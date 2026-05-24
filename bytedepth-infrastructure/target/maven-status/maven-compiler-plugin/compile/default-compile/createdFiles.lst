@@ -1,0 +1,4 @@
+manfred/bytedepth/infrastructure/config/MybatisPlusConfig.class
+manfred/bytedepth/infrastructure/post/PostDO.class
+manfred/bytedepth/infrastructure/post/PostRepositoryImpl.class
+manfred/bytedepth/infrastructure/post/PostMapper.class
