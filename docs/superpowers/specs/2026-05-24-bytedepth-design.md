@@ -22,6 +22,7 @@
 | 缓存 | Redis 7（访客统计 + Session） |
 | 认证 | Spring Security |
 | 富文本编辑器 | Editor.md |
+| 数据库迁移 | Flyway（版本化 SQL 脚本，自动初始化） |
 | 部署 | Docker Compose + Nginx（腾讯云轻量 2核4GB） |
 
 ---
@@ -207,7 +208,23 @@ resources/templates/
 
 ---
 
-## 十、数据库表（核心）
+## 十、数据库初始化与表结构
+
+### 10.1 Flyway 迁移脚本
+
+使用 Flyway 管理所有 DDL，脚本放在 `bytedepth-start/src/main/resources/db/migration/`，
+Spring Boot 启动时自动检测并执行未跑过的脚本：
+
+```
+db/migration/
+├── V1__init_tables.sql          ← 建表：post / tag / category 等
+├── V2__add_page_stats.sql       ← 增量变更示例
+└── V3__add_admin_user.sql
+```
+
+命名规则：`V{版本}__{描述}.sql`，版本号递增，描述用下划线分隔。
+
+### 10.2 核心表清单
 
 | 表名 | 说明 |
 |------|------|
@@ -219,6 +236,7 @@ resources/templates/
 | `project` | 项目展示 |
 | `page_stats` | 页面访问统计 |
 | `admin_user` | 管理员账号 |
+| `flyway_schema_history` | Flyway 自动维护，记录迁移历史 |
 
 ---
 
