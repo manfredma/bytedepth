@@ -1,0 +1,6 @@
+manfred/bytedepth/app/post/command/CreatePostCmdExe.class
+manfred/bytedepth/app/post/query/PostDTO.class
+manfred/bytedepth/app/post/query/ListPostsQryExe.class
+manfred/bytedepth/app/post/command/CreatePostCmd.class
+manfred/bytedepth/app/post/command/PublishPostCmdExe.class
+manfred/bytedepth/app/post/query/GetPostQryExe.class
