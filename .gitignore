@@ -46,3 +46,4 @@ settings.xml
 .omc/
 .claude/
 .gstack/
+__pycache__/
