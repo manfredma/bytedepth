@@ -9,22 +9,11 @@
         .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
         .hero { background: #1a1a2e; color: white; padding: 56px 24px 48px; text-align: center; margin-bottom: 32px; }
         .hero h1 { font-size: 2.5em; margin: 0 0 20px; color: #e94560; letter-spacing: 2px; }
-        .hero-carousel { position: relative; height: 52px; overflow: hidden; }
-        .hero-slide { position: absolute; width: 100%; opacity: 0; animation: fadeSlide 30s infinite; }
-        .hero-slide .quote { color: #ddd; font-size: 1.05em; font-style: italic; line-height: 1.5; }
-        .hero-slide .author { color: #e94560; font-size: 0.82em; margin-top: 6px; letter-spacing: 1px; }
-        .hero-slide:nth-child(1) { animation-delay: 0s; }
-        .hero-slide:nth-child(2) { animation-delay: 6s; }
-        .hero-slide:nth-child(3) { animation-delay: 12s; }
-        .hero-slide:nth-child(4) { animation-delay: 18s; }
-        .hero-slide:nth-child(5) { animation-delay: 24s; }
-        @keyframes fadeSlide {
-          0%   { opacity: 0; transform: translateY(6px); }
-          5%   { opacity: 1; transform: translateY(0); }
-          18%  { opacity: 1; transform: translateY(0); }
-          23%  { opacity: 0; transform: translateY(-6px); }
-          100% { opacity: 0; }
-        }
+        .hero-carousel { position: relative; height: 60px; overflow: hidden; }
+        .hero-slogan { text-align: center; opacity: 0; transition: opacity .6s ease, transform .6s ease; transform: translateY(8px); position: absolute; width: 100%; }
+        .hero-slogan.active { opacity: 1; transform: translateY(0); }
+        .hero-slogan .quote { color: #ddd; font-size: 1.05em; font-style: italic; line-height: 1.5; margin: 0; }
+        .hero-slogan .author { color: #e94560; font-size: 0.82em; margin-top: 6px; letter-spacing: 1px; }
         .post-card { background: white; padding: 24px; margin: 16px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); transition: transform .2s; }
         .post-card:hover { transform: translateY(-2px); }
         .post-card h2 { margin: 0 0 8px; font-size: 1.3em; }
@@ -46,27 +35,58 @@
 <div class="hero">
     <h1>bytedepth</h1>
     <div class="hero-carousel">
-        <div class="hero-slide">
-            <p class="quote">Talk is cheap. Show me the code.</p>
-            <p class="author">— Linus Torvalds</p>
-        </div>
-        <div class="hero-slide">
-            <p class="quote">任何傻瓜都能写出计算机能理解的代码，优秀的程序员写出人类能理解的代码。</p>
-            <p class="author">— Martin Fowler</p>
-        </div>
-        <div class="hero-slide">
-            <p class="quote">过早的优化是万恶之源。</p>
-            <p class="author">— Donald Knuth</p>
-        </div>
-        <div class="hero-slide">
-            <p class="quote">Make it work, make it right, make it fast.</p>
-            <p class="author">— Kent Beck</p>
-        </div>
-        <div class="hero-slide">
-            <p class="quote">深入字节与比特，探索性能与优雅的边界。</p>
-            <p class="author">— bytedepth</p>
+        <div class="hero-slogan active" id="slogan-display">
+            <p class="quote" id="slogan-quote"></p>
+            <p class="author" id="slogan-author"></p>
         </div>
     </div>
+    <script>
+    (function() {
+        var slogans = [
+            { quote: "Talk is cheap. Show me the code.", author: "— Linus Torvalds" },
+            { quote: "任何傻瓜都能写出计算机能理解的代码，优秀的程序员写出人类能理解的代码。", author: "— Martin Fowler" },
+            { quote: "过早的优化是万恶之源。", author: "— Donald Knuth" },
+            { quote: "Make it work, make it right, make it fast.", author: "— Kent Beck" },
+            { quote: "深入字节与比特，探索性能与优雅的边界。", author: "— bytedepth" },
+            { quote: "Programs must be written for people to read, and only incidentally for machines to execute.", author: "— Harold Abelson" },
+            { quote: "Simplicity is the soul of efficiency.", author: "— Austin Freeman" },
+            { quote: "First, solve the problem. Then, write the code.", author: "— John Johnson" },
+            { quote: "简单是可靠性的前提。", author: "— Edsger W. Dijkstra" },
+            { quote: "The best code is no code at all.", author: "— Jeff Atwood" },
+            { quote: "Debugging is twice as hard as writing the code in the first place.", author: "— Brian W. Kernighan" },
+            { quote: "好的架构让正确的事情变得容易，让错误的事情变得困难。", author: "— 软件工程智慧" },
+            { quote: "Don't Repeat Yourself.", author: "— Andy Hunt & Dave Thomas" },
+            { quote: "一千行可以工作的代码，胜过一万行无法维护的代码。", author: "— bytedepth" },
+            { quote: "测量，而不是猜测。", author: "— 性能优化原则" },
+            { quote: "You ain't gonna need it.", author: "— YAGNI Principle" },
+            { quote: "代码是写给人读的，机器执行只是副产品。", author: "— 程序员箴言" },
+            { quote: "每一次重构，都是对未来自己的一封善意的信。", author: "— bytedepth" },
+            { quote: "Architecture is about the important stuff, whatever that is.", author: "— Ralph Johnson" },
+            { quote: "每一行代码背后，都是一个值得深思的决策。", author: "— bytedepth" }
+        ];
+        var lastIdx = -1;
+        function randomIdx() {
+            var idx;
+            do { idx = Math.floor(Math.random() * slogans.length); } while (idx === lastIdx);
+            lastIdx = idx;
+            return idx;
+        }
+        function showSlogan(idx) {
+            var el = document.getElementById('slogan-display');
+            el.classList.remove('active');
+            setTimeout(function() {
+                document.getElementById('slogan-quote').textContent = slogans[idx].quote;
+                document.getElementById('slogan-author').textContent = slogans[idx].author;
+                el.classList.add('active');
+            }, 600);
+        }
+        var idx = randomIdx();
+        document.getElementById('slogan-quote').textContent = slogans[idx].quote;
+        document.getElementById('slogan-author').textContent = slogans[idx].author;
+        document.getElementById('slogan-display').classList.add('active');
+        setInterval(function() { showSlogan(randomIdx()); }, 6000);
+    })();
+    </script>
 </div>
 <div class="container">
 
