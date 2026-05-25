@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${post.title} + ' - bytedepth'">文章详情</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+        .container { max-width: 800px; margin: 40px auto; padding: 40px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        h1 { color: #1a1a2e; margin-top: 0; }
+        .meta { color: #999; font-size: 0.9em; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid #eee; }
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; background: #ffeaa7; color: #d35400; margin-left: 8px; }
+        .content { line-height: 1.8; white-space: pre-wrap; color: #333; }
+        .publish-form { margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; }
+        .btn { padding: 10px 20px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; }
+        .btn:hover { background: #c73652; }
+        .back-link { display: inline-block; margin-top: 24px; color: #666; text-decoration: none; }
+        .back-link:hover { color: #e94560; }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="container">
+    <h1 th:text="${post.title}">文章标题</h1>
+    <div class="meta">
+        <span th:if="${post.publishedAt != null}"
+              th:text="'发布于 ' + ${#temporals.format(post.publishedAt, 'yyyy-MM-dd HH:mm')}"></span>
+        <span th:if="${post.publishedAt == null}">
+            草稿<span class="status-badge">未发布</span>
+        </span>
+    </div>
+    <div class="content" th:text="${post.content}">文章内容</div>
+    <div class="publish-form" th:if="${post.status == 'DRAFT'}">
+        <form th:action="@{/posts/{id}/publish(id=${post.id})}" method="post">
+            <button type="submit" class="btn">发布此文章</button>
+        </form>
+    </div>
+    <a th:href="@{/posts}" class="back-link">← 返回列表</a>
+</div>
+</body>
+</html>

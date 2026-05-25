@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>bytedepth - 技术博客</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .hero { background: #1a1a2e; color: white; padding: 48px 24px; text-align: center; margin-bottom: 32px; }
+        .hero h1 { font-size: 2.5em; margin: 0 0 8px; color: #e94560; }
+        .hero p { color: #aaa; margin: 0; }
+        .post-card { background: white; padding: 24px; margin: 16px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); transition: transform .2s; }
+        .post-card:hover { transform: translateY(-2px); }
+        .post-card h2 { margin: 0 0 8px; font-size: 1.3em; }
+        .post-card h2 a { color: #1a1a2e; text-decoration: none; }
+        .post-card h2 a:hover { color: #e94560; }
+        .meta { color: #999; font-size: 0.88em; }
+        .more-link { display: inline-block; margin-top: 16px; color: #e94560; text-decoration: none; font-weight: 500; }
+        .empty { color: #999; text-align: center; padding: 40px; }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="hero">
+    <h1>bytedepth</h1>
+    <p>深入技术细节，探索 Java 性能与架构</p>
+</div>
+<div class="container">
+    <h2>最新文章</h2>
+    <div th:if="${#lists.isEmpty(recentPosts)}" class="empty">暂无发布的文章，<a th:href="@{/posts/new}" style="color:#e94560;">写第一篇</a>？</div>
+    <div th:each="post : ${recentPosts}" class="post-card">
+        <h2><a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">文章标题</a></h2>
+        <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</p>
+    </div>
+    <a th:href="@{/posts}" class="more-link">查看全部文章 →</a>
+</div>
+</body>
+</html>

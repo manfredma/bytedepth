@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<nav th:fragment="navbar" style="padding:16px 24px;background:#1a1a2e;color:#eee;display:flex;gap:24px;align-items:center;">
+    <a th:href="@{/}" style="color:#e94560;font-weight:bold;font-size:1.2em;text-decoration:none;">bytedepth</a>
+    <a th:href="@{/posts}" style="color:#eee;text-decoration:none;">文章</a>
+    <a th:href="@{/posts/new}" style="color:#eee;text-decoration:none;margin-left:auto;">✏ 写文章</a>
+</nav>
+</body>
+</html>
