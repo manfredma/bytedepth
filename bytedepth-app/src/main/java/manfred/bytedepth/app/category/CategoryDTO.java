@@ -8,4 +8,6 @@ public class CategoryDTO {
     private String name;
     private String slug;
     private Long parentId;
+    private String parentName;
+    private int depth;
 }

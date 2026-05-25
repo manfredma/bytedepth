@@ -14,6 +14,8 @@
         th { color: #888; font-size: 0.85em; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
         td { color: #333; font-size: 0.95em; }
         tr:last-child td { border-bottom: none; }
+        tr.child-row td:first-child { padding-left: 32px; }
+        tr.child-row td:first-child::before { content: "└ "; color: #aaa; }
         .empty { color: #888; text-align: center; padding: 40px; }
         h2 { color: #1a1a2e; font-size: 1.1em; margin-top: 0; margin-bottom: 16px; }
         .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
@@ -24,7 +26,7 @@
         .btn-submit { padding: 8px 20px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.92em; white-space: nowrap; }
         .btn-submit:hover { background: #c73652; }
         .slug-badge { display: inline-block; background: #f0f2f5; color: #666; padding: 2px 8px; border-radius: 4px; font-size: 0.82em; font-family: monospace; }
-        .parent-badge { color: #e94560; font-size: 0.88em; }
+        .parent-badge { color: #e94560; font-size: 0.85em; background: #fff3f5; padding: 2px 8px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -32,27 +34,25 @@
 <div class="container">
     <h1>分类管理</h1>
 
-    <!-- 分类列表 -->
+    <!-- 分类列表（树形展示） -->
     <div class="card">
         <h2>所有分类</h2>
         <div th:if="${#lists.isEmpty(categories)}" class="empty">暂无分类，请在下方添加</div>
         <table th:if="${!#lists.isEmpty(categories)}">
             <thead>
                 <tr>
-                    <th>ID</th>
                     <th>名称</th>
                     <th>Slug</th>
                     <th>父分类</th>
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="cat : ${categories}">
-                    <td th:text="${cat.id}">1</td>
+                <tr th:each="cat : ${categories}" th:classappend="${cat.depth > 0 ? 'child-row' : ''}">
                     <td th:text="${cat.name}">分类名</td>
                     <td><span class="slug-badge" th:text="${cat.slug}">slug</span></td>
                     <td>
-                        <span th:if="${cat.parentId != null}" class="parent-badge" th:text="'#' + ${cat.parentId}">父分类</span>
-                        <span th:if="${cat.parentId == null}" style="color:#aaa;">—</span>
+                        <span th:if="${cat.parentName != null}" class="parent-badge" th:text="${cat.parentName}">父分类名</span>
+                        <span th:if="${cat.parentName == null}" style="color:#aaa;">—</span>
                     </td>
                 </tr>
             </tbody>
@@ -77,6 +77,7 @@
                     <select id="parentId" name="parentId">
                         <option value="">无（顶级分类）</option>
                         <option th:each="cat : ${categories}"
+                                th:if="${cat.depth == 0}"
                                 th:value="${cat.id}"
                                 th:text="${cat.name}">分类名</option>
                     </select>

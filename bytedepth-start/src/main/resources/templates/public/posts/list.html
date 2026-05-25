@@ -14,6 +14,8 @@
         .cat-link { display: block; padding: 9px 16px; font-size: 0.9em; text-decoration: none; color: #444; border-left: 3px solid transparent; transition: all .15s; }
         .cat-link:hover { background: #fdf0f2; color: #e94560; border-left-color: #e94560; }
         .cat-link.active { background: #fdf0f2; color: #e94560; border-left-color: #e94560; font-weight: 600; }
+        .cat-link.child { padding-left: 28px; font-size: 0.85em; color: #666; }
+        .cat-link.child::before { content: "└ "; color: #ccc; }
         /* 主内容 */
         .main { flex: 1; min-width: 0; }
         /* 标签过滤栏 */
@@ -51,9 +53,8 @@
                th:classappend="${activeCategory == null and activeTag == null ? ' active' : ''}">全部文章</a>
             <a th:each="cat : ${allCategories}"
                th:href="@{/posts(category=${cat.slug})}"
-               th:text="${cat.name}"
-               class="cat-link"
-               th:classappend="${activeCategory == cat.slug ? ' active' : ''}">分类</a>
+               th:text="${cat.depth > 0 ? cat.name : cat.name}"
+               th:classappend="${(activeCategory == cat.slug ? ' active' : '') + (cat.depth > 0 ? ' child' : '')}">分类</a>
         </div>
     </aside>
 
