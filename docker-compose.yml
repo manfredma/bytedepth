@@ -3,11 +3,12 @@ version: '3.9'
 services:
   mysql:
     image: mysql:8.0
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-benchmark}
       MYSQL_DATABASE: bytedepth
     volumes:
-      - mysql_data:/var/lib/mysql
+      - /data/mysql:/var/lib/mysql
     ports:
       - "3306:3306"
     healthcheck:
@@ -18,18 +19,20 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
-      - redis_data:/data
+      - /data/redis:/data
     ports:
       - "6379:6379"
 
   app:
     build: .
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bytedepth?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bytedepth?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-benchmark}
       SPRING_DATA_REDIS_HOST: redis
@@ -41,6 +44,7 @@ services:
 
   nginx:
     image: nginx:alpine
+    restart: unless-stopped
     ports:
       - "80:80"
     volumes:
