@@ -26,6 +26,7 @@ import json
 import mimetypes
 import os
 import re
+import ssl
 import sys
 import urllib.error
 import urllib.parse
@@ -39,7 +40,7 @@ SYNC_STATE_FILE = os.path.expanduser("~/.bytedepth_sync_state.json")
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp"}
 
 LOCAL_BASE = "http://localhost:8080"
-REMOTE_BASE = "http://175.24.197.202"
+REMOTE_BASE = "https://bytedepth.cn"
 ADMIN_USER = "admin"
 ADMIN_PASS = "admin2026"
 
@@ -86,7 +87,14 @@ def record_sync(note_rel: str, post_id: int, title: str, category_id: int | None
 
 def make_session() -> urllib.request.OpenerDirector:
     jar = http.cookiejar.CookieJar()
-    return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    # 服务器用 IP 直连，无有效域名证书，跳过 SSL 验证
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return urllib.request.build_opener(
+        urllib.request.HTTPCookieProcessor(jar),
+        urllib.request.HTTPSHandler(context=ctx),
+    )
 
 
 def http_get(opener: urllib.request.OpenerDirector, url: str) -> str:
