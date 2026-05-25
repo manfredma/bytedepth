@@ -261,6 +261,25 @@ def create_and_publish(
     return post_id
 
 
+def update_post(
+    opener: urllib.request.OpenerDirector,
+    base: str,
+    post_id: int,
+    title: str,
+    content: str,
+    category_id: int | None,
+) -> None:
+    """更新已有文章内容，调用 POST /admin/posts/{id}"""
+    data: dict[str, str] = {
+        "title": title,
+        "content": content,
+        "_csrf": get_csrf(opener, base),
+    }
+    if category_id is not None:
+        data["categoryId"] = str(category_id)
+    http_post_form(opener, f"{base}/admin/posts/{post_id}", data)
+
+
 # ---------------------------------------------------------------------------
 # CLI 入口
 # ---------------------------------------------------------------------------
@@ -270,27 +289,44 @@ def cmd_upload_images(args: argparse.Namespace) -> None:
     upload_images(args.dir, base)
 
 
-def cmd_import(args: argparse.Namespace) -> None:
-    base = REMOTE_BASE if args.remote else LOCAL_BASE
-    note_path = os.path.join(VAULT_ROOT, args.note)
+def _prepare_content(opener: urllib.request.OpenerDirector, base: str, note: str, title: str) -> str:
+    note_path = os.path.join(VAULT_ROOT, note)
     if not os.path.exists(note_path):
         print(f"❌ 笔记文件不存在：{note_path}", file=sys.stderr)
         sys.exit(1)
-
-    opener = make_session()
-    login(opener, base)
-
     image_map = load_image_map()
     post_map = fetch_post_map(opener, base)
-
     with open(note_path, encoding="utf-8") as f:
         raw = f.read()
-
     content = convert_obsidian(raw, image_map, post_map)
-    print(f"📄 {args.title}（{len(content)} 字符）")
+    print(f"📄 {title}（{len(content)} 字符）")
+    return content
 
-    post_id = create_and_publish(opener, base, args.title, content, args.category)
-    print(f"✅ 创建并发布成功  {base}/posts/{post_id}")
+
+def cmd_import(args: argparse.Namespace) -> None:
+    base = REMOTE_BASE if args.remote else LOCAL_BASE
+    opener = make_session()
+    login(opener, base)
+    content = _prepare_content(opener, base, args.note, args.title)
+
+    if args.post_id:
+        # 更新已有文章
+        update_post(opener, base, args.post_id, args.title, content, args.category)
+        print(f"✅ 更新成功  {base}/posts/{args.post_id}")
+    else:
+        # 创建并发布新文章
+        post_id = create_and_publish(opener, base, args.title, content, args.category)
+        print(f"✅ 创建并发布成功  {base}/posts/{post_id}")
+
+
+def cmd_update(args: argparse.Namespace) -> None:
+    """单独的 update 子命令：更新已有文章（不改变发布状态）"""
+    base = REMOTE_BASE if args.remote else LOCAL_BASE
+    opener = make_session()
+    login(opener, base)
+    content = _prepare_content(opener, base, args.note, args.title)
+    update_post(opener, base, args.post_id, args.title, content, args.category)
+    print(f"✅ 更新成功  {base}/posts/{args.post_id}")
 
 
 def main() -> None:
@@ -302,11 +338,19 @@ def main() -> None:
     p_upload.add_argument("--dir", required=True, help="图片目录路径")
     p_upload.set_defaults(func=cmd_upload_images)
 
-    p_import = sub.add_parser("import", help="导入笔记并发布")
+    p_import = sub.add_parser("import", help="创建新文章并发布；若指定 --post-id 则更新已有文章")
     p_import.add_argument("--note", required=True, help="笔记相对路径（相对于 ~/w/w/）")
     p_import.add_argument("--title", required=True, help="文章标题")
     p_import.add_argument("--category", type=int, required=True, help="分类 ID")
+    p_import.add_argument("--post-id", type=int, default=None, help="已有文章 ID（提供则更新，不提供则新建）")
     p_import.set_defaults(func=cmd_import)
+
+    p_update = sub.add_parser("update", help="更新已有文章内容（不改变发布状态）")
+    p_update.add_argument("--post-id", type=int, required=True, help="要更新的文章 ID")
+    p_update.add_argument("--note", required=True, help="笔记相对路径（相对于 ~/w/w/）")
+    p_update.add_argument("--title", required=True, help="文章标题")
+    p_update.add_argument("--category", type=int, default=None, help="分类 ID（可选，不传则保持原分类）")
+    p_update.set_defaults(func=cmd_update)
 
     args = parser.parse_args()
     args.func(args)
