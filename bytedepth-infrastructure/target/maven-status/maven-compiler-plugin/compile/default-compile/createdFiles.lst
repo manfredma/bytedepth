@@ -10,5 +10,6 @@ manfred/bytedepth/infrastructure/config/MybatisPlusConfig.class
 manfred/bytedepth/infrastructure/post/PostDO.class
 manfred/bytedepth/infrastructure/project/ProjectRepositoryImpl.class
 manfred/bytedepth/infrastructure/tag/TagDO.class
+manfred/bytedepth/infrastructure/tag/TagWithCountDO.class
 manfred/bytedepth/infrastructure/post/PostRepositoryImpl.class
 manfred/bytedepth/infrastructure/post/PostMapper.class

@@ -19,6 +19,11 @@ public class ListPostsQryExe {
         return posts.stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    public List<PostDTO> executeByTag(String tagSlug, int page, int size) {
+        return postRepository.findPublishedByTag(tagSlug, page, size)
+                .stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
     private PostDTO toDTO(Post post) {
         PostDTO dto = new PostDTO();
         dto.setId(post.getId());

@@ -50,6 +50,18 @@ public class PostRepositoryImpl implements PostRepository {
                 .eq(PostDO::getStatus, PostStatus.PUBLISHED.name()));
     }
 
+    @Override
+    public List<Post> findPublishedByTag(String tagSlug, int page, int size) {
+        int offset = (page - 1) * size;
+        return postMapper.findPublishedByTagSlug(tagSlug, offset, size)
+                .stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
+    @Override
+    public long countPublishedByTag(String tagSlug) {
+        return postMapper.countPublishedByTagSlug(tagSlug);
+    }
+
     private PostDO toDO(Post post) {
         PostDO postDO = new PostDO();
         postDO.setId(post.getId());

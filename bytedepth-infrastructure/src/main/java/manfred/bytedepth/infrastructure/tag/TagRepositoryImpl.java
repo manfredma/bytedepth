@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.domain.tag.Tag;
 import manfred.bytedepth.domain.tag.TagRepository;
+import manfred.bytedepth.domain.tag.TagWithCount;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -55,6 +56,13 @@ public class TagRepositoryImpl implements TagRepository {
         if (tagIds != null && !tagIds.isEmpty()) {
             tagMapper.insertPostTags(postId, tagIds);
         }
+    }
+
+    @Override
+    public List<TagWithCount> findAllWithCount() {
+        return tagMapper.findAllWithCount().stream()
+                .map(d -> new TagWithCount(d.getId(), d.getName(), d.getSlug(), d.getPostCount()))
+                .collect(Collectors.toList());
     }
 
     private TagDO toDO(Tag tag) {

@@ -2,29 +2,63 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>文章列表 - bytedepth</title>
+    <title th:text="${activeTag != null ? '#' + activeTag + ' - 文章' : '全部文章'} + ' - bytedepth'">文章列表</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
-        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        .post-item { background: white; padding: 24px; margin: 12px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-        .post-item h2 { margin: 0 0 8px; font-size: 1.2em; }
+        .container { max-width: 860px; margin: 40px auto; padding: 0 20px; }
+        /* 标签过滤栏 */
+        .tag-bar { background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .tag-bar-label { color: #888; font-size: 0.85em; margin-right: 4px; flex-shrink: 0; }
+        .tag-chip { padding: 4px 12px; border-radius: 16px; font-size: 0.82em; text-decoration: none; background: #f0f0f0; color: #555; transition: all .15s; }
+        .tag-chip:hover { background: #e94560; color: white; }
+        .tag-chip.active { background: #e94560; color: white; font-weight: 600; }
+        .tag-chip .cnt { opacity: 0.7; font-size: 0.88em; margin-left: 2px; }
+        /* 文章卡片 */
+        .post-item { background: white; padding: 22px 24px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.07); transition: transform .15s; }
+        .post-item:hover { transform: translateY(-2px); }
+        .post-item h2 { margin: 0 0 8px; font-size: 1.15em; }
         .post-item h2 a { color: #1a1a2e; text-decoration: none; }
         .post-item h2 a:hover { color: #e94560; }
-        .meta { color: #999; font-size: 0.88em; margin: 0; }
+        .post-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .meta-date { color: #bbb; font-size: 0.82em; }
+        .post-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+        .post-tag { background: #f0f0f0; color: #666; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; text-decoration: none; }
+        .post-tag:hover { background: #e94560; color: white; }
         .empty { color: #999; text-align: center; padding: 60px; background: white; border-radius: 8px; }
+        .active-banner { background: #fff8f8; border-left: 3px solid #e94560; padding: 10px 16px; margin-bottom: 14px; border-radius: 0 6px 6px 0; font-size: 0.9em; color: #555; }
+        .active-banner a { color: #e94560; text-decoration: none; }
     </style>
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
 <div class="container">
-    <h1>全部文章</h1>
-    <div th:if="${#lists.isEmpty(posts)}" class="empty">
-        暂无发布的文章，<a th:href="@{/posts/new}" style="color:#e94560;">写第一篇</a>？
+    <h1 th:text="${activeTag != null ? '#' + activeTag : '全部文章'}">全部文章</h1>
+
+    <!-- 标签过滤栏 -->
+    <div class="tag-bar" th:if="${not #lists.isEmpty(allTags)}">
+        <span class="tag-bar-label">标签</span>
+        <a th:href="@{/posts}" class="tag-chip" th:classappend="${activeTag == null ? ' active' : ''}">全部</a>
+        <a th:each="t : ${allTags}"
+           th:href="@{/posts(tag=${t.slug})}"
+           th:text="${t.name} + ' (' + ${t.count} + ')'"
+           class="tag-chip"
+           th:classappend="${activeTag == t.slug ? ' active' : ''}">标签</a>
     </div>
+
+    <!-- 当前过滤提示 -->
+    <div class="active-banner" th:if="${activeTag != null}">
+        正在显示标签 <strong th:text="'#' + ${activeTag}"></strong> 的文章 &nbsp;·&nbsp;
+        <a th:href="@{/posts}">清除过滤 ×</a>
+    </div>
+
+    <div th:if="${#lists.isEmpty(posts)}" class="empty">该标签下暂无文章</div>
+
     <div th:each="post : ${posts}" class="post-item">
         <h2><a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">文章标题</a></h2>
-        <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd HH:mm')}">发布时间</p>
+        <div class="post-meta">
+            <span class="meta-date" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}"></span>
+        </div>
     </div>
 </div>
 </body>

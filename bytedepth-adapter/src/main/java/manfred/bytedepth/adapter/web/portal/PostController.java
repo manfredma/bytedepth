@@ -31,9 +31,15 @@ public class PostController {
     @GetMapping
     public String list(Model model,
                        @RequestParam(defaultValue = "1") int page,
-                       @RequestParam(defaultValue = "10") int size) {
-        model.addAttribute("posts", listPostsQryExe.execute(page, size));
+                       @RequestParam(defaultValue = "10") int size,
+                       @RequestParam(required = false) String tag) {
+        var posts = (tag != null && !tag.isBlank())
+                ? listPostsQryExe.executeByTag(tag, page, size)
+                : listPostsQryExe.execute(page, size);
+        model.addAttribute("posts", posts);
         model.addAttribute("currentPage", page);
+        model.addAttribute("activeTag", tag);
+        model.addAttribute("allTags", listTagsQryExe.findAllWithCount());
         return "public/posts/list";
     }
 

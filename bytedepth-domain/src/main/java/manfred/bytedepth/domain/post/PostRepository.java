@@ -8,4 +8,6 @@ public interface PostRepository {
     Optional<Post> findById(Long id);
     List<Post> findPublished(int page, int size);
     long countPublished();
+    List<Post> findPublishedByTag(String tagSlug, int page, int size);
+    long countPublishedByTag(String tagSlug);
 }

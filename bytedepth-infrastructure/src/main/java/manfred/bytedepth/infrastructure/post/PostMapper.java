@@ -2,6 +2,27 @@ package manfred.bytedepth.infrastructure.post;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
 
 @Mapper
-public interface PostMapper extends BaseMapper<PostDO> {}
+public interface PostMapper extends BaseMapper<PostDO> {
+
+    @Select("SELECT p.* FROM post p " +
+            "INNER JOIN post_tag pt ON p.id = pt.post_id " +
+            "INNER JOIN tag t ON pt.tag_id = t.id " +
+            "WHERE p.status = 'PUBLISHED' AND t.slug = #{slug} " +
+            "ORDER BY p.published_at DESC " +
+            "LIMIT #{offset}, #{limit}")
+    List<PostDO> findPublishedByTagSlug(@Param("slug") String slug,
+                                        @Param("offset") int offset,
+                                        @Param("limit") int limit);
+
+    @Select("SELECT COUNT(*) FROM post p " +
+            "INNER JOIN post_tag pt ON p.id = pt.post_id " +
+            "INNER JOIN tag t ON pt.tag_id = t.id " +
+            "WHERE p.status = 'PUBLISHED' AND t.slug = #{slug}")
+    long countPublishedByTagSlug(@Param("slug") String slug);
+}

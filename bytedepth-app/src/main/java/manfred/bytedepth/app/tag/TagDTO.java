@@ -7,4 +7,5 @@ public class TagDTO {
     private Long id;
     private String name;
     private String slug;
+    private long count;
 }
