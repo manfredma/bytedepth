@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cd /opt/bytedepth
+cd "$(dirname "$0")"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始部署..."
 
