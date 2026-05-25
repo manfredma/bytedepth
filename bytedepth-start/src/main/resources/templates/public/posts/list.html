@@ -54,6 +54,7 @@
             <a th:each="cat : ${allCategories}"
                th:href="@{/posts(category=${cat.slug})}"
                th:text="${cat.depth > 0 ? cat.name : cat.name}"
+               class="cat-link"
                th:classappend="${(activeCategory == cat.slug ? ' active' : '') + (cat.depth > 0 ? ' child' : '')}">分类</a>
         </div>
     </aside>
