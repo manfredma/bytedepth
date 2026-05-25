@@ -20,6 +20,7 @@ Obsidian 笔记通过 bytedepth API 导入博客。
 """
 
 import argparse
+import hashlib
 import http.cookiejar
 import json
 import mimetypes
@@ -29,16 +30,54 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 
 VAULT_ROOT = os.path.expanduser("~/w/w")
 IMAGE_MAP_FILE = "/tmp/bytedepth_image_map.json"
+SYNC_STATE_FILE = os.path.expanduser("~/.bytedepth_sync_state.json")
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp"}
 
 LOCAL_BASE = "http://localhost:8080"
 REMOTE_BASE = "http://175.24.197.202"
 ADMIN_USER = "admin"
 ADMIN_PASS = "admin2026"
+
+
+# ---------------------------------------------------------------------------
+# 同步状态管理
+# ---------------------------------------------------------------------------
+
+def compute_note_hash(note_rel: str) -> str:
+    note_path = os.path.join(VAULT_ROOT, note_rel)
+    with open(note_path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()[:16]
+
+
+def load_sync_state() -> dict:
+    if os.path.exists(SYNC_STATE_FILE):
+        with open(SYNC_STATE_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def save_sync_state(state: dict) -> None:
+    with open(SYNC_STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
+
+
+def record_sync(note_rel: str, post_id: int, title: str, category_id: int | None, env: str) -> None:
+    state = load_sync_state()
+    state[note_rel] = {
+        "post_id": post_id,
+        "title": title,
+        "category_id": category_id,
+        "last_hash": compute_note_hash(note_rel),
+        "last_sync": datetime.now().isoformat(timespec="seconds"),
+        "env": env,
+    }
+    save_sync_state(state)
+    print(f"   📝 同步状态已记录 ({SYNC_STATE_FILE})")
 
 
 # ---------------------------------------------------------------------------
@@ -309,14 +348,15 @@ def cmd_import(args: argparse.Namespace) -> None:
     login(opener, base)
     content = _prepare_content(opener, base, args.note, args.title)
 
+    env = "remote" if args.remote else "local"
     if args.post_id:
-        # 更新已有文章
         update_post(opener, base, args.post_id, args.title, content, args.category)
         print(f"✅ 更新成功  {base}/posts/{args.post_id}")
+        record_sync(args.note, args.post_id, args.title, args.category, env)
     else:
-        # 创建并发布新文章
         post_id = create_and_publish(opener, base, args.title, content, args.category)
         print(f"✅ 创建并发布成功  {base}/posts/{post_id}")
+        record_sync(args.note, post_id, args.title, args.category, env)
 
 
 def cmd_update(args: argparse.Namespace) -> None:
@@ -326,7 +366,70 @@ def cmd_update(args: argparse.Namespace) -> None:
     login(opener, base)
     content = _prepare_content(opener, base, args.note, args.title)
     update_post(opener, base, args.post_id, args.title, content, args.category)
+    env = "remote" if args.remote else "local"
     print(f"✅ 更新成功  {base}/posts/{args.post_id}")
+    record_sync(args.note, args.post_id, args.title, args.category, env)
+
+
+def cmd_status(args: argparse.Namespace) -> None:
+    """显示本地笔记与博客的同步状态"""
+    env = "remote" if args.remote else "local"
+    state = load_sync_state()
+    entries = {k: v for k, v in state.items() if v.get("env") == env}
+
+    if not entries:
+        print(f"暂无同步记录（{env}）")
+        return
+
+    needs_update: list[tuple[str, dict]] = []
+    for note_rel, info in sorted(entries.items()):
+        note_path = os.path.join(VAULT_ROOT, note_rel)
+        if not os.path.exists(note_path):
+            print(f"  ❓ 文件不存在   {note_rel}")
+            continue
+        current_hash = compute_note_hash(note_rel)
+        tag = info["last_sync"][:10]
+        if current_hash == info["last_hash"]:
+            print(f"  ✅ 已同步 [{tag}]  {note_rel}  →  posts/{info['post_id']}")
+        else:
+            print(f"  ⚠️  本地有修改   {note_rel}  →  posts/{info['post_id']}")
+            needs_update.append((note_rel, info))
+
+    if needs_update:
+        flag = "--remote" if args.remote else ""
+        print(f"\n共 {len(needs_update)} 篇需要更新，运行以下命令自动同步：")
+        print(f"  python3 import_via_api.py sync {flag}")
+
+
+def cmd_sync(args: argparse.Namespace) -> None:
+    """自动更新所有本地有修改（hash 变化）的文章"""
+    env = "remote" if args.remote else "local"
+    base = REMOTE_BASE if args.remote else LOCAL_BASE
+    state = load_sync_state()
+    entries = {k: v for k, v in state.items() if v.get("env") == env}
+
+    to_update = [
+        (note_rel, info) for note_rel, info in entries.items()
+        if os.path.exists(os.path.join(VAULT_ROOT, note_rel))
+        and compute_note_hash(note_rel) != info["last_hash"]
+    ]
+
+    if not to_update:
+        print(f"✅ 所有笔记均已同步（{env}），无需更新")
+        return
+
+    print(f"发现 {len(to_update)} 篇需要更新，开始同步...\n")
+    opener = make_session()
+    login(opener, base)
+
+    for note_rel, info in to_update:
+        print(f"📄 {note_rel}")
+        content = _prepare_content(opener, base, note_rel, info["title"])
+        update_post(opener, base, info["post_id"], info["title"], content, info.get("category_id"))
+        record_sync(note_rel, info["post_id"], info["title"], info.get("category_id"), env)
+        print(f"   ✅ 更新完成  {base}/posts/{info['post_id']}\n")
+
+    print(f"同步完成，共更新 {len(to_update)} 篇")
 
 
 def main() -> None:
@@ -349,8 +452,14 @@ def main() -> None:
     p_update.add_argument("--post-id", type=int, required=True, help="要更新的文章 ID")
     p_update.add_argument("--note", required=True, help="笔记相对路径（相对于 ~/w/w/）")
     p_update.add_argument("--title", required=True, help="文章标题")
-    p_update.add_argument("--category", type=int, default=None, help="分类 ID（可选，不传则保持原分类）")
+    p_update.add_argument("--category", type=int, default=None, help="分类 ID（可选）")
     p_update.set_defaults(func=cmd_update)
+
+    p_status = sub.add_parser("status", help="查看本地笔记与博客的同步状态")
+    p_status.set_defaults(func=cmd_status)
+
+    p_sync = sub.add_parser("sync", help="自动更新所有本地有修改（hash 变化）的文章")
+    p_sync.set_defaults(func=cmd_sync)
 
     args = parser.parse_args()
     args.func(args)
