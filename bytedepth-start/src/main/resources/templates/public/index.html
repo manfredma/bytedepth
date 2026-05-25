@@ -7,9 +7,24 @@
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
         .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        .hero { background: #1a1a2e; color: white; padding: 48px 24px; text-align: center; margin-bottom: 32px; }
-        .hero h1 { font-size: 2.5em; margin: 0 0 8px; color: #e94560; }
-        .hero p { color: #aaa; margin: 0; }
+        .hero { background: #1a1a2e; color: white; padding: 56px 24px 48px; text-align: center; margin-bottom: 32px; }
+        .hero h1 { font-size: 2.5em; margin: 0 0 20px; color: #e94560; letter-spacing: 2px; }
+        .hero-carousel { position: relative; height: 52px; overflow: hidden; }
+        .hero-slide { position: absolute; width: 100%; opacity: 0; animation: fadeSlide 30s infinite; }
+        .hero-slide .quote { color: #ddd; font-size: 1.05em; font-style: italic; line-height: 1.5; }
+        .hero-slide .author { color: #e94560; font-size: 0.82em; margin-top: 6px; letter-spacing: 1px; }
+        .hero-slide:nth-child(1) { animation-delay: 0s; }
+        .hero-slide:nth-child(2) { animation-delay: 6s; }
+        .hero-slide:nth-child(3) { animation-delay: 12s; }
+        .hero-slide:nth-child(4) { animation-delay: 18s; }
+        .hero-slide:nth-child(5) { animation-delay: 24s; }
+        @keyframes fadeSlide {
+          0%   { opacity: 0; transform: translateY(6px); }
+          5%   { opacity: 1; transform: translateY(0); }
+          18%  { opacity: 1; transform: translateY(0); }
+          23%  { opacity: 0; transform: translateY(-6px); }
+          100% { opacity: 0; }
+        }
         .post-card { background: white; padding: 24px; margin: 16px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); transition: transform .2s; }
         .post-card:hover { transform: translateY(-2px); }
         .post-card h2 { margin: 0 0 8px; font-size: 1.3em; }
@@ -24,7 +39,28 @@
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
 <div class="hero">
     <h1>bytedepth</h1>
-    <p>深入技术细节，探索 Java 性能与架构</p>
+    <div class="hero-carousel">
+        <div class="hero-slide">
+            <p class="quote">Talk is cheap. Show me the code.</p>
+            <p class="author">— Linus Torvalds</p>
+        </div>
+        <div class="hero-slide">
+            <p class="quote">任何傻瓜都能写出计算机能理解的代码，优秀的程序员写出人类能理解的代码。</p>
+            <p class="author">— Martin Fowler</p>
+        </div>
+        <div class="hero-slide">
+            <p class="quote">过早的优化是万恶之源。</p>
+            <p class="author">— Donald Knuth</p>
+        </div>
+        <div class="hero-slide">
+            <p class="quote">Make it work, make it right, make it fast.</p>
+            <p class="author">— Kent Beck</p>
+        </div>
+        <div class="hero-slide">
+            <p class="quote">深入字节与比特，探索性能与优雅的边界。</p>
+            <p class="author">— bytedepth</p>
+        </div>
+    </div>
 </div>
 <div class="container">
     <h2>最新文章</h2>
