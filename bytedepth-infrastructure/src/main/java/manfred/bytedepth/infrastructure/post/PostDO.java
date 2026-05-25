@@ -18,4 +18,5 @@ public class PostDO {
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
     private LocalDateTime updatedAt;
+    private Long categoryId;
 }

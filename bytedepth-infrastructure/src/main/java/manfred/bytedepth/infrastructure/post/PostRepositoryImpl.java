@@ -87,6 +87,7 @@ public class PostRepositoryImpl implements PostRepository {
         postDO.setCreatedAt(post.getCreatedAt());
         postDO.setPublishedAt(post.getPublishedAt());
         postDO.setUpdatedAt(post.getUpdatedAt());
+        postDO.setCategoryId(post.getCategoryId());
         return postDO;
     }
 
@@ -98,7 +99,8 @@ public class PostRepositoryImpl implements PostRepository {
                 PostStatus.valueOf(postDO.getStatus()),
                 postDO.getCreatedAt(),
                 postDO.getPublishedAt(),
-                postDO.getUpdatedAt()
+                postDO.getUpdatedAt(),
+                postDO.getCategoryId()
         );
     }
 }

@@ -15,6 +15,7 @@ public class Post {
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
     private LocalDateTime updatedAt;
+    private Long categoryId;
 
     private Post() {}
 
@@ -40,6 +41,18 @@ public class Post {
         post.publishedAt = publishedAt;
         post.updatedAt = updatedAt;
         return post;
+    }
+
+    public static Post reconstruct(Long id, String title, String content, PostStatus status,
+                                   LocalDateTime createdAt, LocalDateTime publishedAt,
+                                   LocalDateTime updatedAt, Long categoryId) {
+        Post post = reconstruct(id, title, content, status, createdAt, publishedAt, updatedAt);
+        post.categoryId = categoryId;
+        return post;
+    }
+
+    public void assignCategory(Long categoryId) {
+        this.categoryId = categoryId;
     }
 
     public void publish() {

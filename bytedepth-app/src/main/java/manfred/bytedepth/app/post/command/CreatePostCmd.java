@@ -9,4 +9,5 @@ import lombok.EqualsAndHashCode;
 public class CreatePostCmd extends Command {
     private String title;
     private String content;
+    private Long categoryId;
 }

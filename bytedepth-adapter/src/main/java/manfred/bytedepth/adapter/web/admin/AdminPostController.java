@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.DeletePostCmdExe;
@@ -28,6 +29,7 @@ public class AdminPostController {
     private final UpdatePostCmdExe updatePostCmdExe;
     private final PublishPostCmdExe publishPostCmdExe;
     private final DeletePostCmdExe deletePostCmdExe;
+    private final ListCategoriesQryExe listCategoriesQryExe;
 
     @GetMapping
     public String list(Model model,
@@ -41,12 +43,14 @@ public class AdminPostController {
     @GetMapping("/new")
     public String newForm(Model model) {
         model.addAttribute("cmd", new CreatePostCmd());
+        model.addAttribute("categories", listCategoriesQryExe.execute());
         return "admin/posts/edit";
     }
 
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         model.addAttribute("post", getPostQryExe.execute(id));
+        model.addAttribute("categories", listCategoriesQryExe.execute());
         return "admin/posts/edit";
     }
 
@@ -59,8 +63,9 @@ public class AdminPostController {
     @PostMapping("/{id}")
     public String update(@PathVariable Long id,
                          @RequestParam String title,
-                         @RequestParam String content) {
-        updatePostCmdExe.execute(id, title, content);
+                         @RequestParam String content,
+                         @RequestParam(required = false) Long categoryId) {
+        updatePostCmdExe.execute(id, title, content, categoryId);
         return "redirect:/admin/posts";
     }
 

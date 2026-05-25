@@ -27,6 +27,7 @@ public class ListAllPostsQryExe {
         dto.setStatus(post.getStatus().name());
         dto.setPublishedAt(post.getPublishedAt());
         dto.setCreatedAt(post.getCreatedAt());
+        dto.setCategoryId(post.getCategoryId());
         return dto;
     }
 }

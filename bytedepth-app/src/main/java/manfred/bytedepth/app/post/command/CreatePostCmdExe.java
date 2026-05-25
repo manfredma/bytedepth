@@ -13,6 +13,9 @@ public class CreatePostCmdExe {
 
     public Long execute(CreatePostCmd cmd) {
         Post post = Post.create(cmd.getTitle(), cmd.getContent());
+        if (cmd.getCategoryId() != null) {
+            post.assignCategory(cmd.getCategoryId());
+        }
         Post saved = postRepository.save(post);
         return saved.getId();
     }
