@@ -45,3 +45,4 @@ settings.xml
 # Tools
 .omc/
 .claude/
+.gstack/

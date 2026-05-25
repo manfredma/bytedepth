@@ -38,9 +38,8 @@
                 <input type="text" name="title" placeholder="文章标题" th:value="${post.title}" required>
             </div>
             <div class="field" th:if="${categories != null and not #lists.isEmpty(categories)}">
-                <label>分类</label>
-                <select name="categoryId" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:4px;font-size:0.95em;">
-                    <option value="">-- 不指定分类 --</option>
+                <label>分类 <span style="color:#e94560">*</span></label>
+                <select name="categoryId" required style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:4px;font-size:0.95em;">
                     <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"
                             th:selected="${post.categoryId != null and post.categoryId == c.id}">分类名</option>
                 </select>
@@ -66,9 +65,8 @@
                 <input type="text" name="title" placeholder="文章标题" th:field="*{title}" required>
             </div>
             <div class="field" th:if="${categories != null and not #lists.isEmpty(categories)}">
-                <label>分类</label>
-                <select name="categoryId" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:4px;font-size:0.95em;">
-                    <option value="">-- 不指定分类 --</option>
+                <label>分类 <span style="color:#e94560">*</span></label>
+                <select name="categoryId" required style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:4px;font-size:0.95em;">
                     <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}">分类名</option>
                 </select>
             </div>

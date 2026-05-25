@@ -9,6 +9,7 @@ import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.domain.stats.PostViewCounter;
+import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -26,20 +27,26 @@ public class PostController {
     private final MarkdownRenderer markdownRenderer;
     private final ListCommentsQryExe listCommentsQryExe;
     private final ListTagsQryExe listTagsQryExe;
+    private final ListCategoriesQryExe listCategoriesQryExe;
     private final PostViewCounter postViewCounter;
 
     @GetMapping
     public String list(Model model,
                        @RequestParam(defaultValue = "1") int page,
                        @RequestParam(defaultValue = "10") int size,
-                       @RequestParam(required = false) String tag) {
+                       @RequestParam(required = false) String tag,
+                       @RequestParam(required = false) String category) {
         var posts = (tag != null && !tag.isBlank())
                 ? listPostsQryExe.executeByTag(tag, page, size)
-                : listPostsQryExe.execute(page, size);
+                : (category != null && !category.isBlank())
+                        ? listPostsQryExe.executeByCategory(category, page, size)
+                        : listPostsQryExe.execute(page, size);
         model.addAttribute("posts", posts);
         model.addAttribute("currentPage", page);
         model.addAttribute("activeTag", tag);
+        model.addAttribute("activeCategory", category);
         model.addAttribute("allTags", listTagsQryExe.findAllWithCount());
+        model.addAttribute("allCategories", listCategoriesQryExe.execute());
         return "public/posts/list";
     }
 

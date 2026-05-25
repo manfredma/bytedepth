@@ -63,6 +63,24 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
+    public List<Post> findPublishedByCategory(Long categoryId, int page, int size) {
+        Page<PostDO> pageParam = new Page<>(page, size);
+        LambdaQueryWrapper<PostDO> wrapper = new LambdaQueryWrapper<PostDO>()
+                .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
+                .eq(PostDO::getCategoryId, categoryId)
+                .orderByDesc(PostDO::getPublishedAt);
+        return postMapper.selectPage(pageParam, wrapper).getRecords()
+                .stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
+    @Override
+    public long countPublishedByCategory(Long categoryId) {
+        return postMapper.selectCount(new LambdaQueryWrapper<PostDO>()
+                .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
+                .eq(PostDO::getCategoryId, categoryId));
+    }
+
+    @Override
     public List<Post> findAll(int page, int size) {
         Page<PostDO> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<PostDO> wrapper = new LambdaQueryWrapper<PostDO>()

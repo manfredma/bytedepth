@@ -13,4 +13,6 @@ public class PostDTO {
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
     private Long categoryId;
+    private String categoryName;
+    private String categorySlug;
 }
