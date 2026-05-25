@@ -6,6 +6,7 @@ import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.DeletePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
+import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListAllPostsQryExe;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin/posts")
@@ -30,6 +33,7 @@ public class AdminPostController {
     private final PublishPostCmdExe publishPostCmdExe;
     private final DeletePostCmdExe deletePostCmdExe;
     private final ListCategoriesQryExe listCategoriesQryExe;
+    private final SetPostTagsCmdExe setPostTagsCmdExe;
 
     @GetMapping
     public String list(Model model,
@@ -79,5 +83,16 @@ public class AdminPostController {
     public String delete(@PathVariable Long id) {
         deletePostCmdExe.execute(id);
         return "redirect:/admin/posts";
+    }
+
+    @PostMapping("/{id}/tags")
+    public String setTags(@PathVariable Long id,
+                          @RequestParam(defaultValue = "") String rawTags) {
+        List<String> slugs = List.of(rawTags.split("[,\\s]+")).stream()
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(java.util.stream.Collectors.toList());
+        setPostTagsCmdExe.execute(id, slugs);
+        return "redirect:/admin/posts/" + id + "/edit";
     }
 }

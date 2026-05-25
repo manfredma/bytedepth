@@ -3,6 +3,7 @@ package manfred.bytedepth.app.post.query;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class PostDTO {
@@ -15,4 +16,5 @@ public class PostDTO {
     private Long categoryId;
     private String categoryName;
     private String categorySlug;
+    private List<String> tagSlugs;
 }

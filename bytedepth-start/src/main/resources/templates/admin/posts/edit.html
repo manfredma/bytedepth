@@ -57,6 +57,23 @@
             <a th:href="@{/admin/posts}" style="margin-left:12px;color:#888;text-decoration:none;font-size:0.9em;">取消</a>
         </form>
 
+        <!-- 标签编辑（编辑模式独立表单） -->
+        <div th:if="${post != null}" style="margin-top:28px;padding-top:24px;border-top:1px solid #f0f0f0;">
+            <form th:action="@{/admin/posts/{id}/tags(id=${post.id})}" method="post">
+                <div class="field">
+                    <label>标签
+                        <span style="font-weight:400;color:#aaa;font-size:0.85em;">（用英文逗号或空格分隔，如 gc,jvm,理论）</span>
+                    </label>
+                    <input type="text" name="rawTags"
+                           style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:4px;font-size:0.95em;"
+                           th:value="${post.tagSlugs != null ? #strings.listJoin(post.tagSlugs, ', ') : ''}"
+                           placeholder="gc, jvm, memory-management">
+                    <p class="hint">保存后立即生效，不影响文章内容。</p>
+                </div>
+                <button type="submit" class="btn" style="background:#555;">保存标签</button>
+            </form>
+        </div>
+
         <!-- 新建模式 -->
         <form th:if="${post == null}"
               th:action="@{/admin/posts}" method="post" th:object="${cmd}">
