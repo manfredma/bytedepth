@@ -1,74 +1,74 @@
 {
   "05 计算机基础/04 GC 垃圾回收/01 GC 总览与历史.md": {
     "post_id": 4,
-    "title": "GC 总览与历史：自动内存管理的起源与演化",
-    "category_id": 10,
+    "title": "GC 系列 #01：GC 总览与历史：自动内存管理的起源与演化",
+    "category_id": null,
     "last_hash": "5e0a10b7f0c650fb",
-    "last_sync": "2026-05-25T22:15:57",
+    "last_sync": "2026-05-25T22:23:31",
     "env": "remote"
   },
   "05 计算机基础/04 GC 垃圾回收/02 GC 基础算法.md": {
     "post_id": 5,
-    "title": "GC 基础算法：标记-清除、标记-整理、复制收集、引用计数",
-    "category_id": 10,
+    "title": "GC 系列 #02：GC 基础算法：标记-清除、标记-整理、复制收集、引用计数",
+    "category_id": null,
     "last_hash": "3a82b6df38598218",
-    "last_sync": "2026-05-25T22:15:58",
+    "last_sync": "2026-05-25T22:23:32",
     "env": "remote"
   },
   "05 计算机基础/04 GC 垃圾回收/03 分代假说与分代收集.md": {
     "post_id": 6,
-    "title": "分代假说与分代收集：朝生夕死的工程哲学",
-    "category_id": 10,
+    "title": "GC 系列 #03：分代假说与分代收集：朝生夕死的工程哲学",
+    "category_id": null,
     "last_hash": "5d54fb166fca06f4",
-    "last_sync": "2026-05-25T22:16:00",
+    "last_sync": "2026-05-25T22:23:33",
     "env": "remote"
   },
   "05 计算机基础/04 GC 垃圾回收/04 CMS 收集器.md": {
     "post_id": 7,
-    "title": "CMS 收集器：Java 第一个并发收集器的设计与缺陷",
-    "category_id": 10,
+    "title": "GC 系列 #04：CMS 收集器：Java 第一个并发收集器的设计与缺陷",
+    "category_id": null,
     "last_hash": "89cf13957faf6c4c",
-    "last_sync": "2026-05-25T22:16:02",
+    "last_sync": "2026-05-25T22:23:34",
     "env": "remote"
   },
   "05 计算机基础/04 GC 垃圾回收/05 G1 收集器.md": {
     "post_id": 8,
-    "title": "G1 收集器：Region 化堆与可预测停顿",
-    "category_id": 10,
+    "title": "GC 系列 #05：G1 收集器：Region 化堆与可预测停顿",
+    "category_id": null,
     "last_hash": "61999374329117c1",
-    "last_sync": "2026-05-25T22:16:04",
+    "last_sync": "2026-05-25T22:23:35",
     "env": "remote"
   },
   "05 计算机基础/04 GC 垃圾回收/06 ZGC 与 Shenandoah.md": {
     "post_id": 9,
-    "title": "ZGC 与 Shenandoah：亚毫秒级停顿的并发移动收集器",
-    "category_id": 10,
+    "title": "GC 系列 #06：ZGC 与 Shenandoah：亚毫秒级停顿的并发移动收集器",
+    "category_id": null,
     "last_hash": "3ffe9a2c380fa17b",
-    "last_sync": "2026-05-25T22:16:05",
+    "last_sync": "2026-05-25T22:23:37",
     "env": "remote"
   },
   "05 计算机基础/04 GC 垃圾回收/07 Go 的 GC.md": {
     "post_id": 10,
-    "title": "Go 的 GC：并发三色标记与混合写屏障",
-    "category_id": 7,
+    "title": "GC 系列 #07：Go 的 GC：并发三色标记与混合写屏障",
+    "category_id": null,
     "last_hash": "84823390c7fe4e93",
-    "last_sync": "2026-05-25T22:16:07",
+    "last_sync": "2026-05-25T22:23:38",
     "env": "remote"
   },
   "05 计算机基础/04 GC 垃圾回收/08 Python 的内存管理.md": {
     "post_id": 11,
-    "title": "Python 的内存管理：引用计数与分代循环 GC",
-    "category_id": 7,
+    "title": "GC 系列 #08：Python 的内存管理：引用计数与分代循环 GC",
+    "category_id": null,
     "last_hash": "90f56192c571ab35",
-    "last_sync": "2026-05-25T22:16:09",
+    "last_sync": "2026-05-25T22:23:39",
     "env": "remote"
   },
   "05 计算机基础/04 GC 垃圾回收/09 GC 调优实践.md": {
     "post_id": 12,
-    "title": "GC 调优实践：JVM 日志解读与 G1/ZGC 参数策略",
-    "category_id": 8,
+    "title": "GC 系列 #09：GC 调优实践：JVM 日志解读与 G1/ZGC 参数策略",
+    "category_id": null,
     "last_hash": "f241bcb5bdd4ebe3",
-    "last_sync": "2026-05-25T22:16:10",
+    "last_sync": "2026-05-25T22:23:40",
     "env": "remote"
   }
 }
