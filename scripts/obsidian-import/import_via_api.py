@@ -36,7 +36,7 @@ from pathlib import Path
 
 VAULT_ROOT = os.path.expanduser("~/w/w")
 IMAGE_MAP_FILE = "/tmp/bytedepth_image_map.json"
-SYNC_STATE_FILE = os.path.expanduser("~/.bytedepth_sync_state.json")
+SYNC_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sync_state.json")
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp"}
 
 LOCAL_BASE = "http://localhost:8080"
