@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.portal;
 
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
@@ -19,6 +20,7 @@ public class PostController {
     private final GetPostQryExe getPostQryExe;
     private final CreatePostCmdExe createPostCmdExe;
     private final PublishPostCmdExe publishPostCmdExe;
+    private final MarkdownRenderer markdownRenderer;
 
     @GetMapping
     public String list(Model model,
@@ -31,7 +33,9 @@ public class PostController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable("id") Long id, Model model) {
-        model.addAttribute("post", getPostQryExe.execute(id));
+        var post = getPostQryExe.execute(id);
+        model.addAttribute("post", post);
+        model.addAttribute("renderedContent", markdownRenderer.render(post.getContent()));
         return "public/posts/detail";
     }
 

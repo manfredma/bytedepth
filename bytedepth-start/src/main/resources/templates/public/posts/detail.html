@@ -10,7 +10,20 @@
         h1 { color: #1a1a2e; margin-top: 0; }
         .meta { color: #999; font-size: 0.9em; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid #eee; }
         .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; background: #ffeaa7; color: #d35400; margin-left: 8px; }
-        .content { line-height: 1.8; white-space: pre-wrap; color: #333; }
+        .content { line-height: 1.8; color: #333; }
+        .content h1,.content h2,.content h3,.content h4 { color: #1a1a2e; margin: 1.5em 0 0.5em; }
+        .content h2 { border-bottom: 2px solid #e94560; padding-bottom: 6px; }
+        .content p { margin: 0.8em 0; }
+        .content code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 0.9em; }
+        .content pre { background: #1a1a2e; color: #e8e8e8; padding: 16px; border-radius: 6px; overflow-x: auto; line-height: 1.5; }
+        .content pre code { background: none; padding: 0; color: inherit; font-size: 0.88em; }
+        .content blockquote { border-left: 4px solid #e94560; margin: 1em 0; padding: 8px 16px; background: #fff8f8; color: #555; }
+        .content table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+        .content th,.content td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+        .content th { background: #1a1a2e; color: white; }
+        .content tr:nth-child(even) { background: #f9f9f9; }
+        .content ul,.content ol { padding-left: 2em; margin: 0.8em 0; }
+        .content a { color: #e94560; }
         .publish-form { margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; }
         .btn { padding: 10px 20px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; }
         .btn:hover { background: #c73652; }
@@ -29,7 +42,7 @@
             草稿<span class="status-badge">未发布</span>
         </span>
     </div>
-    <div class="content" th:text="${post.content}">文章内容</div>
+    <div class="content" th:utext="${renderedContent}">文章内容</div>
     <div class="publish-form" th:if="${post.status == 'DRAFT'}">
         <form th:action="@{/posts/{id}/publish(id=${post.id})}" method="post">
             <button type="submit" class="btn">发布此文章</button>

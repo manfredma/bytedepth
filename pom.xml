@@ -54,6 +54,11 @@
                 <version>${mybatis.plus.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.commonmark</groupId>
+                <artifactId>commonmark</artifactId>
+                <version>0.21.0</version>
+            </dependency>
+            <dependency>
                 <groupId>manfred.bytedepth</groupId>
                 <artifactId>bytedepth-domain</artifactId>
                 <version>${project.version}</version>
