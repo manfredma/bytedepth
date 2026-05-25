@@ -29,3 +29,19 @@ target/
 *.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+# Maven local settings (may contain credentials)
+settings.xml
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+
+# Tools
+.omc/
+.claude/
