@@ -124,6 +124,8 @@ def http_post_multipart(
     content_type: str,
     csrf: str,
 ) -> str:
+    # Spring Security multipart 需要 CSRF 作为 URL 参数传递
+    url_with_csrf = f"{url}?_csrf={urllib.parse.quote(csrf)}"
     boundary = "----BytedepthBoundary7MA4YWxkTrZu0gW"
     body = (
         f"--{boundary}\r\n"
@@ -131,11 +133,8 @@ def http_post_multipart(
         f"Content-Type: {content_type}\r\n\r\n"
     ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
     req = urllib.request.Request(
-        url, data=body,
-        headers={
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-            "X-CSRF-TOKEN": csrf,
-        },
+        url_with_csrf, data=body,
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
     try:
         with opener.open(req) as r:
