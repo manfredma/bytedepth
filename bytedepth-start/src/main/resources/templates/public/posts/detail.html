@@ -58,6 +58,7 @@
         <span th:if="${post.publishedAt == null}">
             草稿<span class="status-badge">未发布</span>
         </span>
+        <span style="margin-left:12px;color:#bbb;">👁 <span th:text="${pvCount}">0</span> 次阅读</span>
     </div>
     <div class="content" th:utext="${renderedContent}">文章内容</div>
     <div th:if="${not #lists.isEmpty(tags)}" class="tags">

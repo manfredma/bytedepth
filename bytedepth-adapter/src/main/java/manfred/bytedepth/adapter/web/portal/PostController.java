@@ -8,6 +8,7 @@ import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
+import manfred.bytedepth.domain.stats.PostViewCounter;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -25,6 +26,7 @@ public class PostController {
     private final MarkdownRenderer markdownRenderer;
     private final ListCommentsQryExe listCommentsQryExe;
     private final ListTagsQryExe listTagsQryExe;
+    private final PostViewCounter postViewCounter;
 
     @GetMapping
     public String list(Model model,
@@ -42,6 +44,8 @@ public class PostController {
         model.addAttribute("renderedContent", markdownRenderer.render(post.getContent()));
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
+        postViewCounter.increment(id);
+        model.addAttribute("pvCount", postViewCounter.getCount(id));
         return "public/posts/detail";
     }
 

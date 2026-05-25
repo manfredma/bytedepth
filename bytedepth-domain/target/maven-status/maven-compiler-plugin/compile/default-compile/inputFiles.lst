@@ -2,7 +2,10 @@
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-domain/src/main/java/manfred/bytedepth/domain/tag/TagRepository.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-domain/src/main/java/manfred/bytedepth/domain/post/Post.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-domain/src/main/java/manfred/bytedepth/domain/comment/CommentRepository.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-domain/src/main/java/manfred/bytedepth/domain/stats/PostViewCounter.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-domain/src/main/java/manfred/bytedepth/domain/post/PostRepository.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-domain/src/main/java/manfred/bytedepth/domain/project/Project.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-domain/src/main/java/manfred/bytedepth/domain/project/ProjectRepository.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-domain/src/main/java/manfred/bytedepth/domain/comment/CommentStatus.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-domain/src/main/java/manfred/bytedepth/domain/tag/Tag.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-domain/src/main/java/manfred/bytedepth/domain/post/PostStatus.java

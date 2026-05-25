@@ -1,10 +1,14 @@
-manfred/bytedepth/infrastructure/tag/TagRepositoryImpl.class
 manfred/bytedepth/infrastructure/comment/CommentMapper.class
 manfred/bytedepth/infrastructure/comment/CommentDO.class
+manfred/bytedepth/infrastructure/tag/TagMapper.class
+manfred/bytedepth/infrastructure/project/ProjectMapper.class
+manfred/bytedepth/infrastructure/stats/RedisStatsService.class
+manfred/bytedepth/infrastructure/tag/TagRepositoryImpl.class
 manfred/bytedepth/infrastructure/comment/CommentRepositoryImpl.class
+manfred/bytedepth/infrastructure/project/ProjectDO.class
 manfred/bytedepth/infrastructure/config/MybatisPlusConfig.class
 manfred/bytedepth/infrastructure/post/PostDO.class
-manfred/bytedepth/infrastructure/tag/TagMapper.class
+manfred/bytedepth/infrastructure/project/ProjectRepositoryImpl.class
 manfred/bytedepth/infrastructure/tag/TagDO.class
 manfred/bytedepth/infrastructure/post/PostRepositoryImpl.class
 manfred/bytedepth/infrastructure/post/PostMapper.class

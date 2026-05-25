@@ -2,12 +2,15 @@
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/post/query/PostDTO.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/comment/ListCommentsQryExe.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/tag/ListTagsQryExe.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/project/ListProjectsQryExe.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/comment/CommentDTO.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/tag/CreateTagCmdExe.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/comment/SubmitCommentCmdExe.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/post/query/GetPostQryExe.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/tag/TagDTO.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/project/ProjectDTO.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/comment/ReviewCommentCmdExe.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/post/command/PublishPostCmdExe.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/post/command/CreatePostCmd.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/post/query/ListPostsQryExe.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-app/src/main/java/manfred/bytedepth/app/project/CreateProjectCmdExe.java

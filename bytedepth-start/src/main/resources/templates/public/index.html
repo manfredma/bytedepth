@@ -34,6 +34,23 @@
         <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</p>
     </div>
     <a th:href="@{/posts}" class="more-link">查看全部文章 →</a>
+
+    <div th:if="${not #lists.isEmpty(projects)}">
+        <h2 style="margin-top:40px;">项目</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:16px;">
+            <div th:each="p : ${projects}" class="post-card">
+                <h2 th:text="${p.name}" style="font-size:1.1em;">项目名</h2>
+                <p th:text="${p.description}" style="color:#888;font-size:0.9em;margin:6px 0 10px;"></p>
+                <div style="display:flex;gap:8px;">
+                    <a th:if="${p.githubUrl}" th:href="${p.githubUrl}" target="_blank"
+                       style="font-size:0.85em;color:#e94560;text-decoration:none;">GitHub →</a>
+                    <a th:if="${p.demoUrl}" th:href="${p.demoUrl}" target="_blank"
+                       style="font-size:0.85em;color:#888;text-decoration:none;">演示 →</a>
+                </div>
+            </div>
+        </div>
+        <a th:href="@{/projects}" class="more-link">全部项目 →</a>
+    </div>
 </div>
 </body>
 </html>
