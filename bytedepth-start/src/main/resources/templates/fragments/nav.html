@@ -1,10 +1,17 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
 <nav th:fragment="navbar" style="padding:16px 24px;background:#1a1a2e;color:#eee;display:flex;gap:24px;align-items:center;">
     <a th:href="@{/}" style="color:#e94560;font-weight:bold;font-size:1.2em;text-decoration:none;">bytedepth</a>
     <a th:href="@{/posts}" style="color:#eee;text-decoration:none;">文章</a>
-    <a th:href="@{/posts/new}" style="color:#eee;text-decoration:none;margin-left:auto;">✏ 写文章</a>
+    <span style="margin-left:auto;display:flex;gap:16px;align-items:center;">
+        <a sec:authorize="hasRole('ADMIN')" th:href="@{/posts/new}" style="color:#eee;text-decoration:none;">✏ 写文章</a>
+        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/comments}" style="color:#eee;text-decoration:none;">💬 审核评论</a>
+        <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" style="margin:0;">
+            <button type="submit" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:0.9em;">退出</button>
+        </form>
+        <a sec:authorize="!isAuthenticated()" th:href="@{/login}" style="color:#aaa;text-decoration:none;font-size:0.9em;">登录</a>
+    </span>
 </nav>
 </body>
 </html>

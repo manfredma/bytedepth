@@ -23,3 +23,7 @@ mybatis-plus:
 
 server:
   port: 8080
+
+bytedepth:
+  upload:
+    image-dir: ${user.home}/bytedepth/images

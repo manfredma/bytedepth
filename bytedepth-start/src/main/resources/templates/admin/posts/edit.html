@@ -18,6 +18,10 @@
         .btn { padding: 10px 28px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; font-weight: 500; }
         .btn:hover { background: #c73652; }
         .hint { font-size: 0.85em; color: #999; margin-top: 6px; }
+        .toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
+        .toolbar-btn { padding: 5px 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
+        .toolbar-btn:hover { background: #e0e0e0; }
+        #upload-input { display: none; }
     </style>
 </head>
 <body>
@@ -32,12 +36,32 @@
             </div>
             <div class="field">
                 <label>正文</label>
-                <textarea name="content" placeholder="支持 Markdown 格式..." th:field="*{content}"></textarea>
+                <div class="toolbar">
+                    <button type="button" class="toolbar-btn" onclick="document.getElementById('upload-input').click()">📷 插入图片</button>
+                    <input type="file" id="upload-input" accept="image/*" onchange="uploadImage(this)">
+                </div>
+                <textarea id="content-editor" name="content" placeholder="支持 Markdown 格式..." th:field="*{content}"></textarea>
                 <p class="hint">保存后为草稿，在文章详情页点击「发布」即可上线。</p>
             </div>
             <button type="submit" class="btn">保存草稿</button>
         </form>
     </div>
 </div>
+<script>
+async function uploadImage(input) {
+    if (!input.files || !input.files[0]) return;
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+    const resp = await fetch('/admin/images/upload', { method: 'POST', body: formData });
+    const data = await resp.json();
+    const editor = document.getElementById('content-editor');
+    const md = `![图片](${data.url})`;
+    const start = editor.selectionStart;
+    editor.value = editor.value.slice(0, start) + md + editor.value.slice(editor.selectionEnd);
+    editor.selectionStart = editor.selectionEnd = start + md.length;
+    editor.focus();
+    input.value = '';
+}
+</script>
 </body>
 </html>

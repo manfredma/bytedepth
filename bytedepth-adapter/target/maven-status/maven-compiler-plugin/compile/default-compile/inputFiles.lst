@@ -1,3 +1,9 @@
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/portal/HomeController.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/util/MarkdownRenderer.java
 /Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/portal/PostController.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/portal/CommentController.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/config/WebMvcConfig.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/security/SecurityConfig.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/admin/ImageController.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/portal/LoginController.java
+/Users/maxingfang/IdeaProjects/github/bytedepth/bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/admin/AdminCommentController.java

@@ -24,11 +24,28 @@
         .content tr:nth-child(even) { background: #f9f9f9; }
         .content ul,.content ol { padding-left: 2em; margin: 0.8em 0; }
         .content a { color: #e94560; }
+        .content img { max-width: 100%; height: auto; display: block; margin: 16px auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
         .publish-form { margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; }
         .btn { padding: 10px 20px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; }
         .btn:hover { background: #c73652; }
         .back-link { display: inline-block; margin-top: 24px; color: #666; text-decoration: none; }
         .back-link:hover { color: #e94560; }
+        .tags { margin: 16px 0; display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag { background: #f0f0f0; color: #555; padding: 3px 10px; border-radius: 12px; font-size: 0.82em; text-decoration: none; }
+        .tag:hover { background: #e94560; color: white; }
+        .comment-section { margin-top: 40px; padding-top: 24px; border-top: 1px solid #eee; }
+        .comment-section h3 { color: #1a1a2e; margin-bottom: 20px; }
+        .comment-item { padding: 14px 0; border-bottom: 1px solid #f5f5f5; }
+        .comment-author { font-weight: 600; color: #333; font-size: 0.9em; }
+        .comment-time { color: #aaa; font-size: 0.82em; margin-left: 8px; }
+        .comment-body { color: #555; margin-top: 6px; line-height: 1.6; }
+        .comment-form { margin-top: 24px; background: #f9f9f9; padding: 20px; border-radius: 8px; }
+        .form-row { margin-bottom: 12px; }
+        .form-row label { display: block; font-size: 0.88em; font-weight: 500; color: #555; margin-bottom: 4px; }
+        .form-row input, .form-row textarea { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em; }
+        .form-row textarea { height: 100px; resize: vertical; }
+        .submit-btn { padding: 8px 20px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; }
+        .commented-tip { background: #e8f5e9; color: #2e7d32; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 0.9em; }
     </style>
 </head>
 <body>
@@ -43,12 +60,46 @@
         </span>
     </div>
     <div class="content" th:utext="${renderedContent}">文章内容</div>
+    <div th:if="${not #lists.isEmpty(tags)}" class="tags">
+        <a th:each="tag : ${tags}" th:href="@{/posts(tag=${tag.slug})}"
+           th:text="'#' + ${tag.name}" class="tag">#标签</a>
+    </div>
     <div class="publish-form" th:if="${post.status == 'DRAFT'}">
         <form th:action="@{/posts/{id}/publish(id=${post.id})}" method="post">
             <button type="submit" class="btn">发布此文章</button>
         </form>
     </div>
     <a th:href="@{/posts}" class="back-link">← 返回列表</a>
+
+    <!-- 评论区 -->
+    <div class="comment-section">
+        <h3>评论 <span th:text="'(' + ${#lists.size(comments)} + ')'" style="font-weight:400;color:#888;font-size:0.9em;"></span></h3>
+        <div class="commented-tip" th:if="${param.commented}">评论已提交，审核通过后显示。</div>
+        <div th:each="c : ${comments}" class="comment-item">
+            <span class="comment-author" th:text="${c.authorName}">作者</span>
+            <span class="comment-time" th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
+            <div class="comment-body" th:text="${c.content}">内容</div>
+        </div>
+        <div th:if="${#lists.isEmpty(comments)}" style="color:#aaa;font-size:0.9em;margin-bottom:16px;">暂无评论，来留下第一条吧。</div>
+        <div class="comment-form">
+            <h4 style="margin:0 0 16px;color:#333;">发表评论</h4>
+            <form th:action="@{/posts/{id}/comments(id=${post.id})}" method="post">
+                <div class="form-row">
+                    <label>昵称 *</label>
+                    <input type="text" name="authorName" required placeholder="你的昵称">
+                </div>
+                <div class="form-row">
+                    <label>邮箱（可选）</label>
+                    <input type="email" name="authorEmail" placeholder="不公开显示">
+                </div>
+                <div class="form-row">
+                    <label>内容 *</label>
+                    <textarea name="content" required placeholder="写下你的想法..."></textarea>
+                </div>
+                <button type="submit" class="submit-btn">提交评论</button>
+            </form>
+        </div>
+    </div>
 </div>
 </body>
 </html>

@@ -2,11 +2,13 @@ package manfred.bytedepth.adapter.web.portal;
 
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
+import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
+import manfred.bytedepth.app.tag.ListTagsQryExe;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,8 @@ public class PostController {
     private final CreatePostCmdExe createPostCmdExe;
     private final PublishPostCmdExe publishPostCmdExe;
     private final MarkdownRenderer markdownRenderer;
+    private final ListCommentsQryExe listCommentsQryExe;
+    private final ListTagsQryExe listTagsQryExe;
 
     @GetMapping
     public String list(Model model,
@@ -36,6 +40,8 @@ public class PostController {
         var post = getPostQryExe.execute(id);
         model.addAttribute("post", post);
         model.addAttribute("renderedContent", markdownRenderer.render(post.getContent()));
+        model.addAttribute("tags", listTagsQryExe.findByPostId(id));
+        model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
         return "public/posts/detail";
     }
 

@@ -1,6 +1,13 @@
 manfred/bytedepth/app/post/command/CreatePostCmdExe.class
-manfred/bytedepth/app/post/query/PostDTO.class
 manfred/bytedepth/app/post/query/ListPostsQryExe.class
+manfred/bytedepth/app/comment/ReviewCommentCmdExe.class
+manfred/bytedepth/app/comment/SubmitCommentCmdExe.class
+manfred/bytedepth/app/tag/TagDTO.class
 manfred/bytedepth/app/post/command/CreatePostCmd.class
 manfred/bytedepth/app/post/command/PublishPostCmdExe.class
+manfred/bytedepth/app/post/query/PostDTO.class
+manfred/bytedepth/app/comment/CommentDTO.class
+manfred/bytedepth/app/tag/CreateTagCmdExe.class
+manfred/bytedepth/app/comment/ListCommentsQryExe.class
 manfred/bytedepth/app/post/query/GetPostQryExe.class
+manfred/bytedepth/app/tag/ListTagsQryExe.class
