@@ -62,6 +62,22 @@ public class PostRepositoryImpl implements PostRepository {
         return postMapper.countPublishedByTagSlug(tagSlug);
     }
 
+    @Override
+    public List<Post> findAll(int page, int size) {
+        Page<PostDO> pageParam = new Page<>(page, size);
+        LambdaQueryWrapper<PostDO> wrapper = new LambdaQueryWrapper<PostDO>()
+                .ne(PostDO::getStatus, PostStatus.DELETED.name())
+                .orderByDesc(PostDO::getCreatedAt);
+        return postMapper.selectPage(pageParam, wrapper).getRecords()
+                .stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
+    @Override
+    public long countAll() {
+        return postMapper.selectCount(new LambdaQueryWrapper<PostDO>()
+                .ne(PostDO::getStatus, PostStatus.DELETED.name()));
+    }
+
     private PostDO toDO(Post post) {
         PostDO postDO = new PostDO();
         postDO.setId(post.getId());

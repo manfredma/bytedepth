@@ -28,8 +28,31 @@
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
 <div class="container">
     <div class="form-card">
-        <h1>写文章</h1>
-        <form th:action="@{/posts}" method="post" th:object="${cmd}">
+        <h1 th:text="${post != null} ? '编辑文章' : '写文章'">写文章</h1>
+
+        <!-- 编辑模式 -->
+        <form th:if="${post != null}"
+              th:action="@{/admin/posts/{id}(id=${post.id})}" method="post">
+            <div class="field">
+                <label>标题</label>
+                <input type="text" name="title" placeholder="文章标题" th:value="${post.title}" required>
+            </div>
+            <div class="field">
+                <label>正文</label>
+                <div class="toolbar">
+                    <button type="button" class="toolbar-btn" onclick="document.getElementById('upload-input').click()">📷 插入图片</button>
+                    <input type="file" id="upload-input" accept="image/*" onchange="uploadImage(this)">
+                </div>
+                <textarea id="content-editor" name="content" placeholder="支持 Markdown 格式..." th:text="${post.content}"></textarea>
+                <p class="hint">保存后更新文章内容。</p>
+            </div>
+            <button type="submit" class="btn">保存修改</button>
+            <a th:href="@{/admin/posts}" style="margin-left:12px;color:#888;text-decoration:none;font-size:0.9em;">取消</a>
+        </form>
+
+        <!-- 新建模式 -->
+        <form th:if="${post == null}"
+              th:action="@{/admin/posts}" method="post" th:object="${cmd}">
             <div class="field">
                 <label>标题</label>
                 <input type="text" name="title" placeholder="文章标题" th:field="*{title}" required>
@@ -41,7 +64,7 @@
                     <input type="file" id="upload-input" accept="image/*" onchange="uploadImage(this)">
                 </div>
                 <textarea id="content-editor" name="content" placeholder="支持 Markdown 格式..." th:field="*{content}"></textarea>
-                <p class="hint">保存后为草稿，在文章详情页点击「发布」即可上线。</p>
+                <p class="hint">保存后为草稿，在文章列表点击「发布」即可上线。</p>
             </div>
             <button type="submit" class="btn">保存草稿</button>
         </form>

@@ -10,4 +10,6 @@ public interface PostRepository {
     long countPublished();
     List<Post> findPublishedByTag(String tagSlug, int page, int size);
     long countPublishedByTag(String tagSlug);
+    List<Post> findAll(int page, int size);
+    long countAll();
 }
