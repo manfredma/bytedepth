@@ -47,8 +47,17 @@ public class PostController {
                 : (category != null && !category.isBlank())
                         ? listPostsQryExe.executeByCategory(category, page, size)
                         : listPostsQryExe.execute(page, size);
+        long total = (tag != null && !tag.isBlank())
+                ? listPostsQryExe.countByTag(tag)
+                : (category != null && !category.isBlank())
+                        ? listPostsQryExe.countByCategory(category)
+                        : listPostsQryExe.countPublished();
+        long totalPages = Math.max(1, (total + size - 1) / size);
         model.addAttribute("posts", posts);
         model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("hasPrev", page > 1);
+        model.addAttribute("hasNext", page < totalPages);
         model.addAttribute("activeTag", tag);
         model.addAttribute("activeCategory", category);
         model.addAttribute("allTags", listTagsQryExe.findAllWithCount());

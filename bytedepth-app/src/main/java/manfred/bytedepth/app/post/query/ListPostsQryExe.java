@@ -21,6 +21,16 @@ public class ListPostsQryExe {
         return postRepository.countPublished();
     }
 
+    public long countByTag(String tagSlug) {
+        return postRepository.countPublishedByTag(tagSlug);
+    }
+
+    public long countByCategory(String categorySlug) {
+        return categoryRepository.findBySlug(categorySlug)
+                .map(cat -> postRepository.countPublishedByCategory(cat.getId()))
+                .orElse(0L);
+    }
+
     public List<PostDTO> execute(int page, int size) {
         List<Post> posts = postRepository.findPublished(page, size);
         return posts.stream().map(this::toDTO).collect(Collectors.toList());
