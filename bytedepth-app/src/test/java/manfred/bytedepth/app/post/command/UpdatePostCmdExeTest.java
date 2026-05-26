@@ -1,5 +1,6 @@
 package manfred.bytedepth.app.post.command;
 
+import manfred.bytedepth.app.search.IndexPostCmdExe;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.PostStatus;
@@ -21,12 +22,14 @@ class UpdatePostCmdExeTest {
 
     @Mock
     private PostRepository postRepository;
+    @Mock
+    private IndexPostCmdExe indexPostCmdExe;
 
     private UpdatePostCmdExe updatePostCmdExe;
 
     @BeforeEach
     void setUp() {
-        updatePostCmdExe = new UpdatePostCmdExe(postRepository);
+        updatePostCmdExe = new UpdatePostCmdExe(postRepository, indexPostCmdExe);
     }
 
     @Test

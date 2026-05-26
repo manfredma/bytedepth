@@ -1,5 +1,6 @@
 package manfred.bytedepth.adapter.web.portal;
 
+import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
 import manfred.bytedepth.app.project.ListProjectsQryExe;
@@ -31,6 +32,9 @@ class HomeControllerTest {
 
     @MockBean
     private ListProjectsQryExe listProjectsQryExe;
+
+    @MockBean
+    private ListCategoriesQryExe listCategoriesQryExe;
 
     @Test
     void home_returnsOkWithCorrectView() throws Exception {

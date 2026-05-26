@@ -31,3 +31,6 @@ server:
 bytedepth:
   upload:
     image-dir: ${user.home}/bytedepth/images
+  search:
+    url: ${BYTEDEPTH_SEARCH_URL:http://localhost:7700}
+    api-key: ${BYTEDEPTH_SEARCH_API_KEY:bytedepth-search-key}

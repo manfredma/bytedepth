@@ -1,14 +1,22 @@
 package manfred.bytedepth.adapter.web.portal;
 
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
+import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
+import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
+import manfred.bytedepth.domain.post.Post;
+import manfred.bytedepth.domain.post.PostRepository;
+import manfred.bytedepth.domain.post.PostStatus;
+import manfred.bytedepth.domain.series.SeriesRepository;
 import manfred.bytedepth.domain.stats.PostViewCounter;
+
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -18,6 +26,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -57,6 +66,18 @@ class PostControllerTest {
 
     @MockBean
     private PostViewCounter postViewCounter;
+
+    @MockBean
+    private ListCategoriesQryExe listCategoriesQryExe;
+
+    @MockBean
+    private PostRepository postRepository;
+
+    @MockBean
+    private SeriesRepository seriesRepository;
+
+    @MockBean
+    private GetSeriesPostsQryExe getSeriesPostsQryExe;
 
     @Test
     void listPosts_defaultParams_returnsOkWithPostsModel() throws Exception {
@@ -102,6 +123,11 @@ class PostControllerTest {
         dto.setContent("# 标题\n正文内容");
         dto.setStatus("PUBLISHED");
 
+        Post domainPost = Post.reconstruct(1L, "测试标题", "# 标题\n正文内容",
+                PostStatus.PUBLISHED, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
+        when(postRepository.findById(1L)).thenReturn(Optional.of(domainPost));
+        when(postRepository.findPrevPublished(1L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(1L)).thenReturn(Optional.empty());
         when(getPostQryExe.execute(1L)).thenReturn(dto);
         when(listTagsQryExe.findByPostId(1L)).thenReturn(List.of());
         when(listCommentsQryExe.findApprovedByPostId(1L)).thenReturn(List.of());
@@ -126,6 +152,11 @@ class PostControllerTest {
         dto.setContent("内容");
         dto.setStatus("PUBLISHED");
 
+        Post domainPost2 = Post.reconstruct(2L, "另一篇文章", "内容",
+                PostStatus.PUBLISHED, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
+        when(postRepository.findById(2L)).thenReturn(Optional.of(domainPost2));
+        when(postRepository.findPrevPublished(2L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(2L)).thenReturn(Optional.empty());
         when(getPostQryExe.execute(2L)).thenReturn(dto);
         when(listTagsQryExe.findByPostId(anyLong())).thenReturn(List.of());
         when(listCommentsQryExe.findApprovedByPostId(anyLong())).thenReturn(List.of());

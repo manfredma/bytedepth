@@ -2,6 +2,7 @@ package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
+import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import manfred.bytedepth.app.post.command.DeletePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
@@ -66,6 +67,9 @@ class AdminPostControllerTest {
 
     @MockBean
     private ListCategoriesQryExe listCategoriesQryExe;
+
+    @MockBean
+    private SetPostTagsCmdExe setPostTagsCmdExe;
 
     // --- Authentication tests ---
 

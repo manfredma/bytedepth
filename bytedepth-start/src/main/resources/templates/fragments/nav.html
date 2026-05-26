@@ -5,7 +5,13 @@
     <a th:href="@{/}" style="color:#e94560;font-weight:bold;font-size:1.2em;text-decoration:none;">bytedepth</a>
     <a th:href="@{/posts}" style="color:#eee;text-decoration:none;">文章</a>
     <a th:href="@{/projects}" style="color:#eee;text-decoration:none;">项目</a>
-    <span style="margin-left:auto;display:flex;gap:16px;align-items:center;">
+    <form action="/search" method="get" style="display:flex;align-items:center;gap:0;margin-left:auto;">
+        <input type="text" name="q" placeholder="搜索…"
+               style="padding:5px 12px;border:none;border-radius:4px 0 0 4px;font-size:0.88em;outline:none;width:160px;background:#2a2a40;color:#eee;" />
+        <button type="submit"
+                style="padding:5px 10px;background:#e94560;color:white;border:none;border-radius:0 4px 4px 0;cursor:pointer;font-size:0.88em;">🔍</button>
+    </form>
+    <span style="display:flex;gap:16px;align-items:center;margin-left:16px;">
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin}" style="color:#e94560;text-decoration:none;font-weight:600;">后台</a>
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/posts/new}" style="color:#eee;text-decoration:none;">✏ 写文章</a>
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/comments}" style="color:#eee;text-decoration:none;">💬 审核评论</a>
