@@ -19,12 +19,18 @@
         /* 主内容 */
         .main { flex: 1; min-width: 0; }
         /* 标签过滤栏 */
-        .tag-bar { background: white; padding: 14px 18px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 18px; display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+        .tag-bar-wrap { background: white; padding: 14px 18px 10px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 18px; }
+        .tag-bar { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; overflow: hidden; transition: max-height .3s ease; }
+        .tag-bar.collapsed { max-height: 105px; }
+        .tag-bar.expanded { max-height: 9999px; }
         .tag-bar-label { color: #aaa; font-size: 0.78em; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-right: 4px; flex-shrink: 0; }
         .tag-chip { padding: 3px 11px; border-radius: 14px; font-size: 0.8em; text-decoration: none; background: #f0f0f0; color: #555; transition: all .15s; }
         .tag-chip:hover { background: #e94560; color: white; }
         .tag-chip.active { background: #e94560; color: white; font-weight: 600; }
         .tag-chip .cnt { opacity: 0.65; font-size: 0.88em; margin-left: 2px; }
+        .tag-toggle { margin-top: 8px; text-align: right; }
+        .tag-toggle-btn { background: none; border: none; color: #e94560; font-size: 0.8em; font-weight: 600; cursor: pointer; padding: 2px 6px; letter-spacing: .03em; }
+        .tag-toggle-btn:hover { text-decoration: underline; }
         /* 文章卡片 */
         .post-item { background: white; padding: 20px 22px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.07); transition: transform .15s; }
         .post-item:hover { transform: translateY(-2px); }
@@ -69,16 +75,34 @@
         <h1 th:text="${activeCategory != null ? activeCategory : (activeTag != null ? '#' + activeTag : '全部文章')}">全部文章</h1>
 
         <!-- 标签过滤栏 -->
-        <div class="tag-bar" th:if="${not #lists.isEmpty(allTags)}">
-            <span class="tag-bar-label">标签</span>
-            <a th:href="@{/posts(category=${activeCategory})}" class="tag-chip"
-               th:classappend="${activeTag == null ? ' active' : ''}">全部</a>
-            <a th:each="t : ${allTags}"
-               th:href="@{/posts(tag=${t.slug})}"
-               th:text="${t.name} + ' (' + ${t.count} + ')'"
-               class="tag-chip"
-               th:classappend="${activeTag == t.slug ? ' active' : ''}">标签</a>
+        <div class="tag-bar-wrap" th:if="${not #lists.isEmpty(allTags)}">
+            <div class="tag-bar collapsed" id="tagBar">
+                <span class="tag-bar-label">标签</span>
+                <a th:href="@{/posts(category=${activeCategory})}" class="tag-chip"
+                   th:classappend="${activeTag == null ? ' active' : ''}">全部</a>
+                <a th:each="t : ${allTags}"
+                   th:href="@{/posts(tag=${t.slug})}"
+                   th:text="${t.name} + ' (' + ${t.count} + ')'"
+                   class="tag-chip"
+                   th:classappend="${activeTag == t.slug ? ' active' : ''}">标签</a>
+            </div>
+            <div class="tag-toggle">
+                <button class="tag-toggle-btn" id="tagToggleBtn" onclick="toggleTags()">展开全部 ▾</button>
+            </div>
         </div>
+        <script>
+        function toggleTags() {
+            var bar = document.getElementById('tagBar');
+            var btn = document.getElementById('tagToggleBtn');
+            if (bar.classList.contains('collapsed')) {
+                bar.classList.replace('collapsed', 'expanded');
+                btn.textContent = '收起 ▴';
+            } else {
+                bar.classList.replace('expanded', 'collapsed');
+                btn.textContent = '展开全部 ▾';
+            }
+        }
+        </script>
 
         <!-- 当前过滤提示 -->
         <div class="active-banner" th:if="${activeTag != null}">
