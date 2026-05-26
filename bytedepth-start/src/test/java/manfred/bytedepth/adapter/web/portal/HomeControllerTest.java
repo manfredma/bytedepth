@@ -38,7 +38,8 @@ class HomeControllerTest {
 
     @Test
     void home_returnsOkWithCorrectView() throws Exception {
-        when(listPostsQryExe.execute(1, 5)).thenReturn(List.of());
+        when(listPostsQryExe.execute(anyInt(), anyInt())).thenReturn(List.of());
+        when(listPostsQryExe.countPublished()).thenReturn(0L);
         when(listProjectsQryExe.execute()).thenReturn(List.of());
 
         mockMvc.perform(get("/"))
@@ -47,18 +48,20 @@ class HomeControllerTest {
     }
 
     @Test
-    void home_modelContainsRecentPostsAttribute() throws Exception {
-        when(listPostsQryExe.execute(1, 5)).thenReturn(List.of());
+    void home_modelContainsPostsAttribute() throws Exception {
+        when(listPostsQryExe.execute(anyInt(), anyInt())).thenReturn(List.of());
+        when(listPostsQryExe.countPublished()).thenReturn(0L);
         when(listProjectsQryExe.execute()).thenReturn(List.of());
 
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(model().attributeExists("recentPosts"));
+                .andExpect(model().attributeExists("posts"));
     }
 
     @Test
     void home_modelContainsProjectsAttribute() throws Exception {
-        when(listPostsQryExe.execute(1, 5)).thenReturn(List.of());
+        when(listPostsQryExe.execute(anyInt(), anyInt())).thenReturn(List.of());
+        when(listPostsQryExe.countPublished()).thenReturn(0L);
         when(listProjectsQryExe.execute()).thenReturn(List.of());
 
         mockMvc.perform(get("/"))
@@ -67,18 +70,19 @@ class HomeControllerTest {
     }
 
     @Test
-    void home_withRecentPosts_exposesThemInModel() throws Exception {
+    void home_withPosts_exposesThemInModel() throws Exception {
         PostDTO post = new PostDTO();
         post.setId(1L);
         post.setTitle("最新文章");
         post.setStatus("PUBLISHED");
 
-        when(listPostsQryExe.execute(1, 5)).thenReturn(List.of(post));
+        when(listPostsQryExe.execute(anyInt(), anyInt())).thenReturn(List.of(post));
+        when(listPostsQryExe.countPublished()).thenReturn(1L);
         when(listProjectsQryExe.execute()).thenReturn(List.of());
 
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(model().attributeExists("recentPosts"));
+                .andExpect(model().attributeExists("posts"));
     }
 
     @Test
@@ -88,6 +92,7 @@ class HomeControllerTest {
         project.setName("ByteDepth");
 
         when(listPostsQryExe.execute(anyInt(), anyInt())).thenReturn(List.of());
+        when(listPostsQryExe.countPublished()).thenReturn(0L);
         when(listProjectsQryExe.execute()).thenReturn(List.of(project));
 
         mockMvc.perform(get("/"))

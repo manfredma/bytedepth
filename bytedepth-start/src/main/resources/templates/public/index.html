@@ -21,6 +21,11 @@
         .post-card h2 a:hover { color: #e94560; }
         .meta { color: #999; font-size: 0.88em; }
         .more-link { display: inline-block; margin-top: 16px; color: #e94560; text-decoration: none; font-weight: 500; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 24px; }
+        .page-btn { padding: 7px 18px; border-radius: 6px; font-size: 0.88em; font-weight: 600;
+            text-decoration: none; border: 1px solid #ddd; background: white; color: #555; transition: all .15s; }
+        .page-btn:hover { background: #e94560; color: white; border-color: #e94560; }
+        .page-info { color: #999; font-size: 0.85em; }
         .empty { color: #999; text-align: center; padding: 40px; }
         /* 分类区 */
         .cat-section { background: white; padding: 28px 24px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.07); margin-bottom: 32px; }
@@ -103,12 +108,19 @@
     </div>
 
     <h2>最新文章</h2>
-    <div th:if="${#lists.isEmpty(recentPosts)}" class="empty">暂无发布的文章，<a th:href="@{/posts/new}" style="color:#e94560;">写第一篇</a>？</div>
-    <div th:each="post : ${recentPosts}" class="post-card">
+    <div th:if="${#lists.isEmpty(posts)}" class="empty">暂无发布的文章，<a th:href="@{/posts/new}" style="color:#e94560;">写第一篇</a>？</div>
+    <div th:each="post : ${posts}" class="post-card">
         <h2><a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">文章标题</a></h2>
         <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</p>
     </div>
-    <a th:href="@{/posts}" class="more-link">查看全部文章 →</a>
+
+    <div th:if="${totalPages > 1}" class="pagination">
+        <a th:if="${hasPrev}" th:href="@{/(page=${currentPage - 1})}" class="page-btn">← 上一页</a>
+        <span th:if="${!hasPrev}" class="page-btn" style="opacity:.4;cursor:default;">← 上一页</span>
+        <span class="page-info" th:text="${currentPage} + ' / ' + ${totalPages}"></span>
+        <a th:if="${hasNext}" th:href="@{/(page=${currentPage + 1})}" class="page-btn">下一页 →</a>
+        <span th:if="${!hasNext}" class="page-btn" style="opacity:.4;cursor:default;">下一页 →</span>
+    </div>
 
     <div th:if="${not #lists.isEmpty(projects)}">
         <h2 style="margin-top:40px;">项目</h2>

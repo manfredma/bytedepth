@@ -17,6 +17,10 @@ public class ListPostsQryExe {
     private final PostRepository postRepository;
     private final CategoryRepository categoryRepository;
 
+    public long countPublished() {
+        return postRepository.countPublished();
+    }
+
     public List<PostDTO> execute(int page, int size) {
         List<Post> posts = postRepository.findPublished(page, size);
         return posts.stream().map(this::toDTO).collect(Collectors.toList());
