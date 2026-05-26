@@ -10,6 +10,7 @@ import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListAllPostsQryExe;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.List;
 
@@ -86,13 +88,10 @@ public class AdminPostController {
     }
 
     @PostMapping("/{id}/tags")
-    public String setTags(@PathVariable Long id,
-                          @RequestParam(defaultValue = "") String rawTags) {
-        List<String> slugs = List.of(rawTags.split("[,\\s]+")).stream()
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(java.util.stream.Collectors.toList());
-        setPostTagsCmdExe.execute(id, slugs);
-        return "redirect:/admin/posts/" + id + "/edit";
+    @ResponseBody
+    public ResponseEntity<Void> setTags(@PathVariable Long id,
+                                        @RequestParam(required = false, defaultValue = "") List<String> tags) {
+        setPostTagsCmdExe.execute(id, tags);
+        return ResponseEntity.ok().build();
     }
 }
