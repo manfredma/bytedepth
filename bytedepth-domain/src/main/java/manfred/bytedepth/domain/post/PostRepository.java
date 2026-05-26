@@ -16,4 +16,5 @@ public interface PostRepository {
     long countAll();
     java.util.Optional<Post> findPrevPublished(Long id);
     java.util.Optional<Post> findNextPublished(Long id);
+    void setPostSeries(Long postId, Long seriesId, Integer seriesOrder);
 }

@@ -106,6 +106,15 @@ public class PostRepositoryImpl implements PostRepository {
         return java.util.Optional.ofNullable(postMapper.findNextPublished(id)).map(this::toEntity);
     }
 
+    @Override
+    public void setPostSeries(Long postId, Long seriesId, Integer seriesOrder) {
+        PostDO postDO = new PostDO();
+        postDO.setId(postId);
+        postDO.setSeriesId(seriesId);
+        postDO.setSeriesOrder(seriesOrder);
+        postMapper.updateById(postDO);
+    }
+
     private PostDO toDO(Post post) {
         PostDO postDO = new PostDO();
         postDO.setId(post.getId());
@@ -116,11 +125,13 @@ public class PostRepositoryImpl implements PostRepository {
         postDO.setPublishedAt(post.getPublishedAt());
         postDO.setUpdatedAt(post.getUpdatedAt());
         postDO.setCategoryId(post.getCategoryId());
+        postDO.setSeriesId(post.getSeriesId());
+        postDO.setSeriesOrder(post.getSeriesOrder());
         return postDO;
     }
 
     private Post toEntity(PostDO postDO) {
-        return Post.reconstruct(
+        Post post = Post.reconstruct(
                 postDO.getId(),
                 postDO.getTitle(),
                 postDO.getContent(),
@@ -130,5 +141,9 @@ public class PostRepositoryImpl implements PostRepository {
                 postDO.getUpdatedAt(),
                 postDO.getCategoryId()
         );
+        if (postDO.getSeriesId() != null) {
+            post.assignSeries(postDO.getSeriesId(), postDO.getSeriesOrder());
+        }
+        return post;
     }
 }

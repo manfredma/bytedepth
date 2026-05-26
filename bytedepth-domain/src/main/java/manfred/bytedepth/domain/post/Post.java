@@ -16,6 +16,8 @@ public class Post {
     private LocalDateTime publishedAt;
     private LocalDateTime updatedAt;
     private Long categoryId;
+    private Long seriesId;
+    private Integer seriesOrder;
 
     private Post() {}
 
@@ -53,6 +55,11 @@ public class Post {
 
     public void assignCategory(Long categoryId) {
         this.categoryId = categoryId;
+    }
+
+    public void assignSeries(Long seriesId, Integer seriesOrder) {
+        this.seriesId = seriesId;
+        this.seriesOrder = seriesOrder;
     }
 
     public void publish() {
