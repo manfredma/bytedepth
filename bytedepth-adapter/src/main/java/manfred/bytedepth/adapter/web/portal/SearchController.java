@@ -16,9 +16,17 @@ public class SearchController {
     private final SearchPostsQryExe searchPostsQryExe;
 
     @GetMapping
-    public String search(@RequestParam(defaultValue = "") String q, Model model) {
+    public String search(@RequestParam(defaultValue = "") String q,
+                         @RequestParam(defaultValue = "1") int page,
+                         Model model) {
+        var result = searchPostsQryExe.execute(q, page);
         model.addAttribute("q", q);
-        model.addAttribute("results", searchPostsQryExe.execute(q));
+        model.addAttribute("results", result.getHits());
+        model.addAttribute("totalHits", result.getTotalHits());
+        model.addAttribute("currentPage", result.getPage());
+        model.addAttribute("totalPages", result.totalPages());
+        model.addAttribute("hasPrev", result.hasPrev());
+        model.addAttribute("hasNext", result.hasNext());
         return "public/search";
     }
 }

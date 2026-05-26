@@ -2,6 +2,7 @@ package manfred.bytedepth.infrastructure.search;
 
 import manfred.bytedepth.domain.search.PostSearchDoc;
 import manfred.bytedepth.domain.search.PostSearchPort;
+import manfred.bytedepth.domain.search.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -58,23 +59,27 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<PostSearchDoc> search(String query) {
+    public SearchResult search(String query, int page, int size) {
+        int offset = (page - 1) * size;
         try {
             var response = restClient.get()
-                    .uri("/indexes/{index}/search?q={q}&limit=20&attributesToHighlight=title,content&highlightPreTag=<em>&highlightPostTag=</em>",
-                            INDEX, query)
+                    .uri("/indexes/{index}/search?q={q}&limit={limit}&offset={offset}&attributesToHighlight=title,content&highlightPreTag=<em>&highlightPostTag=</em>",
+                            INDEX, query, size, offset)
                     .retrieve()
                     .body(Map.class);
 
-            if (response == null) return List.of();
+            if (response == null) return new SearchResult(List.of(), 0, page, size);
 
             var hits = (List<Map<String, Object>>) response.get("hits");
-            if (hits == null) return List.of();
+            if (hits == null) return new SearchResult(List.of(), 0, page, size);
 
-            return hits.stream().map(this::fromMap).toList();
+            long total = response.get("estimatedTotalHits") instanceof Number n
+                    ? n.longValue() : hits.size();
+
+            return new SearchResult(hits.stream().map(this::fromMap).toList(), total, page, size);
         } catch (Exception e) {
             log.warn("MeiliSearch 搜索失败 q={}: {}", query, e.getMessage());
-            return List.of();
+            return new SearchResult(List.of(), 0, page, size);
         }
     }
 

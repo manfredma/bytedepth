@@ -47,3 +47,4 @@ settings.xml
 .claude/
 .gstack/
 __pycache__/
+/scripts/obsidian-import/sync_state.json

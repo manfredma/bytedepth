@@ -41,6 +41,20 @@
 
         .empty { text-align: center; color: #999; padding: 60px 0; }
         .empty p { margin: 8px 0; }
+
+        .pagination {
+            display: flex; justify-content: center; align-items: center;
+            gap: 12px; margin-top: 28px; padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .page-btn {
+            padding: 7px 18px; border-radius: 6px; font-size: 0.88em;
+            font-weight: 600; text-decoration: none; cursor: pointer;
+            border: 1px solid #ddd; background: white; color: #555;
+            transition: all .15s;
+        }
+        .page-btn:hover { background: #e94560; color: white; border-color: #e94560; }
+        .page-info { color: #999; font-size: 0.85em; }
     </style>
 </head>
 <body>
@@ -54,9 +68,22 @@
     </form>
 
     <div th:if="${q != ''}" class="result-count">
-        <span th:if="${not #lists.isEmpty(results)}"
-              th:text="'找到 ' + ${#lists.size(results)} + ' 篇相关文章'"></span>
-        <span th:if="${#lists.isEmpty(results)}">未找到相关文章</span>
+        <span th:if="${totalHits > 0}"
+              th:text="'找到 ' + ${totalHits} + ' 篇相关文章，第 ' + ${currentPage} + ' / ' + ${totalPages} + ' 页'"></span>
+        <span th:if="${totalHits == 0}">未找到相关文章</span>
+    </div>
+
+    <!-- 翻页 -->
+    <div th:if="${totalHits > 0}" class="pagination">
+        <a th:if="${hasPrev}"
+           th:href="@{/search(q=${q},page=${currentPage - 1})}"
+           class="page-btn">← 上一页</a>
+        <span th:if="${!hasPrev}" class="page-btn" style="opacity:.4;cursor:default;">← 上一页</span>
+        <span class="page-info" th:text="${currentPage} + ' / ' + ${totalPages}"></span>
+        <a th:if="${hasNext}"
+           th:href="@{/search(q=${q},page=${currentPage + 1})}"
+           class="page-btn">下一页 →</a>
+        <span th:if="${!hasNext}" class="page-btn" style="opacity:.4;cursor:default;">下一页 →</span>
     </div>
 
     <div th:if="${#lists.isEmpty(results) and q != ''}" class="empty">
