@@ -11,9 +11,7 @@ INSERT IGNORE INTO `category` (name, slug, parent_id) VALUES
     ('工程实践', 'engineering', NULL),
     ('源码解析', 'source-code', NULL),
     ('读书笔记', 'reading', NULL),
-    ('计算机基础', 'computer-fundamentals', NULL),
-    ('AI Coding', 'ai-coding', NULL),
-    ('开发框架', 'framework', NULL);
+    ('计算机基础', 'computer-fundamentals', NULL);
 
 -- 已有未归类文章统一设为「未分类」
 UPDATE `post`
