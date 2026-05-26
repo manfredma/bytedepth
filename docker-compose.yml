@@ -36,6 +36,8 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-benchmark}
       SPRING_DATA_REDIS_HOST: redis
+    volumes:
+      - /data/images:/root/bytedepth/images
     depends_on:
       mysql:
         condition: service_healthy
