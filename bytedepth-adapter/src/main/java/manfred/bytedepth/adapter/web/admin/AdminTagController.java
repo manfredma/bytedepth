@@ -1,7 +1,7 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
-import manfred.bytedepth.app.tag.SetPostTagsCmdExe;
+import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;

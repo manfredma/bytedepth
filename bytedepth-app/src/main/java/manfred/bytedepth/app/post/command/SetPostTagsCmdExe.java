@@ -14,13 +14,20 @@ public class SetPostTagsCmdExe {
 
     private final TagRepository tagRepository;
 
-    public void execute(Long postId, List<String> slugs) {
-        List<Long> tagIds = slugs.stream()
+    /**
+     * tagSpecs 支持两种格式：
+     *   "slug"        → name = slug
+     *   "slug:显示名"  → name = 显示名
+     */
+    public void execute(Long postId, List<String> tagSpecs) {
+        List<Long> tagIds = tagSpecs.stream()
                 .filter(s -> s != null && !s.isBlank())
-                .map(raw -> {
-                    String slug = raw.toLowerCase().substring(0, Math.min(raw.length(), 100));
+                .map(spec -> {
+                    String[] parts = spec.split(":", 2);
+                    String slug = parts[0].trim().toLowerCase();
+                    String name = parts.length > 1 ? parts[1].trim() : slug;
                     return tagRepository.findBySlug(slug)
-                            .orElseGet(() -> tagRepository.save(Tag.create(raw, slug)));
+                            .orElseGet(() -> tagRepository.save(Tag.create(name, slug)));
                 })
                 .map(Tag::getId)
                 .collect(Collectors.toList());
