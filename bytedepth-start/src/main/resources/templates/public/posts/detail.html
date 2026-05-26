@@ -29,6 +29,14 @@
         .btn { padding: 10px 20px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; }
         .btn:hover { background: #c73652; }
         .back-link { display: inline-block; margin-top: 24px; color: #666; text-decoration: none; }
+        .post-nav { display: flex; justify-content: space-between; margin-top: 32px; padding-top: 20px; border-top: 1px solid #eee; gap: 16px; }
+        .post-nav a { flex: 1; padding: 14px 18px; background: #f8f9fa; border-radius: 8px; text-decoration: none; color: #333; transition: all .15s; border: 1px solid #e8eaed; min-width: 0; }
+        .post-nav a:hover { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+        .post-nav .nav-label { font-size: 0.75em; color: #aaa; margin-bottom: 4px; }
+        .post-nav a:hover .nav-label { color: #aaa; }
+        .post-nav .nav-title { font-size: 0.9em; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .post-nav .nav-prev { text-align: left; }
+        .post-nav .nav-next { text-align: right; }
         .back-link:hover { color: #e94560; }
         .tags { margin: 16px 0; display: flex; flex-wrap: wrap; gap: 6px; }
         .tag { background: #f0f0f0; color: #555; padding: 3px 10px; border-radius: 12px; font-size: 0.82em; text-decoration: none; }
@@ -71,6 +79,23 @@
         </form>
     </div>
     <a th:href="@{/posts}" class="back-link">← 返回列表</a>
+
+    <!-- 上下篇导航 -->
+    <div class="post-nav" th:if="${prevPost != null or nextPost != null}">
+        <a th:if="${prevPost != null}"
+           th:href="@{/posts/{id}(id=${prevPost.id})}"
+           class="nav-prev">
+            <div class="nav-label">← 上一篇</div>
+            <div class="nav-title" th:text="${prevPost.title}">上一篇标题</div>
+        </a>
+        <span th:if="${prevPost == null}" style="flex:1"></span>
+        <a th:if="${nextPost != null}"
+           th:href="@{/posts/{id}(id=${nextPost.id})}"
+           class="nav-next">
+            <div class="nav-label">下一篇 →</div>
+            <div class="nav-title" th:text="${nextPost.title}">下一篇标题</div>
+        </a>
+    </div>
 
     <!-- 评论区 -->
     <div class="comment-section">

@@ -8,6 +8,7 @@ import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
+import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.stats.PostViewCounter;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
@@ -29,6 +30,7 @@ public class PostController {
     private final ListTagsQryExe listTagsQryExe;
     private final ListCategoriesQryExe listCategoriesQryExe;
     private final PostViewCounter postViewCounter;
+    private final PostRepository postRepository;
 
     @GetMapping
     public String list(Model model,
@@ -59,6 +61,8 @@ public class PostController {
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
         postViewCounter.increment(id);
         model.addAttribute("pvCount", postViewCounter.getCount(id));
+        model.addAttribute("prevPost", postRepository.findPrevPublished(id).orElse(null));
+        model.addAttribute("nextPost", postRepository.findNextPublished(id).orElse(null));
         return "public/posts/detail";
     }
 

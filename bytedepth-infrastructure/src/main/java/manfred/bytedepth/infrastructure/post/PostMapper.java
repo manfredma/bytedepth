@@ -25,4 +25,14 @@ public interface PostMapper extends BaseMapper<PostDO> {
             "INNER JOIN tag t ON pt.tag_id = t.id " +
             "WHERE p.status = 'PUBLISHED' AND t.slug = #{slug}")
     long countPublishedByTagSlug(@Param("slug") String slug);
+
+    @Select("SELECT * FROM post WHERE status = 'PUBLISHED' " +
+            "AND published_at < (SELECT published_at FROM post WHERE id = #{id}) " +
+            "ORDER BY published_at DESC LIMIT 1")
+    PostDO findPrevPublished(@Param("id") Long id);
+
+    @Select("SELECT * FROM post WHERE status = 'PUBLISHED' " +
+            "AND published_at > (SELECT published_at FROM post WHERE id = #{id}) " +
+            "ORDER BY published_at ASC LIMIT 1")
+    PostDO findNextPublished(@Param("id") Long id);
 }

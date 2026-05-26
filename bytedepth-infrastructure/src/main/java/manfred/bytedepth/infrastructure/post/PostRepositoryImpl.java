@@ -96,6 +96,16 @@ public class PostRepositoryImpl implements PostRepository {
                 .ne(PostDO::getStatus, PostStatus.DELETED.name()));
     }
 
+    @Override
+    public java.util.Optional<Post> findPrevPublished(Long id) {
+        return java.util.Optional.ofNullable(postMapper.findPrevPublished(id)).map(this::toEntity);
+    }
+
+    @Override
+    public java.util.Optional<Post> findNextPublished(Long id) {
+        return java.util.Optional.ofNullable(postMapper.findNextPublished(id)).map(this::toEntity);
+    }
+
     private PostDO toDO(Post post) {
         PostDO postDO = new PostDO();
         postDO.setId(post.getId());

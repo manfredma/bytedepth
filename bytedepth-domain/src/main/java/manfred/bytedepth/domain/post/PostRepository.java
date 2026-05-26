@@ -14,4 +14,6 @@ public interface PostRepository {
     long countPublishedByCategory(Long categoryId);
     List<Post> findAll(int page, int size);
     long countAll();
+    java.util.Optional<Post> findPrevPublished(Long id);
+    java.util.Optional<Post> findNextPublished(Long id);
 }
