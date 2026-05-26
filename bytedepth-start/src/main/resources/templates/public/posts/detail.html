@@ -60,11 +60,11 @@
         </span>
         <span style="margin-left:12px;color:#bbb;">👁 <span th:text="${pvCount}">0</span> 次阅读</span>
     </div>
-    <div class="content" th:utext="${renderedContent}">文章内容</div>
     <div th:if="${not #lists.isEmpty(tags)}" class="tags">
         <a th:each="tag : ${tags}" th:href="@{/posts(tag=${tag.slug})}"
            th:text="'#' + ${tag.name}" class="tag">#标签</a>
     </div>
+    <div class="content" th:utext="${renderedContent}">文章内容</div>
     <div class="publish-form" th:if="${post.status == 'DRAFT'}">
         <form th:action="@{/posts/{id}/publish(id=${post.id})}" method="post">
             <button type="submit" class="btn">发布此文章</button>
