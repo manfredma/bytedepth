@@ -27,6 +27,13 @@ public class SetPostTagsCmdExe {
                     String slug = parts[0].trim().toLowerCase();
                     String name = parts.length > 1 ? parts[1].trim() : slug;
                     return tagRepository.findBySlug(slug)
+                            .map(existing -> {
+                                // 已有标签但名称不同时更新显示名
+                                if (!name.equals(existing.getName())) {
+                                    return tagRepository.save(Tag.reconstruct(existing.getId(), name, slug));
+                                }
+                                return existing;
+                            })
                             .orElseGet(() -> tagRepository.save(Tag.create(name, slug)));
                 })
                 .map(Tag::getId)
