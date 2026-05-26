@@ -507,5 +507,47 @@
     </div>
 
 </div>
+<!-- Mermaid 图表渲染 -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    themeVariables: {
+        primaryColor:       '#dae8fc',
+        primaryTextColor:   '#1c1917',
+        primaryBorderColor: '#6c8ebf',
+        lineColor:          '#57534e',
+        secondaryColor:     '#f7f5f0',
+        tertiaryColor:      '#fff',
+        background:         '#ffffff',
+        mainBkg:            '#dae8fc',
+        nodeBorder:         '#6c8ebf',
+        clusterBkg:         '#f7f5f0',
+        titleColor:         '#1c1917',
+        edgeLabelBackground:'#ffffff',
+        activeTaskBkgColor: '#e94560',
+        activeTaskBorderColor: '#c73652',
+        fontFamily:         "'JetBrains Mono', monospace",
+        fontSize:           '13px',
+    },
+    flowchart:  { useMaxWidth: true, htmlLabels: true },
+    sequence:   { useMaxWidth: true },
+    gantt:      { useMaxWidth: true },
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('pre code.language-mermaid').forEach(function (codeEl) {
+        var pre = codeEl.parentElement;
+        var div = document.createElement('div');
+        div.className = 'mermaid';
+        // textContent 自动解码 HTML 实体（&gt; → > 等）
+        div.textContent = codeEl.textContent;
+        div.style.cssText = 'background:#fff;padding:16px 0;text-align:center;';
+        pre.replaceWith(div);
+    });
+    mermaid.run();
+});
+</script>
 </body>
 </html>
