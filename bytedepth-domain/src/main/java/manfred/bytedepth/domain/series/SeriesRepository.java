@@ -8,4 +8,5 @@ public interface SeriesRepository {
     Optional<Series> findBySlug(String slug);
     Optional<Series> findById(Long id);
     List<Series> findAll();
+    List<SeriesPostItem> findPublishedPostsBySeries(Long seriesId);
 }

@@ -3,6 +3,7 @@ package manfred.bytedepth.infrastructure.series;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.domain.series.Series;
+import manfred.bytedepth.domain.series.SeriesPostItem;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import org.springframework.stereotype.Repository;
 
@@ -42,6 +43,13 @@ public class SeriesRepositoryImpl implements SeriesRepository {
     @Override
     public List<Series> findAll() {
         return seriesMapper.selectList(null).stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SeriesPostItem> findPublishedPostsBySeries(Long seriesId) {
+        return seriesMapper.findPublishedPostsBySeries(seriesId).stream()
+                .map(d -> new SeriesPostItem(d.getId(), d.getTitle(), d.getSeriesOrder()))
+                .collect(Collectors.toList());
     }
 
     private SeriesDO toDO(Series series) {
