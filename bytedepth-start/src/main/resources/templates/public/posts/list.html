@@ -2,6 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <title th:text="${activeCategory != null ? activeCategory + ' - 文章' : (activeTag != null ? '#' + activeTag + ' - 文章' : '全部文章')} + ' - bytedepth'">文章列表</title>
     <style>
         * { box-sizing: border-box; }
