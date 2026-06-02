@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110" width="110" height="110">
+  <defs>
+    <linearGradient id="gF" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="50%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+  <!-- 外圈虚线环 -->
+  <circle cx="55" cy="55" r="48"
+          fill="none" stroke="url(#gF)" stroke-width="2"
+          stroke-dasharray="10 5" opacity="0.55"/>
+  <!-- 静态内圈 -->
+  <circle cx="55" cy="55" r="38"
+          fill="none" stroke="url(#gF)" stroke-width="1.5"
+          stroke-dasharray="4 8" opacity="0.35"/>
+  <!-- 内圆背景 -->
+  <circle cx="55" cy="55" r="28" fill="#062a22"/>
+  <circle cx="55" cy="55" r="27" fill="none" stroke="#34d399" stroke-width="1" opacity="0.4"/>
+  <!-- bd 字母 -->
+  <text x="55" y="63" font-size="22"
+        font-family="'SF Mono','Fira Code','Courier New',monospace"
+        font-weight="700" text-anchor="middle"
+        fill="url(#gF)" letter-spacing="1">bd</text>
+  <!-- 四个彩点 -->
+  <circle cx="55"  cy="7"   r="3.5" fill="#34d399"/>
+  <circle cx="103" cy="55"  r="3.5" fill="#38bdf8"/>
+  <circle cx="55"  cy="103" r="3.5" fill="#818cf8"/>
+  <circle cx="7"   cy="55"  r="3.5" fill="#a78bfa"/>
+</svg>
