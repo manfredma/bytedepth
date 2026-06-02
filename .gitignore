@@ -48,3 +48,4 @@ settings.xml
 .gstack/
 __pycache__/
 /scripts/obsidian-import/sync_state.json
+.superpowers/
