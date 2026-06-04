@@ -96,7 +96,8 @@ class AdminPostControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void adminPostList_withAdmin_returnsOk() throws Exception {
-        when(listAllPostsQryExe.execute(anyInt(), anyInt())).thenReturn(List.of());
+        when(listAllPostsQryExe.execute(anyInt(), anyInt()))
+                .thenReturn(new ListAllPostsQryExe.PageResult(List.of(), 0));
 
         mockMvc.perform(get("/admin/posts"))
                 .andExpect(status().isOk())
@@ -113,7 +114,8 @@ class AdminPostControllerTest {
         post.setTitle("管理后台文章");
         post.setStatus("DRAFT");
 
-        when(listAllPostsQryExe.execute(1, 20)).thenReturn(List.of(post));
+        when(listAllPostsQryExe.execute(1, 20))
+                .thenReturn(new ListAllPostsQryExe.PageResult(List.of(post), 1));
 
         mockMvc.perform(get("/admin/posts"))
                 .andExpect(status().isOk())

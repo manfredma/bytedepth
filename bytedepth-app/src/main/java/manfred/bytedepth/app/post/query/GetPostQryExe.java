@@ -18,7 +18,7 @@ public class GetPostQryExe {
 
     public PostDTO execute(Long postId) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("博文不存在：" + postId));
+                .orElseThrow(() -> new java.util.NoSuchElementException("博文不存在：" + postId));
         PostDTO dto = new PostDTO();
         dto.setId(post.getId());
         dto.setTitle(post.getTitle());
