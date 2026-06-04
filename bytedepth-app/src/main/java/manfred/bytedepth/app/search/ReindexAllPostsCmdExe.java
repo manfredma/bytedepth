@@ -20,7 +20,7 @@ public class ReindexAllPostsCmdExe {
         int size = 50;
         int total = 0;
         while (true) {
-            List<Post> posts = postRepository.findAll(page, size);
+            List<Post> posts = postRepository.findPage(page, size);
             if (posts.isEmpty()) break;
             for (Post post : posts) {
                 if (post.getStatus() == PostStatus.PUBLISHED) {

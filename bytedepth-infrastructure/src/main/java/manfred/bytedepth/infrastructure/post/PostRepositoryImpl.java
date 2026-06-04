@@ -81,7 +81,7 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
-    public List<Post> findAll(int page, int size) {
+    public List<Post> findPage(int page, int size) {
         Page<PostDO> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<PostDO> wrapper = new LambdaQueryWrapper<PostDO>()
                 .ne(PostDO::getStatus, PostStatus.DELETED.name())

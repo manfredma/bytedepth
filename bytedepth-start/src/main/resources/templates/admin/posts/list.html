@@ -29,6 +29,13 @@
         .btn-delete:hover { background: #c0392b; }
         .empty { color: #888; text-align: center; padding: 60px; background: white; border-radius: 8px; }
         form { display: inline; margin: 0; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 28px 0 8px; }
+        .pagination a, .pagination span { padding: 6px 12px; border-radius: 4px; font-size: 0.88em; text-decoration: none; }
+        .pagination a { background: white; border: 1px solid #ddd; color: #333; }
+        .pagination a:hover { background: #f0f0f0; }
+        .pagination .current { background: #e94560; color: white; border: 1px solid #e94560; font-weight: 600; }
+        .pagination .disabled { color: #bbb; cursor: default; }
+        .page-info { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 4px; }
     </style>
 </head>
 <body>
@@ -63,6 +70,33 @@
                   onsubmit="return confirm('确认删除此文章？')">
                 <button type="submit" class="btn-delete">删除</button>
             </form>
+        </div>
+    </div>
+
+    <!-- 分页 -->
+    <div th:if="${totalPages > 1}">
+        <p class="page-info"
+           th:text="'共 ' + ${total} + ' 篇，第 ' + ${currentPage} + ' / ' + ${totalPages} + ' 页'"></p>
+        <div class="pagination">
+            <!-- 上一页 -->
+            <a th:if="${currentPage > 1}"
+               th:href="@{/admin/posts(page=${currentPage - 1}, size=${pageSize})}">&#8592; 上一页</a>
+            <span th:if="${currentPage == 1}" class="disabled">&#8592; 上一页</span>
+
+            <!-- 页码：当前页前后各 2 页 -->
+            <th:block th:each="p : ${#numbers.sequence(
+                    T(java.lang.Math).max(1, currentPage - 2),
+                    T(java.lang.Math).min(totalPages, currentPage + 2))}">
+                <a th:if="${p != currentPage}"
+                   th:href="@{/admin/posts(page=${p}, size=${pageSize})}"
+                   th:text="${p}">1</a>
+                <span th:if="${p == currentPage}" class="current" th:text="${p}">1</span>
+            </th:block>
+
+            <!-- 下一页 -->
+            <a th:if="${currentPage < totalPages}"
+               th:href="@{/admin/posts(page=${currentPage + 1}, size=${pageSize})}">下一页 &#8594;</a>
+            <span th:if="${currentPage == totalPages}" class="disabled">下一页 &#8594;</span>
         </div>
     </div>
 </div>

@@ -41,8 +41,13 @@ public class AdminPostController {
     public String list(Model model,
                        @RequestParam(defaultValue = "1") int page,
                        @RequestParam(defaultValue = "20") int size) {
-        model.addAttribute("posts", listAllPostsQryExe.execute(page, size));
+        var result = listAllPostsQryExe.execute(page, size);
+        int totalPages = (int) Math.ceil((double) result.total() / size);
+        model.addAttribute("posts", result.posts());
         model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("total", result.total());
+        model.addAttribute("pageSize", size);
         return "admin/posts/list";
     }
 

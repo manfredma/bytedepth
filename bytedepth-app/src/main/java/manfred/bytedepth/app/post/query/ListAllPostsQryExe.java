@@ -14,9 +14,13 @@ public class ListAllPostsQryExe {
 
     private final PostRepository postRepository;
 
-    public List<PostDTO> execute(int page, int size) {
-        List<Post> posts = postRepository.findAll(page, size);
-        return posts.stream().map(this::toDTO).collect(Collectors.toList());
+    public record PageResult(List<PostDTO> posts, long total) {}
+
+    public PageResult execute(int page, int size) {
+        List<PostDTO> posts = postRepository.findPage(page, size)
+                .stream().map(this::toDTO).collect(Collectors.toList());
+        long total = postRepository.countAll();
+        return new PageResult(posts, total);
     }
 
     private PostDTO toDTO(Post post) {

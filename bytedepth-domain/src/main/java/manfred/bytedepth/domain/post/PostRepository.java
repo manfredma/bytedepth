@@ -12,7 +12,7 @@ public interface PostRepository {
     long countPublishedByTag(String tagSlug);
     List<Post> findPublishedByCategory(Long categoryId, int page, int size);
     long countPublishedByCategory(Long categoryId);
-    List<Post> findAll(int page, int size);
+    List<Post> findPage(int page, int size);
     long countAll();
     java.util.Optional<Post> findPrevPublished(Long id);
     java.util.Optional<Post> findNextPublished(Long id);
