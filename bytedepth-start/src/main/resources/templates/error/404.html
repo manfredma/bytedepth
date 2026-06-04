@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <title>404 - bytedepth</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+               background: #0d1b2a; color: #cdd5e0; min-height: 100vh; }
+        .container { max-width: 600px; margin: 0 auto; padding: 80px 24px 60px;
+                     text-align: center; }
+        .illustration { margin: 0 auto 32px; display: block; }
+        .code { font-size: 5rem; font-weight: 800; color: #e94560;
+                letter-spacing: -2px; line-height: 1; margin-bottom: 16px;
+                font-family: 'SF Mono', 'Fira Code', monospace; }
+        .title { font-size: 1.5rem; font-weight: 600; color: #e2e8f0;
+                 margin-bottom: 12px; }
+        .desc  { font-size: 0.95rem; color: #7a8fa6; line-height: 1.7;
+                 margin-bottom: 36px; }
+        .btn-home { display: inline-block; padding: 10px 28px;
+                    background: #e94560; color: #fff; border-radius: 6px;
+                    text-decoration: none; font-size: 0.9rem; font-weight: 500;
+                    transition: background .2s; }
+        .btn-home:hover { background: #c73652; }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar}"></nav>
+
+<div class="container">
+
+    <!-- 深海插图 -->
+    <svg class="illustration" width="320" height="200"
+         viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#0d1b2a"/>
+                <stop offset="100%" stop-color="#05080f"/>
+            </linearGradient>
+            <radialGradient id="beam" cx="0%" cy="50%" r="100%"
+                            gradientUnits="objectBoundingBox">
+                <stop offset="0%"   stop-color="#4fc3f7" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#4fc3f7" stop-opacity="0"/>
+            </radialGradient>
+        </defs>
+
+        <!-- 背景 -->
+        <rect width="320" height="200" fill="url(#sea)" rx="12"/>
+
+        <!-- 光束（三角形往左打出） -->
+        <polygon points="108,100 30,58 30,142" fill="url(#beam)"/>
+
+        <!-- 气泡 -->
+        <circle cx="50"  cy="40"  r="3" fill="#4fc3f7" opacity="0.18"/>
+        <circle cx="70"  cy="160" r="2" fill="#4fc3f7" opacity="0.13"/>
+        <circle cx="30"  cy="110" r="1.5" fill="#4fc3f7" opacity="0.2"/>
+        <circle cx="280" cy="55"  r="2" fill="#4fc3f7" opacity="0.1"/>
+        <circle cx="295" cy="145" r="3" fill="#4fc3f7" opacity="0.12"/>
+        <circle cx="260" cy="90"  r="1.5" fill="#4fc3f7" opacity="0.08"/>
+
+        <!-- 远处虚影小鱼骨（幽默彩蛋） -->
+        <g transform="translate(52,98)" opacity="0.12">
+            <line x1="0" y1="0" x2="18" y2="0" stroke="#4fc3f7" stroke-width="1.2"/>
+            <line x1="5"  y1="0" x2="3"  y2="-4" stroke="#4fc3f7" stroke-width="1"/>
+            <line x1="9"  y1="0" x2="7"  y2="-4" stroke="#4fc3f7" stroke-width="1"/>
+            <line x1="13" y1="0" x2="11" y2="-4" stroke="#4fc3f7" stroke-width="1"/>
+            <line x1="5"  y1="0" x2="3"  y2="4"  stroke="#4fc3f7" stroke-width="1"/>
+            <line x1="9"  y1="0" x2="7"  y2="4"  stroke="#4fc3f7" stroke-width="1"/>
+            <line x1="13" y1="0" x2="11" y2="4"  stroke="#4fc3f7" stroke-width="1"/>
+            <polygon points="18,0 24,-4 24,4" fill="#4fc3f7"/>
+        </g>
+
+        <!-- 潜艇主体 -->
+        <g transform="translate(120,82)">
+            <!-- 舰体 -->
+            <ellipse cx="50" cy="20" rx="50" ry="18" fill="#163a5c"/>
+            <!-- 指挥塔 -->
+            <rect x="32" y="4" width="24" height="14" rx="4" fill="#1e4976"/>
+            <!-- 潜望镜 -->
+            <rect x="41" y="-6" width="4" height="12" fill="#1e4976"/>
+            <rect x="36" y="-7" width="14" height="4" rx="2" fill="#1e4976"/>
+            <!-- 舷窗 -->
+            <circle cx="18" cy="20" r="7"  fill="#0d2440"/>
+            <circle cx="18" cy="20" r="5"  fill="#4fc3f7" opacity="0.12"/>
+            <circle cx="19" cy="18" r="1.5" fill="#fff" opacity="0.3"/>
+            <!-- 螺旋桨 -->
+            <ellipse cx="100" cy="14" rx="4" ry="8"  fill="#0f2d47" opacity="0.8"/>
+            <ellipse cx="100" cy="26" rx="4" ry="8"  fill="#0f2d47" opacity="0.8"/>
+            <circle  cx="100" cy="20" r="3" fill="#163a5c"/>
+            <!-- 前灯 -->
+            <circle cx="2" cy="20" r="4" fill="#4fc3f7" opacity="0.8"/>
+            <circle cx="2" cy="20" r="2" fill="#fff" opacity="0.9"/>
+        </g>
+
+        <!-- 底部海草 -->
+        <g opacity="0.2">
+            <path d="M20 200 Q18 185 22 175 Q26 165 24 155" stroke="#2a6049" stroke-width="2" fill="none"/>
+            <path d="M35 200 Q40 182 36 170 Q32 158 37 148" stroke="#2a6049" stroke-width="2" fill="none"/>
+            <path d="M290 200 Q288 186 293 176" stroke="#2a6049" stroke-width="2" fill="none"/>
+            <path d="M305 200 Q308 183 303 172" stroke="#2a6049" stroke-width="2" fill="none"/>
+        </g>
+    </svg>
+
+    <div class="code">404</div>
+    <div class="title">你潜入了字节深渊</div>
+    <div class="desc">这片海域什么都没有<br>或许它从未存在过，或许早已消失在黑暗中</div>
+    <a th:href="@{/}" class="btn-home">浮出水面</a>
+</div>
+</body>
+</html>

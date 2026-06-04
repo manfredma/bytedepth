@@ -18,6 +18,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.NoSuchElementException;
+
 @Controller
 @RequestMapping("/posts")
 @RequiredArgsConstructor
@@ -68,6 +70,9 @@ public class PostController {
     @GetMapping("/{id}")
     public String detail(@PathVariable("id") Long id, Model model) {
         var post = getPostQryExe.execute(id);
+        if (!"PUBLISHED".equals(post.getStatus())) {
+            throw new NoSuchElementException();
+        }
         model.addAttribute("post", post);
         model.addAttribute("renderedContent", markdownRenderer.render(post.getContent()));
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
