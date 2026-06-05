@@ -49,3 +49,6 @@ settings.xml
 __pycache__/
 /scripts/obsidian-import/sync_state.json
 .superpowers/
+
+# Tool-generated analysis artifacts
+.understand-anything/
