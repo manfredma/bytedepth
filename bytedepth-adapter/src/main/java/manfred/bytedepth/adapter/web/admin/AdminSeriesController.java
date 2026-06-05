@@ -18,10 +18,10 @@ public class AdminSeriesController {
 
     /**
      * POST /admin/posts/{id}/series
-     * 给文章绑定系列。系列不存在时自动创建。
-     * @param seriesSlug  系列标识（URL slug）
-     * @param seriesName  系列显示名（可选，默认 = slug）
-     * @param seriesOrder 文章在系列中的序号（从 1 开始）
+     * 给文章绑定专栏。专栏不存在时自动创建。
+     * @param seriesSlug  专栏标识（URL slug）
+     * @param seriesName  专栏显示名（可选，默认 = slug）
+     * @param seriesOrder 文章在专栏中的序号（从 1 开始）
      */
     @PostMapping("/{id}/series")
     public ResponseEntity<Void> setSeries(

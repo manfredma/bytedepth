@@ -310,7 +310,7 @@
             border: 1px solid #a7f3d0;
         }
 
-        /* ── 系列入口（左侧固定） ────────────── */
+        /* ── 专栏入口（左侧固定） ────────────── */
         .series-trigger {
             position: fixed;
             left: 0;
@@ -341,7 +341,7 @@
         .series-trigger-icon { font-size: 0.65rem; color: #fff; transition: transform .25s; }
         .series-trigger.open .series-trigger-icon { transform: rotate(180deg); }
 
-        /* ── 系列面板 ────────────────────────── */
+        /* ── 专栏面板 ────────────────────────── */
         .series-panel {
             position: fixed;
             left: 0;
@@ -400,19 +400,19 @@
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
 <div class="container">
 
-    <!-- 系列文章：左侧浮动入口 + fixed 覆盖面板（不影响正文布局）-->
+    <!-- 专栏文章：左侧浮动入口 + fixed 覆盖面板（不影响正文布局）-->
     <th:block th:if="${series != null}">
         <!-- 遮罩 -->
         <div class="series-overlay" id="seriesOverlay" onclick="closeSeries()"></div>
         <!-- 左侧固定入口 -->
         <div class="series-trigger" id="seriesTrigger" onclick="toggleSeries()">
-            <span class="series-trigger-label">系列文章</span>
+            <span class="series-trigger-label">专栏文章</span>
             <span class="series-trigger-icon">▶</span>
         </div>
         <!-- 展开面板（覆盖正文） -->
         <div class="series-panel" id="seriesPanel">
-            <div class="series-panel-header">系列文章</div>
-            <div class="series-name" th:text="${series.name}">系列名</div>
+            <div class="series-panel-header">专栏文章</div>
+            <div class="series-name" th:text="${series.name}">专栏名</div>
             <a th:each="item : ${seriesPosts}"
                th:href="@{/posts/{id}(id=${item.id})}"
                th:classappend="${item.id == post.id ? ' active' : ''}"

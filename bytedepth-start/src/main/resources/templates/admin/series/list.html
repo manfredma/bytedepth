@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
-    <title>系列管理 - bytedepth</title>
+    <title>专栏管理 - bytedepth</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
@@ -32,12 +32,12 @@
 <body>
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
 <div class="container">
-    <h1>系列管理</h1>
+    <h1>专栏管理</h1>
 
-    <!-- 系列列表 -->
+    <!-- 专栏列表 -->
     <div class="card">
-        <h2>所有系列</h2>
-        <div th:if="${#lists.isEmpty(seriesList)}" class="empty">暂无系列，在下方新建</div>
+        <h2>所有专栏</h2>
+        <div th:if="${#lists.isEmpty(seriesList)}" class="empty">暂无专栏，在下方新建</div>
         <table th:if="${!#lists.isEmpty(seriesList)}">
             <thead>
                 <tr>
@@ -48,7 +48,7 @@
             </thead>
             <tbody>
                 <tr th:each="s : ${seriesList}">
-                    <td th:text="${s.name}">系列名</td>
+                    <td th:text="${s.name}">专栏名</td>
                     <td><span class="slug-badge" th:text="${s.slug}">slug</span></td>
                     <td><span class="desc-text" th:text="${s.description != null ? s.description : '—'}">简介</span></td>
                 </tr>
@@ -56,14 +56,14 @@
         </table>
     </div>
 
-    <!-- 新建系列 -->
+    <!-- 新建专栏 -->
     <div class="card">
-        <h2>新建系列</h2>
+        <h2>新建专栏</h2>
         <form th:action="@{/admin/series}" method="post">
             <div class="form-row">
                 <div class="form-group">
                     <label>名称</label>
-                    <input type="text" name="name" placeholder="例：GC 垃圾回收系列" required>
+                    <input type="text" name="name" placeholder="例：GC 垃圾回收专栏" required>
                 </div>
                 <div class="form-group">
                     <label>Slug</label>
@@ -73,7 +73,7 @@
                     <label>简介（可选）</label>
                     <input type="text" name="description" placeholder="一句话描述" style="width:220px">
                 </div>
-                <button type="submit" class="btn-submit">创建系列</button>
+                <button type="submit" class="btn-submit">创建专栏</button>
             </div>
         </form>
     </div>

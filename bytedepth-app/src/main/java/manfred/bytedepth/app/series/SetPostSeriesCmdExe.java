@@ -14,7 +14,7 @@ public class SetPostSeriesCmdExe {
     private final SeriesRepository seriesRepository;
 
     /**
-     * 给文章设置系列。seriesSlug 不存在时自动创建（name = slug）。
+     * 给文章设置专栏。seriesSlug 不存在时自动创建（name = slug）。
      */
     public void execute(Long postId, String seriesSlug, String seriesName, Integer seriesOrder) {
         Series series = seriesRepository.findBySlug(seriesSlug)
