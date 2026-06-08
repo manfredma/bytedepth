@@ -36,6 +36,21 @@
         .pagination .current { background: #e94560; color: white; border: 1px solid #e94560; font-weight: 600; }
         .pagination .disabled { color: #bbb; cursor: default; }
         .page-info { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 4px; }
+        .series-badge { display: inline-block; background: #e8f0fe; color: #1967d2; padding: 2px 9px; border-radius: 10px; font-size: 0.75em; text-decoration: none; }
+        .series-badge:hover { background: #1967d2; color: white; }
+        .btn-remove-series { padding: 3px 8px; background: #fdecea; color: #c0392b; border: 1px solid #f5c6cb; border-radius: 4px; font-size: 0.75em; cursor: pointer; }
+        .btn-remove-series:hover { background: #f5c6cb; }
+        select.series-select { padding: 3px 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.78em; max-width: 120px; }
+        .btn-assign { padding: 3px 8px; background: #e94560; color: white; border: none; border-radius: 4px; font-size: 0.75em; cursor: pointer; }
+        .btn-assign:hover { background: #c73652; }
+        /* 分页 */
+        .pagination-wrap { margin-top: 16px; }
+        .page-info-top { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 6px; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; }
+        .page-btn { padding: 6px 12px; border-radius: 4px; font-size: 0.88em; text-decoration: none; background: white; border: 1px solid #ddd; color: #333; }
+        .page-btn:hover { background: #f0f0f0; }
+        .page-btn.current { background: #e94560; color: white; border: 1px solid #e94560; font-weight: 600; }
+        .page-btn.disabled { color: #bbb; cursor: default; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -58,9 +73,34 @@
                       th:text="'创建于 ' + ${#temporals.format(p.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
                 <span th:if="${p.publishedAt != null}"
                       th:text="'  ·  发布于 ' + ${#temporals.format(p.publishedAt, 'yyyy-MM-dd HH:mm')}">发布时间</span>
+                <!-- 专栏信息 -->
+                <span th:if="${p.seriesName != null}">
+                    &nbsp;·&nbsp;
+                    <a th:href="@{/admin/series/{slug}(slug=${p.seriesSlug})}"
+                       th:text="${p.seriesName}" class="series-badge">专栏</a>
+                </span>
             </div>
         </div>
         <div class="actions">
+            <!-- 已绑定专栏：移出按钮 -->
+            <form th:if="${p.seriesId != null}"
+                  th:action="@{/admin/posts/{id}/series/remove(id=${p.id})}" method="post"
+                  style="display:inline;margin:0 2px;">
+                <input type="hidden" name="page" th:value="${currentPage}">
+                <button type="submit" class="btn-remove-series"
+                        onclick="return confirm('确认移出专栏？')">✕ 移出专栏</button>
+            </form>
+            <!-- 未绑定专栏：下拉绑定 -->
+            <form th:if="${p.seriesId == null}"
+                  th:action="@{/admin/posts/{id}/series/assign(id=${p.id})}" method="post"
+                  style="display:inline;margin:0 2px;">
+                <input type="hidden" name="page" th:value="${currentPage}">
+                <select name="seriesId" class="series-select">
+                    <option value="">+ 加入专栏</option>
+                    <option th:each="s : ${allSeries}" th:value="${s.id}" th:text="${s.name}">专栏名</option>
+                </select>
+                <button type="submit" class="btn-assign">加入</button>
+            </form>
             <a th:href="@{/admin/posts/{id}/edit(id=${p.id})}" class="btn-edit">编辑</a>
             <form th:if="${p.status == 'DRAFT'}"
                   th:action="@{/admin/posts/{id}/publish(id=${p.id})}" method="post">
@@ -75,29 +115,9 @@
 
     <!-- 分页 -->
     <div th:if="${totalPages > 1}">
-        <p class="page-info"
-           th:text="'共 ' + ${total} + ' 篇，第 ' + ${currentPage} + ' / ' + ${totalPages} + ' 页'"></p>
-        <div class="pagination">
-            <!-- 上一页 -->
-            <a th:if="${currentPage > 1}"
-               th:href="@{/admin/posts(page=${currentPage - 1}, size=${pageSize})}">&#8592; 上一页</a>
-            <span th:if="${currentPage == 1}" class="disabled">&#8592; 上一页</span>
-
-            <!-- 页码：当前页前后各 2 页 -->
-            <th:block th:each="p : ${#numbers.sequence(
-                    T(java.lang.Math).max(1, currentPage - 2),
-                    T(java.lang.Math).min(totalPages, currentPage + 2))}">
-                <a th:if="${p != currentPage}"
-                   th:href="@{/admin/posts(page=${p}, size=${pageSize})}"
-                   th:text="${p}">1</a>
-                <span th:if="${p == currentPage}" class="current" th:text="${p}">1</span>
-            </th:block>
-
-            <!-- 下一页 -->
-            <a th:if="${currentPage < totalPages}"
-               th:href="@{/admin/posts(page=${currentPage + 1}, size=${pageSize})}">下一页 &#8594;</a>
-            <span th:if="${currentPage == totalPages}" class="disabled">下一页 &#8594;</span>
-        </div>
+        <div th:replace="~{fragments/pagination :: pagination(
+            ${currentPage}, ${totalPages}, ${total}, ${pageSize},
+            '/admin/posts?')}"></div>
     </div>
 </div>
 </body>

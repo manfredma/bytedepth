@@ -10,6 +10,9 @@ import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListAllPostsQryExe;
+import manfred.bytedepth.app.series.AppendPostToSeriesCmdExe;
+import manfred.bytedepth.app.series.RemovePostFromSeriesCmdExe;
+import manfred.bytedepth.domain.series.SeriesRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -36,6 +39,9 @@ public class AdminPostController {
     private final DeletePostCmdExe deletePostCmdExe;
     private final ListCategoriesQryExe listCategoriesQryExe;
     private final SetPostTagsCmdExe setPostTagsCmdExe;
+    private final SeriesRepository seriesRepository;
+    private final AppendPostToSeriesCmdExe appendPostToSeriesCmdExe;
+    private final RemovePostFromSeriesCmdExe removePostFromSeriesCmdExe;
 
     @GetMapping
     public String list(Model model,
@@ -48,6 +54,7 @@ public class AdminPostController {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("total", result.total());
         model.addAttribute("pageSize", size);
+        model.addAttribute("allSeries", seriesRepository.findAll());
         return "admin/posts/list";
     }
 
@@ -98,5 +105,22 @@ public class AdminPostController {
                                         @RequestParam(required = false, defaultValue = "") List<String> tags) {
         setPostTagsCmdExe.execute(id, tags);
         return ResponseEntity.ok().build();
+    }
+
+    /** 文章列表页快速绑定专栏 */
+    @PostMapping("/{id}/series/assign")
+    public String assignSeries(@PathVariable Long id,
+                               @RequestParam Long seriesId,
+                               @RequestParam(defaultValue = "1") int page) {
+        appendPostToSeriesCmdExe.execute(id, seriesId);
+        return "redirect:/admin/posts?page=" + page;
+    }
+
+    /** 文章列表页移出专栏 */
+    @PostMapping("/{id}/series/remove")
+    public String removeSeries(@PathVariable Long id,
+                               @RequestParam(defaultValue = "1") int page) {
+        removePostFromSeriesCmdExe.execute(id);
+        return "redirect:/admin/posts?page=" + page;
     }
 }

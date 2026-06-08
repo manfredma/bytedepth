@@ -17,4 +17,7 @@ public class PostDTO {
     private String categoryName;
     private String categorySlug;
     private List<String> tagSlugs;
+    private Long seriesId;
+    private String seriesName;
+    private String seriesSlug;
 }
