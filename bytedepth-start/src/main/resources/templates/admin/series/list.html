@@ -44,6 +44,7 @@
                     <th>名称</th>
                     <th>Slug</th>
                     <th>简介</th>
+                    <th>操作</th>
                 </tr>
             </thead>
             <tbody>
@@ -51,6 +52,10 @@
                     <td th:text="${s.name}">专栏名</td>
                     <td><span class="slug-badge" th:text="${s.slug}">slug</span></td>
                     <td><span class="desc-text" th:text="${s.description != null ? s.description : '—'}">简介</span></td>
+                    <td>
+                        <a th:href="@{/admin/series/{slug}(slug=${s.slug})}"
+                           style="color:#e94560;text-decoration:none;font-size:0.85em;font-weight:600;">管理文章 →</a>
+                    </td>
                 </tr>
             </tbody>
         </table>
