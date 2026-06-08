@@ -9,6 +9,9 @@ import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListAllPostsQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
+import manfred.bytedepth.app.series.AppendPostToSeriesCmdExe;
+import manfred.bytedepth.app.series.RemovePostFromSeriesCmdExe;
+import manfred.bytedepth.domain.series.SeriesRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -71,6 +74,15 @@ class AdminPostControllerTest {
     @MockBean
     private SetPostTagsCmdExe setPostTagsCmdExe;
 
+    @MockBean
+    private SeriesRepository seriesRepository;
+
+    @MockBean
+    private AppendPostToSeriesCmdExe appendPostToSeriesCmdExe;
+
+    @MockBean
+    private RemovePostFromSeriesCmdExe removePostFromSeriesCmdExe;
+
     // --- Authentication tests ---
 
     @Test
@@ -98,6 +110,7 @@ class AdminPostControllerTest {
     void adminPostList_withAdmin_returnsOk() throws Exception {
         when(listAllPostsQryExe.execute(anyInt(), anyInt()))
                 .thenReturn(new ListAllPostsQryExe.PageResult(List.of(), 0));
+        when(seriesRepository.findAll()).thenReturn(List.of());
 
         mockMvc.perform(get("/admin/posts"))
                 .andExpect(status().isOk())
@@ -116,6 +129,7 @@ class AdminPostControllerTest {
 
         when(listAllPostsQryExe.execute(1, 20))
                 .thenReturn(new ListAllPostsQryExe.PageResult(List.of(post), 1));
+        when(seriesRepository.findAll()).thenReturn(List.of());
 
         mockMvc.perform(get("/admin/posts"))
                 .andExpect(status().isOk())

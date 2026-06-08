@@ -1,14 +1,13 @@
-package manfred.bytedepth.infrastructure.series;
+package manfred.bytedepth.app.series;
 
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class SeriesPostItemDO {
+public class SeriesPortalPostDTO {
     private Long id;
     private String title;
     private Integer seriesOrder;
-    private String content;
-    private String status;
+    private String summary;         // content 前 160 字
     private LocalDateTime publishedAt;
 }

@@ -58,6 +58,8 @@ public class PostController {
         model.addAttribute("posts", posts);
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
+        model.addAttribute("total", total);
+        model.addAttribute("pageSize", size);
         model.addAttribute("hasPrev", page > 1);
         model.addAttribute("hasNext", page < totalPages);
         model.addAttribute("activeTag", tag);
