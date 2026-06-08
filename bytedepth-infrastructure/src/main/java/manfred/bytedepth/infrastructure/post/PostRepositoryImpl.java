@@ -115,6 +115,11 @@ public class PostRepositoryImpl implements PostRepository {
         postMapper.updateById(postDO);
     }
 
+    @Override
+    public void clearPostSeries(Long postId) {
+        postMapper.clearPostSeries(postId);
+    }
+
     private PostDO toDO(Post post) {
         PostDO postDO = new PostDO();
         postDO.setId(post.getId());

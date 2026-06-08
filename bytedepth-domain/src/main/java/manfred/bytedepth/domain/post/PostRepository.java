@@ -17,4 +17,6 @@ public interface PostRepository {
     java.util.Optional<Post> findPrevPublished(Long id);
     java.util.Optional<Post> findNextPublished(Long id);
     void setPostSeries(Long postId, Long seriesId, Integer seriesOrder);
+    /** 清除文章的专栏绑定（series_id、series_order 置 null） */
+    void clearPostSeries(Long postId);
 }

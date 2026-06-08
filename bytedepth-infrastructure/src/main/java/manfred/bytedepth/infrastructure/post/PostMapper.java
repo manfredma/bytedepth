@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -35,4 +36,7 @@ public interface PostMapper extends BaseMapper<PostDO> {
             "AND published_at > (SELECT published_at FROM post WHERE id = #{id}) " +
             "ORDER BY published_at ASC LIMIT 1")
     PostDO findNextPublished(@Param("id") Long id);
+
+    @Update("UPDATE post SET series_id = NULL, series_order = NULL WHERE id = #{postId}")
+    void clearPostSeries(@Param("postId") Long postId);
 }

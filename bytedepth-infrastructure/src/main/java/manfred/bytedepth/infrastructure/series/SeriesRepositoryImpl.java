@@ -41,15 +41,42 @@ public class SeriesRepositoryImpl implements SeriesRepository {
     }
 
     @Override
-    public List<Series> findAll() {
-        return seriesMapper.selectList(null).stream().map(this::toEntity).collect(Collectors.toList());
-    }
-
-    @Override
     public List<SeriesPostItem> findPublishedPostsBySeries(Long seriesId) {
         return seriesMapper.findPublishedPostsBySeries(seriesId).stream()
                 .map(d -> new SeriesPostItem(d.getId(), d.getTitle(), d.getSeriesOrder()))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SeriesPostItem> findAllPostsBySeries(Long seriesId) {
+        return seriesMapper.findAllPostsBySeries(seriesId).stream()
+                .map(d -> new SeriesPostItem(d.getId(), d.getTitle(), d.getSeriesOrder()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SeriesPostItem> findCandidatesForSeries(Long seriesId, String keyword, int page, int size) {
+        int offset = (page - 1) * size;
+        return seriesMapper.findCandidatesForSeries(seriesId, keyword, offset, size).stream()
+                .map(d -> new SeriesPostItem(d.getId(), d.getTitle(), d.getSeriesOrder()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long countCandidatesForSeries(Long seriesId, String keyword) {
+        return seriesMapper.countCandidatesForSeries(seriesId, keyword);
+    }
+
+    @Override
+    public int findMaxOrderInSeries(Long seriesId) {
+        return seriesMapper.findMaxOrderInSeries(seriesId);
+    }
+
+    @Override
+    public List<Series> findAll() {
+        return seriesMapper.selectList(
+                new LambdaQueryWrapper<SeriesDO>().orderByAsc(SeriesDO::getName)
+        ).stream().map(this::toEntity).collect(Collectors.toList());
     }
 
     private SeriesDO toDO(Series series) {
