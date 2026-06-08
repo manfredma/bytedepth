@@ -52,3 +52,4 @@ __pycache__/
 
 # Tool-generated analysis artifacts
 .understand-anything/
+.codegraph/
