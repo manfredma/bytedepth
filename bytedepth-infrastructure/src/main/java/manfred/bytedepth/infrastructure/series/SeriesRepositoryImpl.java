@@ -43,14 +43,14 @@ public class SeriesRepositoryImpl implements SeriesRepository {
     @Override
     public List<SeriesPostItem> findPublishedPostsBySeries(Long seriesId) {
         return seriesMapper.findPublishedPostsBySeries(seriesId).stream()
-                .map(d -> new SeriesPostItem(d.getId(), d.getTitle(), d.getSeriesOrder()))
+                .map(this::toSeriesPostItem)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<SeriesPostItem> findAllPostsBySeries(Long seriesId) {
         return seriesMapper.findAllPostsBySeries(seriesId).stream()
-                .map(d -> new SeriesPostItem(d.getId(), d.getTitle(), d.getSeriesOrder()))
+                .map(this::toSeriesPostItem)
                 .collect(Collectors.toList());
     }
 
@@ -58,8 +58,13 @@ public class SeriesRepositoryImpl implements SeriesRepository {
     public List<SeriesPostItem> findCandidatesForSeries(Long seriesId, String keyword, int page, int size) {
         int offset = (page - 1) * size;
         return seriesMapper.findCandidatesForSeries(seriesId, keyword, offset, size).stream()
-                .map(d -> new SeriesPostItem(d.getId(), d.getTitle(), d.getSeriesOrder()))
+                .map(this::toSeriesPostItem)
                 .collect(Collectors.toList());
+    }
+
+    private SeriesPostItem toSeriesPostItem(SeriesPostItemDO d) {
+        return new SeriesPostItem(d.getId(), d.getTitle(), d.getSeriesOrder(),
+                d.getContent(), d.getStatus(), d.getPublishedAt());
     }
 
     @Override
