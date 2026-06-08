@@ -14,7 +14,7 @@
 
         <!-- 页码：当前页前后各 2 页 -->
         <th:block th:with="startPage=${T(java.lang.Math).max(1, currentPage - 2)},
-                           endPage=${T(java.lang.Math).min(totalPages, currentPage + 2)}">
+                           endPage=${T(java.lang.Math).min(totalPages.intValue(), currentPage + 2)}">
             <th:block th:if="${startPage > 1}">
                 <a th:href="${baseUrl + 'page=1&size=' + pageSize}" class="page-btn">1</a>
                 <span th:if="${startPage > 2}" class="page-btn disabled">…</span>
