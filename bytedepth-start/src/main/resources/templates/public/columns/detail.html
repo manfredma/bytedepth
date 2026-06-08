@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <title th:text="${series.name} + ' - 专栏 - bytedepth'">专栏详情</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f7f5f0; --card: #ffffff; --ink: #1c1917; --ink-2: #57534e;
+            --ink-3: #a8a29e; --accent: #e94560; --accent-dk: #c73652;
+            --navy: #1a1a2e; --border: #e7e4df;
+            --serif: 'Source Serif 4', Georgia, serif;
+            --display: 'DM Serif Display', Georgia, serif;
+            --sans: 'Outfit', system-ui, sans-serif;
+            --radius: 10px; --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--serif); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+        .container { max-width: 760px; margin: 48px auto; padding: 0 24px; }
+        .back-link { font-family: var(--sans); font-size: 0.82rem; font-weight: 600; color: var(--ink-3); text-decoration: none; letter-spacing: .03em; transition: color .15s; display: inline-block; margin-bottom: 24px; }
+        .back-link:hover { color: var(--accent); }
+        .series-header { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+        .series-title { font-family: var(--display); font-size: 2rem; font-weight: 400; color: var(--ink); margin-bottom: 8px; }
+        .series-desc { font-size: 1rem; color: var(--ink-2); line-height: 1.7; margin-bottom: 10px; }
+        .series-meta-line { font-family: var(--sans); font-size: 0.8rem; color: var(--ink-3); }
+        .post-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 24px 28px; margin-bottom: 16px;
+            text-decoration: none; color: inherit; display: block; transition: transform .2s, box-shadow .2s;
+        }
+        .post-card:hover { transform: translateY(-2px); box-shadow: 0 4px 24px rgba(0,0,0,.1); }
+        .post-header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; }
+        .post-order { font-family: var(--sans); font-size: 1rem; font-weight: 700; color: var(--accent); flex-shrink: 0; min-width: 28px; }
+        .post-title { font-family: var(--display); font-size: 1.2rem; font-weight: 400; color: var(--ink); line-height: 1.3; }
+        .post-card:hover .post-title { color: var(--accent); }
+        .post-summary { font-size: 0.92rem; line-height: 1.7; color: var(--ink-2); margin-bottom: 8px; }
+        .post-date { font-family: var(--sans); font-size: 0.75rem; color: var(--ink-3); }
+        .empty { text-align: center; color: var(--ink-3); padding: 60px 0; font-family: var(--sans); }
+        /* 分页 */
+        .pagination-wrap { margin-top: 32px; }
+        .page-info-top { text-align: center; font-size: 0.82rem; color: var(--ink-3); font-family: var(--sans); margin-bottom: 10px; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; }
+        .page-btn { padding: 6px 13px; border-radius: 6px; font-size: 0.85rem; text-decoration: none; font-family: var(--sans); background: var(--card); border: 1px solid var(--border); color: var(--ink-2); transition: all .15s; }
+        .page-btn:hover { border-color: var(--navy); background: var(--navy); color: #fff; }
+        .page-btn.current { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+        .page-btn.disabled { color: var(--ink-3); cursor: default; pointer-events: none; }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="container">
+    <a th:href="@{/columns}" class="back-link">← 返回专栏列表</a>
+
+    <div class="series-header">
+        <h1 class="series-title" th:text="${series.name}">专栏名</h1>
+        <p th:if="${series.description != null}" class="series-desc" th:text="${series.description}">简介</p>
+        <p class="series-meta-line" th:text="'共 ' + ${series.totalPosts} + ' 篇文章'">共 0 篇文章</p>
+    </div>
+
+    <div th:if="${#lists.isEmpty(series.posts)}" class="empty">该专栏暂无已发布文章</div>
+
+    <a th:each="post : ${series.posts}"
+       th:href="@{/posts/{id}(id=${post.id})}"
+       class="post-card">
+        <div class="post-header">
+            <span class="post-order" th:text="${post.seriesOrder} + '.'">01.</span>
+            <span class="post-title" th:text="${post.title}">文章标题</span>
+        </div>
+        <p th:if="${post.summary != null and !#strings.isEmpty(post.summary)}" class="post-summary" th:text="${post.summary}">摘要</p>
+        <p th:if="${post.publishedAt != null}" class="post-date"
+           th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">日期</p>
+    </a>
+
+    <!-- 分页 -->
+    <div th:if="${series.totalPages > 1}">
+        <div th:replace="~{fragments/pagination :: pagination(
+            ${series.currentPage}, ${series.totalPages}, ${series.totalPosts}, ${pageSize},
+            '/columns/' + ${series.slug} + '?')}"></div>
+    </div>
+</div>
+</body>
+</html>

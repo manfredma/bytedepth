@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <title>专栏 - bytedepth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f7f5f0; --card: #ffffff; --ink: #1c1917; --ink-2: #57534e;
+            --ink-3: #a8a29e; --accent: #e94560; --accent-dk: #c73652;
+            --navy: #1a1a2e; --border: #e7e4df;
+            --serif: 'Source Serif 4', Georgia, serif;
+            --display: 'DM Serif Display', Georgia, serif;
+            --sans: 'Outfit', system-ui, sans-serif;
+            --radius: 10px; --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--serif); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+        .container { max-width: 760px; margin: 48px auto; padding: 0 24px; }
+        .page-title { font-family: var(--display); font-size: 2.2rem; font-weight: 400; color: var(--ink); margin-bottom: 6px; }
+        .page-subtitle { font-family: var(--sans); font-size: 0.88rem; color: var(--ink-3); margin-bottom: 36px; }
+        .series-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 28px 32px; margin-bottom: 20px;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .series-card:hover { transform: translateY(-2px); box-shadow: 0 4px 24px rgba(0,0,0,.1); }
+        .series-name { font-family: var(--display); font-size: 1.5rem; font-weight: 400; color: var(--ink); margin-bottom: 8px; }
+        .series-meta { font-family: var(--sans); font-size: 0.78rem; color: var(--ink-3); margin-bottom: 12px; }
+        .series-count { display: inline-block; background: var(--bg); border: 1px solid var(--border); color: var(--ink-2); padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .series-summary { font-size: 0.95rem; line-height: 1.7; color: var(--ink-2); margin-bottom: 16px; }
+        .series-link { font-family: var(--sans); font-size: 0.82rem; font-weight: 700; color: var(--accent); text-decoration: none; letter-spacing: .03em; transition: color .15s; }
+        .series-link:hover { color: var(--accent-dk); }
+        .empty { text-align: center; color: var(--ink-3); padding: 80px 0; font-family: var(--sans); }
+        /* 分页 */
+        .pagination-wrap { margin-top: 32px; }
+        .page-info-top { text-align: center; font-size: 0.82rem; color: var(--ink-3); font-family: var(--sans); margin-bottom: 10px; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; }
+        .page-btn { padding: 6px 13px; border-radius: 6px; font-size: 0.85rem; text-decoration: none; font-family: var(--sans); background: var(--card); border: 1px solid var(--border); color: var(--ink-2); transition: all .15s; }
+        .page-btn:hover { border-color: var(--navy); background: var(--navy); color: #fff; }
+        .page-btn.current { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+        .page-btn.disabled { color: var(--ink-3); cursor: default; pointer-events: none; }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="container">
+    <h1 class="page-title">专栏</h1>
+    <p class="page-subtitle">探索系列深度文章</p>
+
+    <div th:if="${#lists.isEmpty(seriesList)}" class="empty">暂无专栏</div>
+
+    <div th:each="s : ${seriesList}" class="series-card">
+        <div class="series-name" th:text="${s.name}">专栏名</div>
+        <div class="series-meta">
+            <span class="series-count" th:text="${s.postCount} + ' 篇文章'">0 篇文章</span>
+        </div>
+        <div th:if="${s.firstSummary != null}" class="series-summary" th:text="${s.firstSummary}">摘要</div>
+        <a th:href="@{/columns/{slug}(slug=${s.slug})}" class="series-link">进入专栏 →</a>
+    </div>
+
+    <!-- 分页 -->
+    <div th:if="${totalPages > 1}">
+        <div th:replace="~{fragments/pagination :: pagination(
+            ${currentPage}, ${totalPages}, ${total}, ${pageSize}, '/columns?')}"></div>
+    </div>
+</div>
+</body>
+</html>
