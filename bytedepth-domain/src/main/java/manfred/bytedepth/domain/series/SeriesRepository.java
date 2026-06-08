@@ -17,4 +17,6 @@ public interface SeriesRepository {
     long countCandidatesForSeries(Long seriesId, String keyword);
     /** 查询专栏当前最大 series_order，无文章时返回 0 */
     int findMaxOrderInSeries(Long seriesId);
+    /** 删除专栏，并清除所有关联文章的 series_id/series_order */
+    void deleteWithPosts(Long seriesId);
 }

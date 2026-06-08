@@ -78,6 +78,13 @@ public class SeriesRepositoryImpl implements SeriesRepository {
     }
 
     @Override
+    public void deleteWithPosts(Long seriesId) {
+        // 先清除所有关联文章的 series_id/series_order，再删除专栏
+        seriesMapper.clearAllPostsInSeries(seriesId);
+        seriesMapper.deleteById(seriesId);
+    }
+
+    @Override
     public List<Series> findAll() {
         return seriesMapper.selectList(
                 new LambdaQueryWrapper<SeriesDO>().orderByAsc(SeriesDO::getName)

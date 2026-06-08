@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -49,4 +50,7 @@ public interface SeriesMapper extends BaseMapper<SeriesDO> {
     @Select("SELECT COALESCE(MAX(p.series_order), 0) FROM post p " +
             "WHERE p.series_id = #{seriesId} AND p.status != 'DELETED'")
     int findMaxOrderInSeries(@Param("seriesId") Long seriesId);
+
+    @Update("UPDATE post SET series_id = NULL, series_order = NULL WHERE series_id = #{seriesId}")
+    void clearAllPostsInSeries(@Param("seriesId") Long seriesId);
 }

@@ -52,9 +52,17 @@
                     <td th:text="${s.name}">专栏名</td>
                     <td><span class="slug-badge" th:text="${s.slug}">slug</span></td>
                     <td><span class="desc-text" th:text="${s.description != null ? s.description : '—'}">简介</span></td>
-                    <td>
+                    <td style="white-space:nowrap;">
                         <a th:href="@{/admin/series/{slug}(slug=${s.slug})}"
                            style="color:#e94560;text-decoration:none;font-size:0.85em;font-weight:600;">管理文章 →</a>
+                        <form th:action="@{/admin/series/{id}/delete(id=${s.id})}" method="post"
+                              style="display:inline;margin-left:12px;"
+                              onsubmit="return confirm('确认删除专栏「' + /*[[${s.name}]]*/ '' + '」？\n该专栏下所有文章将解除关联，文章本身不会删除。')">
+                            <button type="submit"
+                                    style="padding:3px 10px;background:#fdecea;color:#c0392b;border:1px solid #f5c6cb;border-radius:4px;font-size:0.82em;cursor:pointer;">
+                                删除
+                            </button>
+                        </form>
                     </td>
                 </tr>
             </tbody>
