@@ -56,6 +56,14 @@
         }
         .page-btn:hover { background: #e94560; color: white; border-color: #e94560; }
         .page-info { color: #999; font-size: 0.85em; }
+        /* 分页 fragment 样式 */
+        .pagination-wrap { margin-top: 28px; padding-top: 20px; border-top: 1px solid #eee; }
+        .page-info-top { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 8px; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; }
+        .page-btn { padding: 7px 18px; border-radius: 6px; font-size: 0.88em; font-weight: 600; text-decoration: none; cursor: pointer; border: 1px solid #ddd; background: white; color: #555; transition: all .15s; }
+        .page-btn:hover { background: #e94560; color: white; border-color: #e94560; }
+        .page-btn.current { background: #e94560; color: white; border-color: #e94560; font-weight: 700; }
+        .page-btn.disabled { color: #bbb; cursor: default; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -74,17 +82,11 @@
         <span th:if="${totalHits == 0}">未找到相关文章</span>
     </div>
 
-    <!-- 翻页 -->
-    <div th:if="${totalHits > 0}" class="pagination">
-        <a th:if="${hasPrev}"
-           th:href="@{/search(q=${q},page=${currentPage - 1})}"
-           class="page-btn">← 上一页</a>
-        <span th:if="${!hasPrev}" class="page-btn" style="opacity:.4;cursor:default;">← 上一页</span>
-        <span class="page-info" th:text="${currentPage} + ' / ' + ${totalPages}"></span>
-        <a th:if="${hasNext}"
-           th:href="@{/search(q=${q},page=${currentPage + 1})}"
-           class="page-btn">下一页 →</a>
-        <span th:if="${!hasNext}" class="page-btn" style="opacity:.4;cursor:default;">下一页 →</span>
+    <!-- 分页 -->
+    <div th:if="${totalHits > 0}">
+        <div th:replace="~{fragments/pagination :: pagination(
+            ${currentPage}, ${totalPages}, ${totalHits}, ${pageSize},
+            '/search?q=' + ${q} + '&')}"></div>
     </div>
 
     <div th:if="${#lists.isEmpty(results) and q != ''}" class="empty">

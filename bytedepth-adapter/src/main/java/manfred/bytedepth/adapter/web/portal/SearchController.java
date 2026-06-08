@@ -27,6 +27,7 @@ public class SearchController {
         model.addAttribute("totalPages", result.totalPages());
         model.addAttribute("hasPrev", result.hasPrev());
         model.addAttribute("hasNext", result.hasNext());
+        model.addAttribute("pageSize", 10);
         return "public/search";
     }
 }
