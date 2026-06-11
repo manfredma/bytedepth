@@ -19,4 +19,7 @@ public interface PostRepository {
     void setPostSeries(Long postId, Long seriesId, Integer seriesOrder);
     /** 清除文章的专栏绑定（series_id、series_order 置 null） */
     void clearPostSeries(Long postId);
+
+    List<Post> findPublishedByAuthorId(Long authorId, int page, int size);
+    long countPublishedByAuthorId(Long authorId);
 }

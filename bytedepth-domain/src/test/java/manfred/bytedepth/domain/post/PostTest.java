@@ -36,4 +36,38 @@ class PostTest {
         post.delete();
         assertEquals(PostStatus.DELETED, post.getStatus());
     }
+
+    @Test
+    void create_withAuthorId_setsAuthorIdAndFeaturedFalse() {
+        Post post = Post.create("Title", "Content", 42L);
+        assertEquals(42L, post.getAuthorId());
+        assertFalse(post.getFeatured());
+    }
+
+    @Test
+    void isOwnedBy_sameId_returnsTrue() {
+        Post post = Post.create("T", "C", 5L);
+        assertTrue(post.isOwnedBy(5L));
+    }
+
+    @Test
+    void isOwnedBy_differentId_returnsFalse() {
+        Post post = Post.create("T", "C", 5L);
+        assertFalse(post.isOwnedBy(9L));
+    }
+
+    @Test
+    void feature_setsFeatureTrue() {
+        Post post = Post.create("T", "C", 1L);
+        post.feature();
+        assertTrue(post.getFeatured());
+    }
+
+    @Test
+    void unfeature_setsFeaturedFalse() {
+        Post post = Post.create("T", "C", 1L);
+        post.feature();
+        post.unfeature();
+        assertFalse(post.getFeatured());
+    }
 }

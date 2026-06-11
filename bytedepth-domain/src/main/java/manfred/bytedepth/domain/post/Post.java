@@ -9,9 +9,11 @@ import java.time.LocalDateTime;
 public class Post {
 
     private Long id;
+    private Long authorId;
     private String title;
     private String content;
     private PostStatus status;
+    private Boolean featured = false;
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
     private LocalDateTime updatedAt;
@@ -21,11 +23,18 @@ public class Post {
 
     private Post() {}
 
+    /** 向后兼容旧调用（authorId = null） */
     public static Post create(String title, String content) {
+        return create(title, content, null);
+    }
+
+    public static Post create(String title, String content, Long authorId) {
         Post post = new Post();
         post.title = title;
         post.content = content;
+        post.authorId = authorId;
         post.status = PostStatus.DRAFT;
+        post.featured = false;
         post.createdAt = LocalDateTime.now();
         post.updatedAt = LocalDateTime.now();
         return post;
@@ -39,6 +48,7 @@ public class Post {
         post.title = title;
         post.content = content;
         post.status = status;
+        post.featured = false;
         post.createdAt = createdAt;
         post.publishedAt = publishedAt;
         post.updatedAt = updatedAt;
@@ -50,6 +60,17 @@ public class Post {
                                    LocalDateTime updatedAt, Long categoryId) {
         Post post = reconstruct(id, title, content, status, createdAt, publishedAt, updatedAt);
         post.categoryId = categoryId;
+        return post;
+    }
+
+    /** 含 authorId 和 featured 的完整重建（从持久层使用） */
+    public static Post reconstruct(Long id, String title, String content, PostStatus status,
+                                   LocalDateTime createdAt, LocalDateTime publishedAt,
+                                   LocalDateTime updatedAt, Long categoryId,
+                                   Long authorId, Boolean featured) {
+        Post post = reconstruct(id, title, content, status, createdAt, publishedAt, updatedAt, categoryId);
+        post.authorId = authorId;
+        post.featured = Boolean.TRUE.equals(featured);
         return post;
     }
 
@@ -80,5 +101,17 @@ public class Post {
     public void delete() {
         this.status = PostStatus.DELETED;
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public boolean isOwnedBy(Long userId) {
+        return this.authorId != null && this.authorId.equals(userId);
+    }
+
+    public void feature() {
+        this.featured = true;
+    }
+
+    public void unfeature() {
+        this.featured = false;
     }
 }
