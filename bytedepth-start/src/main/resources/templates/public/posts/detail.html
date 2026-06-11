@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="zh">
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
@@ -453,7 +454,7 @@
            th:text="'#' + ${tag.name}" class="tag">#标签</a>
     </div>
     <div class="content" th:utext="${renderedContent}">文章内容</div>
-    <div class="publish-form" th:if="${post.status == 'DRAFT'}">
+    <div class="publish-form" th:if="${canPublish}">
         <form th:action="@{/posts/{id}/publish(id=${post.id})}" method="post">
             <button type="submit" class="btn">发布此文章</button>
         </form>
@@ -480,30 +481,36 @@
     <!-- 评论区 -->
     <div class="comment-section">
         <h3>评论 <span th:text="'(' + ${#lists.size(comments)} + ')'" style="font-weight:400;color:#888;font-size:0.9em;"></span></h3>
-        <div class="commented-tip" th:if="${param.commented}">评论已提交，审核通过后显示。</div>
+        <!-- 评论列表 -->
         <div th:each="c : ${comments}" class="comment-item">
-            <span class="comment-author" th:text="${c.authorName}">作者</span>
+            <a th:href="@{/u/{name}(name=${c.authorName})}"
+               class="comment-author" th:text="${c.authorName}"
+               style="text-decoration:none;color:inherit;">作者</a>
             <span class="comment-time" th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
             <div class="comment-body" th:text="${c.content}">内容</div>
         </div>
-        <div th:if="${#lists.isEmpty(comments)}" style="color:#aaa;font-size:0.9em;margin-bottom:16px;">暂无评论，来留下第一条吧。</div>
-        <div class="comment-form">
-            <h4 style="margin:0 0 16px;color:#333;">发表评论</h4>
+        <div th:if="${#lists.isEmpty(comments)}" style="color:#aaa;font-size:0.9em;margin-bottom:16px;">
+            暂无评论，来留下第一条吧。
+        </div>
+        <!-- 已登录用户：显示评论表单 -->
+        <div sec:authorize="hasAuthority('blog:comment:create')" class="comment-form">
+            <h4>发表评论</h4>
             <form th:action="@{/posts/{id}/comments(id=${post.id})}" method="post">
-                <div class="form-row">
-                    <label>昵称 *</label>
-                    <input type="text" name="authorName" required placeholder="你的昵称">
-                </div>
-                <div class="form-row">
-                    <label>邮箱（可选）</label>
-                    <input type="email" name="authorEmail" placeholder="不公开显示">
-                </div>
                 <div class="form-row">
                     <label>内容 *</label>
                     <textarea name="content" required placeholder="写下你的想法..."></textarea>
                 </div>
                 <button type="submit" class="submit-btn">提交评论</button>
             </form>
+        </div>
+        <!-- 未登录：提示登录 -->
+        <div sec:authorize="!isAuthenticated()"
+             style="margin-top:20px;padding:16px 20px;background:var(--bg);
+                    border-radius:var(--radius);border:1px solid var(--border);
+                    text-align:center;font-family:var(--sans);font-size:0.9rem;color:var(--ink-2);">
+            <a th:href="@{/login}" style="color:var(--accent);font-weight:600;">登录</a> 或
+            <a th:href="@{/register}" style="color:var(--accent);font-weight:600;">注册</a>
+            后才能发表评论
         </div>
     </div>
 

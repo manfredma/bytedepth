@@ -1,7 +1,10 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
-<nav th:fragment="navbar" style="position:sticky;top:0;z-index:1000;padding:16px 24px;background:#1a1a2e;color:#eee;display:flex;gap:24px;align-items:center;">
+<nav th:fragment="navbar"
+     style="position:sticky;top:0;z-index:1000;padding:16px 24px;background:#1a1a2e;
+            color:#eee;display:flex;gap:24px;align-items:center;">
     <a th:href="@{/}" style="display:flex;align-items:center;gap:8px;text-decoration:none;">
         <img th:src="@{/icons/logo.svg}" alt="bytedepth" width="36" height="36" style="display:block;">
         <span style="color:#e94560;font-weight:bold;font-size:1.2em;letter-spacing:1px;">bytedepth</span>
@@ -11,18 +14,41 @@
     <a th:href="@{/projects}" style="color:#eee;text-decoration:none;">项目</a>
     <form action="/search" method="get" style="display:flex;align-items:center;gap:0;margin-left:auto;">
         <input type="text" name="q" placeholder="搜索文章…"
-               style="padding:5px 12px;border:none;border-radius:4px 0 0 4px;font-size:0.88em;outline:none;width:160px;background:#fff;color:#333;" />
+               style="padding:5px 12px;border:none;border-radius:4px 0 0 4px;font-size:0.88em;
+                      outline:none;width:160px;background:#fff;color:#333;" />
         <button type="submit"
-                style="padding:5px 11px;background:#e94560;color:white;border:none;border-radius:0 4px 4px 0;cursor:pointer;font-size:0.9em;line-height:1;">🔍</button>
+                style="padding:5px 11px;background:#e94560;color:white;border:none;
+                       border-radius:0 4px 4px 0;cursor:pointer;font-size:0.9em;line-height:1;">🔍</button>
     </form>
     <span style="display:flex;gap:16px;align-items:center;margin-left:16px;">
-        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin}" style="color:#e94560;text-decoration:none;font-weight:600;">后台</a>
-        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/posts/new}" style="color:#eee;text-decoration:none;">✏ 写文章</a>
-        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/comments}" style="color:#eee;text-decoration:none;">💬 审核评论</a>
+        <!-- 后台 & 管理（仅 admin） -->
+        <a sec:authorize="hasAuthority('admin:dashboard:view')"
+           th:href="@{/admin}"
+           style="color:#e94560;text-decoration:none;font-weight:600;">后台</a>
+        <!-- 写文章（需要 blog:post:create 权限） -->
+        <a sec:authorize="hasAuthority('blog:post:create')"
+           th:href="@{/posts/new}"
+           style="color:#eee;text-decoration:none;">✏ 写文章</a>
+        <!-- 用户审核（仅 admin） -->
+        <a sec:authorize="hasAuthority('system:user:approve')"
+           th:href="@{/admin/users}"
+           style="color:#eee;text-decoration:none;font-size:0.88em;">👤 审核用户</a>
+        <!-- 已登录：用户名（链接到个人主页）+ 退出 -->
+        <a sec:authorize="isAuthenticated()"
+           th:href="@{/u/{u}(u=${#authentication.name})}"
+           style="color:#ccc;text-decoration:none;font-size:0.9em;"
+           th:text="${#authentication.name}">用户名</a>
         <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" style="margin:0;">
-            <button type="submit" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:0.9em;">退出</button>
+            <button type="submit"
+                    style="background:none;border:none;color:#aaa;cursor:pointer;font-size:0.9em;">退出</button>
         </form>
-        <a sec:authorize="!isAuthenticated()" th:href="@{/login}" style="color:#aaa;text-decoration:none;font-size:0.9em;">登录</a>
+        <!-- 未登录：登录 + 注册 -->
+        <a sec:authorize="!isAuthenticated()"
+           th:href="@{/login}"
+           style="color:#aaa;text-decoration:none;font-size:0.9em;">登录</a>
+        <a sec:authorize="!isAuthenticated()"
+           th:href="@{/register}"
+           style="color:#e94560;text-decoration:none;font-size:0.9em;font-weight:600;">注册</a>
     </span>
 </nav>
 </body>
