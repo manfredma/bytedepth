@@ -14,6 +14,12 @@ import manfred.bytedepth.domain.series.SeriesRepository;
 import manfred.bytedepth.domain.stats.PostViewCounter;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
+import manfred.bytedepth.infrastructure.user.SiteUserDetails;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -72,40 +78,83 @@ public class PostController {
     @GetMapping("/{id}")
     public String detail(@PathVariable("id") Long id, Model model) {
         var post = getPostQryExe.execute(id);
-        if (!"PUBLISHED".equals(post.getStatus())) {
+        UserDetails currentUser = currentUser();
+        boolean isAdmin = hasAuthority(currentUser, "blog:post:manage");
+        boolean isOwner = isOwner(currentUser, post.getAuthorId());
+
+        // 草稿仅作者或管理员可查看
+        if (!"PUBLISHED".equals(post.getStatus()) && !isOwner && !isAdmin) {
             throw new NoSuchElementException();
         }
+
         model.addAttribute("post", post);
         model.addAttribute("renderedContent", markdownRenderer.render(post.getContent()));
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
+        model.addAttribute("canPublish", "DRAFT".equals(post.getStatus()) && (isOwner || isAdmin));
         postViewCounter.increment(id);
         model.addAttribute("pvCount", postViewCounter.getCount(id));
         model.addAttribute("prevPost", postRepository.findPrevPublished(id).orElse(null));
         model.addAttribute("nextPost", postRepository.findNextPublished(id).orElse(null));
         var currentPost = postRepository.findById(id).orElseThrow();
         if (currentPost.getSeriesId() != null) {
-            model.addAttribute("series", seriesRepository.findById(currentPost.getSeriesId()).orElse(null));
-            model.addAttribute("seriesPosts", getSeriesPostsQryExe.execute(currentPost.getSeriesId()));
+            model.addAttribute("series",
+                seriesRepository.findById(currentPost.getSeriesId()).orElse(null));
+            model.addAttribute("seriesPosts",
+                getSeriesPostsQryExe.execute(currentPost.getSeriesId()));
         }
         return "public/posts/detail";
     }
 
     @GetMapping("/new")
+    @PreAuthorize("hasAuthority('blog:post:create')")
     public String newForm(Model model) {
         model.addAttribute("cmd", new CreatePostCmd());
         return "admin/posts/edit";
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('blog:post:create')")
     public String create(@ModelAttribute CreatePostCmd cmd) {
+        UserDetails user = currentUser();
+        if (user != null) {
+            cmd.setAuthorUsername(user.getUsername());
+        }
         Long id = createPostCmdExe.execute(cmd);
         return "redirect:/posts/" + id;
     }
 
     @PostMapping("/{id}/publish")
+    @PreAuthorize("isAuthenticated()")
     public String publish(@PathVariable("id") Long id) {
+        var post = getPostQryExe.execute(id);
+        UserDetails user = currentUser();
+        if (!hasAuthority(user, "blog:post:manage") && !isOwner(user, post.getAuthorId())) {
+            throw new AccessDeniedException("无权发布他人文章");
+        }
         publishPostCmdExe.execute(id);
         return "redirect:/posts/" + id;
+    }
+
+    // ── 辅助：从 SecurityContextHolder 读取当前用户 ────────────────────────────
+
+    private UserDetails currentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return null;
+        Object principal = auth.getPrincipal();
+        return (principal instanceof UserDetails ud) ? ud : null;
+    }
+
+    private boolean hasAuthority(UserDetails user, String authority) {
+        return user != null && user.getAuthorities().stream()
+            .anyMatch(a -> authority.equals(a.getAuthority()));
+    }
+
+    private boolean isOwner(UserDetails user, Long authorId) {
+        if (user == null || authorId == null) return false;
+        if (user instanceof SiteUserDetails sd) {
+            return sd.getId().equals(authorId);
+        }
+        return false;
     }
 }
