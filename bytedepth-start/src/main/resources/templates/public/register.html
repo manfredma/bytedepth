@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <title>注册 - bytedepth</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+               margin: 0; background: #1a1a2e;
+               display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .card { background: white; padding: 40px 48px; border-radius: 12px;
+                width: 380px; box-shadow: 0 8px 32px rgba(0,0,0,.3); }
+        h1 { margin: 0 0 4px; color: #1a1a2e; font-size: 1.6em; }
+        .subtitle { color: #888; font-size: 0.9em; margin-bottom: 28px; }
+        .field { margin-bottom: 16px; }
+        label { display: block; font-size: 0.88em; font-weight: 500; color: #555; margin-bottom: 5px; }
+        input { width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+                border-radius: 6px; font-size: 1em; outline: none; }
+        input:focus { border-color: #e94560; }
+        .btn { width: 100%; padding: 11px; background: #e94560; color: white;
+               border: none; border-radius: 6px; font-size: 1em;
+               font-weight: 600; cursor: pointer; margin-top: 8px; }
+        .btn:hover { background: #c73652; }
+        .error { background: #fff0f0; color: #c00; padding: 10px 14px;
+                 border-radius: 6px; font-size: 0.9em; margin-bottom: 16px;
+                 border-left: 3px solid #e94560; }
+        .hint { font-size: 0.8em; color: #aaa; margin-top: 8px; line-height: 1.5; }
+        .back { display: block; text-align: center; margin-top: 20px;
+                color: #888; font-size: 0.9em; text-decoration: none; }
+        .back:hover { color: #e94560; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>bytedepth</h1>
+    <p class="subtitle">创建账号</p>
+    <div class="error" th:if="${param.error}" th:text="${param.error[0]}">错误信息</div>
+    <form th:action="@{/register}" method="post">
+        <div class="field">
+            <label>用户名</label>
+            <input type="text" name="username" autofocus
+                   minlength="2" maxlength="50"
+                   placeholder="2-50 个字符" required>
+        </div>
+        <div class="field">
+            <label>密码</label>
+            <input type="password" name="password"
+                   minlength="6" placeholder="至少 6 位" required>
+            <p class="hint">注册后需等待管理员审核，审核通过后方可登录。</p>
+        </div>
+        <button type="submit" class="btn">注册</button>
+    </form>
+    <a th:href="@{/login}" class="back">已有账号？去登录</a>
+</div>
+</body>
+</html>
