@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <title th:text="${profile.username} + ' - bytedepth'">个人主页</title>
+    <style>
+        :root {
+            --bg:#f7f5f0; --card:#fff; --navy:#1a1a2e; --accent:#e94560;
+            --border:#e7e4df; --ink:#1c1917; --ink-2:#57534e; --ink-3:#a8a29e;
+            --sans:'Outfit',system-ui,sans-serif;
+            --serif:'Source Serif 4',Georgia,serif;
+            --radius:10px;
+            --shadow:0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+        }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:var(--serif); background:var(--bg); color:var(--ink);
+               -webkit-font-smoothing:antialiased; }
+        .container { max-width:860px; margin:40px auto; padding:0 20px; }
+
+        /* 个人信息卡片 */
+        .profile-card {
+            background:var(--card); border-radius:var(--radius);
+            border:1px solid var(--border); padding:32px 40px;
+            box-shadow:var(--shadow); margin-bottom:32px;
+            display:flex; align-items:center; gap:28px;
+        }
+        .avatar {
+            width:72px; height:72px; border-radius:50%;
+            background:var(--navy); color:#fff; display:flex;
+            align-items:center; justify-content:center;
+            font-family:var(--sans); font-size:1.8rem; font-weight:700;
+            flex-shrink:0; text-transform:uppercase;
+        }
+        .profile-info h1 {
+            font-family:var(--sans); font-size:1.5rem; font-weight:700;
+            color:var(--ink);
+        }
+        .profile-info .bio {
+            color:var(--ink-2); margin-top:6px; font-size:0.95rem; line-height:1.6;
+        }
+        .profile-info .stats {
+            margin-top:10px; font-family:var(--sans);
+            font-size:0.82rem; color:var(--ink-3);
+        }
+
+        /* 文章列表 */
+        .posts-section h2 {
+            font-family:var(--sans); font-size:0.85rem; font-weight:700;
+            color:var(--ink); margin-bottom:16px; letter-spacing:.06em;
+            text-transform:uppercase;
+        }
+        .post-item {
+            background:var(--card); padding:18px 24px; margin-bottom:10px;
+            border-radius:var(--radius); border:1px solid var(--border);
+            transition:border-color .15s;
+        }
+        .post-item:hover { border-color:var(--navy); }
+        .post-item a {
+            font-family:var(--sans); font-weight:600; color:var(--ink);
+            text-decoration:none; font-size:1.05rem;
+        }
+        .post-item a:hover { color:var(--accent); }
+        .post-meta {
+            font-size:0.78rem; color:var(--ink-3); margin-top:4px;
+            font-family:var(--sans);
+        }
+        .empty {
+            text-align:center; color:var(--ink-3); padding:40px;
+            font-family:var(--sans); background:var(--card);
+            border-radius:var(--radius); border:1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="container">
+    <div class="profile-card">
+        <div class="avatar"
+             th:text="${#strings.substring(profile.username, 0, 1).toUpperCase()}">A</div>
+        <div class="profile-info">
+            <h1 th:text="${profile.username}">用户名</h1>
+            <p class="bio"
+               th:text="${profile.bio != null and !#strings.isEmpty(profile.bio)
+                           ? profile.bio : '这个人很懒，什么都没留下。'}">简介</p>
+            <p class="stats" th:text="'共发布 ' + ${profile.postCount} + ' 篇文章'">文章数</p>
+        </div>
+    </div>
+
+    <div class="posts-section">
+        <h2>最近发布</h2>
+        <div th:if="${#lists.isEmpty(profile.recentPosts)}" class="empty">
+            还没有发布文章 ✍️
+        </div>
+        <div th:each="post : ${profile.recentPosts}" class="post-item">
+            <a th:href="@{/posts/{id}(id=${post.id})}"
+               th:text="${post.title}">文章标题</a>
+            <div class="post-meta"
+                 th:text="${post.publishedAt != null
+                             ? #temporals.format(post.publishedAt, 'yyyy-MM-dd') : ''}">日期</div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
