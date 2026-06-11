@@ -12,9 +12,11 @@ import java.time.LocalDateTime;
 public class PostDO {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private Long authorId;        // 文章作者 ID
     private String title;
     private String content;
     private String status;
+    private Boolean featured;     // 是否首页推荐
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
     private LocalDateTime updatedAt;

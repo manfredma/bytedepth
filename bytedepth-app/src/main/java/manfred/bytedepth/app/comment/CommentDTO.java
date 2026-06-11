@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class CommentDTO {
     private Long id;
     private Long postId;
+    private Long authorId;
     private String authorName;
     private String content;
     private String status;

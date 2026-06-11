@@ -97,13 +97,13 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
-    public java.util.Optional<Post> findPrevPublished(Long id) {
-        return java.util.Optional.ofNullable(postMapper.findPrevPublished(id)).map(this::toEntity);
+    public Optional<Post> findPrevPublished(Long id) {
+        return Optional.ofNullable(postMapper.findPrevPublished(id)).map(this::toEntity);
     }
 
     @Override
-    public java.util.Optional<Post> findNextPublished(Long id) {
-        return java.util.Optional.ofNullable(postMapper.findNextPublished(id)).map(this::toEntity);
+    public Optional<Post> findNextPublished(Long id) {
+        return Optional.ofNullable(postMapper.findNextPublished(id)).map(this::toEntity);
     }
 
     @Override
@@ -120,34 +120,52 @@ public class PostRepositoryImpl implements PostRepository {
         postMapper.clearPostSeries(postId);
     }
 
-    private PostDO toDO(Post post) {
-        PostDO postDO = new PostDO();
-        postDO.setId(post.getId());
-        postDO.setTitle(post.getTitle());
-        postDO.setContent(post.getContent());
-        postDO.setStatus(post.getStatus().name());
-        postDO.setCreatedAt(post.getCreatedAt());
-        postDO.setPublishedAt(post.getPublishedAt());
-        postDO.setUpdatedAt(post.getUpdatedAt());
-        postDO.setCategoryId(post.getCategoryId());
-        postDO.setSeriesId(post.getSeriesId());
-        postDO.setSeriesOrder(post.getSeriesOrder());
-        return postDO;
+    @Override
+    public List<Post> findPublishedByAuthorId(Long authorId, int page, int size) {
+        Page<PostDO> pageParam = new Page<>(page, size);
+        return postMapper.selectPage(pageParam,
+                new LambdaQueryWrapper<PostDO>()
+                    .eq(PostDO::getAuthorId, authorId)
+                    .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
+                    .orderByDesc(PostDO::getPublishedAt))
+            .getRecords().stream().map(this::toEntity).collect(Collectors.toList());
     }
 
-    private Post toEntity(PostDO postDO) {
+    @Override
+    public long countPublishedByAuthorId(Long authorId) {
+        return postMapper.selectCount(new LambdaQueryWrapper<PostDO>()
+            .eq(PostDO::getAuthorId, authorId)
+            .eq(PostDO::getStatus, PostStatus.PUBLISHED.name()));
+    }
+
+    private PostDO toDO(Post post) {
+        PostDO d = new PostDO();
+        d.setId(post.getId());
+        d.setAuthorId(post.getAuthorId());
+        d.setTitle(post.getTitle());
+        d.setContent(post.getContent());
+        d.setStatus(post.getStatus().name());
+        d.setFeatured(post.getFeatured() != null ? post.getFeatured() : false);
+        d.setCreatedAt(post.getCreatedAt());
+        d.setPublishedAt(post.getPublishedAt());
+        d.setUpdatedAt(post.getUpdatedAt());
+        d.setCategoryId(post.getCategoryId());
+        d.setSeriesId(post.getSeriesId());
+        d.setSeriesOrder(post.getSeriesOrder());
+        return d;
+    }
+
+    private Post toEntity(PostDO d) {
         Post post = Post.reconstruct(
-                postDO.getId(),
-                postDO.getTitle(),
-                postDO.getContent(),
-                PostStatus.valueOf(postDO.getStatus()),
-                postDO.getCreatedAt(),
-                postDO.getPublishedAt(),
-                postDO.getUpdatedAt(),
-                postDO.getCategoryId()
+            d.getId(), d.getTitle(), d.getContent(),
+            PostStatus.valueOf(d.getStatus()),
+            d.getCreatedAt(), d.getPublishedAt(), d.getUpdatedAt(),
+            d.getCategoryId(),
+            d.getAuthorId(),
+            d.getFeatured()
         );
-        if (postDO.getSeriesId() != null) {
-            post.assignSeries(postDO.getSeriesId(), postDO.getSeriesOrder());
+        if (d.getSeriesId() != null) {
+            post.assignSeries(d.getSeriesId(), d.getSeriesOrder());
         }
         return post;
     }
