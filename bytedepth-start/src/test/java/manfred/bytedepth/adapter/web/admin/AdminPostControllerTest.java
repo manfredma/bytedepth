@@ -106,7 +106,7 @@ class AdminPostControllerTest {
     // --- Authorized access tests ---
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
     void adminPostList_withAdmin_returnsOk() throws Exception {
         when(listAllPostsQryExe.execute(anyInt(), anyInt()))
                 .thenReturn(new ListAllPostsQryExe.PageResult(List.of(), 0));
@@ -120,7 +120,7 @@ class AdminPostControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
     void adminPostList_withAdmin_exposesPostsInModel() throws Exception {
         PostDTO post = new PostDTO();
         post.setId(1L);
@@ -137,7 +137,7 @@ class AdminPostControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
     void adminNewForm_withAdmin_returnsEditView() throws Exception {
         when(listCategoriesQryExe.execute()).thenReturn(List.of());
 
@@ -149,7 +149,7 @@ class AdminPostControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
     void adminEditForm_withAdmin_returnsEditViewWithPost() throws Exception {
         PostDTO post = new PostDTO();
         post.setId(1L);
@@ -168,7 +168,7 @@ class AdminPostControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
     void adminCreate_withAdmin_redirectsToList() throws Exception {
         when(createPostCmdExe.execute(org.mockito.ArgumentMatchers.any())).thenReturn(1L);
 
@@ -181,7 +181,7 @@ class AdminPostControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
     void adminPublish_withAdmin_redirectsToList() throws Exception {
         mockMvc.perform(post("/admin/posts/1/publish")
                         .with(csrf()))
@@ -190,7 +190,7 @@ class AdminPostControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
     void adminDelete_withAdmin_redirectsToList() throws Exception {
         mockMvc.perform(post("/admin/posts/1/delete")
                         .with(csrf()))

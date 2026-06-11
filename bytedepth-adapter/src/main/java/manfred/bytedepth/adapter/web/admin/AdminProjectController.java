@@ -2,12 +2,14 @@ package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.project.CreateProjectCmdExe;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+@PreAuthorize("hasAuthority(\'admin:dashboard:view\')")
 @Controller
 @RequestMapping("/admin/projects")
 @RequiredArgsConstructor

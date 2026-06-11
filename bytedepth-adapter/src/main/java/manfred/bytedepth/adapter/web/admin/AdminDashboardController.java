@@ -2,11 +2,13 @@ package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.dashboard.DashboardStatsQryExe;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+@PreAuthorize("hasAuthority(\'admin:dashboard:view\')")
 @Controller
 @RequestMapping("/admin")
 @RequiredArgsConstructor

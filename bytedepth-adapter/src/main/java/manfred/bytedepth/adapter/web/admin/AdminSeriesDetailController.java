@@ -9,6 +9,7 @@ import manfred.bytedepth.app.series.RemovePostFromSeriesCmdExe;
 import manfred.bytedepth.app.series.SeriesDetailDTO;
 import manfred.bytedepth.domain.series.SeriesPostItem;
 import manfred.bytedepth.domain.series.SeriesRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@PreAuthorize("hasAuthority(\'admin:dashboard:view\')")
 @Controller
 @RequestMapping("/admin/series")
 @RequiredArgsConstructor
