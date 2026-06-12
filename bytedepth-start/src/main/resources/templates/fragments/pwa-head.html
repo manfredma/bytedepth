@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<th:block th:fragment="pwa">
+    <!-- PWA: Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- PWA: 主题色（Android 地址栏、iOS 状态栏） -->
+    <meta name="theme-color" content="#1a1a2e">
+    <!-- PWA: 视口 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- PWA: iOS Safari 独立模式 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="bytedepth">
+    <link rel="apple-touch-icon" href="/icons/logo.svg">
+    <!-- PWA: Service Worker 注册 -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js')
+                    .catch(function (err) { console.warn('SW 注册失败:', err); });
+            });
+        }
+    </script>
+</th:block>
+</head>
+</html>
