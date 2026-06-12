@@ -27,10 +27,21 @@
         <cola.version>4.3.2</cola.version>
         <mybatis.plus.version>3.5.5</mybatis.plus.version>
         <sort.skip>true</sort.skip>
+        <!-- 升级 Testcontainers：1.20.x 内置 docker-java 3.4+，兼容 Colima 29.x（API>=1.44） -->
+        <testcontainers.version>1.20.1</testcontainers.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- Testcontainers BOM 放在 Spring Boot 之前，覆盖其中的旧版本
+                 1.20.x 内置 docker-java 3.4+，兼容 Colima 29.x（Docker API >= 1.44）-->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>1.20.1</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
