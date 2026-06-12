@@ -396,6 +396,34 @@
         /* ── 遮罩 ────────────────────────────── */
         .series-overlay { display: none; position: fixed; inset: 0; z-index: 199; background: rgba(0,0,0,.3); backdrop-filter: blur(2px); }
         .series-overlay.open { display: block; }
+
+        /* ── 移动端响应式 ────────────────────── */
+        @media (max-width: 768px) {
+            .container {
+                max-width: 100%;
+                margin: 0;
+                padding: 20px 16px 40px;
+                border-radius: 0;
+                box-shadow: none;
+                border-left: none;
+                border-right: none;
+                border-top: none;
+            }
+            h1 { font-size: 1.5rem; }
+            .content { font-size: 0.97rem; line-height: 1.75; }
+            .content pre { padding: 14px 14px; font-size: 0.82em; }
+            .content table { font-size: 0.82rem; }
+            .post-nav { flex-direction: column; gap: 8px; }
+            .post-nav .nav-next { text-align: left; }
+            .post-nav .nav-title { white-space: normal; }
+            .comment-form { padding: 16px; }
+            .series-trigger { padding: 10px 7px; }
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 16px 12px 32px; }
+            .content { font-size: 0.95rem; }
+        }
     </style>
 </head>
 <body>
