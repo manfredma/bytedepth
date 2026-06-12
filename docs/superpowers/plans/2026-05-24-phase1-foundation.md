@@ -1190,7 +1190,7 @@ git commit -m "feat: 添加 Spring Boot 启动入口及 application.yml 配置"
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>bytedepth - 技术博客</title>
+    <title>bytedepth - 字节深处</title>
     <style>
         body { font-family: sans-serif; margin: 0; background: #f5f5f5; }
         .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }

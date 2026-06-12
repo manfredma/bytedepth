@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为 bytedepth 技术博客生成 SVG icon（favicon + logo），并注入全部 15 个 HTML 模板。
+**Goal:** 为 bytedepth 字节深处生成 SVG icon（favicon + logo），并注入全部 15 个 HTML 模板。
 
 **Architecture:** 生成两个 SVG 文件放入 `static/icons/`；favicon 为静态版（无动效，兼容浏览器），logo 为带动效完整版（供 header 使用）；各模板 `<head>` 直接插入 `<link rel="icon">` 指向 favicon.svg，nav fragment 中的文字 logo 替换为 SVG logo。
 
