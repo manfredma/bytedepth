@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class Post {
 
     private Long id;
+    private String slug;
     private Long authorId;
     private String title;
     private String content;
@@ -23,14 +24,20 @@ public class Post {
 
     private Post() {}
 
-    /** 向后兼容旧调用（authorId = null） */
+    /** 向后兼容旧调用（authorId = null，slug 由 CmdExe 填入） */
     public static Post create(String title, String content) {
-        return create(title, content, null);
+        return create(title, content, null, null);
     }
 
+    /** 向后兼容（slug 由 CmdExe 填入） */
     public static Post create(String title, String content, Long authorId) {
+        return create(title, content, authorId, null);
+    }
+
+    public static Post create(String title, String content, Long authorId, String slug) {
         Post post = new Post();
         post.title = title;
+        post.slug = slug;
         post.content = content;
         post.authorId = authorId;
         post.status = PostStatus.DRAFT;
@@ -63,7 +70,7 @@ public class Post {
         return post;
     }
 
-    /** 含 authorId 和 featured 的完整重建（从持久层使用） */
+    /** 含 authorId 和 featured 的完整重建（向后兼容，slug = null） */
     public static Post reconstruct(Long id, String title, String content, PostStatus status,
                                    LocalDateTime createdAt, LocalDateTime publishedAt,
                                    LocalDateTime updatedAt, Long categoryId,
@@ -71,6 +78,26 @@ public class Post {
         Post post = reconstruct(id, title, content, status, createdAt, publishedAt, updatedAt, categoryId);
         post.authorId = authorId;
         post.featured = Boolean.TRUE.equals(featured);
+        return post;
+    }
+
+    /** 含 slug 的完整重建（持久层首选） */
+    public static Post reconstruct(Long id, String slug, String title, String content, PostStatus status,
+                                   LocalDateTime createdAt, LocalDateTime publishedAt,
+                                   LocalDateTime updatedAt, Long categoryId,
+                                   Long authorId, Boolean featured) {
+        Post post = new Post();
+        post.id = id;
+        post.slug = slug;
+        post.title = title;
+        post.content = content;
+        post.status = status;
+        post.authorId = authorId;
+        post.featured = Boolean.TRUE.equals(featured);
+        post.createdAt = createdAt;
+        post.publishedAt = publishedAt;
+        post.updatedAt = updatedAt;
+        post.categoryId = categoryId;
         return post;
     }
 

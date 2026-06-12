@@ -138,9 +138,17 @@ public class PostRepositoryImpl implements PostRepository {
             .eq(PostDO::getStatus, PostStatus.PUBLISHED.name()));
     }
 
+    @Override
+    public Optional<Post> findBySlug(String slug) {
+        return Optional.ofNullable(postMapper.selectOne(
+                new LambdaQueryWrapper<PostDO>().eq(PostDO::getSlug, slug)))
+            .map(this::toEntity);
+    }
+
     private PostDO toDO(Post post) {
         PostDO d = new PostDO();
         d.setId(post.getId());
+        d.setSlug(post.getSlug());
         d.setAuthorId(post.getAuthorId());
         d.setTitle(post.getTitle());
         d.setContent(post.getContent());
@@ -157,7 +165,7 @@ public class PostRepositoryImpl implements PostRepository {
 
     private Post toEntity(PostDO d) {
         Post post = Post.reconstruct(
-            d.getId(), d.getTitle(), d.getContent(),
+            d.getId(), d.getSlug(), d.getTitle(), d.getContent(),
             PostStatus.valueOf(d.getStatus()),
             d.getCreatedAt(), d.getPublishedAt(), d.getUpdatedAt(),
             d.getCategoryId(),

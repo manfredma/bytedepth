@@ -96,7 +96,7 @@
 
     <div th:each="r : ${results}" class="result-item">
         <h2 class="result-title">
-            <a th:href="@{/posts/{id}(id=${r.id})}" th:utext="${r.title}">标题</a>
+            <a th:href="@{/posts/{slug}(slug=${r.slug})}" th:utext="${r.title}">标题</a>
         </h2>
         <div class="result-meta">
             <a th:if="${r.categoryName != ''}"

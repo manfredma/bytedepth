@@ -22,4 +22,6 @@ public interface PostRepository {
 
     List<Post> findPublishedByAuthorId(Long authorId, int page, int size);
     long countPublishedByAuthorId(Long authorId);
+
+    java.util.Optional<Post> findBySlug(String slug);
 }

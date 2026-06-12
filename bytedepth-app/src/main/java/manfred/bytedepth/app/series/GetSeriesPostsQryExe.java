@@ -19,6 +19,7 @@ public class GetSeriesPostsQryExe {
                 .map(item -> {
                     SeriesPostItemDTO dto = new SeriesPostItemDTO();
                     dto.setId(item.id());
+                    dto.setSlug(item.slug());
                     dto.setTitle(item.title());
                     dto.setSeriesOrder(item.seriesOrder());
                     return dto;

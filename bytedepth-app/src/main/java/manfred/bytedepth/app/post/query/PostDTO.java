@@ -8,6 +8,7 @@ import java.util.List;
 @Data
 public class PostDTO {
     private Long id;
+    private String slug;
     private Long authorId;
     private String title;
     private String content;

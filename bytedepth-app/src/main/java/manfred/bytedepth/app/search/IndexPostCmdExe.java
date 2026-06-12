@@ -49,6 +49,7 @@ public class IndexPostCmdExe {
 
         PostSearchDoc doc = PostSearchDoc.builder()
                 .id(postId)
+                .slug(post.getSlug())
                 .title(post.getTitle())
                 .content(post.getContent())
                 .categoryName(categoryName)

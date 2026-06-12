@@ -27,6 +27,7 @@ public class GetUserProfileQryExe {
             .map(p -> {
                 PostDTO dto = new PostDTO();
                 dto.setId(p.getId());
+                dto.setSlug(p.getSlug());
                 dto.setAuthorId(p.getAuthorId());
                 dto.setTitle(p.getTitle());
                 dto.setPublishedAt(p.getPublishedAt());

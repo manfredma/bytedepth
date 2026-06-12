@@ -62,7 +62,7 @@
     <div th:if="${#lists.isEmpty(series.posts)}" class="empty">该专栏暂无已发布文章</div>
 
     <a th:each="post : ${series.posts}"
-       th:href="@{/posts/{id}(id=${post.id})}"
+       th:href="@{/posts/{slug}(slug=${post.slug})}"
        class="post-card">
         <div class="post-header">
             <span class="post-order" th:text="${post.seriesOrder} + '.'">01.</span>

@@ -415,7 +415,7 @@
             <div class="series-panel-header">专栏文章</div>
             <div class="series-name" th:text="${series.name}">专栏名</div>
             <a th:each="item : ${seriesPosts}"
-               th:href="@{/posts/{id}(id=${item.id})}"
+               th:href="@{/posts/{slug}(slug=${item.slug})}"
                th:classappend="${item.id == post.id ? ' active' : ''}"
                class="series-item">
                 <span class="order" th:text="${item.seriesOrder} + '.'"></span>
@@ -455,7 +455,7 @@
     </div>
     <div class="content" th:utext="${renderedContent}">文章内容</div>
     <div class="publish-form" th:if="${canPublish}">
-        <form th:action="@{/posts/{id}/publish(id=${post.id})}" method="post">
+        <form th:action="@{/posts/{slug}/publish(slug=${post.slug})}" method="post">
             <button type="submit" class="btn">发布此文章</button>
         </form>
     </div>
@@ -464,14 +464,14 @@
     <!-- 上下篇导航 -->
     <div class="post-nav" th:if="${prevPost != null or nextPost != null}">
         <a th:if="${prevPost != null}"
-           th:href="@{/posts/{id}(id=${prevPost.id})}"
+           th:href="@{/posts/{slug}(slug=${prevPost.slug})}"
            class="nav-prev">
             <div class="nav-label">← 上一篇</div>
             <div class="nav-title" th:text="${prevPost.title}">上一篇标题</div>
         </a>
         <span th:if="${prevPost == null}" style="flex:1"></span>
         <a th:if="${nextPost != null}"
-           th:href="@{/posts/{id}(id=${nextPost.id})}"
+           th:href="@{/posts/{slug}(slug=${nextPost.slug})}"
            class="nav-next">
             <div class="nav-label">下一篇 →</div>
             <div class="nav-title" th:text="${nextPost.title}">下一篇标题</div>
@@ -495,7 +495,7 @@
         <!-- 已登录用户：显示评论表单 -->
         <div sec:authorize="hasAuthority('blog:comment:create')" class="comment-form">
             <h4>发表评论</h4>
-            <form th:action="@{/posts/{id}/comments(id=${post.id})}" method="post">
+            <form th:action="@{/posts/{slug}/comments(slug=${post.slug})}" method="post">
                 <div class="form-row">
                     <label>内容 *</label>
                     <textarea name="content" required placeholder="写下你的想法..."></textarea>

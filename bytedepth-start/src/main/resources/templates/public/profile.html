@@ -94,7 +94,7 @@
             还没有发布文章 ✍️
         </div>
         <div th:each="post : ${profile.recentPosts}" class="post-item">
-            <a th:href="@{/posts/{id}(id=${post.id})}"
+            <a th:href="@{/posts/{slug}(slug=${post.slug})}"
                th:text="${post.title}">文章标题</a>
             <div class="post-meta"
                  th:text="${post.publishedAt != null

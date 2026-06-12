@@ -63,7 +63,7 @@ public class SeriesRepositoryImpl implements SeriesRepository {
     }
 
     private SeriesPostItem toSeriesPostItem(SeriesPostItemDO d) {
-        return new SeriesPostItem(d.getId(), d.getTitle(), d.getSeriesOrder(),
+        return new SeriesPostItem(d.getId(), d.getSlug(), d.getTitle(), d.getSeriesOrder(),
                 d.getContent(), d.getStatus(), d.getPublishedAt());
     }
 

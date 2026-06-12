@@ -111,7 +111,7 @@
     <h2>最新文章</h2>
     <div th:if="${#lists.isEmpty(posts)}" class="empty">暂无发布的文章，<a th:href="@{/posts/new}" style="color:#e94560;">写第一篇</a>？</div>
     <div th:each="post : ${posts}" class="post-card">
-        <h2><a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">文章标题</a></h2>
+        <h2><a th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a></h2>
         <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</p>
     </div>
 

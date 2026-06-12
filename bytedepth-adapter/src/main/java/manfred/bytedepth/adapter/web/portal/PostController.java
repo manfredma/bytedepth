@@ -75,9 +75,21 @@ public class PostController {
         return "public/posts/list";
     }
 
-    @GetMapping("/{id}")
-    public String detail(@PathVariable("id") Long id, Model model) {
-        var post = getPostQryExe.execute(id);
+    /**
+     * 文章详情：支持 slug 和数字 ID 两种路径。
+     * 数字 ID → 301 重定向到 slug URL（兼容旧链接、admin 后台跳转）。
+     */
+    @GetMapping("/{identifier}")
+    public String detail(@PathVariable("identifier") String identifier, Model model) {
+        // 纯数字 → 按 ID 查出 slug 后重定向
+        if (identifier.matches("\\d+")) {
+            var p = postRepository.findById(Long.parseLong(identifier))
+                    .orElseThrow(() -> new NoSuchElementException("博文不存在：" + identifier));
+            return "redirect:/posts/" + p.getSlug();
+        }
+
+        var post = getPostQryExe.executeBySlug(identifier);
+        Long id = post.getId();
         UserDetails currentUser = currentUser();
         boolean isAdmin = hasAuthority(currentUser, "blog:post:manage");
         boolean isOwner = isOwner(currentUser, post.getAuthorId());
@@ -110,6 +122,7 @@ public class PostController {
     @PreAuthorize("hasAuthority('blog:post:create')")
     public String newForm(Model model) {
         model.addAttribute("cmd", new CreatePostCmd());
+        model.addAttribute("categories", listCategoriesQryExe.execute());
         return "admin/posts/edit";
     }
 
@@ -121,19 +134,21 @@ public class PostController {
             cmd.setAuthorUsername(user.getUsername());
         }
         Long id = createPostCmdExe.execute(cmd);
-        return "redirect:/posts/" + id;
+        // 用 slug 构建跳转 URL
+        String slug = postRepository.findById(id).map(p -> p.getSlug()).orElse(id.toString());
+        return "redirect:/posts/" + slug;
     }
 
-    @PostMapping("/{id}/publish")
+    @PostMapping("/{slug}/publish")
     @PreAuthorize("isAuthenticated()")
-    public String publish(@PathVariable("id") Long id) {
-        var post = getPostQryExe.execute(id);
+    public String publish(@PathVariable("slug") String slug) {
+        var post = getPostQryExe.executeBySlug(slug);
         UserDetails user = currentUser();
         if (!hasAuthority(user, "blog:post:manage") && !isOwner(user, post.getAuthorId())) {
             throw new AccessDeniedException("无权发布他人文章");
         }
-        publishPostCmdExe.execute(id);
-        return "redirect:/posts/" + id;
+        publishPostCmdExe.execute(post.getId());
+        return "redirect:/posts/" + slug;
     }
 
     // ── 辅助：从 SecurityContextHolder 读取当前用户 ────────────────────────────

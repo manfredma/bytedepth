@@ -31,7 +31,7 @@
     <div th:each="c : ${comments}" class="comment-card">
         <span class="author" th:text="${c.authorName}">作者</span>
         <span class="post-link">来自：
-            <a th:href="@{/posts/{id}(id=${c.postId})}"
+            <a th:href="@{/posts/{slug}(slug=${c.postSlug})}"
                th:text="'文章 #' + ${c.postId}" target="_blank">文章</a>
         </span>
         <div class="time" th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd HH:mm')}">时间</div>

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class PostDO {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private String slug;
     private Long authorId;        // 文章作者 ID
     private String title;
     private String content;

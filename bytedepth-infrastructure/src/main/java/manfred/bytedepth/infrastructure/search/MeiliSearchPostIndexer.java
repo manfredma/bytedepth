@@ -84,15 +84,17 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
     }
 
     private Map<String, Object> toMap(PostSearchDoc doc) {
-        return Map.of(
-                "id", doc.getId(),
-                "title", doc.getTitle(),
-                "content", truncate(doc.getContent(), 3000),
-                "categoryName", doc.getCategoryName() != null ? doc.getCategoryName() : "",
-                "categorySlug", doc.getCategorySlug() != null ? doc.getCategorySlug() : "",
-                "tags", doc.getTags() != null ? doc.getTags() : List.of(),
-                "seriesName", doc.getSeriesName() != null ? doc.getSeriesName() : ""
-        );
+        // Map.of 最多 10 个 key；用 java.util.HashMap 以便扩展
+        var m = new java.util.HashMap<String, Object>();
+        m.put("id", doc.getId());
+        m.put("slug", doc.getSlug() != null ? doc.getSlug() : "");
+        m.put("title", doc.getTitle());
+        m.put("content", truncate(doc.getContent(), 3000));
+        m.put("categoryName", doc.getCategoryName() != null ? doc.getCategoryName() : "");
+        m.put("categorySlug", doc.getCategorySlug() != null ? doc.getCategorySlug() : "");
+        m.put("tags", doc.getTags() != null ? doc.getTags() : List.of());
+        m.put("seriesName", doc.getSeriesName() != null ? doc.getSeriesName() : "");
+        return m;
     }
 
     @SuppressWarnings("unchecked")
@@ -104,6 +106,7 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
 
         return PostSearchDoc.builder()
                 .id(((Number) hit.get("id")).longValue())
+                .slug(str(hit.get("slug")))
                 .title(str(formatted.get("title")))
                 .content(str(formatted.get("content")))
                 .categoryName(str(hit.get("categoryName")))

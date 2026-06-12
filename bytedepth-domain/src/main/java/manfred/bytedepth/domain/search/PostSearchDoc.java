@@ -9,6 +9,7 @@ import java.util.List;
 @Builder
 public class PostSearchDoc {
     private Long id;
+    private String slug;
     private String title;
     private String content;
     private String categoryName;

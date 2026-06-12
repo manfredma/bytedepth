@@ -126,7 +126,7 @@
         <div th:if="${#lists.isEmpty(posts)}" class="empty">该分类/标签下暂无文章</div>
 
         <div th:each="post : ${posts}" class="post-item">
-            <h2><a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">文章标题</a></h2>
+            <h2><a th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a></h2>
             <div class="post-meta">
                 <span class="meta-date" th:if="${post.publishedAt != null}"
                       th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}"></span>
