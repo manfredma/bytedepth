@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>离线 - bytedepth</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a2e; color: #eee;
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        }
+        .container { text-align: center; padding: 40px 24px; }
+        .icon { font-size: 4rem; margin-bottom: 24px; }
+        h1 { color: #e94560; font-size: 1.8em; margin-bottom: 12px; letter-spacing: 1px; }
+        p { color: #aaa; font-size: 1em; line-height: 1.6; margin-bottom: 24px; }
+        button {
+            padding: 10px 28px; background: #e94560; color: white;
+            border: none; border-radius: 6px; font-size: 1em;
+            cursor: pointer; transition: background .2s;
+        }
+        button:hover { background: #c73652; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📡</div>
+        <h1>当前处于离线状态</h1>
+        <p>网络连接已断开，无法加载新内容。<br>您仍可访问之前已缓存的文章。</p>
+        <button onclick="window.location.reload()">重新连接</button>
+    </div>
+</body>
+</html>

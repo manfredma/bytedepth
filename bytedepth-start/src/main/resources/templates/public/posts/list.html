@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
     <title th:text="${activeCategory != null ? activeCategory + ' - 文章' : (activeTag != null ? '#' + activeTag + ' - 文章' : '全部文章')} + ' - bytedepth'">文章列表</title>
     <style>
         * { box-sizing: border-box; }
