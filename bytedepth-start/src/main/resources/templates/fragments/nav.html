@@ -2,54 +2,97 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
-<nav th:fragment="navbar"
-     style="position:sticky;top:0;z-index:1000;padding:16px 24px;background:#1a1a2e;
-            color:#eee;display:flex;gap:24px;align-items:center;">
-    <a th:href="@{/}" style="display:flex;align-items:center;gap:8px;text-decoration:none;">
-        <img th:src="@{/icons/logo.svg}" alt="bytedepth" width="36" height="36" style="display:block;">
-        <span style="color:#e94560;font-weight:bold;font-size:1.2em;letter-spacing:1px;">bytedepth</span>
-    </a>
-    <a th:href="@{/posts}" style="color:#eee;text-decoration:none;">文章</a>
-    <a th:href="@{/columns}" style="color:#eee;text-decoration:none;">专栏</a>
-    <a th:href="@{/projects}" style="color:#eee;text-decoration:none;">项目</a>
-    <form action="/search" method="get" style="display:flex;align-items:center;gap:0;margin-left:auto;">
-        <input type="text" name="q" placeholder="搜索文章…"
-               style="padding:5px 12px;border:none;border-radius:4px 0 0 4px;font-size:0.88em;
-                      outline:none;width:160px;background:#fff;color:#333;" />
-        <button type="submit"
-                style="padding:5px 11px;background:#e94560;color:white;border:none;
-                       border-radius:0 4px 4px 0;cursor:pointer;font-size:0.9em;line-height:1;">🔍</button>
-    </form>
-    <span style="display:flex;gap:16px;align-items:center;margin-left:16px;">
-        <!-- 后台 & 管理（仅 admin） -->
-        <a sec:authorize="hasAuthority('admin:dashboard:view')"
-           th:href="@{/admin}"
-           style="color:#e94560;text-decoration:none;font-weight:600;">后台</a>
-        <!-- 写文章（需要 blog:post:create 权限） -->
-        <a sec:authorize="hasAuthority('blog:post:create')"
-           th:href="@{/posts/new}"
-           style="color:#eee;text-decoration:none;">✏ 写文章</a>
-        <!-- 用户审核（仅 admin） -->
-        <a sec:authorize="hasAuthority('system:user:approve')"
-           th:href="@{/admin/users}"
-           style="color:#eee;text-decoration:none;font-size:0.88em;">👤 审核用户</a>
-        <!-- 已登录：用户名（链接到个人主页）+ 退出 -->
-        <a sec:authorize="isAuthenticated()"
-           th:href="@{/u/{u}(u=${#authentication.name})}"
-           style="color:#ccc;text-decoration:none;font-size:0.9em;"
-           th:text="${#authentication.name}">用户名</a>
-        <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" style="margin:0;">
-            <button type="submit"
-                    style="background:none;border:none;color:#aaa;cursor:pointer;font-size:0.9em;">退出</button>
-        </form>
-        <!-- 未登录：登录 + 注册 -->
-        <a sec:authorize="!isAuthenticated()"
-           th:href="@{/login}"
-           style="color:#aaa;text-decoration:none;font-size:0.9em;">登录</a>
-        <a sec:authorize="!isAuthenticated()"
-           th:href="@{/register}"
-           style="color:#e94560;text-decoration:none;font-size:0.9em;font-weight:600;">注册</a>
-    </span>
+<style>
+.nav-bar {
+    position: sticky; top: 0; z-index: 1000;
+    background: #1a1a2e; color: #eee;
+}
+.nav-row {
+    display: flex; align-items: center;
+    padding: 10px 20px; gap: 20px;
+}
+.nav-brand {
+    display: flex; align-items: center; gap: 8px;
+    text-decoration: none; flex-shrink: 0;
+}
+.nav-brand img { display: block; }
+.nav-brand span { color: #e94560; font-weight: bold; font-size: 1.1em; letter-spacing: 1px; }
+.nav-links { display: flex; align-items: center; gap: 20px; }
+.nav-links a { color: #eee; text-decoration: none; font-size: 0.95em; white-space: nowrap; }
+.nav-links a:hover { color: #e94560; }
+.nav-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.nav-search { display: flex; align-items: center; }
+.nav-search input {
+    padding: 5px 10px; border: none; border-radius: 4px 0 0 4px;
+    font-size: 0.85em; outline: none; width: 150px;
+    background: #fff; color: #333;
+}
+.nav-search button {
+    padding: 5px 10px; background: #e94560; color: white;
+    border: none; border-radius: 0 4px 4px 0; cursor: pointer; line-height: 1;
+}
+.nav-auth { display: flex; align-items: center; gap: 12px; }
+.nav-auth a, .nav-auth button {
+    color: #aaa; text-decoration: none; font-size: 0.88em;
+    background: none; border: none; cursor: pointer;
+}
+.nav-auth .nav-register { color: #e94560; font-weight: 600; }
+.nav-auth .nav-admin   { color: #e94560; font-weight: 600; }
+
+/* ── 移动端：两行布局 ── */
+@media (max-width: 640px) {
+    .nav-row { flex-wrap: wrap; padding: 10px 14px; gap: 0; row-gap: 8px; }
+    .nav-brand { flex: 0 0 auto; }
+    /* 第一行：品牌 + 链接 + auth 在右侧 */
+    .nav-links { gap: 14px; flex: 1; justify-content: flex-end; }
+    .nav-right  { width: 100%; }
+    /* 第二行：搜索撑满 */
+    .nav-search { flex: 1; }
+    .nav-search input { width: 100%; border-radius: 4px 0 0 4px; }
+    .nav-auth { margin-left: auto; }
+}
+@media (max-width: 400px) {
+    .nav-brand span { display: none; } /* 极小屏只显示 logo 图标 */
+    .nav-links a { font-size: 0.88em; }
+}
+</style>
+<nav th:fragment="navbar" class="nav-bar">
+    <div class="nav-row">
+        <!-- 品牌 -->
+        <a th:href="@{/}" class="nav-brand">
+            <img th:src="@{/icons/logo.svg}" alt="bd" width="28" height="28">
+            <span>bytedepth</span>
+        </a>
+        <!-- 导航链接 -->
+        <div class="nav-links">
+            <a th:href="@{/posts}">文章</a>
+            <a th:href="@{/columns}">专栏</a>
+            <a th:href="@{/projects}">项目</a>
+        </div>
+        <!-- 搜索 + 用户区 -->
+        <div class="nav-right">
+            <form action="/search" method="get" class="nav-search">
+                <input type="text" name="q" placeholder="搜索文章…" />
+                <button type="submit">🔍</button>
+            </form>
+            <div class="nav-auth">
+                <a sec:authorize="hasAuthority('admin:dashboard:view')"
+                   th:href="@{/admin}" class="nav-admin">后台</a>
+                <a sec:authorize="hasAuthority('blog:post:create')"
+                   th:href="@{/posts/new}">✏</a>
+                <a sec:authorize="isAuthenticated()"
+                   th:href="@{/u/{u}(u=${#authentication.name})}"
+                   th:text="${#authentication.name}">用户名</a>
+                <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" style="margin:0;">
+                    <button type="submit">退出</button>
+                </form>
+                <a sec:authorize="!isAuthenticated()"
+                   th:href="@{/login}">登录</a>
+                <a sec:authorize="!isAuthenticated()"
+                   th:href="@{/register}" class="nav-register">注册</a>
+            </div>
+        </div>
+    </div>
 </nav>
 </body>
 </html>
