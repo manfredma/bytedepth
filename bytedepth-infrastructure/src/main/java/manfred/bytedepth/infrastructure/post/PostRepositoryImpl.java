@@ -145,6 +145,11 @@ public class PostRepositoryImpl implements PostRepository {
             .map(this::toEntity);
     }
 
+    @Override
+    public void updateSlug(Long id, String slug) {
+        postMapper.updateSlug(id, slug);
+    }
+
     private PostDO toDO(Post post) {
         PostDO d = new PostDO();
         d.setId(post.getId());

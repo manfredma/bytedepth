@@ -15,7 +15,10 @@ import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListAllPostsQryExe;
 import manfred.bytedepth.app.series.AppendPostToSeriesCmdExe;
 import manfred.bytedepth.app.series.RemovePostFromSeriesCmdExe;
+import manfred.bytedepth.domain.common.SlugUtils;
+import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.SeriesRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -47,6 +50,7 @@ public class AdminPostController {
     private final SeriesRepository seriesRepository;
     private final AppendPostToSeriesCmdExe appendPostToSeriesCmdExe;
     private final RemovePostFromSeriesCmdExe removePostFromSeriesCmdExe;
+    private final PostRepository postRepository;
 
     @GetMapping
     public String list(Model model,
@@ -115,6 +119,29 @@ public class AdminPostController {
                                         @RequestParam(required = false, defaultValue = "") List<String> tags) {
         setPostTagsCmdExe.execute(id, tags);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 更新文章 slug。
+     * 格式要求：仅含 [a-z0-9-]，首尾为英数字，无连续 -。
+     * 返回 200 成功，400 格式非法，409 slug 已被其他文章占用。
+     */
+    @PostMapping("/{id}/slug")
+    @ResponseBody
+    public ResponseEntity<String> updateSlug(@PathVariable Long id,
+                                             @RequestParam String slug) {
+        if (!SlugUtils.isValid(slug)) {
+            return ResponseEntity.badRequest()
+                    .body("slug 格式非法：只允许小写英文、数字和连字符（-），首尾须为英数字，不可连续 -");
+        }
+        // 唯一性检查：同 slug 被其他文章占用则拒绝
+        var conflict = postRepository.findBySlug(slug);
+        if (conflict.isPresent() && !conflict.get().getId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("slug '" + slug + "' 已被 postId=" + conflict.get().getId() + " 占用");
+        }
+        postRepository.updateSlug(id, slug);
+        return ResponseEntity.ok("ok");
     }
 
     /** 文章列表页快速绑定专栏 */

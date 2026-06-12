@@ -39,4 +39,7 @@ public interface PostMapper extends BaseMapper<PostDO> {
 
     @Update("UPDATE post SET series_id = NULL, series_order = NULL WHERE id = #{postId}")
     void clearPostSeries(@Param("postId") Long postId);
+
+    @Update("UPDATE post SET slug = #{slug} WHERE id = #{id}")
+    void updateSlug(@Param("id") Long id, @Param("slug") String slug);
 }

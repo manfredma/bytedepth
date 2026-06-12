@@ -24,4 +24,7 @@ public interface PostRepository {
     long countPublishedByAuthorId(Long authorId);
 
     java.util.Optional<Post> findBySlug(String slug);
+
+    /** 直接更新 slug 字段（不触及其他字段）。调用方需保证格式合法且无冲突。 */
+    void updateSlug(Long id, String slug);
 }
