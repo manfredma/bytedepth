@@ -2,61 +2,38 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
-<style>
-.nav-bar {
-    position: sticky; top: 0; z-index: 1000;
-    background: #1a1a2e; color: #eee;
-}
-.nav-row {
-    display: flex; align-items: center;
-    padding: 10px 20px; gap: 20px;
-}
-.nav-brand {
-    display: flex; align-items: center; gap: 8px;
-    text-decoration: none; flex-shrink: 0;
-}
-.nav-brand img { display: block; }
-.nav-brand span { color: #e94560; font-weight: bold; font-size: 1.1em; letter-spacing: 1px; }
-.nav-links { display: flex; align-items: center; gap: 20px; }
-.nav-links a { color: #eee; text-decoration: none; font-size: 0.95em; white-space: nowrap; }
-.nav-links a:hover { color: #e94560; }
-.nav-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-.nav-search { display: flex; align-items: center; }
-.nav-search input {
-    padding: 5px 10px; border: none; border-radius: 4px 0 0 4px;
-    font-size: 0.85em; outline: none; width: 150px;
-    background: #fff; color: #333;
-}
-.nav-search button {
-    padding: 5px 10px; background: #e94560; color: white;
-    border: none; border-radius: 0 4px 4px 0; cursor: pointer; line-height: 1;
-}
-.nav-auth { display: flex; align-items: center; gap: 12px; }
-.nav-auth a, .nav-auth button {
-    color: #aaa; text-decoration: none; font-size: 0.88em;
-    background: none; border: none; cursor: pointer;
-}
-.nav-auth .nav-register { color: #e94560; font-weight: 600; }
-.nav-auth .nav-admin   { color: #e94560; font-weight: 600; }
-
-/* ── 移动端：两行布局 ── */
-@media (max-width: 640px) {
-    .nav-row { flex-wrap: wrap; padding: 10px 14px; gap: 0; row-gap: 8px; }
-    .nav-brand { flex: 0 0 auto; }
-    /* 第一行：品牌 + 链接 + auth 在右侧 */
-    .nav-links { gap: 14px; flex: 1; justify-content: flex-end; }
-    .nav-right  { width: 100%; }
-    /* 第二行：搜索撑满 */
-    .nav-search { flex: 1; }
-    .nav-search input { width: 100%; border-radius: 4px 0 0 4px; }
-    .nav-auth { margin-left: auto; }
-}
-@media (max-width: 400px) {
-    .nav-brand span { display: none; } /* 极小屏只显示 logo 图标 */
-    .nav-links a { font-size: 0.88em; }
-}
-</style>
 <nav th:fragment="navbar" class="nav-bar">
+    <style>
+    .nav-bar { position:sticky; top:0; z-index:1000; background:#1a1a2e; color:#eee; }
+    .nav-row { display:flex; align-items:center; padding:10px 20px; gap:20px; }
+    .nav-brand { display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0; }
+    .nav-brand img { display:block; }
+    .nav-brand span { color:#e94560; font-weight:bold; font-size:1.1em; letter-spacing:1px; }
+    .nav-links { display:flex; align-items:center; gap:20px; }
+    .nav-links a { color:#eee; text-decoration:none; font-size:0.95em; white-space:nowrap; }
+    .nav-links a:hover { color:#e94560; }
+    .nav-right { display:flex; align-items:center; gap:12px; margin-left:auto; }
+    .nav-search { display:flex; align-items:center; }
+    .nav-search input { padding:5px 10px; border:none; border-radius:4px 0 0 4px; font-size:0.85em; outline:none; width:150px; background:#fff; color:#333; }
+    .nav-search button { padding:5px 10px; background:#e94560; color:white; border:none; border-radius:0 4px 4px 0; cursor:pointer; line-height:1; }
+    .nav-auth { display:flex; align-items:center; gap:12px; }
+    .nav-auth a, .nav-auth button { color:#aaa; text-decoration:none; font-size:0.88em; background:none; border:none; cursor:pointer; }
+    .nav-auth .nav-register { color:#e94560; font-weight:600; }
+    .nav-auth .nav-admin { color:#e94560; font-weight:600; }
+    @media (max-width:640px) {
+        .nav-row { flex-wrap:wrap; padding:10px 14px; gap:0; row-gap:8px; }
+        .nav-brand { flex:0 0 auto; }
+        .nav-links { gap:14px; flex:1; justify-content:flex-end; }
+        .nav-right { width:100%; }
+        .nav-search { flex:1; }
+        .nav-search input { width:100%; }
+        .nav-auth { margin-left:auto; }
+    }
+    @media (max-width:400px) {
+        .nav-brand span { display:none; }
+        .nav-links a { font-size:0.88em; }
+    }
+    </style>
     <div class="nav-row">
         <!-- 品牌 -->
         <a th:href="@{/}" class="nav-brand">
