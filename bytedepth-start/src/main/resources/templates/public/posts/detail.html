@@ -595,5 +595,30 @@ document.addEventListener('DOMContentLoaded', function () {
     mermaid.run();
 });
 </script>
+<!-- Schema.org 结构化数据：让 Google 展示发布时间、作者等富文本摘要 -->
+<script type="application/ld+json" th:inline="javascript">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline":       /*[[${post.title}]]*/ "",
+  "description":    /*[[${metaDescription}]]*/ "",
+  "url":            /*[[${canonicalUrl}]]*/ "",
+  "datePublished":  /*[[${post.publishedAt != null ? #temporals.format(post.publishedAt, 'yyyy-MM-dd') : ''}]]*/ "",
+  "dateModified":   /*[[${post.updatedAt   != null ? #temporals.format(post.updatedAt,   'yyyy-MM-dd') : ''}]]*/ "",
+  "author": {
+    "@type": "Person",
+    "name":  "ByteDepth"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name":  "ByteDepth",
+    "url":   /*[[${canonicalUrl.replaceAll('/posts/.*', '')}]]*/ ""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id":   /*[[${canonicalUrl}]]*/ ""
+  }
+}
+</script>
 </body>
 </html>
