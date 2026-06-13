@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# 不索引后台管理页面
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://bytedepth.cn/sitemap.xml

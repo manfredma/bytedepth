@@ -29,6 +29,8 @@ server:
   port: 8080
 
 bytedepth:
+  site:
+    url: ${BYTEDEPTH_SITE_URL:https://bytedepth.cn}
   upload:
     image-dir: ${user.home}/bytedepth/images
   search:

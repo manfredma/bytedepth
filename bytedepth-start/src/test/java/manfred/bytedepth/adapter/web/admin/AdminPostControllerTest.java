@@ -11,6 +11,7 @@ import manfred.bytedepth.app.post.query.ListAllPostsQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
 import manfred.bytedepth.app.series.AppendPostToSeriesCmdExe;
 import manfred.bytedepth.app.series.RemovePostFromSeriesCmdExe;
+import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,6 +83,9 @@ class AdminPostControllerTest {
 
     @MockBean
     private RemovePostFromSeriesCmdExe removePostFromSeriesCmdExe;
+
+    @MockBean
+    private PostRepository postRepository;
 
     // --- Authentication tests ---
 

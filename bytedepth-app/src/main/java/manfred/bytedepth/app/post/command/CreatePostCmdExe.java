@@ -8,6 +8,9 @@ import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.user.UserRepository;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Component
 @RequiredArgsConstructor
 public class CreatePostCmdExe {
@@ -31,11 +34,15 @@ public class CreatePostCmdExe {
         return saved.getId();
     }
 
+    private static final DateTimeFormatter SLUG_TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
     /**
      * 生成唯一 slug：
      * 1. 优先使用用户手动填写的 slug（已校验格式）；
      * 2. 若未填写，从标题提取英文 + 数字片段自动生成；
-     * 3. 冲突时追加 -2/-3/... 后缀。
+     * 3. 纯中文标题无法提取英文片段时，fallback 为 {@code post-{yyyyMMddHHmmss}}，
+     *    避免与其他文章碰撞产生无意义的 post-2、post-3；
+     * 4. 仍有冲突时追加 -2/-3/... 后缀。
      */
     private String resolveSlug(String provided, String title) {
         String base;
@@ -45,7 +52,8 @@ public class CreatePostCmdExe {
             base = SlugUtils.slugify(title);
         }
         if (base.isBlank()) {
-            base = "post";
+            // 纯中文/无 ASCII 字符标题：用时间戳生成唯一基础 slug
+            base = "post-" + LocalDateTime.now().format(SLUG_TS);
         }
         if (postRepository.findBySlug(base).isEmpty()) return base;
         for (int i = 2; i <= 999; i++) {

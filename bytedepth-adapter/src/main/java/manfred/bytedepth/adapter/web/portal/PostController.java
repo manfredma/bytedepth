@@ -2,6 +2,7 @@ package manfred.bytedepth.adapter.web.portal;
 
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
+import manfred.bytedepth.adapter.web.util.SeoUtils;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
@@ -15,6 +16,7 @@ import manfred.bytedepth.domain.stats.PostViewCounter;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import manfred.bytedepth.infrastructure.user.SiteUserDetails;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -30,6 +32,9 @@ import java.util.NoSuchElementException;
 @RequestMapping("/posts")
 @RequiredArgsConstructor
 public class PostController {
+
+    @Value("${bytedepth.site.url}")
+    private String siteUrl;
 
     private final ListPostsQryExe listPostsQryExe;
     private final GetPostQryExe getPostQryExe;
@@ -100,6 +105,8 @@ public class PostController {
         }
 
         model.addAttribute("post", post);
+        model.addAttribute("metaDescription", SeoUtils.excerpt(post.getContent()));
+        model.addAttribute("canonicalUrl", siteUrl + "/posts/" + post.getSlug());
         model.addAttribute("renderedContent", markdownRenderer.render(post.getContent()));
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));

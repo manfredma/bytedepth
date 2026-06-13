@@ -27,4 +27,7 @@ public interface PostRepository {
 
     /** 直接更新 slug 字段（不触及其他字段）。调用方需保证格式合法且无冲突。 */
     void updateSlug(Long id, String slug);
+
+    /** 查询所有已发布文章（不分页），用于生成 sitemap。 */
+    List<Post> findAllPublished();
 }

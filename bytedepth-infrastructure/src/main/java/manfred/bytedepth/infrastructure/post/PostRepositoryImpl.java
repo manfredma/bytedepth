@@ -150,6 +150,14 @@ public class PostRepositoryImpl implements PostRepository {
         postMapper.updateSlug(id, slug);
     }
 
+    @Override
+    public List<Post> findAllPublished() {
+        return postMapper.selectList(new LambdaQueryWrapper<PostDO>()
+                .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
+                .orderByDesc(PostDO::getPublishedAt))
+                .stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
     private PostDO toDO(Post post) {
         PostDO d = new PostDO();
         d.setId(post.getId());
