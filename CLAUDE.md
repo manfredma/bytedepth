@@ -24,10 +24,13 @@ python3 ~/.claude/skills/obsidian-to-bytedepth/import_via_api.py --remote update
 ## 部署
 
 ```bash
-# docker restart 不切换镜像，必须用 up --build
+# 重建 app 镜像并确保所有服务（含 nginx）都在运行
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@175.24.197.202 \
-  "cd /opt/bytedepth && git pull && sudo docker compose up --build -d app"
+  "cd /opt/bytedepth && git pull && sudo docker compose up --build -d && sudo docker compose ps"
 ```
+
+> ⚠️ 不要只写 `up --build -d app`——nginx 不在重启范围内，会导致 HTTPS 全部不可达。
+> 部署后等 15 秒再验证：`curl -s https://bytedepth.cn -o /dev/null -w "%{http_code}"`
 
 ## 代码质量
 
