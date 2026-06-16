@@ -13,11 +13,24 @@
         .sidebar { width: 200px; flex-shrink: 0; }
         .sidebar-card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.06); overflow: hidden; }
         .sidebar-title { padding: 14px 16px 10px; font-size: 0.78em; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #f0f0f0; }
-        .cat-link { display: block; padding: 9px 16px; font-size: 0.9em; text-decoration: none; color: #444; border-left: 3px solid transparent; transition: all .15s; }
+        .cat-link { display: flex; align-items: center; gap: 8px; padding: 9px 16px; font-size: 0.9em; text-decoration: none; color: #444; border-left: 3px solid transparent; transition: all .15s; }
         .cat-link:hover { background: #fdf0f2; color: #e94560; border-left-color: #e94560; }
         .cat-link.active { background: #fdf0f2; color: #e94560; border-left-color: #e94560; font-weight: 600; }
         .cat-link.child { padding-left: 28px; font-size: 0.85em; color: #666; }
         .cat-link.child::before { content: "└ "; color: #ccc; }
+        .cat-icon { font-size: 1.05em; flex-shrink: 0; line-height: 1; }
+        .cat-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* 移动端：侧栏缩为纯图标条 */
+        @media (max-width: 768px) {
+            .layout { margin: 10px auto; padding: 0 6px; gap: 8px; }
+            .sidebar { width: 46px; flex-shrink: 0; }
+            .sidebar-title { padding: 8px 0; font-size: 0.6em; text-align: center; letter-spacing: 0; }
+            .cat-link { padding: 9px 0; justify-content: center; gap: 0; border-left-width: 2px; }
+            .cat-link.child { padding-left: 0; }
+            .cat-link.child::before { content: none; }
+            .cat-icon { font-size: 1.2rem; }
+            .cat-name { display: none; }
+        }
         /* 主内容 */
         .main { flex: 1; min-width: 0; }
         /* 标签过滤栏 */
@@ -70,13 +83,38 @@
     <aside class="sidebar">
         <div class="sidebar-card">
             <div class="sidebar-title">分类</div>
-            <a th:href="@{/posts}" class="cat-link"
-               th:classappend="${activeCategory == null and activeTag == null ? ' active' : ''}">全部文章</a>
+            <a th:href="@{/posts}" class="cat-link" title="全部文章"
+               th:classappend="${activeCategory == null and activeTag == null ? ' active' : ''}">
+                <span class="cat-icon">📰</span>
+                <span class="cat-name">全部文章</span>
+            </a>
             <a th:each="cat : ${allCategories}"
                th:href="@{/posts(category=${cat.slug})}"
-               th:text="${cat.depth > 0 ? cat.name : cat.name}"
+               th:title="${cat.name}"
                class="cat-link"
-               th:classappend="${(activeCategory == cat.slug ? ' active' : '') + (cat.depth > 0 ? ' child' : '')}">分类</a>
+               th:classappend="${(activeCategory == cat.slug ? ' active' : '') + (cat.depth > 0 ? ' child' : '')}">
+                <span class="cat-icon">
+                    <th:block th:switch="${cat.slug}">
+                        <th:block th:case="'architecture'">🏗️</th:block>
+                        <th:block th:case="'distributed'">🌐</th:block>
+                        <th:block th:case="'microservices'">🧩</th:block>
+                        <th:block th:case="'devops'">♾️</th:block>
+                        <th:block th:case="'data'">📊</th:block>
+                        <th:block th:case="'language'">💻</th:block>
+                        <th:block th:case="'performance'">⚡</th:block>
+                        <th:block th:case="'engineering'">🔧</th:block>
+                        <th:block th:case="'source-code'">🔬</th:block>
+                        <th:block th:case="'reading'">📖</th:block>
+                        <th:block th:case="'computer-fundamentals'">🖥️</th:block>
+                        <th:block th:case="'ai-coding'">🤖</th:block>
+                        <th:block th:case="'framework'">🧰</th:block>
+                        <th:block th:case="'database'">🗄️</th:block>
+                        <th:block th:case="'uncategorized'">📁</th:block>
+                        <th:block th:case="*">📂</th:block>
+                    </th:block>
+                </span>
+                <span class="cat-name" th:text="${cat.name}">分类</span>
+            </a>
         </div>
     </aside>
 
