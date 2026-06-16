@@ -325,7 +325,7 @@
         .series-trigger {
             position: fixed;
             left: 0;
-            top: 50%;
+            top: 25%;
             transform: translateY(-50%);
             z-index: 300;
             background: var(--navy);
@@ -426,7 +426,18 @@
             .post-nav .nav-next { text-align: left; }
             .post-nav .nav-title { white-space: normal; }
             .comment-form { padding: 16px; }
-            .series-trigger { padding: 10px 7px; }
+            /* 手机端：极窄小的专栏入口，不遮挡正文 */
+            .series-trigger {
+                padding: 8px 5px;
+                gap: 4px;
+                border-radius: 0 6px 6px 0;
+                box-shadow: 2px 0 8px rgba(0,0,0,.18);
+            }
+            .series-trigger-label {
+                font-size: 0.52rem;
+                letter-spacing: .06em;
+            }
+            .series-trigger-icon { font-size: 0.52rem; }
         }
 
         @media (max-width: 480px) {
