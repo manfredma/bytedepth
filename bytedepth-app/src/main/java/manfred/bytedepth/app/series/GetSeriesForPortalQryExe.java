@@ -32,6 +32,7 @@ public class GetSeriesForPortalQryExe {
         List<SeriesPortalPostDTO> postDTOs = pagePosts.stream().map(item -> {
             SeriesPortalPostDTO dto = new SeriesPortalPostDTO();
             dto.setId(item.id());
+            dto.setSlug(item.slug());
             dto.setTitle(item.title());
             dto.setSeriesOrder(item.seriesOrder());
             dto.setSummary(summarize(item.content(), 160));
