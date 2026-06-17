@@ -104,9 +104,17 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
                 ? (Map<String, Object>) hit.get("_formatted")
                 : hit;
 
+        long id = ((Number) hit.get("id")).longValue();
+        // 旧索引文档可能缺少 slug 字段（在 slug 特性上线前已索引）；
+        // 回退到数字 ID，PostController 会 301 跳转到正确的 slug URL。
+        String slug = str(hit.get("slug"));
+        if (slug.isBlank()) {
+            slug = String.valueOf(id);
+        }
+
         return PostSearchDoc.builder()
-                .id(((Number) hit.get("id")).longValue())
-                .slug(str(hit.get("slug")))
+                .id(id)
+                .slug(slug)
                 .title(str(formatted.get("title")))
                 .content(str(formatted.get("content")))
                 .categoryName(str(hit.get("categoryName")))
