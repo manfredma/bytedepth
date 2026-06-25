@@ -24,7 +24,6 @@ import java.util.List;
 public class SitemapController {
 
     private static final DateTimeFormatter ISO_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final String STATIC_LASTMOD = LocalDateTime.now().format(ISO_DATE);
 
     @Value("${bytedepth.site.url}")
     private String siteUrl;
@@ -35,6 +34,7 @@ public class SitemapController {
     @GetMapping(value = "/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
     @ResponseBody
     public String sitemap() {
+        String today = LocalDateTime.now().format(ISO_DATE);
         List<Post> posts = postRepository.findAllPublished();
         List<Series> seriesList = seriesRepository.findAll();
 
@@ -43,13 +43,16 @@ public class SitemapController {
         xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
 
         // 首页
-        appendUrl(xml, siteUrl + "/", STATIC_LASTMOD, "daily", "1.0");
+        appendUrl(xml, siteUrl + "/", today, "daily", "1.0");
 
         // 文章列表页
-        appendUrl(xml, siteUrl + "/posts", STATIC_LASTMOD, "daily", "0.9");
+        appendUrl(xml, siteUrl + "/posts", today, "daily", "0.9");
 
         // 专栏列表页
-        appendUrl(xml, siteUrl + "/columns", STATIC_LASTMOD, "weekly", "0.8");
+        appendUrl(xml, siteUrl + "/columns", today, "weekly", "0.8");
+
+        // 关于页面
+        appendUrl(xml, siteUrl + "/about", today, "monthly", "0.5");
 
         // 各篇文章
         for (Post post : posts) {
@@ -59,7 +62,7 @@ public class SitemapController {
                     ? post.getUpdatedAt().format(ISO_DATE)
                     : post.getPublishedAt() != null
                             ? post.getPublishedAt().format(ISO_DATE)
-                            : STATIC_LASTMOD;
+                            : today;
             appendUrl(xml, siteUrl + "/posts/" + slug, lastmod, "monthly", "0.8");
         }
 
@@ -67,7 +70,7 @@ public class SitemapController {
         for (Series series : seriesList) {
             String slug = series.getSlug();
             if (slug == null || slug.isBlank()) continue;
-            appendUrl(xml, siteUrl + "/columns/" + slug, STATIC_LASTMOD, "weekly", "0.7");
+            appendUrl(xml, siteUrl + "/columns/" + slug, today, "weekly", "0.7");
         }
 
         xml.append("</urlset>");

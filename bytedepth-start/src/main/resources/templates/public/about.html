@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
+    <title>关于 - bytedepth</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+        .container { max-width: 760px; margin: 40px auto; padding: 0 20px 60px; }
+        .page-header { margin-bottom: 32px; }
+        .page-header h1 { font-size: 1.8em; color: #1a1a2e; margin: 0 0 8px; }
+        .page-header p { color: #888; font-size: 0.95em; margin: 0; }
+        .card { background: white; border-radius: 10px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 20px; }
+        .card h2 { font-size: 1.05em; color: #e94560; margin: 0 0 14px; font-weight: 700;
+                   text-transform: uppercase; letter-spacing: .06em; }
+        .card p { color: #444; line-height: 1.8; margin: 0 0 12px; font-size: 0.97em; }
+        .card p:last-child { margin-bottom: 0; }
+        .site-name { color: #1a1a2e; font-weight: 700; }
+        .highlight { color: #e94560; font-weight: 600; }
+        .tech-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+        .tech-tag { background: #f4f6f8; color: #555; border: 1px solid #e4e7eb;
+                    padding: 4px 12px; border-radius: 14px; font-size: 0.85em; font-weight: 500; }
+        .link-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+        .link-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px;
+                    border-radius: 6px; font-size: 0.9em; font-weight: 600; text-decoration: none;
+                    transition: opacity .15s; }
+        .link-btn:hover { opacity: .82; }
+        .link-github { background: #1a1a2e; color: white; }
+        .divider { border: none; border-top: 1px solid #f0f2f5; margin: 18px 0; }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="container">
+    <div class="page-header">
+        <h1>关于</h1>
+        <p>这里是 bytedepth — 字节深处</p>
+    </div>
+
+    <!-- 网站介绍 -->
+    <div class="card">
+        <h2>网站简介</h2>
+        <p>
+            <span class="site-name">bytedepth（字节深处）</span>是一个专注于
+            <span class="highlight">技术深度</span>的个人博客。
+            名字取自"字节"与"深度"——在这里，我希望每一篇文章都能超过表面，
+            真正钻进某个技术问题的内部，把原理、细节和取舍说清楚。
+        </p>
+        <p>
+            这里不追热点，不堆砌概念。写一篇文章，至少要把一个点讲透：
+            为什么这样设计？代价是什么？有没有更好的做法？
+        </p>
+    </div>
+
+    <!-- 内容方向 -->
+    <div class="card">
+        <h2>内容方向</h2>
+        <p>
+            文章以 <span class="highlight">Java 后端 / 系统设计</span> 为主线，兼顾工程实践与性能调优。
+            具体来说会写：
+        </p>
+        <p>
+            <strong>技术原理</strong> — JVM、并发、数据库内核、分布式协议，追根溯源而不只是 API 用法。
+        </p>
+        <p>
+            <strong>工程实践</strong> — 代码设计、架构演进、踩坑记录，真实项目里的权衡与教训。
+        </p>
+        <p>
+            <strong>专栏系列</strong> — 将同一主题的文章串成系列，系统性地把一个领域从入门讲到深水区。
+        </p>
+    </div>
+
+    <!-- 技术栈 -->
+    <div class="card">
+        <h2>站点技术栈</h2>
+        <p>这个博客本身也是一个练手项目，采用 DDD 分层架构，自己从零搭建：</p>
+        <div class="tech-row">
+            <span class="tech-tag">Java 21</span>
+            <span class="tech-tag">Spring Boot 3</span>
+            <span class="tech-tag">MyBatis-Plus</span>
+            <span class="tech-tag">MySQL</span>
+            <span class="tech-tag">Thymeleaf</span>
+            <span class="tech-tag">Docker</span>
+            <span class="tech-tag">Nginx</span>
+        </div>
+        <hr class="divider">
+        <p style="margin-top:4px;">
+            源码在 GitHub 上开放，欢迎参考或提 Issue。
+        </p>
+        <div class="link-row">
+            <a href="https://github.com/manfredhuang/bytedepth" class="link-btn link-github"
+               target="_blank" rel="noopener">
+                ⭐ GitHub
+            </a>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
