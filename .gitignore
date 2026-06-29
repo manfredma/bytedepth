@@ -53,3 +53,9 @@ __pycache__/
 # Tool-generated analysis artifacts
 .understand-anything/
 .codegraph/
+
+# MaxMind GeoLite2 数据库（约 60MB，手动部署，勿提交）
+# 下载：https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
+# 部署路径：/opt/bytedepth/GeoLite2-City.mmdb
+# 配置：export BYTEDEPTH_GEOIP_DB_PATH=/opt/bytedepth/GeoLite2-City.mmdb
+*.mmdb
