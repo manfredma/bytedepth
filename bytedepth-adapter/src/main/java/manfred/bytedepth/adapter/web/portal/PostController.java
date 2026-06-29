@@ -1,5 +1,6 @@
 package manfred.bytedepth.adapter.web.portal;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
 import manfred.bytedepth.adapter.web.util.SeoUtils;
@@ -13,10 +14,12 @@ import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import manfred.bytedepth.domain.stats.PostViewCounter;
+import manfred.bytedepth.domain.stats.PostViewedEvent;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import manfred.bytedepth.infrastructure.user.SiteUserDetails;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -26,6 +29,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
 
 @Controller
@@ -48,6 +52,7 @@ public class PostController {
     private final PostRepository postRepository;
     private final SeriesRepository seriesRepository;
     private final GetSeriesPostsQryExe getSeriesPostsQryExe;
+    private final ApplicationEventPublisher eventPublisher;
 
     @GetMapping
     public String list(Model model,
@@ -85,7 +90,9 @@ public class PostController {
      * 数字 ID → 301 重定向到 slug URL（兼容旧链接、admin 后台跳转）。
      */
     @GetMapping("/{identifier}")
-    public String detail(@PathVariable("identifier") String identifier, Model model) {
+    public String detail(@PathVariable("identifier") String identifier,
+                         Model model,
+                         HttpServletRequest request) {
         // 纯数字 → 按 ID 查出 slug 后重定向
         if (identifier.matches("\\d+")) {
             var p = postRepository.findById(Long.parseLong(identifier))
@@ -113,6 +120,17 @@ public class PostController {
         model.addAttribute("canPublish", "DRAFT".equals(post.getStatus()) && (isOwner || isAdmin));
         postViewCounter.increment(id);
         model.addAttribute("pvCount", postViewCounter.getCount(id));
+
+        // 发布访问事件（异步写日志，不影响响应时间）
+        eventPublisher.publishEvent(new PostViewedEvent(
+                id,
+                extractUserId(currentUser),
+                getClientIp(request),
+                truncate(request.getHeader("User-Agent"), 512),
+                truncate(request.getHeader("Referer"), 512),
+                LocalDateTime.now()
+        ));
+
         model.addAttribute("prevPost", postRepository.findPrevPublished(id).orElse(null));
         model.addAttribute("nextPost", postRepository.findNextPublished(id).orElse(null));
         var currentPost = postRepository.findById(id).orElseThrow();
@@ -178,5 +196,42 @@ public class PostController {
             return sd.getId().equals(authorId);
         }
         return false;
+    }
+
+    /** 从登录用户中提取数据库 ID，匿名返回 null。 */
+    private Long extractUserId(UserDetails user) {
+        if (user instanceof SiteUserDetails sd) {
+            return sd.getId();
+        }
+        return null;
+    }
+
+    /**
+     * 获取客户端真实 IP：优先取 X-Forwarded-For 首个非私有 IP，
+     * 无法解析时回退到 RemoteAddr。
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            for (String part : xff.split(",")) {
+                String ip = part.trim();
+                if (!ip.isBlank() && !isPrivateIp(ip)) {
+                    return ip;
+                }
+            }
+        }
+        return request.getRemoteAddr();
+    }
+
+    /** 判断是否为私有/回环 IP（简单字符串匹配）。 */
+    private boolean isPrivateIp(String ip) {
+        return ip.startsWith("10.") || ip.startsWith("172.") || ip.startsWith("192.168.")
+                || ip.equals("127.0.0.1") || ip.equals("::1") || ip.equals("0:0:0:0:0:0:0:1");
+    }
+
+    /** 截断字符串至指定长度，null 安全。 */
+    private String truncate(String s, int maxLen) {
+        if (s == null) return null;
+        return s.length() <= maxLen ? s : s.substring(0, maxLen);
     }
 }

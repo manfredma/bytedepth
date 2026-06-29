@@ -15,6 +15,7 @@ import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.PostStatus;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import manfred.bytedepth.domain.stats.PostViewCounter;
+import manfred.bytedepth.domain.stats.PostViewedEvent;
 
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
@@ -23,11 +24,14 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -38,10 +42,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(value = PostController.class,
         excludeAutoConfiguration = {SecurityAutoConfiguration.class, DataSourceAutoConfiguration.class})
+@RecordApplicationEvents
 class PostControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ApplicationEvents applicationEvents;
 
     @MockBean
     private ListPostsQryExe listPostsQryExe;
@@ -183,5 +191,31 @@ class PostControllerTest {
         mockMvc.perform(get("/posts/another-post"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("pvCount", 10L));
+    }
+
+    @Test
+    void getPostDetail_publishesPostViewedEvent() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(3L);
+        dto.setSlug("event-test");
+        dto.setTitle("事件测试");
+        dto.setContent("内容");
+        dto.setStatus("PUBLISHED");
+
+        Post domainPost = Post.reconstruct(3L, "event-test", "事件测试", "内容",
+                PostStatus.PUBLISHED, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), null, null, false);
+        when(postRepository.findById(3L)).thenReturn(Optional.of(domainPost));
+        when(postRepository.findPrevPublished(3L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(3L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("event-test")).thenReturn(dto);
+        when(listTagsQryExe.findByPostId(3L)).thenReturn(List.of());
+        when(listCommentsQryExe.findApprovedByPostId(3L)).thenReturn(List.of());
+        when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");
+
+        mockMvc.perform(get("/posts/event-test"))
+                .andExpect(status().isOk());
+
+        assertThat(applicationEvents.stream(PostViewedEvent.class).count())
+                .isGreaterThanOrEqualTo(1);
     }
 }
