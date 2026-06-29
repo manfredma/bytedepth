@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <title>访问日志 - bytedepth</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { color: #1a1a2e; margin: 0; }
+        .total-info { font-size: 0.9em; color: #888; }
+        .filter-bar { background: white; padding: 14px 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .filter-bar input { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.88em; width: 140px; }
+        .btn-filter { padding: 6px 16px; background: #e94560; color: white; border: none; border-radius: 4px; font-size: 0.88em; cursor: pointer; }
+        .btn-filter:hover { background: #c73652; }
+        .btn-reset { padding: 6px 14px; background: #f0f0f0; color: #555; text-decoration: none; border-radius: 4px; font-size: 0.88em; }
+        .btn-reset:hover { background: #e0e0e0; }
+        .back-link { font-size: 0.88em; color: #888; text-decoration: none; }
+        .back-link:hover { color: #e94560; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+        th { background: #f8f9fa; padding: 11px 14px; text-align: left; font-size: 0.82em; color: #666; font-weight: 600; border-bottom: 1px solid #eee; }
+        td { padding: 10px 14px; font-size: 0.85em; color: #333; border-bottom: 1px solid #f3f3f3; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+        .visitor-user { color: #1967d2; font-weight: 500; }
+        .visitor-anon { color: #888; font-family: monospace; font-size: 0.92em; }
+        .geo { color: #555; }
+        .geo-empty { color: #ccc; }
+        .referer { color: #555; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+        .ua { color: #999; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+        .time { color: #888; white-space: nowrap; }
+        .post-link { color: #e94560; text-decoration: none; font-weight: 500; }
+        .post-link:hover { text-decoration: underline; }
+        .empty { text-align: center; padding: 60px; color: #aaa; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 24px 0 8px; }
+        .pagination a, .pagination span { padding: 6px 12px; border-radius: 4px; font-size: 0.88em; text-decoration: none; }
+        .pagination a { background: white; border: 1px solid #ddd; color: #333; }
+        .pagination a:hover { background: #f0f0f0; }
+        .pagination .current { background: #e94560; color: white; border: 1px solid #e94560; font-weight: 600; }
+        .pagination .disabled { color: #bbb; cursor: default; }
+        .page-info { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="page-header">
+        <h1>📋 文章访问日志</h1>
+        <span class="total-info">共 <strong th:text="${total}">0</strong> 条记录</span>
+    </div>
+
+    <a href="/admin" class="back-link">← 返回后台首页</a>
+    <br><br>
+
+    <!-- 筛选栏 -->
+    <form method="get" action="/admin/view-logs" class="filter-bar">
+        <input type="number" name="postId" placeholder="文章 ID 筛选"
+               th:value="${filterPostId}" min="1">
+        <input type="number" name="userId" placeholder="用户 ID 筛选"
+               th:value="${filterUserId}" min="1">
+        <button type="submit" class="btn-filter">筛选</button>
+        <a href="/admin/view-logs" class="btn-reset">重置</a>
+    </form>
+
+    <!-- 日志表格 -->
+    <table>
+        <thead>
+        <tr>
+            <th>文章 ID</th>
+            <th>访客</th>
+            <th>IP</th>
+            <th>国家 / 城市</th>
+            <th>来源</th>
+            <th>浏览器</th>
+            <th>时间</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="log : ${logs}">
+            <td>
+                <a class="post-link"
+                   th:href="@{/posts/{id}(id=${log.postId})}"
+                   target="_blank"
+                   th:text="'#' + ${log.postId}">#1</a>
+            </td>
+            <td>
+                <span th:if="${log.userId != null}"
+                      class="visitor-user"
+                      th:text="'用户 #' + ${log.userId}">用户</span>
+                <span th:if="${log.userId == null}"
+                      class="visitor-anon"
+                      th:text="${log.ip}">匿名</span>
+            </td>
+            <td th:text="${log.ip}" class="visitor-anon">IP</td>
+            <td>
+                <span th:if="${log.country != null and !log.country.isEmpty()}"
+                      class="geo"
+                      th:text="${log.country} + (${log.city != null and !log.city.isEmpty()} ? ' / ' + ${log.city} : '')">-</span>
+                <span th:if="${log.country == null or log.country.isEmpty()}"
+                      class="geo-empty">-</span>
+            </td>
+            <td>
+                <span th:if="${log.referer != null}"
+                      class="referer"
+                      th:title="${log.referer}"
+                      th:text="${log.referer}">-</span>
+                <span th:if="${log.referer == null}" class="geo-empty">直接访问</span>
+            </td>
+            <td>
+                <span th:if="${log.userAgent != null}"
+                      class="ua"
+                      th:title="${log.userAgent}"
+                      th:text="${log.userAgent}">-</span>
+            </td>
+            <td class="time"
+                th:text="${#temporals.format(log.visitedAt, 'MM-dd HH:mm')}">时间</td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(logs)}">
+            <td colspan="7" class="empty">暂无访问记录</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- 分页 -->
+    <div class="page-info" th:if="${totalPages > 1}">
+        第 <span th:text="${currentPage}">1</span> / <span th:text="${totalPages}">1</span> 页
+    </div>
+    <div class="pagination" th:if="${totalPages > 1}">
+        <a th:if="${currentPage > 1}"
+           th:href="@{/admin/view-logs(page=${currentPage - 1}, postId=${filterPostId}, userId=${filterUserId})}">上一页</a>
+        <span th:if="${currentPage == 1}" class="disabled">上一页</span>
+
+        <th:block th:each="i : ${#numbers.sequence(1, totalPages)}">
+            <span th:if="${i == currentPage}" class="current" th:text="${i}">1</span>
+            <a th:if="${i != currentPage}"
+               th:href="@{/admin/view-logs(page=${i}, postId=${filterPostId}, userId=${filterUserId})}"
+               th:text="${i}">1</a>
+        </th:block>
+
+        <a th:if="${currentPage < totalPages}"
+           th:href="@{/admin/view-logs(page=${currentPage + 1}, postId=${filterPostId}, userId=${filterUserId})}">下一页</a>
+        <span th:if="${currentPage == totalPages}" class="disabled">下一页</span>
+    </div>
+</div>
+</body>
+</html>

@@ -36,3 +36,8 @@ bytedepth:
   search:
     url: ${BYTEDEPTH_SEARCH_URL:http://localhost:7700}
     api-key: ${BYTEDEPTH_SEARCH_API_KEY:bytedepth-search-key}
+  geoip:
+    # GeoLite2-City.mmdb 路径。留空则 IP 地理解析禁用。
+    # 下载：https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
+    # 部署时设置：export BYTEDEPTH_GEOIP_DB_PATH=/opt/bytedepth/GeoLite2-City.mmdb
+    db-path: ${BYTEDEPTH_GEOIP_DB_PATH:}
