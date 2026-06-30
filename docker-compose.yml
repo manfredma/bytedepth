@@ -53,6 +53,7 @@ services:
       JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
     volumes:
       - /data/images:/root/bytedepth/images
+      - /data/geoip:/data/geoip:ro
     depends_on:
       mysql:
         condition: service_healthy
