@@ -49,6 +49,8 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       BYTEDEPTH_SEARCH_URL: http://meilisearch:7700
       BYTEDEPTH_SEARCH_API_KEY: ${MEILI_MASTER_KEY:-bytedepth-search-key}
+      BYTEDEPTH_GEOIP_DB_PATH: /data/geoip/GeoLite2-City.mmdb
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
     volumes:
       - /data/images:/root/bytedepth/images
     depends_on:
