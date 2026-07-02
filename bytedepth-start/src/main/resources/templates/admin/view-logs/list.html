@@ -35,13 +35,13 @@
         .post-link { color: #e94560; text-decoration: none; font-weight: 500; }
         .post-link:hover { text-decoration: underline; }
         .empty { text-align: center; padding: 60px; color: #aaa; }
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 24px 0 8px; }
-        .pagination a, .pagination span { padding: 6px 12px; border-radius: 4px; font-size: 0.88em; text-decoration: none; }
-        .pagination a { background: white; border: 1px solid #ddd; color: #333; }
-        .pagination a:hover { background: #f0f0f0; }
-        .pagination .current { background: #e94560; color: white; border: 1px solid #e94560; font-weight: 600; }
-        .pagination .disabled { color: #bbb; cursor: default; }
-        .page-info { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 4px; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 24px 0 8px; flex-wrap: wrap; }
+        .page-btn { padding: 6px 12px; border-radius: 4px; font-size: 0.88em; text-decoration: none;
+                    background: white; border: 1px solid #ddd; color: #333; }
+        .page-btn:hover { background: #f0f0f0; }
+        .page-btn.current { background: #e94560; color: white; border-color: #e94560; font-weight: 600; }
+        .page-btn.disabled { color: #bbb; cursor: default; pointer-events: none; }
+        .page-info-top { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 4px; }
     </style>
 </head>
 <body>
@@ -124,25 +124,13 @@
         </tbody>
     </table>
 
-    <!-- 分页 -->
-    <div class="page-info" th:if="${totalPages > 1}">
-        第 <span th:text="${currentPage}">1</span> / <span th:text="${totalPages}">1</span> 页
-    </div>
-    <div class="pagination" th:if="${totalPages > 1}">
-        <a th:if="${currentPage > 1}"
-           th:href="@{/admin/view-logs(page=${currentPage - 1}, postId=${filterPostId}, userId=${filterUserId})}">上一页</a>
-        <span th:if="${currentPage == 1}" class="disabled">上一页</span>
-
-        <th:block th:each="i : ${#numbers.sequence(1, totalPages)}">
-            <span th:if="${i == currentPage}" class="current" th:text="${i}">1</span>
-            <a th:if="${i != currentPage}"
-               th:href="@{/admin/view-logs(page=${i}, postId=${filterPostId}, userId=${filterUserId})}"
-               th:text="${i}">1</a>
-        </th:block>
-
-        <a th:if="${currentPage < totalPages}"
-           th:href="@{/admin/view-logs(page=${currentPage + 1}, postId=${filterPostId}, userId=${filterUserId})}">下一页</a>
-        <span th:if="${currentPage == totalPages}" class="disabled">下一页</span>
+    <!-- 分页（baseUrl 按需拼接筛选参数）-->
+    <div th:if="${totalPages > 1}"
+         th:with="baseUrl='/admin/view-logs?' +
+                  (${filterPostId} != null ? 'postId=' + ${filterPostId} + '&amp;' : '') +
+                  (${filterUserId} != null ? 'userId=' + ${filterUserId} + '&amp;' : '')">
+        <div th:replace="~{fragments/pagination :: pagination(
+            ${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${baseUrl})}"></div>
     </div>
 </div>
 </div>

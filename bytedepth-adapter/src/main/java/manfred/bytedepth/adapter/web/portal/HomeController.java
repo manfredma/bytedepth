@@ -27,6 +27,8 @@ public class HomeController {
         model.addAttribute("posts", posts);
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
+        model.addAttribute("total", total);
+        model.addAttribute("pageSize", PAGE_SIZE);
         model.addAttribute("hasPrev", page > 1);
         model.addAttribute("hasNext", page < totalPages);
         model.addAttribute("projects", listProjectsQryExe.execute());

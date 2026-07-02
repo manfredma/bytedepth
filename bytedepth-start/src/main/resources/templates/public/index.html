@@ -28,6 +28,8 @@
             text-decoration: none; border: 1px solid #ddd; background: white; color: #555; transition: all .15s; }
         .page-btn:hover { background: #e94560; color: white; border-color: #e94560; }
         .page-info { color: #999; font-size: 0.85em; }
+        .page-info-top { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 8px; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
         .empty { color: #999; text-align: center; padding: 40px; }
         /* 分类区 */
         .cat-section { background: white; padding: 28px 24px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.07); margin-bottom: 32px; }
@@ -116,12 +118,9 @@
         <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</p>
     </div>
 
-    <div th:if="${totalPages > 1}" class="pagination">
-        <a th:if="${hasPrev}" th:href="@{/(page=${currentPage - 1})}" class="page-btn">← 上一页</a>
-        <span th:if="${!hasPrev}" class="page-btn" style="opacity:.4;cursor:default;">← 上一页</span>
-        <span class="page-info" th:text="${currentPage} + ' / ' + ${totalPages}"></span>
-        <a th:if="${hasNext}" th:href="@{/(page=${currentPage + 1})}" class="page-btn">下一页 →</a>
-        <span th:if="${!hasNext}" class="page-btn" style="opacity:.4;cursor:default;">下一页 →</span>
+    <div th:if="${totalPages > 1}">
+        <div th:replace="~{fragments/pagination :: pagination(
+            ${currentPage}, ${totalPages}, ${total}, ${pageSize}, '/?')}"></div>
     </div>
 
     <div th:if="${not #lists.isEmpty(projects)}">

@@ -3,8 +3,26 @@
 <head></head>
 <body>
 <div th:fragment="pagination(currentPage, totalPages, total, pageSize, baseUrl)" class="pagination-wrap">
+    <style>
+        .page-jump { display: inline-flex; align-items: center; gap: 5px;
+                     font-size: .85em; color: #777; margin-left: 10px; vertical-align: middle; }
+        .jump-input { width: 52px; padding: 5px 7px; border: 1px solid #ddd; border-radius: 4px;
+                      font-size: .85em; text-align: center; outline: none;
+                      -moz-appearance: textfield; }
+        .jump-input::-webkit-inner-spin-button,
+        .jump-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .jump-input:focus { border-color: #e94560; }
+        .jump-btn { padding: 5px 10px; background: #e94560; color: white;
+                    border: none; border-radius: 4px; cursor: pointer;
+                    font-size: .85em; transition: background .15s; line-height: 1.4; }
+        .jump-btn:hover { background: #c73652; }
+    </style>
+
+    <!-- 总条数 / 页码信息（total 为 null 或 0 时不显示）-->
     <p class="page-info-top"
+       th:if="${total != null and total > 0}"
        th:text="'共 ' + ${total} + ' 条，第 ' + ${currentPage} + ' / ' + ${totalPages} + ' 页'"></p>
+
     <div class="pagination">
         <!-- 上一页 -->
         <a th:if="${currentPage > 1}"
@@ -12,19 +30,21 @@
            class="page-btn">← 上一页</a>
         <span th:if="${currentPage == 1}" class="page-btn disabled">← 上一页</span>
 
-        <!-- 页码：当前页前后各 2 页 -->
+        <!-- 页码（当前页前后各 2 页 + 省略号 + 首末页）-->
         <th:block th:with="startPage=${T(java.lang.Math).max(1, currentPage - 2)},
                            endPage=${T(java.lang.Math).min(totalPages.intValue(), currentPage + 2)}">
             <th:block th:if="${startPage > 1}">
                 <a th:href="${baseUrl + 'page=1&size=' + pageSize}" class="page-btn">1</a>
                 <span th:if="${startPage > 2}" class="page-btn disabled">…</span>
             </th:block>
+
             <th:block th:each="p : ${#numbers.sequence(startPage, endPage)}">
                 <a th:if="${p != currentPage}"
                    th:href="${baseUrl + 'page=' + p + '&size=' + pageSize}"
                    th:text="${p}" class="page-btn"></a>
                 <span th:if="${p == currentPage}" class="page-btn current" th:text="${p}"></span>
             </th:block>
+
             <th:block th:if="${endPage < totalPages}">
                 <span th:if="${endPage < totalPages - 1}" class="page-btn disabled">…</span>
                 <a th:href="${baseUrl + 'page=' + totalPages + '&size=' + pageSize}"
@@ -37,6 +57,28 @@
            th:href="${baseUrl + 'page=' + (currentPage + 1) + '&size=' + pageSize}"
            class="page-btn">下一页 →</a>
         <span th:if="${currentPage >= totalPages}" class="page-btn disabled">下一页 →</span>
+
+        <!-- 跳转到指定页 -->
+        <span class="page-jump">
+            跳至
+            <input type="number"
+                   class="jump-input"
+                   min="1"
+                   th:max="${totalPages}"
+                   th:attr="data-base=${baseUrl},data-size=${pageSize}"
+                   placeholder="页码"
+                   onkeydown="if(event.key==='Enter'){
+                       var v=+this.value, m=+this.max;
+                       if(v>=1 && v<=m) location.href=this.dataset.base+'page='+v+'&size='+this.dataset.size;
+                   }">
+            页
+            <button class="jump-btn"
+                    onclick="var i=this.closest('.page-jump').querySelector('.jump-input'),
+                                 v=+i.value, m=+i.max;
+                             if(v>=1 && v<=m) location.href=i.dataset.base+'page='+v+'&size='+i.dataset.size;">
+                跳
+            </button>
+        </span>
     </div>
 </div>
 </body>
