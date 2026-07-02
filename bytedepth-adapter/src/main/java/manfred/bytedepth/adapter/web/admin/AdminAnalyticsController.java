@@ -1,0 +1,141 @@
+package manfred.bytedepth.adapter.web.admin;
+
+import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.infrastructure.stats.ViewLogStatsMapper;
+import manfred.bytedepth.infrastructure.stats.dto.CountryViewStat;
+import manfred.bytedepth.infrastructure.stats.dto.PostViewRank;
+import manfred.bytedepth.infrastructure.stats.dto.TrendPoint;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+
+/**
+ * 访问统计分析后台。
+ * 路径：GET /admin/analytics（页面）及 /admin/analytics/api/*（JSON）
+ * 权限：由 SecurityConfig /admin/** 规则守卫（需 admin:dashboard:view）。
+ */
+@Controller
+@RequestMapping("/admin/analytics")
+@RequiredArgsConstructor
+public class AdminAnalyticsController {
+
+    private final ViewLogStatsMapper viewLogStatsMapper;
+
+    /** 页面骨架，数据全部由前端 AJAX 拉取。 */
+    @GetMapping
+    public String page() {
+        return "admin/analytics";
+    }
+
+    @GetMapping("/api/top-posts")
+    @ResponseBody
+    public List<PostViewRank> topPosts(
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime end   = toEndTime(period, to);
+        List<PostViewRank> rows = viewLogStatsMapper.topPosts(start, end, limit);
+        long total = rows.stream().mapToLong(PostViewRank::getViewCount).sum();
+        rows.forEach(r -> r.setPercent(pct(r.getViewCount(), total)));
+        return rows;
+    }
+
+    @GetMapping("/api/countries")
+    @ResponseBody
+    public List<CountryViewStat> countries(
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime end   = toEndTime(period, to);
+        List<CountryViewStat> rows = viewLogStatsMapper.countryStats(start, end);
+        long total = rows.stream().mapToLong(CountryViewStat::getViewCount).sum();
+        rows.forEach(r -> r.setPercent(pct(r.getViewCount(), total)));
+        return rows;
+    }
+
+    @GetMapping("/api/country-posts")
+    @ResponseBody
+    public List<PostViewRank> countryPosts(
+            @RequestParam String country,
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime end   = toEndTime(period, to);
+        List<PostViewRank> rows = viewLogStatsMapper.countryTopPosts(country, start, end, limit);
+        long total = rows.stream().mapToLong(PostViewRank::getViewCount).sum();
+        rows.forEach(r -> r.setPercent(pct(r.getViewCount(), total)));
+        return rows;
+    }
+
+    @GetMapping("/api/post-trend")
+    @ResponseBody
+    public List<TrendPoint> postTrend(
+            @RequestParam Long postId,
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime end   = toEndTime(period, to);
+        return viewLogStatsMapper.postTrend(postId, start, end, toDateFormat(start, end));
+    }
+
+    @GetMapping("/api/overview-trend")
+    @ResponseBody
+    public List<TrendPoint> overviewTrend(
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime end   = toEndTime(period, to);
+        return viewLogStatsMapper.overviewTrend(start, end, toDateFormat(start, end));
+    }
+
+    // ── 工具方法（package-private 供测试直接调用）─────────────────────────
+
+    static LocalDateTime toStartTime(String period, String from) {
+        if (from != null && !from.isBlank()) {
+            return LocalDate.parse(from).atStartOfDay();
+        }
+        return switch (period) {
+            case "today" -> LocalDate.now().atStartOfDay();
+            case "month" -> LocalDateTime.now().minusDays(30);
+            case "year"  -> LocalDateTime.now().minusDays(365);
+            default      -> LocalDateTime.now().minusDays(7);  // "week"
+        };
+    }
+
+    static LocalDateTime toEndTime(String period, String to) {
+        if (to != null && !to.isBlank()) {
+            return LocalDate.parse(to).atTime(23, 59, 59);
+        }
+        if ("today".equals(period)) {
+            return LocalDate.now().atTime(23, 59, 59);
+        }
+        return LocalDateTime.now();
+    }
+
+    /** 按时间跨度自动选择 DATE_FORMAT 格式字符串。 */
+    static String toDateFormat(LocalDateTime start, LocalDateTime end) {
+        long days = ChronoUnit.DAYS.between(start, end);
+        if (days <= 2)  return "%H:00";
+        if (days <= 60) return "%m-%d";
+        return "%Y-%m";
+    }
+
+    private static double pct(long value, long total) {
+        if (total == 0) return 0.0;
+        return Math.round(value * 1000.0 / total) / 10.0;
+    }
+}
