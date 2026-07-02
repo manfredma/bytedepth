@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>添加项目 - bytedepth</title>
     <style>
         * { box-sizing: border-box; }
@@ -20,6 +21,9 @@
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="admin-shell">
+<aside th:replace="~{fragments/admin-sidebar :: sidebar('projects')}"></aside>
+<div class="admin-main">
 <div class="container">
     <div class="card">
         <h1>添加项目</h1>
@@ -40,6 +44,8 @@
             <button type="submit" class="btn">保存</button>
         </form>
     </div>
+</div>
+</div>
 </div>
 </body>
 </html>

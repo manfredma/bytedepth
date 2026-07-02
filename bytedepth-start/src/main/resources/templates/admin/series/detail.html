@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title th:text="${series.name} + ' — 专栏管理 - bytedepth'">专栏详情</title>
     <style>
         * { box-sizing: border-box; }
@@ -47,6 +48,9 @@
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="admin-shell">
+<aside th:replace="~{fragments/admin-sidebar :: sidebar('series')}"></aside>
+<div class="admin-main">
 <div class="container">
     <a th:href="@{/admin/series}" class="back-link">← 返回专栏列表</a>
     <h1 th:text="${series.name}" style="margin-top:12px;">专栏名</h1>
@@ -135,6 +139,8 @@
     </div>
 
     <a th:href="@{/admin/series}" class="back-link">← 返回专栏列表</a>
+</div>
+</div>
 </div>
 </body>
 </html>

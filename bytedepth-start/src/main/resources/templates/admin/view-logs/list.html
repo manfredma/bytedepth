@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>访问日志 - bytedepth</title>
     <style>
         * { box-sizing: border-box; }
@@ -45,14 +46,14 @@
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="admin-shell">
+<aside th:replace="~{fragments/admin-sidebar :: sidebar('view-logs')}"></aside>
+<div class="admin-main">
 <div class="container">
     <div class="page-header">
         <h1>📋 文章访问日志</h1>
         <span class="total-info">共 <strong th:text="${total}">0</strong> 条记录</span>
     </div>
-
-    <a href="/admin" class="back-link">← 返回后台首页</a>
-    <br><br>
 
     <!-- 筛选栏 -->
     <form method="get" action="/admin/view-logs" class="filter-bar">
@@ -143,6 +144,8 @@
            th:href="@{/admin/view-logs(page=${currentPage + 1}, postId=${filterPostId}, userId=${filterUserId})}">下一页</a>
         <span th:if="${currentPage == totalPages}" class="disabled">下一页</span>
     </div>
+</div>
+</div>
 </div>
 </body>
 </html>

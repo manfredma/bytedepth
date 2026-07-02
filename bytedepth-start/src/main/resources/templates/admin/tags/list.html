@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>标签管理 - bytedepth</title>
     <style>
         * { box-sizing: border-box; }
@@ -24,6 +25,9 @@
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="admin-shell">
+<aside th:replace="~{fragments/admin-sidebar :: sidebar('tags')}"></aside>
+<div class="admin-main">
 <div class="container">
     <h1>标签管理</h1>
 
@@ -49,6 +53,8 @@
     </div>
 
     <a th:href="@{/admin}" class="back-link">← 返回后台</a>
+</div>
+</div>
 </div>
 </body>
 </html>

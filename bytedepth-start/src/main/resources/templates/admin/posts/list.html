@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>文章管理 - bytedepth</title>
     <style>
         * { box-sizing: border-box; }
@@ -55,6 +56,9 @@
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="admin-shell">
+<aside th:replace="~{fragments/admin-sidebar :: sidebar('posts')}"></aside>
+<div class="admin-main">
 <div class="container">
     <div class="page-header">
         <h1>文章管理</h1>
@@ -119,6 +123,8 @@
             ${currentPage}, ${totalPages}, ${total}, ${pageSize},
             '/admin/posts?')}"></div>
     </div>
+</div>
+</div>
 </div>
 </body>
 </html>

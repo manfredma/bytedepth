@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  后台侧边栏 fragment。
+  用法：<aside th:replace="~{fragments/admin-sidebar :: sidebar('posts')}"></aside>
+  active 可选值：dashboard | posts | comments | categories | tags | series
+               | users | analytics | view-logs | projects
+-->
+<aside th:fragment="sidebar(active)" class="admin-sidebar">
+
+    <!-- 内容管理 -->
+    <div class="admin-sidebar-section">内容管理</div>
+    <a href="/admin/posts" class="admin-sidebar-item"
+       th:classappend="${active == 'posts'} ? ' active' : ''">
+        <span class="si-icon">📝</span>文章管理
+    </a>
+    <a href="/admin/comments" class="admin-sidebar-item"
+       th:classappend="${active == 'comments'} ? ' active' : ''">
+        <span class="si-icon">💬</span>评论管理
+    </a>
+    <a href="/admin/categories" class="admin-sidebar-item"
+       th:classappend="${active == 'categories'} ? ' active' : ''">
+        <span class="si-icon">🗂️</span>分类管理
+    </a>
+    <a href="/admin/tags" class="admin-sidebar-item"
+       th:classappend="${active == 'tags'} ? ' active' : ''">
+        <span class="si-icon">🏷️</span>标签管理
+    </a>
+    <a href="/admin/series" class="admin-sidebar-item"
+       th:classappend="${active == 'series'} ? ' active' : ''">
+        <span class="si-icon">📚</span>专栏管理
+    </a>
+    <a href="/admin/users" class="admin-sidebar-item"
+       th:classappend="${active == 'users'} ? ' active' : ''">
+        <span class="si-icon">👥</span>用户审核
+    </a>
+
+    <!-- 数据分析 -->
+    <div class="admin-sidebar-section">数据分析</div>
+    <a href="/admin/analytics" class="admin-sidebar-item"
+       th:classappend="${active == 'analytics'} ? ' active' : ''">
+        <span class="si-icon">📊</span>访问统计
+    </a>
+    <a href="/admin/view-logs" class="admin-sidebar-item"
+       th:classappend="${active == 'view-logs'} ? ' active' : ''">
+        <span class="si-icon">📋</span>访问日志
+    </a>
+
+    <!-- 网站 -->
+    <div class="admin-sidebar-section">网站</div>
+    <a href="/admin/projects/new" class="admin-sidebar-item"
+       th:classappend="${active == 'projects'} ? ' active' : ''">
+        <span class="si-icon">🚀</span>项目展示
+    </a>
+    <a href="/" class="admin-sidebar-item" target="_blank">
+        <span class="si-icon">🌐</span>查看前台 ↗
+    </a>
+
+</aside>
+</body>
+</html>

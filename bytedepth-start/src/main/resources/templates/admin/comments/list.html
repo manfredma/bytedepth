@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>评论列表 - bytedepth</title>
     <style>
         * { box-sizing: border-box; }
@@ -25,6 +26,9 @@
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="admin-shell">
+<aside th:replace="~{fragments/admin-sidebar :: sidebar('comments')}"></aside>
+<div class="admin-main">
 <div class="container">
     <h1>评论列表</h1>
     <div th:if="${#lists.isEmpty(comments)}" class="empty">暂无评论</div>
@@ -37,6 +41,8 @@
         <div class="time" th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd HH:mm')}">时间</div>
         <div class="body" th:text="${c.content}">内容</div>
     </div>
+</div>
+</div>
 </div>
 </body>
 </html>

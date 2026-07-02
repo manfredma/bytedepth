@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>写文章 - bytedepth</title>
     <style>
         * { box-sizing: border-box; }
@@ -30,6 +31,9 @@
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar}"></nav>
+<div class="admin-shell">
+<aside th:replace="~{fragments/admin-sidebar :: sidebar('posts')}"></aside>
+<div class="admin-main">
 <div class="container">
     <div class="form-card">
         <h1 th:text="${post != null} ? '编辑文章' : '写文章'">写文章</h1>
@@ -134,5 +138,7 @@ async function uploadImage(input) {
     input.value = '';
 }
 </script>
+</div>
+</div>
 </body>
 </html>
