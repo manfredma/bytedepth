@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="manfred.bytedepth.infrastructure.stats.ViewLogStatsMapper">
+
+    <!-- 文章访问排名（LEFT JOIN post 取标题，percent 占位 0.0 由 Controller 回填）-->
+    <select id="topPosts"
+            resultType="manfred.bytedepth.infrastructure.stats.dto.PostViewRank">
+        SELECT v.post_id,
+               p.title      AS post_title,
+               COUNT(*)     AS view_count,
+               0.0          AS percent
+        FROM post_view_log v
+                 LEFT JOIN post p ON v.post_id = p.id
+        WHERE v.visited_at &gt;= #{startTime}
+          AND v.visited_at &lt;= #{endTime}
+        GROUP BY v.post_id, p.title
+        ORDER BY view_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 国家/地区分布（NULL 和空字符串归为"未知"）-->
+    <select id="countryStats"
+            resultType="manfred.bytedepth.infrastructure.stats.dto.CountryViewStat">
+        SELECT COALESCE(NULLIF(country, ''), '未知') AS country,
+               COUNT(*)                              AS view_count,
+               0.0                                  AS percent
+        FROM post_view_log
+        WHERE visited_at &gt;= #{startTime}
+          AND visited_at &lt;= #{endTime}
+        GROUP BY country
+        ORDER BY view_count DESC
+        LIMIT 30
+    </select>
+
+    <!-- 下钻A：指定国家内文章排名 -->
+    <select id="countryTopPosts"
+            resultType="manfred.bytedepth.infrastructure.stats.dto.PostViewRank">
+        SELECT v.post_id,
+               p.title  AS post_title,
+               COUNT(*) AS view_count,
+               0.0      AS percent
+        FROM post_view_log v
+                 LEFT JOIN post p ON v.post_id = p.id
+        WHERE v.visited_at &gt;= #{startTime}
+          AND v.visited_at &lt;= #{endTime}
+          AND v.country = #{country}
+        GROUP BY v.post_id, p.title
+        ORDER BY view_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 下钻B：单篇文章时间趋势（format 由 Controller 按时间跨度决定）-->
+    <select id="postTrend"
+            resultType="manfred.bytedepth.infrastructure.stats.dto.TrendPoint">
+        SELECT DATE_FORMAT(visited_at, #{format}) AS label,
+               COUNT(*)                           AS view_count
+        FROM post_view_log
+        WHERE post_id = #{postId}
+          AND visited_at &gt;= #{startTime}
+          AND visited_at &lt;= #{endTime}
+        GROUP BY label
+        ORDER BY label ASC
+    </select>
+
+    <!-- 总体访问趋势（时间粒度下钻 C 也复用此查询）-->
+    <select id="overviewTrend"
+            resultType="manfred.bytedepth.infrastructure.stats.dto.TrendPoint">
+        SELECT DATE_FORMAT(visited_at, #{format}) AS label,
+               COUNT(*)                           AS view_count
+        FROM post_view_log
+        WHERE visited_at &gt;= #{startTime}
+          AND visited_at &lt;= #{endTime}
+        GROUP BY label
+        ORDER BY label ASC
+    </select>
+
+</mapper>
