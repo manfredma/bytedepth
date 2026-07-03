@@ -116,6 +116,30 @@
                 <span class="cat-name" th:text="${cat.name}">分类</span>
             </a>
         </div>
+
+        <!-- 专栏入口 -->
+        <div class="sidebar-card" style="margin-top:12px;" th:if="${not #lists.isEmpty(allSeries)}">
+            <div class="sidebar-title">专栏</div>
+            <a th:href="@{/columns}" class="cat-link" title="全部专栏">
+                <span class="cat-icon">📚</span>
+                <span class="cat-name">全部专栏</span>
+            </a>
+            <a th:each="s, iterStat : ${allSeries}"
+               th:if="${iterStat.index < 5}"
+               th:href="@{/columns/{slug}(slug=${s.slug})}"
+               th:title="${s.name}"
+               class="cat-link">
+                <span class="cat-icon">📖</span>
+                <span class="cat-name" th:text="${s.name}">专栏名</span>
+            </a>
+            <a th:if="${#lists.size(allSeries) > 5}"
+               th:href="@{/columns}"
+               class="cat-link"
+               style="color:#e94560;font-size:0.82em;font-weight:600;">
+                <span class="cat-icon">···</span>
+                <span class="cat-name">更多专栏 →</span>
+            </a>
+        </div>
     </aside>
 
     <!-- 主内容 -->

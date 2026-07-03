@@ -82,6 +82,7 @@ public class PostController {
         model.addAttribute("activeCategory", category);
         model.addAttribute("allTags", listTagsQryExe.findAllWithCount());
         model.addAttribute("allCategories", listCategoriesQryExe.execute());
+        model.addAttribute("allSeries", seriesRepository.findAll());
         return "public/posts/list";
     }
 
