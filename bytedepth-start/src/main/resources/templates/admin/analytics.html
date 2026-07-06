@@ -83,10 +83,8 @@
         <button class="period-tab" data-period="all">全部</button>
     </div>
 
-    <!-- 面包屑 -->
-    <div class="breadcrumb" id="breadcrumb">
-        <span class="bc-link" onclick="resetToRoot()">全部</span>
-    </div>
+    <!-- 面包屑（下钻路径，无下钻时为空） -->
+    <div class="breadcrumb" id="breadcrumb"></div>
 
     <!-- 主图区：文章排名 + 国家分布 -->
     <div class="charts-row">
@@ -355,35 +353,22 @@
 
     // ─── 面包屑 ──────────────────────────────────────────────────
     function updateBreadcrumb() {
-        let html = '<span class="bc-link" onclick="resetToRoot()">全部</span>';
+        const crumbs = [];
         if (state.from) {
-            html += ` <span class="bc-sep">›</span>`
-                  + ` <span class="bc-link" onclick="resetTimeRange()">`
-                  + `📅 ${state.from} ~ ${state.to}</span>`;
+            crumbs.push(`<span class="bc-link" onclick="resetTimeRange()">`
+                       + `📅 ${state.from} ~ ${state.to}</span>`);
         }
         if (state.country) {
-            html += ` <span class="bc-sep">›</span>`
-                  + ` <span class="bc-link" onclick="resetToCountry()">`
-                  + `🌍 ${state.country}</span>`;
+            crumbs.push(`<span class="bc-link" onclick="resetToCountry()">`
+                       + `🌍 ${state.country}</span>`);
         }
         if (state.postId) {
-            html += ` <span class="bc-sep">›</span>`
-                  + ` <span class="bc-current">${state.postTitle}</span>`;
+            crumbs.push(`<span class="bc-current">${state.postTitle}</span>`);
         }
-        document.getElementById('breadcrumb').innerHTML = html;
+        document.getElementById('breadcrumb').innerHTML = crumbs.join(' <span class="bc-sep">›</span> ');
     }
 
     // ─── 回退操作 ────────────────────────────────────────────────
-    function resetToRoot() {
-        state.country = null; state.postId = null;
-        state.from = null; state.to = null;
-        // 面包屑"全部"= 显示全部历史，切到 all 维度
-        state.period = 'all';
-        document.querySelectorAll('.period-tab').forEach(t => {
-            t.classList.toggle('active', t.dataset.period === state.period);
-        });
-        loadAll();
-    }
 
     function resetToCountry() {
         state.postId = null;
