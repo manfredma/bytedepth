@@ -4,27 +4,29 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <script th:src="@{/js/theme-switcher.js}"></script>
     <title>项目 - bytedepth</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: var(--bd-bg, #f0f2f5); color: var(--bd-text, #1a1a2e); }
         .container { max-width: 860px; margin: 40px auto; padding: 0 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; margin-top: 24px; }
-        .card { background: white; border-radius: 10px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.08); transition: transform .2s; }
+        .card { background: var(--bd-surface, white); border-radius: 10px; padding: 24px; box-shadow: var(--bd-shadow, 0 2px 8px rgba(0,0,0,.08)); transition: transform .2s; }
         .card:hover { transform: translateY(-3px); }
-        .card h2 { margin: 0 0 10px; color: #1a1a2e; font-size: 1.2em; }
-        .card p { color: #555; font-size: 0.95em; line-height: 1.6; margin: 0 0 14px; }
+        .card h2 { margin: 0 0 10px; color: var(--bd-text, #1a1a2e); font-size: 1.2em; }
+        .card p { color: var(--bd-text-muted, #555); font-size: 0.95em; line-height: 1.6; margin: 0 0 14px; }
         .tech-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-        .tech-tag { background: #e8f4fd; color: #2980b9; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; }
+        .tech-tag { background: var(--bd-project-tech-bg, #e8f4fd); color: var(--bd-project-tech-text, #2980b9); padding: 3px 10px; border-radius: 12px; font-size: 0.8em; }
         .links { display: flex; gap: 12px; }
         .link-btn { padding: 6px 14px; border-radius: 6px; font-size: 0.88em; text-decoration: none; font-weight: 500; }
-        .link-github { background: #1a1a2e; color: white; }
-        .link-demo { background: #e94560; color: white; }
-        .empty { color: #888; text-align: center; padding: 60px; background: white; border-radius: 8px; }
+        .link-github { background: var(--bd-nav-bg, #1a1a2e); color: var(--bd-nav-text, white); }
+        .link-demo { background: var(--bd-accent, #e94560); color: var(--bd-accent-text, white); }
+        .empty { color: var(--bd-text-subtle, #888); text-align: center; padding: 60px; background: var(--bd-surface, white); border-radius: 8px; }
     </style>
 </head>
 <body>
-<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
 <div class="container">
     <h1>项目</h1>
     <div th:if="${#lists.isEmpty(projects)}" class="empty">暂无项目展示</div>

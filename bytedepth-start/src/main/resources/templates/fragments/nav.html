@@ -2,24 +2,32 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
-<nav th:fragment="navbar" class="nav-bar">
+<nav th:fragment="navbar(showThemeSwitcher)" class="nav-bar">
     <style>
-    .nav-bar { position:sticky; top:0; z-index:1000; background:#1a1a2e; color:#eee; }
+    .nav-bar { position:sticky; top:0; z-index:1000; background:var(--bd-nav-bg, #1a1a2e); color:var(--bd-nav-text, #eee); }
     .nav-row { display:flex; align-items:center; padding:10px 20px; gap:20px; }
     .nav-brand { display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0; }
     .nav-brand img { display:block; }
-    .nav-brand span { color:#e94560; font-weight:bold; font-size:1.1em; letter-spacing:1px; }
+    .nav-brand span { color:var(--bd-nav-accent, #e94560); font-weight:bold; font-size:1.1em; letter-spacing:1px; }
     .nav-links { display:flex; align-items:center; gap:20px; }
-    .nav-links a { color:#eee; text-decoration:none; font-size:0.95em; white-space:nowrap; }
-    .nav-links a:hover { color:#e94560; }
+    .nav-links a { color:var(--bd-nav-text, #eee); text-decoration:none; font-size:0.95em; white-space:nowrap; }
+    .nav-links a:hover { color:var(--bd-nav-accent, #e94560); }
     .nav-right { display:flex; align-items:center; gap:12px; margin-left:auto; }
     .nav-search { display:flex; align-items:center; }
-    .nav-search input { padding:5px 10px; border:none; border-radius:4px 0 0 4px; font-size:0.85em; outline:none; width:150px; background:#fff; color:#333; }
-    .nav-search button { padding:5px 10px; background:#e94560; color:white; border:none; border-radius:0 4px 4px 0; cursor:pointer; line-height:1; }
+    .nav-search input { padding:5px 10px; border:none; border-radius:4px 0 0 4px; font-size:0.85em; outline:none; width:150px; background:var(--bd-surface, #fff); color:var(--bd-text, #333); }
+    .nav-search button { padding:5px 10px; background:var(--bd-accent, #e94560); color:var(--bd-accent-text, #fff); border:none; border-radius:0 4px 4px 0; cursor:pointer; line-height:1; }
     .nav-auth { display:flex; align-items:center; gap:12px; }
-    .nav-auth a, .nav-auth button { color:#aaa; text-decoration:none; font-size:0.88em; background:none; border:none; cursor:pointer; }
-    .nav-auth .nav-register { color:#e94560; font-weight:600; }
-    .nav-auth .nav-admin { color:#e94560; font-weight:600; }
+    .nav-auth a, .nav-auth button { color:var(--bd-nav-text, #eee); opacity:.72; text-decoration:none; font-size:0.88em; background:none; border:none; cursor:pointer; }
+    .nav-auth .nav-register { color:var(--bd-nav-accent, #e94560); opacity:1; font-weight:600; }
+    .nav-auth .nav-admin { color:var(--bd-nav-accent, #e94560); opacity:1; font-weight:600; }
+    .theme-switcher { position:relative; }
+    .theme-trigger { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid rgba(255,255,255,.18); border-radius:6px; background:rgba(255,255,255,.08); color:var(--bd-nav-text, #eee); cursor:pointer; font-size:1rem; line-height:1; }
+    .theme-trigger:hover, .theme-trigger[aria-expanded="true"] { border-color:var(--bd-nav-accent, #e94560); color:var(--bd-nav-accent, #e94560); }
+    .theme-menu { display:none; position:absolute; right:0; top:calc(100% + 8px); min-width:168px; padding:8px; border:1px solid var(--bd-border, #ddd); border-radius:8px; background:var(--bd-surface, #fff); box-shadow:var(--bd-shadow, 0 2px 8px rgba(0,0,0,.08)); z-index:1001; }
+    .theme-switcher.open .theme-menu { display:grid; gap:4px; }
+    .theme-option { display:flex; align-items:center; gap:8px; width:100%; padding:7px 8px; border:0; border-radius:6px; background:transparent; color:var(--bd-text-muted, #555); cursor:pointer; font-size:.88rem; text-align:left; }
+    .theme-option:hover, .theme-option.active { background:var(--bd-surface-muted, #f4f6f8); color:var(--bd-accent, #e94560); }
+    .theme-swatch { width:16px; height:16px; border-radius:50%; border:1px solid var(--bd-border, #ddd); flex-shrink:0; }
     @media (max-width:640px) {
         .nav-row { flex-wrap:wrap; padding:10px 14px; gap:0; row-gap:8px; }
         .nav-brand { flex:0 0 auto; }
@@ -53,6 +61,29 @@
                 <input type="text" name="q" placeholder="搜索文章…" />
                 <button type="submit">🔍</button>
             </form>
+            <div class="theme-switcher" th:if="${showThemeSwitcher}">
+                <button type="button" class="theme-trigger" aria-label="切换主题" aria-expanded="false">◐</button>
+                <div class="theme-menu">
+                    <button type="button" class="theme-option" data-theme-option="default" aria-pressed="true">
+                        <span class="theme-swatch default"></span><span>默认</span>
+                    </button>
+                    <button type="button" class="theme-option" data-theme-option="paper" aria-pressed="false">
+                        <span class="theme-swatch paper"></span><span>纸张阅读</span>
+                    </button>
+                    <button type="button" class="theme-option" data-theme-option="blue" aria-pressed="false">
+                        <span class="theme-swatch blue"></span><span>清爽蓝</span>
+                    </button>
+                    <button type="button" class="theme-option" data-theme-option="green" aria-pressed="false">
+                        <span class="theme-swatch green"></span><span>森林绿</span>
+                    </button>
+                    <button type="button" class="theme-option" data-theme-option="midnight" aria-pressed="false">
+                        <span class="theme-swatch midnight"></span><span>深夜代码</span>
+                    </button>
+                    <button type="button" class="theme-option" data-theme-option="rose" aria-pressed="false">
+                        <span class="theme-swatch rose"></span><span>玫瑰暖色</span>
+                    </button>
+                </div>
+            </div>
             <div class="nav-auth">
                 <a sec:authorize="hasAuthority('admin:dashboard:view')"
                    th:href="@{/admin}" class="nav-admin">后台</a>

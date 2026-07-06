@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<nav th:replace="~{fragments/nav :: navbar(false)}"></nav>
 <div class="admin-shell">
 <aside th:replace="~{fragments/admin-sidebar :: sidebar('projects')}"></aside>
 <div class="admin-main">

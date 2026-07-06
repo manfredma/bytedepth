@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <script th:src="@{/js/theme-switcher.js}"></script>
     <title th:text="${post.title} + ' - bytedepth'">文章详情</title>
     <!-- SEO -->
     <meta name="description" th:if="${metaDescription != null}" th:content="${metaDescription}">
@@ -19,23 +21,25 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg:        #f7f5f0;
-            --card:      #ffffff;
-            --ink:       #1c1917;
-            --ink-2:     #57534e;
-            --ink-3:     #a8a29e;
-            --accent:    #e94560;
-            --accent-dk: #c73652;
-            --navy:      #1a1a2e;
-            --border:    #e7e4df;
-            --code-bg:   #0d1117;
-            --code-fg:   #e6edf3;
+            --bg:        var(--bd-bg, #f7f5f0);
+            --card:      var(--bd-surface, #ffffff);
+            --ink:       var(--bd-text, #1c1917);
+            --ink-2:     var(--bd-text-muted, #57534e);
+            --ink-3:     var(--bd-text-subtle, #a8a29e);
+            --accent:    var(--bd-accent, #e94560);
+            --accent-dk: var(--bd-accent-hover, #c73652);
+            --accent-fg: var(--bd-accent-text, #ffffff);
+            --navy:      var(--bd-nav-bg, #1a1a2e);
+            --navy-fg:   var(--bd-nav-text, #ffffff);
+            --border:    var(--bd-border, #e7e4df);
+            --code-bg:   var(--bd-code-bg, #0d1117);
+            --code-fg:   var(--bd-code-text, #e6edf3);
             --serif:     'Source Serif 4', Georgia, serif;
             --display:   'DM Serif Display', Georgia, serif;
             --sans:      'Outfit', system-ui, sans-serif;
             --mono:      'JetBrains Mono', 'Fira Code', monospace;
             --radius:    10px;
-            --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+            --shadow:    var(--bd-shadow, 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06));
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -108,7 +112,7 @@
             text-decoration: none;
             transition: all .15s;
         }
-        .tag:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .tag:hover { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 
         /* ── 正文内容 ─────────────────────────── */
         .content { font-size: 1.05rem; line-height: 1.85; color: var(--ink); }
@@ -131,11 +135,11 @@
         .content code {
             font-family: var(--mono);
             font-size: 0.85em;
-            background: #f3f1ed;
-            color: #c0392b;
+            background: var(--bd-surface-muted, #f3f1ed);
+            color: var(--accent-dk);
             padding: 2px 7px;
             border-radius: 4px;
-            border: 1px solid #e8e4df;
+            border: 1px solid var(--border);
         }
         .content pre {
             background: var(--code-bg);
@@ -145,7 +149,7 @@
             overflow-x: auto;
             line-height: 1.6;
             margin: 1.5em 0;
-            border: 1px solid #21262d;
+            border: 1px solid var(--bd-border, #21262d);
             position: relative;
         }
         .content pre code {
@@ -160,7 +164,7 @@
             margin: 1.5em 0;
             padding: 16px 20px;
             border-left: 3px solid var(--accent);
-            background: #fff8f8;
+            background: var(--bd-highlight-bg, #fff8f8);
             border-radius: 0 var(--radius) var(--radius) 0;
             color: var(--ink-2);
             font-style: italic;
@@ -177,13 +181,13 @@
         .content th, .content td { border: 1px solid var(--border); padding: 9px 14px; text-align: left; }
         .content th {
             background: var(--navy);
-            color: #fff;
+            color: var(--navy-fg);
             font-family: var(--sans);
             font-size: 0.78rem;
             letter-spacing: .04em;
             font-weight: 600;
         }
-        .content tr:nth-child(even) { background: #faf9f7; }
+        .content tr:nth-child(even) { background: var(--bd-surface-muted, #faf9f7); }
         .content ul, .content ol { padding-left: 1.6em; margin: 1em 0; }
         .content li { margin: 0.3em 0; }
         .content img {
@@ -214,7 +218,7 @@
             transition: all .2s;
             min-width: 0;
         }
-        .post-nav a:hover { border-color: var(--navy); background: var(--navy); color: #fff; }
+        .post-nav a:hover { border-color: var(--navy); background: var(--navy); color: var(--navy-fg); }
         .post-nav .nav-label {
             font-family: var(--sans);
             font-size: 0.7rem;
@@ -251,7 +255,7 @@
             font-weight: 700;
             padding: 10px 24px;
             background: var(--accent);
-            color: #fff;
+            color: var(--accent-fg);
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -271,7 +275,7 @@
             letter-spacing: .03em;
             text-transform: uppercase;
         }
-        .comment-item { padding: 16px 0; border-bottom: 1px solid #f5f2ee; }
+        .comment-item { padding: 16px 0; border-bottom: 1px solid var(--border); }
         .comment-author { font-family: var(--sans); font-weight: 700; font-size: 0.88rem; color: var(--ink); }
         .comment-time { font-size: 0.78rem; color: var(--ink-3); margin-left: 10px; }
         .comment-body { color: var(--ink-2); margin-top: 8px; line-height: 1.7; font-size: 0.95rem; }
@@ -293,7 +297,7 @@
             font-family: var(--serif);
             font-size: 0.95rem;
             color: var(--ink);
-            background: #fff;
+            background: var(--card);
             transition: border-color .15s;
         }
         .form-row input:focus, .form-row textarea:focus { outline: none; border-color: var(--accent); }
@@ -303,7 +307,7 @@
             font-weight: 700;
             padding: 9px 22px;
             background: var(--accent);
-            color: #fff;
+            color: var(--accent-fg);
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -349,7 +353,7 @@
             letter-spacing: .1em;
             text-transform: uppercase;
         }
-        .series-trigger-icon { font-size: 0.65rem; color: #fff; transition: transform .25s; }
+        .series-trigger-icon { font-size: 0.65rem; color: var(--navy-fg); transition: transform .25s; }
         .series-trigger.open .series-trigger-icon { transform: rotate(180deg); }
 
         /* ── 专栏面板 ────────────────────────── */
@@ -360,7 +364,7 @@
             width: 300px;
             height: 100vh;
             background: var(--navy);
-            color: #fff;
+            color: var(--navy-fg);
             box-shadow: 6px 0 32px rgba(0,0,0,.3);
             z-index: 200;
             overflow-y: auto;
@@ -383,7 +387,7 @@
             font-family: var(--sans);
             font-size: 0.95rem;
             font-weight: 700;
-            color: #fff;
+            color: var(--navy-fg);
             border-bottom: 1px solid rgba(255,255,255,.08);
             line-height: 1.4;
         }
@@ -397,8 +401,8 @@
             transition: all .15s;
             line-height: 1.5;
         }
-        .series-item:hover { background: rgba(255,255,255,.06); color: #fff; border-left-color: var(--accent); }
-        .series-item.active { background: rgba(233,69,96,.15); color: #fff; border-left-color: var(--accent); font-weight: 600; }
+        .series-item:hover { background: rgba(255,255,255,.06); color: var(--navy-fg); border-left-color: var(--accent); }
+        .series-item.active { background: rgba(255,255,255,.10); color: var(--navy-fg); border-left-color: var(--accent); font-weight: 600; }
         .series-item .order { color: rgba(255,255,255,.3); font-family: var(--mono); font-size: 0.75em; margin-right: 6px; }
         .series-item.active .order { color: var(--accent); }
 
@@ -447,7 +451,7 @@
     </style>
 </head>
 <body>
-<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
 <div class="container">
 
     <!-- 专栏文章：左侧浮动入口 + fixed 覆盖面板（不影响正文布局）-->
@@ -496,7 +500,7 @@
         <span th:if="${post.publishedAt == null}">
             草稿<span class="status-badge">未发布</span>
         </span>
-        <span style="margin-left:12px;color:#bbb;">👁 <span th:text="${pvCount}">0</span> 次阅读</span>
+        <span style="margin-left:12px;color:var(--ink-3);">👁 <span th:text="${pvCount}">0</span> 次阅读</span>
     </div>
     <div th:if="${not #lists.isEmpty(tags)}" class="tags">
         <a th:each="tag : ${tags}" th:href="@{/posts(tag=${tag.slug})}"
@@ -529,7 +533,7 @@
 
     <!-- 评论区 -->
     <div class="comment-section">
-        <h3>评论 <span th:text="'(' + ${#lists.size(comments)} + ')'" style="font-weight:400;color:#888;font-size:0.9em;"></span></h3>
+        <h3>评论 <span th:text="'(' + ${#lists.size(comments)} + ')'" style="font-weight:400;color:var(--ink-3);font-size:0.9em;"></span></h3>
         <!-- 评论列表 -->
         <div th:each="c : ${comments}" class="comment-item">
             <a th:href="@{/u/{name}(name=${c.authorName})}"
@@ -538,7 +542,7 @@
             <span class="comment-time" th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
             <div class="comment-body" th:text="${c.content}">内容</div>
         </div>
-        <div th:if="${#lists.isEmpty(comments)}" style="color:#aaa;font-size:0.9em;margin-bottom:16px;">
+        <div th:if="${#lists.isEmpty(comments)}" style="color:var(--ink-3);font-size:0.9em;margin-bottom:16px;">
             暂无评论，来留下第一条吧。
         </div>
         <!-- 已登录用户：显示评论表单 -->
@@ -600,7 +604,7 @@ document.addEventListener('DOMContentLoaded', function () {
         div.className = 'mermaid';
         // textContent 自动解码 HTML 实体（&gt; → > 等）
         div.textContent = codeEl.textContent;
-        div.style.cssText = 'background:#fff;padding:16px 0;text-align:center;';
+        div.style.cssText = 'background:var(--card);padding:16px 0;text-align:center;';
         pre.replaceWith(div);
     });
     mermaid.run();

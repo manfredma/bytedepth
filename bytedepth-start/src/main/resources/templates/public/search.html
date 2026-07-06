@@ -4,71 +4,73 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <script th:src="@{/js/theme-switcher.js}"></script>
     <title th:text="(${q} != '' ? '搜索：' + ${q} : '搜索') + ' - bytedepth'">搜索</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: var(--bd-bg, #f0f2f5); color: var(--bd-text, #1a1a2e); }
         .container { max-width: 760px; margin: 40px auto; padding: 0 20px; }
-        h1 { color: #1a1a2e; font-size: 1.4em; margin: 0 0 20px; }
+        h1 { color: var(--bd-text, #1a1a2e); font-size: 1.4em; margin: 0 0 20px; }
 
         .search-form { display: flex; gap: 8px; margin-bottom: 28px; }
         .search-input {
-            flex: 1; padding: 10px 16px; border: 1px solid #ddd; border-radius: 6px;
-            font-size: 1em; outline: none;
+            flex: 1; padding: 10px 16px; border: 1px solid var(--bd-border, #ddd); border-radius: 6px;
+            font-size: 1em; outline: none; background: var(--bd-surface, white); color: var(--bd-text, #1a1a2e);
         }
-        .search-input:focus { border-color: #e94560; }
+        .search-input:focus { border-color: var(--bd-accent, #e94560); }
         .search-btn {
-            padding: 10px 20px; background: #e94560; color: white; border: none;
+            padding: 10px 20px; background: var(--bd-accent, #e94560); color: var(--bd-accent-text, white); border: none;
             border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: 600;
         }
-        .search-btn:hover { background: #c73652; }
+        .search-btn:hover { background: var(--bd-accent-hover, #c73652); }
 
-        .result-count { color: #999; font-size: 0.88em; margin-bottom: 16px; }
+        .result-count { color: var(--bd-text-subtle, #999); font-size: 0.88em; margin-bottom: 16px; }
 
         .result-item {
-            background: white; padding: 20px 22px; margin-bottom: 12px;
-            border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            background: var(--bd-surface, white); padding: 20px 22px; margin-bottom: 12px;
+            border-radius: 8px; box-shadow: var(--bd-shadow, 0 2px 8px rgba(0,0,0,.06));
         }
         .result-title { margin: 0 0 8px; font-size: 1.1em; }
-        .result-title a { color: #1a1a2e; text-decoration: none; }
-        .result-title a:hover { color: #e94560; }
-        .result-title em { color: #e94560; font-style: normal; font-weight: 600; }
+        .result-title a { color: var(--bd-text, #1a1a2e); text-decoration: none; }
+        .result-title a:hover { color: var(--bd-accent, #e94560); }
+        .result-title em { color: var(--bd-accent, #e94560); font-style: normal; font-weight: 600; }
 
         .result-meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
-        .meta-cat { background: #e8f0fe; color: #1967d2; padding: 2px 9px; border-radius: 10px; font-size: 0.75em; text-decoration: none; }
-        .meta-tag { background: #f0f0f0; color: #555; padding: 2px 9px; border-radius: 10px; font-size: 0.75em; text-decoration: none; }
+        .meta-cat { background: var(--bd-info-bg, #e8f0fe); color: var(--bd-info-text, #1967d2); padding: 2px 9px; border-radius: 10px; font-size: 0.75em; text-decoration: none; }
+        .meta-tag { background: var(--bd-surface-muted, #f0f0f0); color: var(--bd-text-muted, #555); padding: 2px 9px; border-radius: 10px; font-size: 0.75em; text-decoration: none; }
 
-        .result-snippet { color: #555; font-size: 0.9em; line-height: 1.6; }
-        .result-snippet em { color: #e94560; font-style: normal; font-weight: 600; background: #fff5f7; padding: 0 2px; border-radius: 2px; }
+        .result-snippet { color: var(--bd-text-muted, #555); font-size: 0.9em; line-height: 1.6; }
+        .result-snippet em { color: var(--bd-accent, #e94560); font-style: normal; font-weight: 600; background: var(--bd-highlight-bg, #fff5f7); padding: 0 2px; border-radius: 2px; }
 
-        .empty { text-align: center; color: #999; padding: 60px 0; }
+        .empty { text-align: center; color: var(--bd-text-subtle, #999); padding: 60px 0; }
         .empty p { margin: 8px 0; }
 
         .pagination {
             display: flex; justify-content: center; align-items: center;
             gap: 12px; margin-top: 28px; padding-top: 20px;
-            border-top: 1px solid #eee;
+            border-top: 1px solid var(--bd-border, #eee);
         }
         .page-btn {
             padding: 7px 18px; border-radius: 6px; font-size: 0.88em;
             font-weight: 600; text-decoration: none; cursor: pointer;
-            border: 1px solid #ddd; background: white; color: #555;
+            border: 1px solid var(--bd-border, #ddd); background: var(--bd-surface, white); color: var(--bd-text-muted, #555);
             transition: all .15s;
         }
-        .page-btn:hover { background: #e94560; color: white; border-color: #e94560; }
-        .page-info { color: #999; font-size: 0.85em; }
+        .page-btn:hover { background: var(--bd-accent, #e94560); color: var(--bd-accent-text, white); border-color: var(--bd-accent, #e94560); }
+        .page-info { color: var(--bd-text-subtle, #999); font-size: 0.85em; }
         /* 分页 fragment 样式 */
-        .pagination-wrap { margin-top: 28px; padding-top: 20px; border-top: 1px solid #eee; }
-        .page-info-top { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 8px; }
+        .pagination-wrap { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--bd-border, #eee); }
+        .page-info-top { text-align: center; font-size: 0.82em; color: var(--bd-text-subtle, #aaa); margin-bottom: 8px; }
         .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; }
-        .page-btn { padding: 7px 18px; border-radius: 6px; font-size: 0.88em; font-weight: 600; text-decoration: none; cursor: pointer; border: 1px solid #ddd; background: white; color: #555; transition: all .15s; }
-        .page-btn:hover { background: #e94560; color: white; border-color: #e94560; }
-        .page-btn.current { background: #e94560; color: white; border-color: #e94560; font-weight: 700; }
-        .page-btn.disabled { color: #bbb; cursor: default; pointer-events: none; }
+        .page-btn { padding: 7px 18px; border-radius: 6px; font-size: 0.88em; font-weight: 600; text-decoration: none; cursor: pointer; border: 1px solid var(--bd-border, #ddd); background: var(--bd-surface, white); color: var(--bd-text-muted, #555); transition: all .15s; }
+        .page-btn:hover { background: var(--bd-accent, #e94560); color: var(--bd-accent-text, white); border-color: var(--bd-accent, #e94560); }
+        .page-btn.current { background: var(--bd-accent, #e94560); color: var(--bd-accent-text, white); border-color: var(--bd-accent, #e94560); font-weight: 700; }
+        .page-btn.disabled { color: var(--bd-text-subtle, #bbb); cursor: default; pointer-events: none; }
     </style>
 </head>
 <body>
-<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
 <div class="container">
     <h1>搜索</h1>
 
@@ -92,7 +94,7 @@
 
     <div th:if="${#lists.isEmpty(results) and q != ''}" class="empty">
         <p>没有找到与 "<strong th:text="${q}"></strong>" 相关的文章</p>
-        <p style="font-size:0.88em;">试试换个关键词，或者<a href="/posts" style="color:#e94560;">浏览全部文章</a></p>
+        <p style="font-size:0.88em;">试试换个关键词，或者<a href="/posts" style="color:var(--bd-accent, #e94560);">浏览全部文章</a></p>
     </div>
 
     <div th:each="r : ${results}" class="result-item">

@@ -5,17 +5,18 @@
 <div th:fragment="pagination(currentPage, totalPages, total, pageSize, baseUrl)" class="pagination-wrap">
     <style>
         .page-jump { display: inline-flex; align-items: center; gap: 5px;
-                     font-size: .85em; color: #777; margin-left: 10px; vertical-align: middle; }
-        .jump-input { width: 52px; padding: 5px 7px; border: 1px solid #ddd; border-radius: 4px;
+                     font-size: .85em; color: var(--bd-text-subtle, #777); margin-left: 10px; vertical-align: middle; }
+        .jump-input { width: 52px; padding: 5px 7px; border: 1px solid var(--bd-border, #ddd); border-radius: 4px;
                       font-size: .85em; text-align: center; outline: none;
+                      background: var(--bd-surface, #fff); color: var(--bd-text, #333);
                       -moz-appearance: textfield; }
         .jump-input::-webkit-inner-spin-button,
         .jump-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .jump-input:focus { border-color: #e94560; }
-        .jump-btn { padding: 5px 10px; background: #e94560; color: white;
+        .jump-input:focus { border-color: var(--bd-accent, #e94560); }
+        .jump-btn { padding: 5px 10px; background: var(--bd-accent, #e94560); color: var(--bd-accent-text, #fff);
                     border: none; border-radius: 4px; cursor: pointer;
                     font-size: .85em; transition: background .15s; line-height: 1.4; }
-        .jump-btn:hover { background: #c73652; }
+        .jump-btn:hover { background: var(--bd-accent-hover, #c73652); }
     </style>
 
     <!-- 总条数 / 页码信息（total 为 null 或 0 时不显示）-->

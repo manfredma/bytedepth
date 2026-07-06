@@ -4,35 +4,37 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <script th:src="@{/js/theme-switcher.js}"></script>
     <title>关于 - bytedepth</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: var(--bd-bg, #f0f2f5); color: var(--bd-text, #1a1a2e); }
         .container { max-width: 760px; margin: 40px auto; padding: 0 20px 60px; }
         .page-header { margin-bottom: 32px; }
-        .page-header h1 { font-size: 1.8em; color: #1a1a2e; margin: 0 0 8px; }
-        .page-header p { color: #888; font-size: 0.95em; margin: 0; }
-        .card { background: white; border-radius: 10px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 20px; }
-        .card h2 { font-size: 1.05em; color: #e94560; margin: 0 0 14px; font-weight: 700;
+        .page-header h1 { font-size: 1.8em; color: var(--bd-text, #1a1a2e); margin: 0 0 8px; }
+        .page-header p { color: var(--bd-text-subtle, #888); font-size: 0.95em; margin: 0; }
+        .card { background: var(--bd-surface, white); border-radius: 10px; padding: 32px; box-shadow: var(--bd-shadow, 0 2px 8px rgba(0,0,0,.08)); margin-bottom: 20px; }
+        .card h2 { font-size: 1.05em; color: var(--bd-accent, #e94560); margin: 0 0 14px; font-weight: 700;
                    text-transform: uppercase; letter-spacing: .06em; }
-        .card p { color: #444; line-height: 1.8; margin: 0 0 12px; font-size: 0.97em; }
+        .card p { color: var(--bd-text-muted, #444); line-height: 1.8; margin: 0 0 12px; font-size: 0.97em; }
         .card p:last-child { margin-bottom: 0; }
-        .site-name { color: #1a1a2e; font-weight: 700; }
-        .highlight { color: #e94560; font-weight: 600; }
+        .site-name { color: var(--bd-text, #1a1a2e); font-weight: 700; }
+        .highlight { color: var(--bd-accent, #e94560); font-weight: 600; }
         .tech-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-        .tech-tag { background: #f4f6f8; color: #555; border: 1px solid #e4e7eb;
+        .tech-tag { background: var(--bd-surface-muted, #f4f6f8); color: var(--bd-text-muted, #555); border: 1px solid var(--bd-border, #e4e7eb);
                     padding: 4px 12px; border-radius: 14px; font-size: 0.85em; font-weight: 500; }
         .link-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
         .link-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px;
                     border-radius: 6px; font-size: 0.9em; font-weight: 600; text-decoration: none;
                     transition: opacity .15s; }
         .link-btn:hover { opacity: .82; }
-        .link-github { background: #1a1a2e; color: white; }
-        .divider { border: none; border-top: 1px solid #f0f2f5; margin: 18px 0; }
+        .link-github { background: var(--bd-nav-bg, #1a1a2e); color: var(--bd-nav-text, white); }
+        .divider { border: none; border-top: 1px solid var(--bd-border, #f0f2f5); margin: 18px 0; }
     </style>
 </head>
 <body>
-<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
 <div class="container">
     <div class="page-header">
         <h1>关于</h1>

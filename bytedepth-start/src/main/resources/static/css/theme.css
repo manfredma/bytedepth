@@ -1,0 +1,235 @@
+:root {
+    --bd-bg: #f0f2f5;
+    --bd-surface: #ffffff;
+    --bd-surface-muted: #f4f6f8;
+    --bd-text: #1a1a2e;
+    --bd-text-muted: #555555;
+    --bd-text-subtle: #999999;
+    --bd-border: #dddddd;
+    --bd-accent: #d93652;
+    --bd-accent-hover: #c73652;
+    --bd-accent-text: #ffffff;
+    --bd-nav-bg: #1a1a2e;
+    --bd-nav-text: #eeeeee;
+    --bd-nav-accent: #f05268;
+    --bd-code-bg: #0d1117;
+    --bd-code-text: #e6edf3;
+    --bd-highlight-bg: #fff5f7;
+    --bd-info-bg: #e8f0fe;
+    --bd-info-text: #1967d2;
+    --bd-info-hover-bg: #1967d2;
+    --bd-info-hover-text: #ffffff;
+    --bd-project-tech-bg: #e8f4fd;
+    --bd-project-tech-text: #1d5f8f;
+    --bd-success: #2ecc71;
+    --bd-danger: #c00;
+    --bd-shadow: 0 2px 8px rgba(0,0,0,.08);
+    --bd-shadow-strong: 0 8px 32px rgba(0,0,0,.3);
+}
+
+html[data-theme="paper"] {
+    --bd-bg: #f7f5f0;
+    --bd-surface: #fffaf2;
+    --bd-surface-muted: #f0e9dc;
+    --bd-text: #1f1d1a;
+    --bd-text-muted: #5f574d;
+    --bd-text-subtle: #9a8f80;
+    --bd-border: #ded4c3;
+    --bd-accent: #98543a;
+    --bd-accent-hover: #7c3f2c;
+    --bd-accent-text: #ffffff;
+    --bd-nav-bg: #2b2a27;
+    --bd-nav-text: #f6efe4;
+    --bd-nav-accent: #f59e0b;
+    --bd-code-bg: #202124;
+    --bd-code-text: #f3eadc;
+    --bd-highlight-bg: #fff1e8;
+    --bd-info-bg: #f3e4d7;
+    --bd-info-text: #98543a;
+    --bd-info-hover-bg: #98543a;
+    --bd-info-hover-text: #ffffff;
+    --bd-project-tech-bg: #f0e1d2;
+    --bd-project-tech-text: #8a492f;
+    --bd-shadow: 0 2px 10px rgba(88,70,46,.12);
+}
+
+html[data-theme="blue"] {
+    --bd-bg: #f5f7fa;
+    --bd-surface: #ffffff;
+    --bd-surface-muted: #eaf2fb;
+    --bd-text: #172033;
+    --bd-text-muted: #526071;
+    --bd-text-subtle: #8b9aaa;
+    --bd-border: #d8e2ed;
+    --bd-accent: #1f66c2;
+    --bd-accent-hover: #1a56a5;
+    --bd-accent-text: #ffffff;
+    --bd-nav-bg: #10233f;
+    --bd-nav-text: #eef6ff;
+    --bd-nav-accent: #60a5fa;
+    --bd-code-bg: #0b1726;
+    --bd-code-text: #dbeafe;
+    --bd-highlight-bg: #eaf3ff;
+    --bd-info-bg: #e8f0fe;
+    --bd-info-text: #1967d2;
+    --bd-info-hover-bg: #1967d2;
+    --bd-info-hover-text: #ffffff;
+    --bd-project-tech-bg: #e8f4fd;
+    --bd-project-tech-text: #1d5f8f;
+}
+
+html[data-theme="green"] {
+    --bd-bg: #f2f7f1;
+    --bd-surface: #ffffff;
+    --bd-surface-muted: #e7f0e5;
+    --bd-text: #17251b;
+    --bd-text-muted: #526154;
+    --bd-text-subtle: #8a9a8c;
+    --bd-border: #d4e0d1;
+    --bd-accent: #2f855a;
+    --bd-accent-hover: #276749;
+    --bd-accent-text: #ffffff;
+    --bd-nav-bg: #14311f;
+    --bd-nav-text: #edf7ef;
+    --bd-nav-accent: #4ade80;
+    --bd-code-bg: #111b14;
+    --bd-code-text: #d8f3dc;
+    --bd-highlight-bg: #e9f7ec;
+    --bd-info-bg: #e5f3e9;
+    --bd-info-text: #276749;
+    --bd-info-hover-bg: #276749;
+    --bd-info-hover-text: #ffffff;
+    --bd-project-tech-bg: #e5f3e9;
+    --bd-project-tech-text: #276749;
+}
+
+html[data-theme="midnight"] {
+    --bd-bg: #111827;
+    --bd-surface: #172033;
+    --bd-surface-muted: #202b3f;
+    --bd-text: #e5e7eb;
+    --bd-text-muted: #cbd5e1;
+    --bd-text-subtle: #94a3b8;
+    --bd-border: #334155;
+    --bd-accent: #38bdf8;
+    --bd-accent-hover: #0ea5e9;
+    --bd-accent-text: #020617;
+    --bd-nav-bg: #0b1120;
+    --bd-nav-text: #e5e7eb;
+    --bd-nav-accent: #38bdf8;
+    --bd-code-bg: #020617;
+    --bd-code-text: #e2e8f0;
+    --bd-highlight-bg: #0f2a3a;
+    --bd-info-bg: #0f2a3a;
+    --bd-info-text: #7dd3fc;
+    --bd-info-hover-bg: #38bdf8;
+    --bd-info-hover-text: #020617;
+    --bd-project-tech-bg: #0f2a3a;
+    --bd-project-tech-text: #7dd3fc;
+    --bd-shadow: 0 2px 12px rgba(0,0,0,.35);
+}
+
+html[data-theme="rose"] {
+    --bd-bg: #fff5f6;
+    --bd-surface: #ffffff;
+    --bd-surface-muted: #ffe8ec;
+    --bd-text: #30171d;
+    --bd-text-muted: #68434c;
+    --bd-text-subtle: #a77b84;
+    --bd-border: #f2c9d1;
+    --bd-accent: #be3450;
+    --bd-accent-hover: #a72b43;
+    --bd-accent-text: #ffffff;
+    --bd-nav-bg: #3b1823;
+    --bd-nav-text: #fff1f4;
+    --bd-nav-accent: #fb7185;
+    --bd-code-bg: #241116;
+    --bd-code-text: #ffe4e9;
+    --bd-highlight-bg: #ffe8ec;
+    --bd-info-bg: #ffe8ec;
+    --bd-info-text: #be3450;
+    --bd-info-hover-bg: #be3450;
+    --bd-info-hover-text: #ffffff;
+    --bd-project-tech-bg: #ffe8ec;
+    --bd-project-tech-text: #be3450;
+}
+
+.theme-switcher {
+    position: relative;
+}
+
+.theme-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 6px;
+    background: rgba(255,255,255,.08);
+    color: var(--bd-nav-text);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.theme-trigger:hover,
+.theme-trigger[aria-expanded="true"] {
+    border-color: var(--bd-nav-accent);
+    color: var(--bd-nav-accent);
+}
+
+.theme-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    display: none;
+    min-width: 168px;
+    padding: 8px;
+    border: 1px solid var(--bd-border);
+    border-radius: 8px;
+    background: var(--bd-surface);
+    box-shadow: var(--bd-shadow);
+    z-index: 1001;
+}
+
+.theme-switcher.open .theme-menu {
+    display: grid;
+    gap: 4px;
+}
+
+.theme-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--bd-text-muted);
+    cursor: pointer;
+    font-size: .88rem;
+    text-align: left;
+}
+
+.theme-option:hover,
+.theme-option.active {
+    background: var(--bd-surface-muted);
+    color: var(--bd-accent);
+}
+
+.theme-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--bd-border);
+    flex-shrink: 0;
+}
+
+.theme-swatch.default { background: linear-gradient(135deg, #1a1a2e 50%, #e94560 50%); }
+.theme-swatch.paper { background: linear-gradient(135deg, #f7f5f0 50%, #b86b4b 50%); }
+.theme-swatch.blue { background: linear-gradient(135deg, #f5f7fa 50%, #2f80ed 50%); }
+.theme-swatch.green { background: linear-gradient(135deg, #f2f7f1 50%, #2f855a 50%); }
+.theme-swatch.midnight { background: linear-gradient(135deg, #111827 50%, #38bdf8 50%); }
+.theme-swatch.rose { background: linear-gradient(135deg, #fff5f6 50%, #d94662 50%); }

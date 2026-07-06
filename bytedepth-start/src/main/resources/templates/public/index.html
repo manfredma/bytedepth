@@ -4,43 +4,45 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <script th:src="@{/js/theme-switcher.js}"></script>
     <title>bytedepth - 字节深处</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: var(--bd-bg, #f0f2f5); color: var(--bd-text, #1a1a2e); }
         .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        .hero { background: #1a1a2e; color: white; padding: 56px 24px 48px; text-align: center; margin-bottom: 32px; }
-        .hero h1 { font-size: 2.5em; margin: 0 0 20px; color: #e94560; letter-spacing: 2px; }
+        .hero { background: var(--bd-nav-bg, #1a1a2e); color: var(--bd-nav-text, white); padding: 56px 24px 48px; text-align: center; margin-bottom: 32px; }
+        .hero h1 { font-size: 2.5em; margin: 0 0 20px; color: var(--bd-nav-accent, #e94560); letter-spacing: 2px; }
         .hero-carousel { position: relative; height: 60px; overflow: hidden; }
         .hero-slogan { text-align: center; opacity: 0; transition: opacity .6s ease, transform .6s ease; transform: translateY(8px); position: absolute; width: 100%; }
         .hero-slogan.active { opacity: 1; transform: translateY(0); }
-        .hero-slogan .quote { color: #ddd; font-size: 1.05em; font-style: italic; line-height: 1.5; margin: 0; }
-        .hero-slogan .author { color: #e94560; font-size: 0.82em; margin-top: 6px; letter-spacing: 1px; }
-        .post-card { background: white; padding: 24px; margin: 16px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); transition: transform .2s; }
+        .hero-slogan .quote { color: var(--bd-nav-text, #ddd); font-size: 1.05em; font-style: italic; line-height: 1.5; margin: 0; }
+        .hero-slogan .author { color: var(--bd-nav-accent, #e94560); font-size: 0.82em; margin-top: 6px; letter-spacing: 1px; }
+        .post-card { background: var(--bd-surface, white); padding: 24px; margin: 16px 0; border-radius: 8px; box-shadow: var(--bd-shadow, 0 2px 8px rgba(0,0,0,.08)); transition: transform .2s; }
         .post-card:hover { transform: translateY(-2px); }
         .post-card h2 { margin: 0 0 8px; font-size: 1.3em; }
-        .post-card h2 a { color: #1a1a2e; text-decoration: none; }
-        .post-card h2 a:hover { color: #e94560; }
-        .meta { color: #999; font-size: 0.88em; }
-        .more-link { display: inline-block; margin-top: 16px; color: #e94560; text-decoration: none; font-weight: 500; }
+        .post-card h2 a { color: var(--bd-text, #1a1a2e); text-decoration: none; }
+        .post-card h2 a:hover { color: var(--bd-accent, #e94560); }
+        .meta { color: var(--bd-text-subtle, #999); font-size: 0.88em; }
+        .more-link { display: inline-block; margin-top: 16px; color: var(--bd-accent, #e94560); text-decoration: none; font-weight: 500; }
         .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 24px; }
         .page-btn { padding: 7px 18px; border-radius: 6px; font-size: 0.88em; font-weight: 600;
-            text-decoration: none; border: 1px solid #ddd; background: white; color: #555; transition: all .15s; }
-        .page-btn:hover { background: #e94560; color: white; border-color: #e94560; }
-        .page-info { color: #999; font-size: 0.85em; }
-        .page-info-top { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 8px; }
+            text-decoration: none; border: 1px solid var(--bd-border, #ddd); background: var(--bd-surface, white); color: var(--bd-text-muted, #555); transition: all .15s; }
+        .page-btn:hover { background: var(--bd-accent, #e94560); color: var(--bd-accent-text, white); border-color: var(--bd-accent, #e94560); }
+        .page-info { color: var(--bd-text-subtle, #999); font-size: 0.85em; }
+        .page-info-top { text-align: center; font-size: 0.82em; color: var(--bd-text-subtle, #aaa); margin-bottom: 8px; }
         .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
-        .empty { color: #999; text-align: center; padding: 40px; }
+        .empty { color: var(--bd-text-subtle, #999); text-align: center; padding: 40px; }
         /* 分类区 */
-        .cat-section { background: white; padding: 28px 24px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.07); margin-bottom: 32px; }
-        .cat-section h2 { margin: 0 0 18px; font-size: 1em; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+        .cat-section { background: var(--bd-surface, white); padding: 28px 24px; border-radius: 10px; box-shadow: var(--bd-shadow, 0 2px 8px rgba(0,0,0,.07)); margin-bottom: 32px; }
+        .cat-section h2 { margin: 0 0 18px; font-size: 1em; color: var(--bd-text-subtle, #999); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
         .cat-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-        .cat-pill { padding: 7px 18px; border-radius: 20px; background: #f4f6f8; color: #444; text-decoration: none; font-size: 0.9em; font-weight: 500; transition: all .15s; border: 1px solid #e8eaed; }
-        .cat-pill:hover { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+        .cat-pill { padding: 7px 18px; border-radius: 20px; background: var(--bd-surface-muted, #f4f6f8); color: var(--bd-text-muted, #444); text-decoration: none; font-size: 0.9em; font-weight: 500; transition: all .15s; border: 1px solid var(--bd-border, #e8eaed); }
+        .cat-pill:hover { background: var(--bd-nav-bg, #1a1a2e); color: var(--bd-nav-text, white); border-color: var(--bd-nav-bg, #1a1a2e); }
     </style>
 </head>
 <body>
-<nav th:replace="~{fragments/nav :: navbar}"></nav>
+<nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
 <div class="hero">
     <h1>bytedepth</h1>
     <div class="hero-carousel">
@@ -112,7 +114,7 @@
     </div>
 
     <h2>最新文章</h2>
-    <div th:if="${#lists.isEmpty(posts)}" class="empty">暂无发布的文章，<a th:href="@{/posts/new}" style="color:#e94560;">写第一篇</a>？</div>
+    <div th:if="${#lists.isEmpty(posts)}" class="empty">暂无发布的文章，<a th:href="@{/posts/new}" style="color:var(--bd-accent, #e94560);">写第一篇</a>？</div>
     <div th:each="post : ${posts}" class="post-card">
         <h2><a th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a></h2>
         <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</p>
@@ -128,12 +130,12 @@
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:16px;">
             <div th:each="p : ${projects}" class="post-card">
                 <h2 th:text="${p.name}" style="font-size:1.1em;">项目名</h2>
-                <p th:text="${p.description}" style="color:#888;font-size:0.9em;margin:6px 0 10px;"></p>
+                <p th:text="${p.description}" style="color:var(--bd-text-subtle, #888);font-size:0.9em;margin:6px 0 10px;"></p>
                 <div style="display:flex;gap:8px;">
                     <a th:if="${p.githubUrl}" th:href="${p.githubUrl}" target="_blank"
-                       style="font-size:0.85em;color:#e94560;text-decoration:none;">GitHub →</a>
+                       style="font-size:0.85em;color:var(--bd-accent, #e94560);text-decoration:none;">GitHub →</a>
                     <a th:if="${p.demoUrl}" th:href="${p.demoUrl}" target="_blank"
-                       style="font-size:0.85em;color:#888;text-decoration:none;">演示 →</a>
+                       style="font-size:0.85em;color:var(--bd-text-subtle, #888);text-decoration:none;">演示 →</a>
                 </div>
             </div>
         </div>
