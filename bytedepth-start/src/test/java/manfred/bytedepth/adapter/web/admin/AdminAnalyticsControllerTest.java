@@ -136,13 +136,15 @@ class AdminAnalyticsControllerTest {
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
-    void postTrend_weekPeriod_usesDayFormat() throws Exception {
+    void postTrend_oneWeekSpan_usesDayFormat() throws Exception {
         when(viewLogStatsMapper.postTrend(any(), any(), any(), any()))
                 .thenReturn(List.of());
 
+        // 用显式 from/to 指定一周跨度，避免依赖"今天是周几"导致边界不稳定
         mockMvc.perform(get("/admin/analytics/api/post-trend")
                         .param("postId", "42")
-                        .param("period", "week"))
+                        .param("from", "2026-06-30")
+                        .param("to", "2026-07-06"))
                 .andExpect(status().isOk());
 
         ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
@@ -169,9 +171,13 @@ class AdminAnalyticsControllerTest {
     // ── 静态工具方法单元测试 ───────────────────────────────
 
     @Test
-    void toStartTime_weekPeriod_returnsMinus7Days() {
+    void toStartTime_weekPeriod_returnsStartOfThisWeek() {
         LocalDateTime result = AdminAnalyticsController.toStartTime("week", null);
-        assertThat(result).isBefore(LocalDateTime.now());
+        // 本周一 00:00（周一为一周起始）
+        assertThat(result.toLocalDate().getDayOfWeek())
+                .isEqualTo(java.time.DayOfWeek.MONDAY);
+        assertThat(result.toLocalTime()).isEqualTo(java.time.LocalTime.MIN);
+        assertThat(result).isBeforeOrEqualTo(LocalDateTime.now());
         assertThat(result).isAfter(LocalDateTime.now().minusDays(8));
     }
 
@@ -185,6 +191,25 @@ class AdminAnalyticsControllerTest {
     void toStartTime_today_returnsStartOfToday() {
         LocalDateTime result = AdminAnalyticsController.toStartTime("today", null);
         assertThat(result).isEqualTo(LocalDate.now().atStartOfDay());
+    }
+
+    @Test
+    void toStartTime_monthPeriod_returnsFirstDayOfThisMonth() {
+        LocalDateTime result = AdminAnalyticsController.toStartTime("month", null);
+        assertThat(result).isEqualTo(LocalDate.now().withDayOfMonth(1).atStartOfDay());
+    }
+
+    @Test
+    void toStartTime_yearPeriod_returnsFirstDayOfThisYear() {
+        LocalDateTime result = AdminAnalyticsController.toStartTime("year", null);
+        assertThat(result).isEqualTo(LocalDate.now().withDayOfYear(1).atStartOfDay());
+    }
+
+    @Test
+    void toStartTime_allPeriod_returnsEarlyEpoch() {
+        LocalDateTime result = AdminAnalyticsController.toStartTime("all", null);
+        // "全部"应覆盖所有历史数据，起点远早于任何真实访问日志
+        assertThat(result).isBefore(LocalDateTime.of(2010, 1, 1, 0, 0));
     }
 
     @Test

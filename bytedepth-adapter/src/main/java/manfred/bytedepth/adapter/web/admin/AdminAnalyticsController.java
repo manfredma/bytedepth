@@ -11,9 +11,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
 /**
@@ -108,11 +110,17 @@ public class AdminAnalyticsController {
         if (from != null && !from.isBlank()) {
             return LocalDate.parse(from).atStartOfDay();
         }
+        LocalDate today = LocalDate.now();
         return switch (period) {
-            case "today" -> LocalDate.now().atStartOfDay();
-            case "month" -> LocalDateTime.now().minusDays(30);
-            case "year"  -> LocalDateTime.now().minusDays(365);
-            default      -> LocalDateTime.now().minusDays(7);  // "week"
+            case "today" -> today.atStartOfDay();
+            // 本月：自然月边界（本月 1 日 00:00），而非"过去 30 天"
+            case "month" -> today.withDayOfMonth(1).atStartOfDay();
+            // 本年：自然年边界（今年 1 月 1 日 00:00），而非"过去 365 天"
+            case "year"  -> today.withDayOfYear(1).atStartOfDay();
+            // 全部：从极早时间起，覆盖所有历史数据
+            case "all"   -> LocalDate.of(2000, 1, 1).atStartOfDay();
+            // 本周：自然周边界（本周一 00:00，周一为一周起始），而非"过去 7 天"
+            default      -> today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).atStartOfDay();
         };
     }
 

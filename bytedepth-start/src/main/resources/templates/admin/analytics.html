@@ -80,6 +80,7 @@
         <button class="period-tab active" data-period="week">本周</button>
         <button class="period-tab" data-period="month">本月</button>
         <button class="period-tab" data-period="year">本年</button>
+        <button class="period-tab" data-period="all">全部</button>
     </div>
 
     <!-- 面包屑 -->
@@ -376,6 +377,8 @@
     function resetToRoot() {
         state.country = null; state.postId = null;
         state.from = null; state.to = null;
+        // 面包屑"全部"= 显示全部历史，切到 all 维度
+        state.period = 'all';
         document.querySelectorAll('.period-tab').forEach(t => {
             t.classList.toggle('active', t.dataset.period === state.period);
         });
