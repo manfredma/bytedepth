@@ -12,8 +12,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -36,14 +34,12 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        // XorCsrfTokenRequestAttributeHandler：在 CsrfFilter 阶段主动解析并暴露 token，
-        // 配合 CookieCsrfTokenRepository 会在每个响应主动下发 XSRF-TOKEN cookie。
-        // 修复登录后 cookie 被清除却不下发新 cookie、导致后续 POST 表单（退出等）403 的问题。
-        var csrfHandler = new XorCsrfTokenRequestAttributeHandler();
+        // CSRF：默认 HttpSessionCsrfTokenRepository + Thymeleaf 自动注入 _csrf hidden input。
+        // 之前用 CookieCsrfTokenRepository，登录成功后 CsrfAuthenticationStrategy 清除
+        // XSRF-TOKEN cookie 却不重新下发，导致后续 POST 表单（退出等）403。session 仓库
+        // 把 token 存 session、提交时从 session 校验，不依赖 cookie 下发，更可靠。
         http
             .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .csrfTokenRequestHandler(csrfHandler)
                 .ignoringRequestMatchers("/admin/search/**")
             )
             .authorizeHttpRequests(auth -> auth

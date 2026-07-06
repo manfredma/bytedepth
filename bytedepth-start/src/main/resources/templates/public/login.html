@@ -64,7 +64,18 @@
     </form>
 
     <a th:href="@{/register}" class="back">还没有账号？去注册 →</a>
-    <a th:href="@{/}" class="back">← 返回博客</a>
+    <a href="javascript:void(0)" id="backLink" class="back">← 返回</a>
+    <script>
+    // 有浏览历史则返回上一页，否则回首页兜底
+    (function () {
+        var link = document.getElementById('backLink');
+        if (window.history.length > 1 && document.referrer && document.referrer.indexOf(location.origin) === 0) {
+            link.addEventListener('click', function (e) { e.preventDefault(); window.history.back(); });
+        } else {
+            link.setAttribute('href', '/');
+        }
+    })();
+    </script>
 </div>
 </body>
 </html>
