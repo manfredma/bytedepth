@@ -1,7 +1,7 @@
 // bytedepth Service Worker
 // 策略：静态资源 cache-first，页面导航 network-first + 离线回退
 
-const CACHE_NAME = 'bytedepth-v1';
+const CACHE_NAME = 'bytedepth-v2';
 
 // 预缓存的核心资源
 const PRECACHE_URLS = [

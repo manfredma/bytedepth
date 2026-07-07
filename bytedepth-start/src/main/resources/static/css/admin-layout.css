@@ -1,4 +1,8 @@
 /* ─── Admin layout shell ─────────────────────────────────────── */
+html {
+    scrollbar-gutter: stable;
+}
+
 .admin-shell {
     display: flex;
     min-height: calc(100vh - 48px);

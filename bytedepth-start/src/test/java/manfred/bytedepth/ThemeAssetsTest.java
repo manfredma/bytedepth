@@ -25,6 +25,7 @@ class ThemeAssetsTest {
 
         assertThat(css)
                 .contains("--bd-bg")
+                .contains("scrollbar-gutter: stable")
                 .contains("html[data-theme=\"paper\"]")
                 .contains("html[data-theme=\"blue\"]")
                 .contains("html[data-theme=\"green\"]")
@@ -42,6 +43,39 @@ class ThemeAssetsTest {
                 .contains("midnight")
                 .contains("rose")
                 .contains("data-theme");
+    }
+
+    @Test
+    void navStaticAssetDefinesIsolatedComponentContract() throws Exception {
+        String css = classpathText("/static/css/nav.css");
+
+        assertThat(css)
+                .contains("@import url('https://fonts.googleapis.com")
+                .contains(".nav-bar")
+                .contains("font-family:var(--bd-font-sans")
+                .contains("font-size:16px")
+                .contains(".nav-bar *,")
+                .contains(".nav-bar *::before,")
+                .contains(".nav-bar *::after")
+                .contains("box-sizing:border-box")
+                .contains("max-width:var(--bd-page-max, 1060px)")
+                .contains("padding:0 var(--bd-page-pad, 20px)")
+                .contains("background:var(--bd-nav-bg")
+                .contains(".nav-theme-placeholder")
+                .contains("visibility:hidden")
+                .contains("flex:0 0 36px")
+                .doesNotContain("font-size:1.34em");
+    }
+
+    @Test
+    void serviceWorkerUsesVersionedCacheFirstStaticAssets() throws Exception {
+        String sw = classpathText("/static/sw.js");
+
+        assertThat(sw)
+                .contains("bytedepth-v2")
+                .contains("静态资源：cache-first")
+                .contains("if (cached) return cached")
+                .doesNotContain("isFreshStaticAsset");
     }
 
     @Test
@@ -114,15 +148,16 @@ class ThemeAssetsTest {
         String nav = classpathText("/templates/fragments/nav.html");
 
         assertThat(nav)
+                .contains("@{/css/nav.css}")
                 .contains("class=\"nav-inner\"")
-                .contains("max-width:var(--bd-page-max, 1060px)")
-                .contains("padding:0 var(--bd-page-pad, 20px)")
-                .contains("background:var(--bd-nav-bg")
                 .contains("class=\"nav-left\"")
                 .contains("class=\"nav-primary\"")
                 .contains("class=\"nav-actions\"")
                 .contains("class=\"nav-about\"")
+                .contains("nav-theme-placeholder")
                 .contains("action=\"/search\"")
-                .contains("method=\"get\"");
+                .contains("method=\"get\"")
+                .doesNotContain("<style>")
+                .doesNotContain(".nav-bar {");
     }
 }

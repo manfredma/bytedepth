@@ -37,6 +37,10 @@
     --bd-page-pad: 20px;
 }
 
+html {
+    scrollbar-gutter: stable;
+}
+
 html[data-theme="paper"] {
     --bd-bg: #f7f5f0;
     --bd-surface: #fffaf2;
