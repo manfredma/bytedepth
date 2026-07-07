@@ -4,59 +4,64 @@
 <body>
 <nav th:fragment="navbar(showThemeSwitcher)" class="nav-bar">
     <style>
-    .nav-bar { position:sticky; top:0; z-index:1000; background:var(--bd-nav-bg, #1a1a2e); color:var(--bd-nav-text, #eee); }
-    .nav-row { display:flex; align-items:center; padding:10px 20px; gap:20px; }
-    .nav-brand { display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0; }
-    .nav-brand img { display:block; }
-    .nav-brand span { color:var(--bd-nav-accent, #e94560); font-weight:bold; font-size:1.1em; letter-spacing:1px; }
-    .nav-links { display:flex; align-items:center; gap:20px; }
-    .nav-links a { color:var(--bd-nav-text, #eee); text-decoration:none; font-size:0.95em; white-space:nowrap; }
-    .nav-links a:hover { color:var(--bd-nav-accent, #e94560); }
-    .nav-right { display:flex; align-items:center; gap:12px; margin-left:auto; }
+    .nav-bar { position:sticky; top:0; z-index:1000; background:var(--bd-nav-bg, #1a1a2e); color:var(--bd-nav-text, #eee); border-bottom:1px solid rgba(255,255,255,.08); box-shadow:0 1px 0 rgba(0,0,0,.12); }
+    .nav-inner { display:flex; align-items:center; min-height:60px; max-width:1060px; margin:0 auto; padding:0 20px; gap:24px; }
+    .nav-left { display:flex; align-items:center; min-width:0; gap:28px; flex:1 1 auto; }
+    .nav-brand { display:flex; align-items:center; gap:10px; text-decoration:none; flex-shrink:0; }
+    .nav-brand img { display:block; width:36px; height:36px; }
+    .nav-brand span { color:var(--bd-accent, #d93652); font-weight:800; font-size:1.34em; letter-spacing:.01em; }
+    .nav-primary { display:flex; align-items:center; gap:22px; min-width:0; }
+    .nav-primary a, .nav-about { color:var(--bd-nav-text, #eee); text-decoration:none; font-size:.96rem; font-weight:700; line-height:60px; opacity:.88; white-space:nowrap; }
+    .nav-primary a:hover, .nav-about:hover { color:var(--bd-nav-accent, #f05268); opacity:1; }
+    .nav-actions { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-shrink:0; }
     .nav-search { display:flex; align-items:center; }
-    .nav-search input { padding:5px 10px; border:none; border-radius:4px 0 0 4px; font-size:0.85em; outline:none; width:150px; background:var(--bd-surface, #fff); color:var(--bd-text, #333); }
-    .nav-search button { padding:5px 10px; background:var(--bd-accent, #e94560); color:var(--bd-accent-text, #fff); border:none; border-radius:0 4px 4px 0; cursor:pointer; line-height:1; }
-    .nav-auth { display:flex; align-items:center; gap:12px; }
-    .nav-auth a, .nav-auth button { color:var(--bd-nav-text, #eee); opacity:.72; text-decoration:none; font-size:0.88em; background:none; border:none; cursor:pointer; }
-    .nav-auth .nav-register { color:var(--bd-nav-accent, #e94560); opacity:1; font-weight:600; }
-    .nav-auth .nav-admin { color:var(--bd-nav-accent, #e94560); opacity:1; font-weight:600; }
+    .nav-search input { box-sizing:border-box; height:36px; width:190px; padding:0 11px; border:1px solid rgba(255,255,255,.2); border-right:0; border-radius:4px 0 0 4px; font-size:.9rem; outline:none; background:rgba(255,255,255,.95); color:var(--bd-text, #333); }
+    .nav-search input:focus { border-color:var(--bd-nav-accent, #f05268); background:var(--bd-surface, #fff); }
+    .nav-search button { display:inline-flex; align-items:center; justify-content:center; width:38px; height:36px; padding:0; background:var(--bd-accent, #d93652); color:var(--bd-accent-text, #fff); border:1px solid var(--bd-accent, #d93652); border-radius:0 4px 4px 0; cursor:pointer; line-height:1; }
+    .nav-auth { display:flex; align-items:center; gap:10px; }
+    .nav-auth a, .nav-auth button { color:var(--bd-nav-text, #eee); opacity:.78; text-decoration:none; font-size:.9rem; font-weight:600; background:none; border:none; cursor:pointer; white-space:nowrap; }
+    .nav-auth a:hover, .nav-auth button:hover { color:var(--bd-nav-accent, #f05268); opacity:1; }
+    .nav-auth .nav-register { color:var(--bd-nav-accent, #f05268); opacity:1; font-weight:700; }
+    .nav-auth .nav-admin { color:var(--bd-nav-accent, #f05268); opacity:1; font-weight:700; }
+    .nav-write { display:inline-flex; align-items:center; justify-content:center; height:36px; padding:0 14px; border-radius:4px; background:var(--bd-accent, #d93652) !important; color:var(--bd-accent-text, #fff) !important; opacity:1 !important; font-weight:700 !important; }
+    .nav-write:hover { background:var(--bd-accent-hover, #c73652) !important; color:var(--bd-accent-text, #fff) !important; }
     .theme-switcher { position:relative; }
-    .theme-trigger { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid rgba(255,255,255,.18); border-radius:6px; background:rgba(255,255,255,.08); color:var(--bd-nav-text, #eee); cursor:pointer; font-size:1rem; line-height:1; }
-    .theme-trigger:hover, .theme-trigger[aria-expanded="true"] { border-color:var(--bd-nav-accent, #e94560); color:var(--bd-nav-accent, #e94560); }
+    .theme-trigger { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(255,255,255,.2); border-radius:4px; background:rgba(255,255,255,.08); color:var(--bd-nav-text, #eee); cursor:pointer; font-size:1rem; line-height:1; }
+    .theme-trigger:hover, .theme-trigger[aria-expanded="true"] { border-color:var(--bd-nav-accent, #f05268); color:var(--bd-nav-accent, #f05268); }
     .theme-menu { display:none; position:absolute; right:0; top:calc(100% + 8px); min-width:168px; padding:8px; border:1px solid var(--bd-border, #ddd); border-radius:8px; background:var(--bd-surface, #fff); box-shadow:var(--bd-shadow, 0 2px 8px rgba(0,0,0,.08)); z-index:1001; }
     .theme-switcher.open .theme-menu { display:grid; gap:4px; }
     .theme-option { display:flex; align-items:center; gap:8px; width:100%; padding:7px 8px; border:0; border-radius:6px; background:transparent; color:var(--bd-text-muted, #555); cursor:pointer; font-size:.88rem; text-align:left; }
     .theme-option:hover, .theme-option.active { background:var(--bd-surface-muted, #f4f6f8); color:var(--bd-accent, #e94560); }
     .theme-swatch { width:16px; height:16px; border-radius:50%; border:1px solid var(--bd-border, #ddd); flex-shrink:0; }
-    @media (max-width:640px) {
-        .nav-row { flex-wrap:wrap; padding:10px 14px; gap:0; row-gap:8px; }
-        .nav-brand { flex:0 0 auto; }
-        .nav-links { gap:14px; flex:1; justify-content:flex-end; }
-        .nav-right { width:100%; }
+    @media (max-width:940px) {
+        .nav-inner { flex-wrap:wrap; padding:10px 16px; gap:10px 18px; }
+        .nav-left { width:100%; justify-content:space-between; gap:20px; }
+        .nav-primary { gap:18px; overflow-x:auto; scrollbar-width:none; }
+        .nav-primary::-webkit-scrollbar { display:none; }
+        .nav-primary a, .nav-about { line-height:36px; }
+        .nav-actions { width:100%; }
         .nav-search { flex:1; }
         .nav-search input { width:100%; }
         .nav-auth { margin-left:auto; }
     }
     @media (max-width:400px) {
         .nav-brand span { display:none; }
-        .nav-links a { font-size:0.88em; }
+        .nav-primary a, .nav-about { font-size:.9rem; }
     }
     </style>
-    <div class="nav-row">
-        <!-- 品牌 -->
-        <a th:href="@{/}" class="nav-brand">
-            <img th:src="@{/icons/logo.svg}" alt="bd" width="28" height="28">
-            <span>bytedepth</span>
-        </a>
-        <!-- 导航链接 -->
-        <div class="nav-links">
-            <a th:href="@{/posts}">文章</a>
-            <a th:href="@{/columns}">专栏</a>
-            <a th:href="@{/projects}">项目</a>
-            <a th:href="@{/about}">关于</a>
+    <div class="nav-inner">
+        <div class="nav-left">
+            <a th:href="@{/}" class="nav-brand">
+                <img th:src="@{/icons/logo.svg}" alt="bd" width="28" height="28">
+                <span>bytedepth</span>
+            </a>
+            <div class="nav-primary">
+                <a th:href="@{/posts}">文章</a>
+                <a th:href="@{/columns}">专栏</a>
+                <a th:href="@{/projects}">项目</a>
+            </div>
         </div>
-        <!-- 搜索 + 用户区 -->
-        <div class="nav-right">
+        <div class="nav-actions">
             <form action="/search" method="get" class="nav-search">
                 <input type="text" name="q" placeholder="搜索文章…" />
                 <button type="submit">🔍</button>
@@ -88,7 +93,7 @@
                 <a sec:authorize="hasAuthority('admin:dashboard:view')"
                    th:href="@{/admin}" class="nav-admin">后台</a>
                 <a sec:authorize="hasAuthority('blog:post:create')"
-                   th:href="@{/posts/new}">✏</a>
+                   th:href="@{/posts/new}" class="nav-write">写文章</a>
                 <a sec:authorize="isAuthenticated()"
                    th:href="@{/u/{u}(u=${#authentication.name})}"
                    th:text="${#authentication.name}">用户名</a>
@@ -100,6 +105,7 @@
                 <a sec:authorize="!isAuthenticated()"
                    th:href="@{/register}" class="nav-register">注册</a>
             </div>
+            <a th:href="@{/about}" class="nav-about">关于</a>
         </div>
     </div>
 </nav>

@@ -78,4 +78,20 @@ class ThemeAssetsTest {
                 .contains("data-theme-option=\"midnight\"")
                 .contains("data-theme-option=\"rose\"");
     }
+
+    @Test
+    void navbarUsesBoundedHeaderLayout() throws Exception {
+        String nav = classpathText("/templates/fragments/nav.html");
+
+        assertThat(nav)
+                .contains("class=\"nav-inner\"")
+                .contains("max-width:1060px")
+                .contains("background:var(--bd-nav-bg")
+                .contains("class=\"nav-left\"")
+                .contains("class=\"nav-primary\"")
+                .contains("class=\"nav-actions\"")
+                .contains("class=\"nav-about\"")
+                .contains("action=\"/search\"")
+                .contains("method=\"get\"");
+    }
 }
