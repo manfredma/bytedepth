@@ -12,13 +12,13 @@
             --bg:var(--bd-bg, #f7f5f0); --card:var(--bd-surface, #fff); --navy:var(--bd-nav-bg, #1a1a2e); --accent:var(--bd-accent, #e94560);
             --border:var(--bd-border, #e7e4df); --ink:var(--bd-text, #1c1917); --ink-2:var(--bd-text-muted, #57534e); --ink-3:var(--bd-text-subtle, #a8a29e);
             --navy-fg:var(--bd-nav-text, #fff);
-            --sans:'Outfit',system-ui,sans-serif;
-            --serif:'Source Serif 4',Georgia,serif;
+            --sans:var(--bd-font-sans);
+            --serif:var(--bd-font-serif);
             --radius:10px;
             --shadow:var(--bd-shadow, 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06));
         }
         * { box-sizing:border-box; margin:0; padding:0; }
-        body { font-family:var(--serif); background:var(--bg); color:var(--ink);
+        body { font-family: var(--serif); background:var(--bg); color:var(--ink);
                -webkit-font-smoothing:antialiased; }
         .container { max-width:var(--bd-page-max, 1060px); margin:40px auto; padding:0 var(--bd-page-pad, 20px); }
 

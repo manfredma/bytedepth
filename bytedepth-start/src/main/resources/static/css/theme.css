@@ -1,4 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap');
+
 :root {
+    --bd-font-serif: 'Source Serif 4', Georgia, serif;
+    --bd-font-display: 'DM Serif Display', Georgia, serif;
+    --bd-font-sans: 'Outfit', system-ui, sans-serif;
+    --serif: var(--bd-font-serif);
+    --display: var(--bd-font-display);
+    --sans: var(--bd-font-sans);
     --bd-bg: #f0f2f5;
     --bd-surface: #ffffff;
     --bd-surface-muted: #f4f6f8;

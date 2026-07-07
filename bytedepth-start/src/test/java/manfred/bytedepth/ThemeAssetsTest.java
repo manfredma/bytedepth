@@ -68,6 +68,34 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void publicShellTemplatesUseColumnTypographyBaseline() throws Exception {
+        String css = classpathText("/static/css/theme.css");
+        assertThat(css)
+                .contains("--bd-font-serif")
+                .contains("--bd-font-display")
+                .contains("--bd-font-sans");
+
+        List<String> templates = List.of(
+                "/templates/public/index.html",
+                "/templates/public/posts/list.html",
+                "/templates/public/columns/list.html",
+                "/templates/public/columns/detail.html",
+                "/templates/public/search.html",
+                "/templates/public/about.html",
+                "/templates/public/projects/list.html",
+                "/templates/public/profile.html",
+                "/templates/public/login.html",
+                "/templates/public/register.html"
+        );
+
+        for (String template : templates) {
+            String html = classpathText(template);
+            assertThat(html).as(template).contains("font-family: var(--serif)");
+            assertThat(html).as(template).doesNotContain("-apple-system");
+        }
+    }
+
+    @Test
     void navbarContainsThemeSwitcherMarkup() throws Exception {
         String nav = classpathText("/templates/fragments/nav.html");
 
