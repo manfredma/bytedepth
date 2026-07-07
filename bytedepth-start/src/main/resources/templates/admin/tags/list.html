@@ -2,7 +2,6 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>标签管理 - bytedepth</title>
@@ -35,7 +34,7 @@
     <div class="card">
         <h2>所有标签</h2>
         <div th:if="${#lists.isEmpty(tags)}" class="empty">暂无标签</div>
-        <div class="table-wrap"><table th:if="${!#lists.isEmpty(tags)}">
+        <table th:if="${!#lists.isEmpty(tags)}">
             <thead>
                 <tr>
                     <th>名称</th>
@@ -50,7 +49,7 @@
                     <td><span class="count-badge" th:text="${tag.count}">0</span></td>
                 </tr>
             </tbody>
-        </table></div>
+        </table>
     </div>
 
     <a th:href="@{/admin}" class="back-link">← 返回后台</a>

@@ -7,10 +7,7 @@
   active 可选值：dashboard | posts | comments | categories | tags | series
                | users | analytics | view-logs | projects
 -->
-<th:block th:fragment="sidebar(active)">
-<button type="button" class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="展开后台菜单" aria-expanded="false">☰ 后台菜单</button>
-<div class="admin-sidebar-overlay" id="adminSidebarOverlay" aria-hidden="true"></div>
-<aside class="admin-sidebar" id="adminSidebar">
+<aside th:fragment="sidebar(active)" class="admin-sidebar">
 
     <!-- 内容管理 -->
     <div class="admin-sidebar-section">内容管理</div>
@@ -61,27 +58,5 @@
     </a>
 
 </aside>
-<script>
-(function () {
-    var toggle = document.getElementById('adminSidebarToggle');
-    var aside = document.getElementById('adminSidebar');
-    var overlay = document.getElementById('adminSidebarOverlay');
-    if (!toggle || !aside) return;
-    function close() {
-        aside.classList.remove('open');
-        toggle.setAttribute('aria-expanded', 'false');
-        toggle.textContent = '☰ 后台菜单';
-    }
-    toggle.addEventListener('click', function () {
-        var open = aside.classList.toggle('open');
-        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        toggle.textContent = open ? '✕ 关闭菜单' : '☰ 后台菜单';
-    });
-    if (overlay) overlay.addEventListener('click', close);
-    aside.querySelectorAll('.admin-sidebar-item').forEach(function (item) {
-        item.addEventListener('click', close);
-    });
-})();
-</script>
 </body>
 </html>
