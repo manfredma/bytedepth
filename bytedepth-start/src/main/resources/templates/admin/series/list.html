@@ -2,6 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>专栏管理 - bytedepth</title>
@@ -42,7 +43,7 @@
     <div class="card">
         <h2>所有专栏</h2>
         <div th:if="${#lists.isEmpty(seriesList)}" class="empty">暂无专栏，在下方新建</div>
-        <table th:if="${!#lists.isEmpty(seriesList)}">
+        <div class="table-wrap"><table th:if="${!#lists.isEmpty(seriesList)}">
             <thead>
                 <tr>
                     <th>名称</th>
@@ -70,7 +71,7 @@
                     </td>
                 </tr>
             </tbody>
-        </table>
+        </table></div>
     </div>
 
     <!-- 新建专栏 -->

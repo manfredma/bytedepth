@@ -2,6 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title th:text="${series.name} + ' — 专栏管理 - bytedepth'">专栏详情</title>
@@ -63,7 +64,7 @@
     <div class="card">
         <h2>专栏文章</h2>
         <div th:if="${#lists.isEmpty(series.posts)}" class="empty">暂无文章，在下方添加</div>
-        <table th:if="${!#lists.isEmpty(series.posts)}">
+        <div class="table-wrap"><table th:if="${!#lists.isEmpty(series.posts)}">
             <thead><tr><th>#</th><th>标题</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
                 <tr th:each="post,iter : ${series.posts}">
@@ -97,7 +98,7 @@
                     </td>
                 </tr>
             </tbody>
-        </table>
+        </table></div>
     </div>
 
     <!-- 加入文章（候选列表） -->
@@ -109,7 +110,7 @@
         </form>
 
         <div th:if="${#lists.isEmpty(candidates)}" class="empty">暂无可加入的文章</div>
-        <table th:if="${!#lists.isEmpty(candidates)}">
+        <div class="table-wrap"><table th:if="${!#lists.isEmpty(candidates)}">
             <thead><tr><th>标题</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
                 <tr th:each="c : ${candidates}">
@@ -128,7 +129,7 @@
                     </td>
                 </tr>
             </tbody>
-        </table>
+        </table></div>
 
         <!-- 候选文章分页 -->
         <div th:if="${candidateTotalPages > 1}">

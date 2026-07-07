@@ -2,6 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>分类管理 - bytedepth</title>
@@ -43,7 +44,7 @@
     <div class="card">
         <h2>所有分类</h2>
         <div th:if="${#lists.isEmpty(categories)}" class="empty">暂无分类，请在下方添加</div>
-        <table th:if="${!#lists.isEmpty(categories)}">
+        <div class="table-wrap"><table th:if="${!#lists.isEmpty(categories)}">
             <thead>
                 <tr>
                     <th>名称</th>
@@ -61,7 +62,7 @@
                     </td>
                 </tr>
             </tbody>
-        </table>
+        </table></div>
     </div>
 
     <!-- 新建分类表单 -->
