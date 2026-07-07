@@ -10,10 +10,9 @@
     <style>
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: var(--bd-bg, #f0f2f5); color: var(--bd-text, #1a1a2e); }
-        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        .hero { background: var(--bd-nav-bg, #1a1a2e); color: var(--bd-nav-text, white); padding: 56px 24px 48px; text-align: center; margin-bottom: 32px; }
-        .hero h1 { font-size: 2.5em; margin: 0 0 20px; color: var(--bd-nav-accent, #e94560); letter-spacing: 2px; }
-        .hero-carousel { position: relative; height: 60px; overflow: hidden; }
+        .container { max-width: var(--bd-page-max, 1060px); margin: 32px auto 40px; padding: 0 var(--bd-page-pad, 20px); }
+        .hero { background: var(--bd-nav-bg, #1a1a2e); color: var(--bd-nav-text, white); padding: 34px 24px 30px; text-align: center; margin-bottom: 32px; }
+        .hero-carousel { position: relative; height: 54px; overflow: hidden; max-width: var(--bd-page-max, 1060px); margin: 0 auto; }
         .hero-slogan { text-align: center; opacity: 0; transition: opacity .6s ease, transform .6s ease; transform: translateY(8px); position: absolute; width: 100%; }
         .hero-slogan.active { opacity: 1; transform: translateY(0); }
         .hero-slogan .quote { color: var(--bd-nav-text, #ddd); font-size: 1.05em; font-style: italic; line-height: 1.5; margin: 0; }
@@ -44,7 +43,6 @@
 <body>
 <nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
 <div class="hero">
-    <h1>bytedepth</h1>
     <div class="hero-carousel">
         <div class="hero-slogan active" id="slogan-display">
             <p class="quote" id="slogan-quote"></p>

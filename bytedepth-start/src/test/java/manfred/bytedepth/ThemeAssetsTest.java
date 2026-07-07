@@ -30,7 +30,9 @@ class ThemeAssetsTest {
                 .contains("html[data-theme=\"green\"]")
                 .contains("html[data-theme=\"midnight\"]")
                 .contains("html[data-theme=\"rose\"]")
-                .contains(".theme-switcher");
+                .contains(".theme-switcher")
+                .contains("--bd-page-max: 1060px")
+                .contains("--bd-page-pad: 20px");
 
         assertThat(js)
                 .contains("bytedepth.theme")
@@ -85,7 +87,8 @@ class ThemeAssetsTest {
 
         assertThat(nav)
                 .contains("class=\"nav-inner\"")
-                .contains("max-width:1060px")
+                .contains("max-width:var(--bd-page-max, 1060px)")
+                .contains("padding:0 var(--bd-page-pad, 20px)")
                 .contains("background:var(--bd-nav-bg")
                 .contains("class=\"nav-left\"")
                 .contains("class=\"nav-primary\"")

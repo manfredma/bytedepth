@@ -25,6 +25,8 @@
     --bd-danger: #c00;
     --bd-shadow: 0 2px 8px rgba(0,0,0,.08);
     --bd-shadow-strong: 0 8px 32px rgba(0,0,0,.3);
+    --bd-page-max: 1060px;
+    --bd-page-pad: 20px;
 }
 
 html[data-theme="paper"] {
