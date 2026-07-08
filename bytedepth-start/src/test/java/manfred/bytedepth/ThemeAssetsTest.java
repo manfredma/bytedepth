@@ -75,6 +75,7 @@ class ThemeAssetsTest {
         assertThat(css)
                 .contains("@media (max-width: 768px)")
                 .contains(".admin-sidebar-toggle")
+                .contains("bottom: calc(14px + env(safe-area-inset-bottom))")
                 .contains(".admin-sidebar-overlay.open")
                 .contains(".admin-sidebar.open")
                 .contains("position: fixed")
@@ -111,7 +112,8 @@ class ThemeAssetsTest {
         for (String template : templates) {
             String html = classpathText(template);
             assertThat(html).as(template)
-                    .contains("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">");
+                    .contains("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">")
+                    .contains("@{/css/admin-layout.css(v=20260708)}");
         }
     }
 
@@ -120,9 +122,10 @@ class ThemeAssetsTest {
         String sw = classpathText("/static/sw.js");
 
         assertThat(sw)
-                .contains("bytedepth-v2")
+                .contains("bytedepth-v3")
                 .contains("静态资源：cache-first")
                 .contains("if (cached) return cached")
+                .contains("url.pathname === '/css/admin-layout.css'")
                 .doesNotContain("isFreshStaticAsset");
     }
 
