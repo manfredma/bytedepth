@@ -68,6 +68,54 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void adminLayoutDefinesMobileFloatingSidebarContract() throws Exception {
+        String css = classpathText("/static/css/admin-layout.css");
+        String sidebar = classpathText("/templates/fragments/admin-sidebar.html");
+
+        assertThat(css)
+                .contains("@media (max-width: 768px)")
+                .contains(".admin-sidebar-toggle")
+                .contains(".admin-sidebar-overlay.open")
+                .contains(".admin-sidebar.open")
+                .contains("position: fixed")
+                .contains("transform: translateX(0)")
+                .contains(".admin-main table")
+                .contains("overflow-x: auto");
+
+        assertThat(sidebar)
+                .contains("id=\"adminSidebarToggle\"")
+                .contains("id=\"adminSidebarOverlay\"")
+                .contains("id=\"adminSidebar\"")
+                .contains("aria-expanded")
+                .contains("admin-menu-open")
+                .contains("setOpen(false)");
+    }
+
+    @Test
+    void adminTemplatesDeclareMobileViewport() throws Exception {
+        List<String> templates = List.of(
+                "/templates/admin/analytics.html",
+                "/templates/admin/categories/list.html",
+                "/templates/admin/comments/list.html",
+                "/templates/admin/dashboard.html",
+                "/templates/admin/posts/edit.html",
+                "/templates/admin/posts/list.html",
+                "/templates/admin/projects/edit.html",
+                "/templates/admin/series/detail.html",
+                "/templates/admin/series/list.html",
+                "/templates/admin/tags/list.html",
+                "/templates/admin/users/list.html",
+                "/templates/admin/view-logs/list.html"
+        );
+
+        for (String template : templates) {
+            String html = classpathText(template);
+            assertThat(html).as(template)
+                    .contains("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">");
+        }
+    }
+
+    @Test
     void serviceWorkerUsesVersionedCacheFirstStaticAssets() throws Exception {
         String sw = classpathText("/static/sw.js");
 
