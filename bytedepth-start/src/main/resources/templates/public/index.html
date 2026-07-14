@@ -38,6 +38,14 @@
         .cat-grid { display: flex; flex-wrap: wrap; gap: 10px; }
         .cat-pill { padding: 7px 18px; border-radius: 20px; background: var(--bd-surface-muted, #f4f6f8); color: var(--bd-text-muted, #444); text-decoration: none; font-size: 0.9em; font-weight: 500; transition: all .15s; border: 1px solid var(--bd-border, #e8eaed); }
         .cat-pill:hover { background: var(--bd-nav-bg, #1a1a2e); color: var(--bd-nav-text, white); border-color: var(--bd-nav-bg, #1a1a2e); }
+        .home-post-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 32px; }
+        .home-post-heading h2 { margin: 0; }
+        .home-sort-tabs { display: flex; gap: 8px; }
+        .home-sort-tab { padding: 6px 12px; border: 1px solid var(--bd-border, #ddd); border-radius: 16px; color: var(--bd-text-muted, #555); font-size: .85em; text-decoration: none; }
+        .home-sort-tab:hover, .home-sort-tab.active { background: var(--bd-accent, #e94560); border-color: var(--bd-accent, #e94560); color: var(--bd-accent-text, white); }
+        .home-recent-posts { margin-bottom: 28px; }
+        .home-recent-posts > h2 { margin: 0 0 8px; font-size: 1.1em; }
+        .home-post-views { margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -111,16 +119,32 @@
         </div>
     </div>
 
-    <h2>最新文章</h2>
+    <div class="home-post-heading">
+        <h2 th:text="${sort == 'hot' ? '热门文章' : '最新文章'}">最新文章</h2>
+        <div class="home-sort-tabs">
+            <a th:href="@{/(sort=latest)}" class="home-sort-tab" th:classappend="${sort == 'latest' ? ' active' : ''}">最新</a>
+            <a th:href="@{/(sort=hot)}" class="home-sort-tab" th:classappend="${sort == 'hot' ? ' active' : ''}">热门</a>
+        </div>
+    </div>
+
+    <section th:if="${sort == 'hot' and not #lists.isEmpty(recentPosts)}" class="home-recent-posts">
+        <h2>最新发布</h2>
+        <div th:each="post : ${recentPosts}" class="post-card">
+            <h2><a th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a></h2>
+            <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</p>
+        </div>
+    </section>
+
     <div th:if="${#lists.isEmpty(posts)}" class="empty">暂无发布的文章，<a th:href="@{/posts/new}" style="color:var(--bd-accent, #e94560);">写第一篇</a>？</div>
     <div th:each="post : ${posts}" class="post-card">
         <h2><a th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a></h2>
         <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</p>
+        <p th:if="${sort == 'hot'}" class="meta home-post-views" th:text="|👁 ${post.viewCount} 次阅读|">👁 0 次阅读</p>
     </div>
 
     <div th:if="${totalPages > 1}">
         <div th:replace="~{fragments/pagination :: pagination(
-            ${currentPage}, ${totalPages}, ${total}, ${pageSize}, '/?')}"></div>
+            ${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${paginationBaseUrl})}"></div>
     </div>
 
     <div th:if="${not #lists.isEmpty(projects)}">

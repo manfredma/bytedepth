@@ -19,7 +19,10 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -139,5 +142,36 @@ class HomeControllerTest {
         verify(listPostsQryExe).execute(1, 10);
         verify(listPostsQryExe, never()).executeByHotness(anyInt(), anyInt());
         verify(listPostsQryExe, never()).executeLatestExcluding(anyList(), anyInt());
+    }
+
+    @Test
+    void hotSort_rendersTemplateWithSortControls() throws Exception {
+        PostDTO hotPost = new PostDTO();
+        hotPost.setId(1L);
+        hotPost.setSlug("hot-post");
+        hotPost.setTitle("热门文章");
+        hotPost.setViewCount(123L);
+        PostDTO recentPost = new PostDTO();
+        recentPost.setId(2L);
+        recentPost.setSlug("recent-post");
+        recentPost.setTitle("补充文章");
+
+        when(listPostsQryExe.executeByHotness(1, 10)).thenReturn(List.of(hotPost));
+        when(listPostsQryExe.executeLatestExcluding(List.of(1L), 3)).thenReturn(List.of(recentPost));
+        when(listPostsQryExe.countPublished()).thenReturn(1L);
+        when(listProjectsQryExe.execute()).thenReturn(List.of());
+
+        mockMvc.perform(get("/").param("sort", "hot"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("最新发布")))
+                .andExpect(content().string(containsString("热门文章")))
+                .andExpect(content().string(containsString("123 次阅读")))
+                .andExpect(content().string(containsString("/?sort=latest")))
+                .andExpect(content().string(containsString("/?sort=hot")));
+
+        when(listPostsQryExe.execute(1, 10)).thenReturn(List.of());
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("热门文章"))));
     }
 }
