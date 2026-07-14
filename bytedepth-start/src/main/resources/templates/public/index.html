@@ -43,9 +43,20 @@
         .home-sort-tabs { display: flex; gap: 8px; }
         .home-sort-tab { padding: 6px 12px; border: 1px solid var(--bd-border, #ddd); border-radius: 16px; color: var(--bd-text-muted, #555); font-size: .85em; text-decoration: none; }
         .home-sort-tab:hover, .home-sort-tab.active { background: var(--bd-accent, #e94560); border-color: var(--bd-accent, #e94560); color: var(--bd-accent-text, white); }
-        .home-recent-posts { margin-bottom: 28px; }
-        .home-recent-posts > h2 { margin: 0 0 8px; font-size: 1.1em; }
-        .home-post-views { margin-top: 8px; }
+        .home-recent-posts { margin: 12px 0 32px; }
+        .home-recent-posts > h2 { margin: 0 0 10px; font-size: 1.05em; }
+        .home-recent-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+        .home-recent-card { display: block; min-width: 0; padding: 16px; border: 1px solid var(--bd-border, #e8eaed); border-radius: 8px; background: var(--bd-surface, #fff); color: inherit; text-decoration: none; }
+        .home-recent-card:hover { border-color: var(--bd-accent, #e94560); }
+        .home-recent-title { display: block; overflow: hidden; color: var(--bd-text, #1a1a2e); font-size: .95em; font-weight: 700; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+        .home-recent-date { display: block; margin-top: 10px; color: var(--bd-text-subtle, #999); font-size: .8em; }
+        .home-hot-list { display: grid; gap: 12px; }
+        .home-hot-card { position: relative; display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 14px; padding: 20px 22px; margin: 0; }
+        .home-hot-rank { color: var(--bd-accent, #e94560); font-family: var(--mono, monospace); font-size: 1.2em; font-weight: 700; line-height: 1.45; }
+        .home-hot-title { display: inline-block; color: var(--bd-text, #1a1a2e); font-size: 1.2em; font-weight: 700; text-decoration: none; }
+        .home-hot-excerpt { display: -webkit-box; overflow: hidden; margin: 8px 0 12px; color: var(--bd-text-muted, #666); font-size: .9em; line-height: 1.65; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+        .home-hot-meta { display: flex; gap: 12px; color: var(--bd-text-subtle, #999); font-size: .82em; }
+        @media (max-width: 640px) { .home-recent-grid { grid-template-columns: 1fr; } .home-hot-card { grid-template-columns: 32px minmax(0, 1fr); padding: 18px; } }
     </style>
 </head>
 <body>
@@ -129,17 +140,28 @@
 
     <section th:if="${sort == 'hot' and not #lists.isEmpty(recentPosts)}" class="home-recent-posts">
         <h2>最新发布</h2>
-        <div th:each="post : ${recentPosts}" class="post-card">
-            <h2><a th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a></h2>
-            <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</p>
+        <div class="home-recent-grid">
+            <a th:each="post : ${recentPosts}" th:href="@{/posts/{slug}(slug=${post.slug})}" class="home-recent-card">
+                <span class="home-recent-title" th:text="${post.title}">文章标题</span>
+                <span class="home-recent-date" th:text="${#temporals.format(post.publishedAt, 'MM-dd')}">发布时间</span>
+            </a>
         </div>
     </section>
 
     <div th:if="${#lists.isEmpty(posts)}" class="empty">暂无发布的文章，<a th:href="@{/posts/new}" style="color:var(--bd-accent, #e94560);">写第一篇</a>？</div>
-    <div th:each="post : ${posts}" class="post-card">
-        <h2><a th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a></h2>
-        <p class="meta" th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</p>
-        <p th:if="${sort == 'hot'}" class="meta home-post-views" th:text="|👁 ${post.viewCount} 次阅读|">👁 0 次阅读</p>
+    <div class="home-hot-list">
+        <article th:each="post, stat : ${posts}" class="post-card home-hot-card">
+            <span th:if="${sort == 'hot'}" class="home-hot-rank" th:text="|${#numbers.formatInteger(stat.count, 2)}|">01</span>
+            <span th:if="${sort != 'hot'}" class="home-hot-rank">·</span>
+            <div>
+                <a class="home-hot-title" th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a>
+                <p class="home-hot-excerpt" th:text="${post.content == null ? '' : (#strings.length(post.content) > 120 ? #strings.substring(post.content, 0, 120) + '…' : post.content)}">文章摘要</p>
+                <div class="home-hot-meta">
+                    <span th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</span>
+                    <span th:if="${sort == 'hot'}" th:text="|👁 ${post.viewCount} 次阅读|">👁 0 次阅读</span>
+                </div>
+            </div>
+        </article>
     </div>
 
     <div th:if="${totalPages > 1}">
