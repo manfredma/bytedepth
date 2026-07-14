@@ -3,6 +3,7 @@ package manfred.bytedepth.infrastructure.post;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.domain.post.HotPost;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.PostStatus;
@@ -42,6 +43,21 @@ public class PostRepositoryImpl implements PostRepository {
                 .orderByDesc(PostDO::getPublishedAt);
         return postMapper.selectPage(pageParam, wrapper).getRecords()
                 .stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<HotPost> findPublishedByHotness(int page, int size) {
+        int offset = (page - 1) * size;
+        return postMapper.findPublishedByHotness(offset, size).stream()
+                .map(row -> new HotPost(toEntity(row), row.getViewCount() == null ? 0L : row.getViewCount()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Post> findLatestPublishedExcluding(List<Long> excludedIds, int limit) {
+        return postMapper.findLatestPublishedExcluding(excludedIds, limit).stream()
+                .map(this::toEntity)
+                .collect(Collectors.toList());
     }
 
     @Override

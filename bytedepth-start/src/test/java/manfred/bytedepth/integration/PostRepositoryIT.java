@@ -10,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -18,6 +19,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,6 +42,9 @@ class PostRepositoryIT {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void save_newPost_assignsIdAndPersists() {
@@ -96,6 +101,39 @@ class PostRepositoryIT {
     }
 
     @Test
+    void findsPublishedPostsByHotnessAndLatestExcludingIds() {
+        Post first = publishPost("热门排序第一篇");
+        Post second = publishPost("热门排序第二篇");
+        Post third = publishPost("热门排序第三篇");
+
+        jdbcTemplate.update("UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL -3 MINUTE) WHERE id = ?", first.getId());
+        jdbcTemplate.update("UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL -2 MINUTE) WHERE id = ?", second.getId());
+        jdbcTemplate.update("UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL -1 MINUTE) WHERE id = ?", third.getId());
+        jdbcTemplate.update("INSERT INTO page_stats (path, pv_count, updated_at) VALUES (?, ?, NOW())",
+                "/posts/" + first.getId(), 100);
+        jdbcTemplate.update("INSERT INTO page_stats (path, pv_count, updated_at) VALUES (?, ?, NOW())",
+                "/posts/" + second.getId(), 100);
+
+        var hotPosts = postRepository.findPublishedByHotness(1, 3);
+        assertThat(hotPosts)
+                .extracting(row -> row.post().getId())
+                .containsExactly(second.getId(), first.getId(), third.getId());
+        assertThat(hotPosts.get(2).viewCount()).isZero();
+
+        List<Post> latest = postRepository.findLatestPublishedExcluding(List.of(third.getId()), 3);
+        assertThat(latest)
+                .extracting(Post::getId)
+                .doesNotContain(third.getId());
+        assertThat(latest).hasSizeLessThanOrEqualTo(3)
+                .isSortedAccordingTo((left, right) -> {
+                    int publishedAtComparison = right.getPublishedAt().compareTo(left.getPublishedAt());
+                    return publishedAtComparison != 0
+                            ? publishedAtComparison
+                            : right.getId().compareTo(left.getId());
+                });
+    }
+
+    @Test
     void countAll_excludesDeletedPosts() {
         long before = postRepository.countAll();
 
@@ -119,5 +157,11 @@ class PostRepositoryIT {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("public/index"));
+    }
+
+    private Post publishPost(String title) {
+        Post post = postRepository.save(Post.create(title, "内容", 1L, title));
+        post.publish();
+        return postRepository.save(post);
     }
 }
