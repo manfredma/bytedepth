@@ -106,9 +106,9 @@ class PostRepositoryIT {
         Post second = publishPost("热门排序第二篇");
         Post third = publishPost("热门排序第三篇");
 
-        jdbcTemplate.update("UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL -3 MINUTE) WHERE id = ?", first.getId());
-        jdbcTemplate.update("UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL -2 MINUTE) WHERE id = ?", second.getId());
-        jdbcTemplate.update("UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL -1 MINUTE) WHERE id = ?", third.getId());
+        jdbcTemplate.update("UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL 1 DAY) - INTERVAL 3 MINUTE WHERE id = ?", first.getId());
+        jdbcTemplate.update("UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL 1 DAY) - INTERVAL 2 MINUTE WHERE id = ?", second.getId());
+        jdbcTemplate.update("UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL 1 DAY) - INTERVAL 1 MINUTE WHERE id = ?", third.getId());
         jdbcTemplate.update("INSERT INTO page_stats (path, pv_count, updated_at) VALUES (?, ?, NOW())",
                 "/posts/" + first.getId(), 100);
         jdbcTemplate.update("INSERT INTO page_stats (path, pv_count, updated_at) VALUES (?, ?, NOW())",
