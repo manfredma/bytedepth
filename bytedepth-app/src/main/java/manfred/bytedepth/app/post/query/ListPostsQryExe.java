@@ -3,6 +3,7 @@ package manfred.bytedepth.app.post.query;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.domain.category.Category;
 import manfred.bytedepth.domain.category.CategoryRepository;
+import manfred.bytedepth.domain.post.HotPost;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import org.springframework.stereotype.Component;
@@ -36,6 +37,18 @@ public class ListPostsQryExe {
         return posts.stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    public List<PostDTO> executeByHotness(int page, int size) {
+        return postRepository.findPublishedByHotness(page, size).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<PostDTO> executeLatestExcluding(List<Long> excludedIds, int limit) {
+        return postRepository.findLatestPublishedExcluding(excludedIds, limit).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
     public List<PostDTO> executeByTag(String tagSlug, int page, int size) {
         return postRepository.findPublishedByTag(tagSlug, page, size)
                 .stream().map(this::toDTO).collect(Collectors.toList());
@@ -64,6 +77,12 @@ public class ListPostsQryExe {
                 dto.setCategorySlug(cat.getSlug());
             });
         }
+        return dto;
+    }
+
+    private PostDTO toDTO(HotPost hotPost) {
+        PostDTO dto = toDTO(hotPost.post());
+        dto.setViewCount(hotPost.viewCount());
         return dto;
     }
 }

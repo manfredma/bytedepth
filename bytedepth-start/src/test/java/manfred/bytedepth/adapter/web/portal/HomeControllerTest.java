@@ -15,6 +15,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -98,5 +101,43 @@ class HomeControllerTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(model().attributeExists("projects"));
+    }
+
+    @Test
+    void home_withHotSort_exposesHotPostsAndRecentPosts() throws Exception {
+        PostDTO hotPost = new PostDTO();
+        hotPost.setId(1L);
+        PostDTO recentPost = new PostDTO();
+        recentPost.setId(2L);
+        when(listPostsQryExe.executeByHotness(2, 10)).thenReturn(List.of(hotPost));
+        when(listPostsQryExe.executeLatestExcluding(List.of(1L), 3)).thenReturn(List.of(recentPost));
+        when(listPostsQryExe.countPublished()).thenReturn(1L);
+        when(listProjectsQryExe.execute()).thenReturn(List.of());
+
+        mockMvc.perform(get("/").param("sort", "hot").param("page", "2"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("sort", "hot"))
+                .andExpect(model().attribute("paginationBaseUrl", "/?sort=hot&"))
+                .andExpect(model().attributeExists("recentPosts"));
+
+        verify(listPostsQryExe).executeByHotness(2, 10);
+        verify(listPostsQryExe).executeLatestExcluding(List.of(1L), 3);
+    }
+
+    @Test
+    void home_withInvalidSort_usesLatestPostsWithoutRecentPosts() throws Exception {
+        when(listPostsQryExe.execute(1, 10)).thenReturn(List.of());
+        when(listPostsQryExe.countPublished()).thenReturn(0L);
+        when(listProjectsQryExe.execute()).thenReturn(List.of());
+
+        mockMvc.perform(get("/").param("sort", "unknown"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("sort", "latest"))
+                .andExpect(model().attribute("paginationBaseUrl", "/?"))
+                .andExpect(model().attributeDoesNotExist("recentPosts"));
+
+        verify(listPostsQryExe).execute(1, 10);
+        verify(listPostsQryExe, never()).executeByHotness(anyInt(), anyInt());
+        verify(listPostsQryExe, never()).executeLatestExcluding(anyList(), anyInt());
     }
 }

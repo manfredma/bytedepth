@@ -23,4 +23,5 @@ public class PostDTO {
     private Long seriesId;
     private String seriesName;
     private String seriesSlug;
+    private Long viewCount;
 }
