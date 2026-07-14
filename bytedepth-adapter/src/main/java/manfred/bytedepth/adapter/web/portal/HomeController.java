@@ -48,6 +48,6 @@ public class HomeController {
     }
 
     private String normalizeSort(String sort) {
-        return "hot".equals(sort) ? "hot" : "latest";
+        return "latest".equals(sort) ? "latest" : "hot";
     }
 }

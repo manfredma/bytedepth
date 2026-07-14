@@ -128,20 +128,21 @@ class HomeControllerTest {
     }
 
     @Test
-    void home_withInvalidSort_usesLatestPostsWithoutRecentPosts() throws Exception {
-        when(listPostsQryExe.execute(1, 10)).thenReturn(List.of());
+    void home_withoutSort_usesHotPostsAndRecentPosts() throws Exception {
+        when(listPostsQryExe.executeByHotness(1, 10)).thenReturn(List.of());
+        when(listPostsQryExe.executeLatestExcluding(List.of(), 3)).thenReturn(List.of());
         when(listPostsQryExe.countPublished()).thenReturn(0L);
         when(listProjectsQryExe.execute()).thenReturn(List.of());
 
-        mockMvc.perform(get("/").param("sort", "unknown"))
+        mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(model().attribute("sort", "latest"))
-                .andExpect(model().attribute("paginationBaseUrl", "/?"))
-                .andExpect(model().attributeDoesNotExist("recentPosts"));
+                .andExpect(model().attribute("sort", "hot"))
+                .andExpect(model().attribute("paginationBaseUrl", "/?sort=hot&"))
+                .andExpect(model().attributeExists("recentPosts"));
 
-        verify(listPostsQryExe).execute(1, 10);
-        verify(listPostsQryExe, never()).executeByHotness(anyInt(), anyInt());
-        verify(listPostsQryExe, never()).executeLatestExcluding(anyList(), anyInt());
+        verify(listPostsQryExe).executeByHotness(1, 10);
+        verify(listPostsQryExe).executeLatestExcluding(List.of(), 3);
+        verify(listPostsQryExe, never()).execute(anyInt(), anyInt());
     }
 
     @Test
@@ -170,7 +171,7 @@ class HomeControllerTest {
                 .andExpect(content().string(containsString("/?sort=hot")));
 
         when(listPostsQryExe.execute(1, 10)).thenReturn(List.of());
-        mockMvc.perform(get("/"))
+        mockMvc.perform(get("/").param("sort", "latest"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("热门文章"))));
     }
