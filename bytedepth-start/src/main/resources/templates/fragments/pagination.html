@@ -2,85 +2,164 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head></head>
 <body>
-<div th:fragment="pagination(currentPage, totalPages, total, pageSize, baseUrl)" class="pagination-wrap">
+<div th:fragment="pagination(currentPage, totalPages, total, pageSize, baseUrl)" class="bd-pagination-wrap">
     <style>
-        .page-jump { display: inline-flex; align-items: center; gap: 5px;
-                     font-size: .85em; color: var(--bd-text-subtle, #777); margin-left: 10px; vertical-align: middle; }
-        .jump-input { width: 52px; padding: 5px 7px; border: 1px solid var(--bd-border, #ddd); border-radius: 4px;
-                      font-size: .85em; text-align: center; outline: none;
-                      background: var(--bd-surface, #fff); color: var(--bd-text, #333);
-                      -moz-appearance: textfield; }
-        .jump-input::-webkit-inner-spin-button,
-        .jump-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .jump-input:focus { border-color: var(--bd-accent, #e94560); }
-        .jump-btn { padding: 5px 10px; background: var(--bd-accent, #e94560); color: var(--bd-accent-text, #fff);
-                    border: none; border-radius: 4px; cursor: pointer;
-                    font-size: .85em; transition: background .15s; line-height: 1.4; }
-        .jump-btn:hover { background: var(--bd-accent-hover, #c73652); }
+        .bd-pagination-wrap, .bd-pagination-wrap * { box-sizing: border-box; }
+        .bd-pagination-wrap {
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 1px solid var(--bd-border, #e5e7eb);
+            color: var(--bd-text-muted, #5f6368);
+            font-family: var(--bd-font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+            font-size: 14px;
+        }
+        .bd-pagination-nav {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .bd-pagination-link, .bd-pagination-current, .bd-pagination-ellipsis, .bd-pagination-jump-summary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 34px;
+            padding: 0 9px;
+            border: 1px solid transparent;
+            border-radius: 7px;
+            color: var(--bd-text-muted, #5f6368);
+            font: inherit;
+            font-weight: 600;
+            line-height: 1;
+            text-decoration: none;
+        }
+        .bd-pagination-link { transition: background-color .15s ease, color .15s ease; }
+        .bd-pagination-link:hover {
+            background: var(--bd-surface-muted, #f3f4f6);
+            color: var(--bd-accent, #e94560);
+        }
+        .bd-pagination-link:focus-visible, .bd-pagination-jump-summary:focus-visible,
+        .bd-pagination-input:focus-visible, .bd-pagination-submit:focus-visible {
+            outline: 2px solid var(--bd-accent, #e94560);
+            outline-offset: 2px;
+        }
+        .bd-pagination-link--edge { gap: 5px; padding-inline: 10px; }
+        .bd-pagination-link--disabled { color: var(--bd-text-subtle, #b6b8bd); cursor: default; }
+        .bd-pagination-current {
+            border-color: var(--bd-accent, #e94560);
+            background: var(--bd-accent, #e94560);
+            color: var(--bd-accent-text, #fff);
+        }
+        .bd-pagination-ellipsis { color: var(--bd-text-subtle, #9ca0a8); cursor: default; }
+        .bd-pagination-jump { position: relative; margin-left: 4px; }
+        .bd-pagination-jump-summary { gap: 4px; cursor: pointer; list-style: none; }
+        .bd-pagination-jump-summary::-webkit-details-marker { display: none; }
+        .bd-pagination-jump-summary::after { content: "⌄"; font-size: 12px; }
+        .bd-pagination-jump[open] .bd-pagination-jump-summary,
+        .bd-pagination-jump-summary:hover { background: var(--bd-surface-muted, #f3f4f6); color: var(--bd-accent, #e94560); }
+        .bd-pagination-jump-panel {
+            position: absolute;
+            z-index: 2;
+            right: 0;
+            bottom: calc(100% + 8px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px;
+            border: 1px solid var(--bd-border, #e5e7eb);
+            border-radius: 8px;
+            background: var(--bd-surface, #fff);
+            box-shadow: var(--bd-shadow, 0 8px 20px rgba(0, 0, 0, .1));
+        }
+        .bd-pagination-input {
+            width: 48px;
+            height: 30px;
+            padding: 4px 6px;
+            border: 1px solid var(--bd-border, #d1d5db);
+            border-radius: 5px;
+            background: var(--bd-surface, #fff);
+            color: var(--bd-text, #333);
+            font: inherit;
+            text-align: center;
+            -moz-appearance: textfield;
+        }
+        .bd-pagination-input::-webkit-inner-spin-button,
+        .bd-pagination-input::-webkit-outer-spin-button { margin: 0; -webkit-appearance: none; }
+        .bd-pagination-submit {
+            height: 30px;
+            padding: 0 9px;
+            border: 0;
+            border-radius: 5px;
+            background: var(--bd-accent, #e94560);
+            color: var(--bd-accent-text, #fff);
+            cursor: pointer;
+            font: inherit;
+            font-weight: 600;
+        }
+        .bd-pagination-submit { white-space: nowrap; flex: 0 0 auto; }
+        .bd-pagination-submit:hover { background: var(--bd-accent-hover, #c73652); }
+        .bd-pagination-info {
+            margin: 9px 0 0;
+            color: var(--bd-text-subtle, #989ba2);
+            font-size: 12px;
+            line-height: 1.4;
+            text-align: center;
+        }
+        @media (max-width: 560px) {
+            .bd-pagination-wrap { margin-top: 22px; padding-top: 14px; }
+            .bd-pagination-nav { gap: 2px; }
+            .bd-pagination-link, .bd-pagination-current, .bd-pagination-ellipsis, .bd-pagination-jump-summary {
+                min-width: 32px;
+                height: 32px;
+                padding: 0 7px;
+            }
+            .bd-pagination-link--edge { padding-inline: 8px; }
+            .bd-pagination-link--edge .bd-pagination-edge-text { display: none; }
+        }
     </style>
 
-    <!-- 总条数 / 页码信息（total 为 null 或 0 时不显示）-->
-    <p class="page-info-top"
-       th:if="${total != null and total > 0}"
-       th:text="'共 ' + ${total} + ' 条，第 ' + ${currentPage} + ' / ' + ${totalPages} + ' 页'"></p>
-
-    <div class="pagination">
-        <!-- 上一页 -->
+    <nav class="bd-pagination-nav" aria-label="分页导航">
         <a th:if="${currentPage > 1}"
            th:href="${baseUrl + 'page=' + (currentPage - 1) + '&size=' + pageSize}"
-           class="page-btn">← 上一页</a>
-        <span th:if="${currentPage == 1}" class="page-btn disabled">← 上一页</span>
+           class="bd-pagination-link bd-pagination-link--edge" aria-label="上一页"><span aria-hidden="true">‹</span><span class="bd-pagination-edge-text">上一页</span></a>
+        <span th:if="${currentPage == 1}" class="bd-pagination-link bd-pagination-link--edge bd-pagination-link--disabled" aria-disabled="true"><span aria-hidden="true">‹</span><span class="bd-pagination-edge-text">上一页</span></span>
 
-        <!-- 页码（当前页前后各 2 页 + 省略号 + 首末页）-->
-        <th:block th:with="startPage=${T(java.lang.Math).max(1, currentPage - 2)},
-                           endPage=${T(java.lang.Math).min(totalPages.intValue(), currentPage + 2)}">
+        <th:block th:with="startPage=${T(java.lang.Math).max(1, currentPage - 2)}, endPage=${T(java.lang.Math).min(totalPages.intValue(), currentPage + 2)}">
             <th:block th:if="${startPage > 1}">
-                <a th:href="${baseUrl + 'page=1&size=' + pageSize}" class="page-btn">1</a>
-                <span th:if="${startPage > 2}" class="page-btn disabled">…</span>
+                <a th:href="${baseUrl + 'page=1&size=' + pageSize}" class="bd-pagination-link" aria-label="第 1 页">1</a>
+                <span th:if="${startPage > 2}" class="bd-pagination-ellipsis" aria-hidden="true">…</span>
             </th:block>
 
             <th:block th:each="p : ${#numbers.sequence(startPage, endPage)}">
-                <a th:if="${p != currentPage}"
-                   th:href="${baseUrl + 'page=' + p + '&size=' + pageSize}"
-                   th:text="${p}" class="page-btn"></a>
-                <span th:if="${p == currentPage}" class="page-btn current" th:text="${p}"></span>
+                <a th:if="${p != currentPage}" th:href="${baseUrl + 'page=' + p + '&size=' + pageSize}" th:text="${p}" th:aria-label="'第 ' + ${p} + ' 页'" class="bd-pagination-link"></a>
+                <span th:if="${p == currentPage}" class="bd-pagination-current" th:text="${p}" aria-current="page"></span>
             </th:block>
 
             <th:block th:if="${endPage < totalPages}">
-                <span th:if="${endPage < totalPages - 1}" class="page-btn disabled">…</span>
-                <a th:href="${baseUrl + 'page=' + totalPages + '&size=' + pageSize}"
-                   th:text="${totalPages}" class="page-btn"></a>
+                <span th:if="${endPage < totalPages - 1}" class="bd-pagination-ellipsis" aria-hidden="true">…</span>
+                <a th:href="${baseUrl + 'page=' + totalPages + '&size=' + pageSize}" th:text="${totalPages}" th:aria-label="'第 ' + ${totalPages} + ' 页'" class="bd-pagination-link"></a>
             </th:block>
         </th:block>
 
-        <!-- 下一页 -->
         <a th:if="${currentPage < totalPages}"
            th:href="${baseUrl + 'page=' + (currentPage + 1) + '&size=' + pageSize}"
-           class="page-btn">下一页 →</a>
-        <span th:if="${currentPage >= totalPages}" class="page-btn disabled">下一页 →</span>
+           class="bd-pagination-link bd-pagination-link--edge" aria-label="下一页"><span class="bd-pagination-edge-text">下一页</span><span aria-hidden="true">›</span></a>
+        <span th:if="${currentPage >= totalPages}" class="bd-pagination-link bd-pagination-link--edge bd-pagination-link--disabled" aria-disabled="true"><span class="bd-pagination-edge-text">下一页</span><span aria-hidden="true">›</span></span>
 
-        <!-- 跳转到指定页 -->
-        <span class="page-jump">
-            跳至
-            <input type="number"
-                   class="jump-input"
-                   min="1"
-                   th:max="${totalPages}"
-                   th:attr="data-base=${baseUrl},data-size=${pageSize}"
-                   placeholder="页码"
-                   onkeydown="if(event.key==='Enter'){
-                       var v=+this.value, m=+this.max;
-                       if(v>=1 && v<=m) location.href=this.dataset.base+'page='+v+'&size='+this.dataset.size;
-                   }">
-            页
-            <button class="jump-btn"
-                    onclick="var i=this.closest('.page-jump').querySelector('.jump-input'),
-                                 v=+i.value, m=+i.max;
-                             if(v>=1 && v<=m) location.href=i.dataset.base+'page='+v+'&size='+i.dataset.size;">
-                跳
-            </button>
-        </span>
-    </div>
+        <details class="bd-pagination-jump">
+            <summary class="bd-pagination-jump-summary">跳至</summary>
+            <div class="bd-pagination-jump-panel">
+                <input type="number" class="bd-pagination-input" min="1" th:max="${totalPages}"
+                       th:attr="data-base=${baseUrl},data-size=${pageSize}" aria-label="跳转页码" placeholder="页码"
+                       onkeydown="if(event.key==='Enter'){var v=+this.value,m=+this.max;if(v>=1&&v<=m)location.href=this.dataset.base+'page='+v+'&size='+this.dataset.size;}">
+                <button type="button" class="bd-pagination-submit" onclick="var i=this.closest('.bd-pagination-jump').querySelector('.bd-pagination-input'),v=+i.value,m=+i.max;if(v>=1&&v<=m)location.href=i.dataset.base+'page='+v+'&size='+i.dataset.size;">前往</button>
+            </div>
+        </details>
+    </nav>
+
+    <p class="bd-pagination-info" th:if="${total != null and total > 0}" th:text="'第 ' + ${currentPage} + ' / ' + ${totalPages} + ' 页 · 共 ' + ${total} + ' 篇'"></p>
 </div>
 </body>
 </html>
