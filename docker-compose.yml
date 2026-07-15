@@ -50,6 +50,9 @@ services:
       BYTEDEPTH_SEARCH_URL: http://meilisearch:7700
       BYTEDEPTH_SEARCH_API_KEY: ${MEILI_MASTER_KEY:-bytedepth-search-key}
       BYTEDEPTH_GEOIP_DB_PATH: /data/geoip/GeoLite2-City.mmdb
+      BYTEDEPTH_REMEMBER_ME_KEY: ${BYTEDEPTH_REMEMBER_ME_KEY}
+      BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE: "true"
+      BYTEDEPTH_SESSION_COOKIE_SECURE: "true"
       JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
     volumes:
       - /data/images:/root/bytedepth/images
