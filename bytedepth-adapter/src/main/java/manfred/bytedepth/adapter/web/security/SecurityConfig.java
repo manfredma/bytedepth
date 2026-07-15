@@ -1,8 +1,10 @@
 package manfred.bytedepth.adapter.web.security;
 
 import jakarta.servlet.http.HttpServletResponse;
+import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -12,11 +14,21 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity   // 开启 @PreAuthorize 方法级权限
 public class SecurityConfig {
+
+    @Bean
+    public PersistentTokenRepository persistentTokenRepository(DataSource dataSource) {
+        JdbcTokenRepositoryImpl repository = new JdbcTokenRepositoryImpl();
+        repository.setDataSource(dataSource);
+        repository.setCreateTableOnStartup(false);
+        return repository;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -33,7 +45,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           PersistentTokenRepository persistentTokenRepository,
+                                           @Value("${BYTEDEPTH_REMEMBER_ME_KEY:bytedepth-local-remember-me-key}") String rememberMeKey,
+                                           @Value("${BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE:false}") boolean rememberMeCookieSecure) throws Exception {
         // CSRF：默认 HttpSessionCsrfTokenRepository + Thymeleaf 自动注入 _csrf hidden input。
         // 之前用 CookieCsrfTokenRepository，登录成功后 CsrfAuthenticationStrategy 清除
         // XSRF-TOKEN cookie 却不重新下发，导致后续 POST 表单（退出等）403。session 仓库
@@ -58,7 +73,20 @@ public class SecurityConfig {
                 .defaultSuccessUrl("/", true)   // 登录成功回首页，管理员自行导航到后台
                 .permitAll()
             )
+            .rememberMe(rememberMe -> rememberMe
+                .tokenRepository(persistentTokenRepository)
+                .rememberMeParameter("remember-me")
+                .rememberMeCookieName("bytedepth-remember-me")
+                .tokenValiditySeconds(30 * 24 * 60 * 60)
+                .useSecureCookie(rememberMeCookieSecure)
+                .key(rememberMeKey)
+            )
             .logout(logout -> logout
+                .addLogoutHandler((request, response, authentication) -> {
+                    if (authentication != null) {
+                        persistentTokenRepository.removeUserTokens(authentication.getName());
+                    }
+                })
                 .logoutSuccessUrl("/")
                 .permitAll()
             )

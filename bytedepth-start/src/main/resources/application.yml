@@ -17,6 +17,20 @@ spring:
     redis:
       host: localhost
       port: 6379
+  session:
+    store-type: redis
+    timeout: 60m
+    redis:
+      namespace: bytedepth:session
+
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${BYTEDEPTH_SESSION_COOKIE_SECURE:false}
 
 mybatis-plus:
   mapper-locations: classpath*:mapper/**/*.xml
@@ -25,9 +39,6 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: auto
-
-server:
-  port: 8080
 
 bytedepth:
   site:
