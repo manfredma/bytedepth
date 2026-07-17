@@ -71,6 +71,7 @@
         <thead>
         <tr>
             <th>文章 ID</th>
+            <th>文章名称</th>
             <th>访客</th>
             <th>IP</th>
             <th>国家 / 城市</th>
@@ -86,6 +87,10 @@
                    th:href="@{/posts/{id}(id=${log.postId})}"
                    target="_blank"
                    th:text="'#' + ${log.postId}">#1</a>
+            </td>
+            <td>
+                <span th:if="${log.postTitle != null}" th:text="${log.postTitle}">文章标题</span>
+                <span th:if="${log.postTitle == null}" class="geo-empty">文章已删除</span>
             </td>
             <td>
                 <span th:if="${log.userId != null}"
@@ -120,7 +125,7 @@
                 th:text="${#temporals.format(log.visitedAt, 'MM-dd HH:mm')}">时间</td>
         </tr>
         <tr th:if="${#lists.isEmpty(logs)}">
-            <td colspan="7" class="empty">暂无访问记录</td>
+            <td colspan="8" class="empty">暂无访问记录</td>
         </tr>
         </tbody>
     </table>

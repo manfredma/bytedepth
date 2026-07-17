@@ -9,6 +9,7 @@ import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
+import manfred.bytedepth.app.rating.GetPostRatingQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
 import manfred.bytedepth.domain.post.PostRepository;
@@ -52,6 +53,7 @@ public class PostController {
     private final PostRepository postRepository;
     private final SeriesRepository seriesRepository;
     private final GetSeriesPostsQryExe getSeriesPostsQryExe;
+    private final GetPostRatingQryExe getPostRatingQryExe;
     private final ApplicationEventPublisher eventPublisher;
 
     @GetMapping
@@ -118,6 +120,7 @@ public class PostController {
         model.addAttribute("renderedContent", markdownRenderer.render(post.getContent()));
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
+        model.addAttribute("rating", getPostRatingQryExe.execute(id, readRatingVisitorToken(request)));
         model.addAttribute("canPublish", "DRAFT".equals(post.getStatus()) && (isOwner || isAdmin));
         postViewCounter.increment(id);
         model.addAttribute("pvCount", postViewCounter.getCount(id));
@@ -142,6 +145,14 @@ public class PostController {
                 getSeriesPostsQryExe.execute(currentPost.getSeriesId()));
         }
         return "public/posts/detail";
+    }
+
+    private String readRatingVisitorToken(HttpServletRequest request) {
+        if (request.getCookies() == null) return null;
+        for (var cookie : request.getCookies()) {
+            if (PostRatingController.VISITOR_COOKIE.equals(cookie.getName())) return cookie.getValue();
+        }
+        return null;
     }
 
     @GetMapping("/new")

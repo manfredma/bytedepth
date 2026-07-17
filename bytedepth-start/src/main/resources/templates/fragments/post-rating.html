@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<body>
+<section th:fragment="rating(post, rating, anchor)" class="post-rating" th:id="${anchor}">
+    <p class="post-rating-title">这篇文章对你有帮助吗？</p>
+    <form class="post-rating-stars" method="post" th:action="@{/posts/{slug}/rating(slug=${post.slug})}">
+        <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <button th:each="score : ${#numbers.sequence(1, 5)}" type="submit" name="score" th:value="${score}"
+                class="post-rating-star" th:classappend="${rating.visitorScore != null and score <= rating.visitorScore} ? ' is-selected' : ''"
+                th:title="${score} + ' 星'" th:text="${score <= (rating.visitorScore ?: 0)} ? '★' : '☆'">☆</button>
+    </form>
+    <p class="post-rating-summary" th:text="${rating.ratingCount == 0} ? '成为第一个评分的人' : '平均 ' + ${#numbers.formatDecimal(rating.averageRating, 1, 1)} + ' / 5 · ' + ${rating.ratingCount} + ' 人评分'"></p>
+</section>
+</body>
+</html>

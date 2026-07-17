@@ -6,6 +6,7 @@
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
     <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <link rel="stylesheet" th:href="@{/css/post-rating.css}">
     <script th:src="@{/js/theme-switcher.js}"></script>
     <title th:text="${post.title} + ' - bytedepth'">文章详情</title>
     <!-- SEO -->
@@ -787,6 +788,7 @@
            th:text="'#' + ${tag.name}" class="tag">#标签</a>
     </div>
     <div class="content" th:utext="${renderedContent}">文章内容</div>
+    <div th:replace="~{fragments/post-rating :: rating(${post}, ${rating}, 'post-rating-top')}"></div>
     <div class="publish-form" th:if="${canPublish}">
         <form th:action="@{/posts/{slug}/publish(slug=${post.slug})}" method="post">
             <button type="submit" class="btn">发布此文章</button>
@@ -810,6 +812,7 @@
             <div class="nav-title" th:text="${nextPost.title}">下一篇标题</div>
         </a>
     </div>
+    <div th:replace="~{fragments/post-rating :: rating(${post}, ${rating}, 'post-rating-end')}"></div>
 
     <!-- 评论区 -->
     <div class="comment-section">

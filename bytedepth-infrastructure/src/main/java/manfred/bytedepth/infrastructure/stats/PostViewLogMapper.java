@@ -11,11 +11,12 @@ import java.util.List;
 public interface PostViewLogMapper extends BaseMapper<PostViewLogDO> {
 
     @Select("""
-            SELECT *
-            FROM post_view_log
-            WHERE (#{postId} IS NULL OR post_id = #{postId})
-              AND (#{userId} IS NULL OR user_id = #{userId})
-            ORDER BY visited_at DESC
+            SELECT pvl.*, p.title AS post_title
+            FROM post_view_log pvl
+            LEFT JOIN post p ON p.id = pvl.post_id
+            WHERE (#{postId} IS NULL OR pvl.post_id = #{postId})
+              AND (#{userId} IS NULL OR pvl.user_id = #{userId})
+            ORDER BY pvl.visited_at DESC
             LIMIT #{offset}, #{size}
             """)
     List<PostViewLogDO> findPage(@Param("postId") Long postId,

@@ -1,0 +1,7 @@
+.post-rating, .post-rating * { box-sizing: border-box; }
+.post-rating { margin: 32px 0; padding: 18px 20px; border: 1px solid var(--bd-border, #e7e4df); border-radius: 10px; background: var(--bd-surface-muted, #faf9f7); font-family: var(--bd-font-sans, sans-serif); text-align: center; }
+.post-rating-title { margin: 0 0 8px; color: var(--bd-text, #1c1917); font-size: 14px; font-weight: 700; }
+.post-rating-stars { display: flex; justify-content: center; gap: 3px; }
+.post-rating-star { padding: 0; border: 0; background: transparent; color: #c9c5bd; cursor: pointer; font-size: 28px; line-height: 1; }
+.post-rating-star:hover, .post-rating-star.is-selected { color: var(--bd-accent, #e94560); }
+.post-rating-summary { margin: 8px 0 0; color: var(--bd-text-subtle, #888); font-size: 12px; }

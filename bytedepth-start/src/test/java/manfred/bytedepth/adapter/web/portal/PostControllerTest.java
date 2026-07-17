@@ -8,6 +8,8 @@ import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
+import manfred.bytedepth.app.rating.GetPostRatingQryExe;
+import manfred.bytedepth.app.rating.PostRatingDTO;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import manfred.bytedepth.domain.post.Post;
@@ -18,6 +20,7 @@ import manfred.bytedepth.domain.stats.PostViewCounter;
 import manfred.bytedepth.domain.stats.PostViewedEvent;
 
 import java.time.LocalDateTime;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -34,6 +37,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -86,6 +90,14 @@ class PostControllerTest {
 
     @MockBean
     private GetSeriesPostsQryExe getSeriesPostsQryExe;
+
+    @MockBean
+    private GetPostRatingQryExe getPostRatingQryExe;
+
+    @BeforeEach
+    void setUp() {
+        when(getPostRatingQryExe.execute(anyLong(), any())).thenReturn(new PostRatingDTO(0D, 0L, null));
+    }
 
     @Test
     void listPosts_defaultParams_returnsOkWithPostsModel() throws Exception {
