@@ -53,3 +53,50 @@ bytedepth:
     # 下载：https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
     # 部署时设置：export BYTEDEPTH_GEOIP_DB_PATH=/opt/bytedepth/GeoLite2-City.mmdb
     db-path: ${BYTEDEPTH_GEOIP_DB_PATH:}
+  visit-filter:
+    enabled: true
+    rules:
+      - id: python-urllib
+        field: user-agent
+        match: prefix
+        value: Python-urllib
+      - id: curl
+        field: user-agent
+        match: prefix
+        value: curl/
+      - id: wget
+        field: user-agent
+        match: prefix
+        value: Wget/
+      - id: go-http-client
+        field: user-agent
+        match: prefix
+        value: Go-http-client
+      - id: java-client
+        field: user-agent
+        match: prefix
+        value: Java/
+      - id: apache-http-client
+        field: user-agent
+        match: prefix
+        value: Apache-HttpClient
+      - id: okhttp
+        field: user-agent
+        match: prefix
+        value: okhttp
+      - id: postman
+        field: user-agent
+        match: prefix
+        value: PostmanRuntime
+      - id: bot
+        field: user-agent
+        match: contains
+        value: bot
+      - id: crawler
+        field: user-agent
+        match: contains
+        value: crawler
+      - id: spider
+        field: user-agent
+        match: contains
+        value: spider

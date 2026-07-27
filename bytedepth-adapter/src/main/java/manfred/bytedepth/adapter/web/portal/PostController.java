@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
 import manfred.bytedepth.adapter.web.util.SeoUtils;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
@@ -54,6 +55,7 @@ public class PostController {
     private final SeriesRepository seriesRepository;
     private final GetSeriesPostsQryExe getSeriesPostsQryExe;
     private final GetPostRatingQryExe getPostRatingQryExe;
+    private final VisitRequestFilter visitRequestFilter;
     private final ApplicationEventPublisher eventPublisher;
 
     @GetMapping
@@ -122,18 +124,19 @@ public class PostController {
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
         model.addAttribute("rating", getPostRatingQryExe.execute(id, readRatingVisitorToken(request)));
         model.addAttribute("canPublish", "DRAFT".equals(post.getStatus()) && (isOwner || isAdmin));
-        postViewCounter.increment(id);
+        String userAgent = truncate(request.getHeader("User-Agent"), 512);
+        if (visitRequestFilter.shouldRecord(new VisitRequestFilter.Request(userAgent))) {
+            postViewCounter.increment(id);
+            eventPublisher.publishEvent(new PostViewedEvent(
+                    id,
+                    extractUserId(currentUser),
+                    getClientIp(request),
+                    userAgent,
+                    truncate(request.getHeader("Referer"), 512),
+                    LocalDateTime.now()
+            ));
+        }
         model.addAttribute("pvCount", postViewCounter.getCount(id));
-
-        // 发布访问事件（异步写日志，不影响响应时间）
-        eventPublisher.publishEvent(new PostViewedEvent(
-                id,
-                extractUserId(currentUser),
-                getClientIp(request),
-                truncate(request.getHeader("User-Agent"), 512),
-                truncate(request.getHeader("Referer"), 512),
-                LocalDateTime.now()
-        ));
 
         model.addAttribute("prevPost", postRepository.findPrevPublished(id).orElse(null));
         model.addAttribute("nextPost", postRepository.findNextPublished(id).orElse(null));

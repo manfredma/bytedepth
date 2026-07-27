@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.portal;
 
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
@@ -39,6 +40,8 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -94,9 +97,13 @@ class PostControllerTest {
     @MockBean
     private GetPostRatingQryExe getPostRatingQryExe;
 
+    @MockBean
+    private VisitRequestFilter visitRequestFilter;
+
     @BeforeEach
     void setUp() {
         when(getPostRatingQryExe.execute(anyLong(), any())).thenReturn(new PostRatingDTO(0D, 0L, null));
+        when(visitRequestFilter.shouldRecord(any())).thenReturn(true);
     }
 
     @Test
@@ -229,5 +236,32 @@ class PostControllerTest {
 
         assertThat(applicationEvents.stream(PostViewedEvent.class).count())
                 .isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    void getPostDetail_invalidVisitorDoesNotIncrementViewCountOrPublishEvent() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(4L);
+        dto.setSlug("filtered-visitor");
+        dto.setTitle("过滤访问");
+        dto.setContent("内容");
+        dto.setStatus("PUBLISHED");
+
+        Post domainPost = Post.reconstruct(4L, "filtered-visitor", "过滤访问", "内容",
+                PostStatus.PUBLISHED, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), null, null, false);
+        when(postRepository.findById(4L)).thenReturn(Optional.of(domainPost));
+        when(postRepository.findPrevPublished(4L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(4L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("filtered-visitor")).thenReturn(dto);
+        when(listTagsQryExe.findByPostId(4L)).thenReturn(List.of());
+        when(listCommentsQryExe.findApprovedByPostId(4L)).thenReturn(List.of());
+        when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");
+        when(visitRequestFilter.shouldRecord(any())).thenReturn(false);
+
+        mockMvc.perform(get("/posts/filtered-visitor").header("User-Agent", "Python-urllib/3.12"))
+                .andExpect(status().isOk());
+
+        verify(postViewCounter, never()).increment(4L);
+        assertThat(applicationEvents.stream(PostViewedEvent.class).count()).isZero();
     }
 }
