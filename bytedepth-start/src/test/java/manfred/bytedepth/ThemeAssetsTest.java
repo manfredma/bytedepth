@@ -113,7 +113,7 @@ class ThemeAssetsTest {
             String html = classpathText(template);
             assertThat(html).as(template)
                     .contains("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">")
-                    .contains("@{/css/admin-layout.css(v=20260708)}");
+                    .contains("@{/css/admin-layout.css}");
         }
     }
 
@@ -125,8 +125,17 @@ class ThemeAssetsTest {
                 .contains("bytedepth-v3")
                 .contains("静态资源：cache-first")
                 .contains("if (cached) return cached")
-                .contains("url.pathname === '/css/admin-layout.css'")
+                .doesNotContain("admin-layout.css")
                 .doesNotContain("isFreshStaticAsset");
+    }
+
+    @Test
+    void cssAssetsUseContentHashVersioningInsteadOfManualVersions() throws Exception {
+        String config = classpathText("/application.yml");
+
+        assertThat(config)
+                .contains("chain:\n        enabled: true")
+                .contains("content:\n            enabled: true\n            paths: /css/**");
     }
 
     @Test
