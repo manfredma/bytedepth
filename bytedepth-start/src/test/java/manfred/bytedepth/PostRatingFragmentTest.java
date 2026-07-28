@@ -21,6 +21,17 @@ class PostRatingFragmentTest {
                 .doesNotContain("成为第一个评分的人");
     }
 
+    @Test
+    void usesRoundedSvgStarsForSelectedAndUnselectedStates() throws IOException {
+        String template = classpathText("/templates/fragments/post-rating.html");
+
+        assertThat(template)
+                .contains("class=\"post-rating-star-icon\"")
+                .contains("viewBox=\"0 0 24 24\"")
+                .contains("is-selected")
+                .doesNotContain("? '★' : '☆'");
+    }
+
     private String classpathText(String path) throws IOException {
         try (InputStream in = getClass().getResourceAsStream(path)) {
             assertThat(in).as("classpath resource %s", path).isNotNull();

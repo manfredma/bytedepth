@@ -7,7 +7,11 @@
         <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
         <button th:each="score : ${#numbers.sequence(1, 5)}" type="submit" name="score" th:value="${score}"
                 class="post-rating-star" th:classappend="${rating.visitorScore != null and score <= rating.visitorScore} ? ' is-selected' : ''"
-                th:title="${score} + ' 星'" th:text="${score <= (rating.visitorScore ?: 0)} ? '★' : '☆'">☆</button>
+                th:title="${score} + ' 星'" th:aria-label="${score} + ' 星'">
+            <svg class="post-rating-star-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3.8l2.35 4.8 5.35.78-3.87 3.77.92 5.3L12 15.98l-4.75 2.47.92-5.3-3.87-3.77 5.35-.78z"/>
+            </svg>
+        </button>
     </form>
     <span th:if="${rating.ratingCount > 0}" class="post-rating-average"
           th:text="${#numbers.formatDecimal(rating.averageRating, 1, 1)} + ' / 5'">4.6 / 5</span>

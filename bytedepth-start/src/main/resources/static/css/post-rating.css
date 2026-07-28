@@ -2,7 +2,8 @@
 .post-rating { position: fixed; right: 24px; bottom: 24px; z-index: 20; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--bd-border, #e7e4df); border-radius: 999px; background: var(--bd-surface, #fff); box-shadow: 0 8px 24px rgb(28 25 23 / 12%); font-family: var(--bd-font-sans, sans-serif); }
 .post-rating-label { color: var(--bd-text, #1c1917); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .post-rating-stars { display: flex; gap: 2px; }
-.post-rating-star { padding: 0; border: 0; background: transparent; color: #c9c5bd; cursor: pointer; font-size: 22px; line-height: 1; }
-.post-rating-star:hover, .post-rating-star.is-selected { color: var(--bd-accent, #e94560); }
+.post-rating-star { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.post-rating-star-icon { width: 18px; height: 18px; fill: #fff8e7; stroke: #d8b75e; stroke-linejoin: round; stroke-width: 2.75; filter: drop-shadow(0 1px 0 #fff8e8); transition: fill .15s ease, stroke .15s ease, transform .15s ease; }
+.post-rating-star:hover .post-rating-star-icon, .post-rating-star.is-selected .post-rating-star-icon { fill: #efd485; stroke: #cda550; stroke-width: 2.55; transform: scale(1.04); }
 .post-rating-average { color: var(--bd-text-subtle, #888); font-size: 12px; white-space: nowrap; }
 @media (max-width: 768px) { .post-rating { right: auto; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px); } }
