@@ -818,6 +818,11 @@
     </div>
     <div th:replace="~{fragments/post-rating :: rating(${post}, ${rating}, 'post-rating')}"></div>
 
+    <div th:if="${visitToken != null}" id="post-reading-tracker" hidden
+         th:data-visit-token="${visitToken}"
+         th:data-progress-url="@{/posts/{slug}/reading-progress(slug=${post.slug})}"></div>
+    <script th:if="${visitToken != null}" th:src="@{/js/post-reading.js}"></script>
+
     <!-- 评论区 -->
     <div class="comment-section">
         <h3>评论 <span th:text="'(' + ${#lists.size(comments)} + ')'" style="font-weight:400;color:var(--ink-3);font-size:0.9em;"></span></h3>

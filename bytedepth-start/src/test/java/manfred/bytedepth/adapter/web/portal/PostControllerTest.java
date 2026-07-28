@@ -244,6 +244,8 @@ class PostControllerTest {
 
         assertThat(applicationEvents.stream(PostViewedEvent.class).count())
                 .isGreaterThanOrEqualTo(1);
+        assertThat(applicationEvents.stream(PostViewedEvent.class).findFirst().orElseThrow().visitToken())
+                .isNotBlank();
     }
 
     @Test

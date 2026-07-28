@@ -30,13 +30,14 @@ class PostViewEventHandlerTest {
     void onPostViewed_loggedInUser_savesAllFields() {
         var event = new PostViewedEvent(
                 10L, 99L, "8.8.8.8", "Mozilla/5.0", "https://google.com",
+                "visit-token",
                 LocalDateTime.of(2026, 6, 29, 12, 0));
         when(geoIpService.resolve("8.8.8.8")).thenReturn(new GeoInfo("China", "Beijing"));
 
         handler.onPostViewed(event);
 
         ArgumentCaptor<PostViewLogDO> captor = ArgumentCaptor.forClass(PostViewLogDO.class);
-        verify(postViewLogMapper).insert(captor.capture());
+        verify(postViewLogMapper).upsertVisit(captor.capture());
         PostViewLogDO saved = captor.getValue();
         assertThat(saved.getPostId()).isEqualTo(10L);
         assertThat(saved.getUserId()).isEqualTo(99L);
@@ -46,29 +47,30 @@ class PostViewEventHandlerTest {
         assertThat(saved.getCountry()).isEqualTo("China");
         assertThat(saved.getCity()).isEqualTo("Beijing");
         assertThat(saved.getVisitedAt()).isEqualTo(LocalDateTime.of(2026, 6, 29, 12, 0));
+        assertThat(saved.getVisitToken()).isEqualTo("visit-token");
     }
 
     @Test
     void onPostViewed_anonymousUser_savesNullUserId() {
-        var event = new PostViewedEvent(5L, null, "1.2.3.4", "curl/7.0", null,
+        var event = new PostViewedEvent(5L, null, "1.2.3.4", "curl/7.0", null, "visit-token",
                 LocalDateTime.now());
         when(geoIpService.resolve("1.2.3.4")).thenReturn(GeoInfo.unknown());
 
         handler.onPostViewed(event);
 
         ArgumentCaptor<PostViewLogDO> captor = ArgumentCaptor.forClass(PostViewLogDO.class);
-        verify(postViewLogMapper).insert(captor.capture());
+        verify(postViewLogMapper).upsertVisit(captor.capture());
         assertThat(captor.getValue().getUserId()).isNull();
         assertThat(captor.getValue().getCountry()).isEmpty();
     }
 
     @Test
     void onPostViewed_geoResolutionFails_stillSavesLog() {
-        var event = new PostViewedEvent(1L, null, "bad-ip", null, null, LocalDateTime.now());
+        var event = new PostViewedEvent(1L, null, "bad-ip", null, null, "visit-token", LocalDateTime.now());
         when(geoIpService.resolve("bad-ip")).thenReturn(GeoInfo.unknown());
 
         handler.onPostViewed(event);
 
-        verify(postViewLogMapper).insert(any(PostViewLogDO.class));
+        verify(postViewLogMapper).upsertVisit(any(PostViewLogDO.class));
     }
 }

@@ -33,7 +33,8 @@ public class PostViewEventHandler {
             log.setCountry(geo.country());
             log.setCity(geo.city());
             log.setVisitedAt(event.occurredAt());
-            postViewLogMapper.insert(log);
+            log.setVisitToken(event.visitToken());
+            postViewLogMapper.upsertVisit(log);
         } catch (Exception e) {
             log.error("访问日志写入失败 postId={} ip={}", event.postId(), event.ip(), e);
         }

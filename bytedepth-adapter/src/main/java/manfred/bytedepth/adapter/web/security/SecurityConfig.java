@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -56,6 +57,7 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers("/admin/search/**")
+                .ignoringRequestMatchers(new AntPathRequestMatcher("/posts/*/reading-progress", HttpMethod.POST.name()))
             )
             .authorizeHttpRequests(auth -> auth
                 // 后台：需要 admin 仪表盘权限（粗粒度守卫，各方法再用 @PreAuthorize 细化）

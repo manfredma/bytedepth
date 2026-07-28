@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @Controller
 @RequestMapping("/posts")
@@ -129,6 +130,7 @@ public class PostController {
         model.addAttribute("canPublish", "DRAFT".equals(post.getStatus()) && (isOwner || isAdmin));
         String userAgent = truncate(request.getHeader("User-Agent"), 512);
         if (visitRequestFilter.shouldRecord(new VisitRequestFilter.Request(userAgent))) {
+            String visitToken = UUID.randomUUID().toString();
             postViewCounter.increment(id);
             eventPublisher.publishEvent(new PostViewedEvent(
                     id,
@@ -136,8 +138,10 @@ public class PostController {
                     getClientIp(request),
                     userAgent,
                     truncate(request.getHeader("Referer"), 512),
+                    visitToken,
                     LocalDateTime.now()
             ));
+            model.addAttribute("visitToken", visitToken);
         }
         model.addAttribute("pvCount", postViewCounter.getCount(id));
 

@@ -32,6 +32,10 @@
         .geo-empty { color: #ccc; }
         .referer { color: #555; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
         .ua { color: #999; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+        .reading { white-space: nowrap; font-size: 0.82em; color: #666; }
+        .reading-status { display: inline-block; margin-left: 4px; padding: 2px 5px; border-radius: 10px; font-size: 0.9em; }
+        .reading-completed { color: #16794b; background: #e8f7ee; }
+        .reading-pending { color: #777; background: #f1f1f1; }
         .time { color: #888; white-space: nowrap; }
         .post-link { color: #e94560; text-decoration: none; font-weight: 500; }
         .post-link:hover { text-decoration: underline; }
@@ -77,6 +81,7 @@
             <th>国家 / 城市</th>
             <th>来源</th>
             <th>浏览器</th>
+            <th>阅读情况</th>
             <th>时间</th>
         </tr>
         </thead>
@@ -121,11 +126,19 @@
                       th:title="${log.userAgent}"
                       th:text="${log.userAgent}">-</span>
             </td>
+            <td class="reading">
+                <span th:if="${log.visitToken == null}" class="geo-empty">—</span>
+                <th:block th:if="${log.visitToken != null}">
+                    <span th:text="${log.activeReadSeconds / 60} + '分' + ${log.activeReadSeconds % 60} + '秒 · ' + ${log.maxScrollDepth} + '%'">0分0秒 · 0%</span>
+                    <span th:if="${log.completedAt != null}" class="reading-status reading-completed">已完成</span>
+                    <span th:if="${log.completedAt == null}" class="reading-status reading-pending">未完成</span>
+                </th:block>
+            </td>
             <td class="time"
                 th:text="${#temporals.format(log.visitedAt, 'MM-dd HH:mm')}">时间</td>
         </tr>
         <tr th:if="${#lists.isEmpty(logs)}">
-            <td colspan="8" class="empty">暂无访问记录</td>
+            <td colspan="9" class="empty">暂无访问记录</td>
         </tr>
         </tbody>
     </table>

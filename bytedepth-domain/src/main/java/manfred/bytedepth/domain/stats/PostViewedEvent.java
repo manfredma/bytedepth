@@ -12,5 +12,6 @@ public record PostViewedEvent(
         String ip,
         String userAgent,
         String referer,
+        String visitToken,
         LocalDateTime occurredAt
 ) {}

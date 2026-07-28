@@ -22,6 +22,11 @@ public class PostViewLogDO {
     private String country;
     private String city;
     private LocalDateTime visitedAt;
+    private String visitToken;
+    private Integer activeReadSeconds;
+    private Integer maxScrollDepth;
+    private LocalDateTime lastActivityAt;
+    private LocalDateTime completedAt;
     @TableField(exist = false)
     private String postTitle;
 }

@@ -9,7 +9,7 @@ class PostViewedEventTest {
     @Test
     void constructor_setsAllFields() {
         var now = LocalDateTime.of(2026, 1, 1, 12, 0);
-        var event = new PostViewedEvent(1L, 42L, "1.2.3.4", "Mozilla/5.0", "https://google.com", now);
+        var event = new PostViewedEvent(1L, 42L, "1.2.3.4", "Mozilla/5.0", "https://google.com", "visit-token", now);
 
         assertEquals(1L, event.postId());
         assertEquals(42L, event.userId());
@@ -21,7 +21,7 @@ class PostViewedEventTest {
 
     @Test
     void constructor_allowsNullUserId_forAnonymous() {
-        var event = new PostViewedEvent(1L, null, "1.2.3.4", null, null, LocalDateTime.now());
+        var event = new PostViewedEvent(1L, null, "1.2.3.4", null, null, "visit-token", LocalDateTime.now());
         assertNull(event.userId());
     }
 }
