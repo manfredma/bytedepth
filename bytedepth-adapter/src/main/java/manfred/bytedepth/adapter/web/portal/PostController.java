@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
 import manfred.bytedepth.adapter.web.util.SeoUtils;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
+import manfred.bytedepth.adapter.web.util.CsrfTokenInitializer;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
@@ -98,6 +99,7 @@ public class PostController {
     public String detail(@PathVariable("identifier") String identifier,
                          Model model,
                          HttpServletRequest request) {
+        CsrfTokenInitializer.initialize(request);
         // 纯数字 → 按 ID 查出 slug 后重定向
         if (identifier.matches("\\d+")) {
             var p = postRepository.findById(Long.parseLong(identifier))
