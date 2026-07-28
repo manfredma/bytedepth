@@ -781,6 +781,11 @@
         <span th:if="${post.publishedAt == null}">
             草稿<span class="status-badge">未发布</span>
         </span>
+        <span th:if="${post.updatedAt != null}" class="meta-sep">·</span>
+        <span th:if="${post.updatedAt != null}"
+              th:text="'最后编辑于 ' + ${#temporals.format(post.updatedAt, 'yyyy-MM-dd HH:mm')}">最后编辑于 2026-07-28 13:40</span>
+        <span class="meta-sep">·</span>
+        <span th:text="'字数 ' + ${#numbers.formatInteger(wordCount, 1, 'COMMA')}">字数 0</span>
         <span style="margin-left:12px;color:var(--ink-3);">👁 <span th:text="${pvCount}">0</span> 次阅读</span>
     </div>
     <div th:if="${not #lists.isEmpty(tags)}" class="tags">

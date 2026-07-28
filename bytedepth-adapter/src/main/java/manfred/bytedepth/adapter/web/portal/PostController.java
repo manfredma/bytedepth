@@ -122,6 +122,7 @@ public class PostController {
         model.addAttribute("metaDescription", SeoUtils.excerpt(post.getContent()));
         model.addAttribute("canonicalUrl", siteUrl + "/posts/" + post.getSlug());
         model.addAttribute("renderedContent", markdownRenderer.render(post.getContent()));
+        model.addAttribute("wordCount", markdownRenderer.countVisibleCharacters(post.getContent()));
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
         model.addAttribute("rating", getPostRatingQryExe.execute(id, readRatingVisitorToken(request)));

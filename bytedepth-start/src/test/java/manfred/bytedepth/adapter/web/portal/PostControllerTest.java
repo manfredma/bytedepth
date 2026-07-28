@@ -163,6 +163,7 @@ class PostControllerTest {
         when(listTagsQryExe.findByPostId(1L)).thenReturn(List.of());
         when(listCommentsQryExe.findApprovedByPostId(1L)).thenReturn(List.of());
         when(markdownRenderer.render(dto.getContent())).thenReturn("<h1>标题</h1><p>正文内容</p>");
+        when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(6);
         when(postViewCounter.getCount(1L)).thenReturn(42L);
 
         mockMvc.perform(get("/posts/test-post"))
@@ -170,6 +171,7 @@ class PostControllerTest {
                 .andExpect(view().name("public/posts/detail"))
                 .andExpect(model().attributeExists("post"))
                 .andExpect(model().attributeExists("renderedContent"))
+                .andExpect(model().attribute("wordCount", 6))
                 .andExpect(model().attributeExists("tags"))
                 .andExpect(model().attributeExists("comments"))
                 .andExpect(model().attributeExists("pvCount"))

@@ -4,6 +4,7 @@ import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.Heading;
 import org.commonmark.node.Node;
 import org.commonmark.node.Text;
+import org.commonmark.node.Code;
 import org.commonmark.node.AbstractVisitor;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.AttributeProvider;
@@ -31,6 +32,28 @@ public class MarkdownRenderer {
             return "";
         }
         return renderer.render(parser.parse(markdown));
+    }
+
+    /**
+     * 统计读者能看到的字符数：忽略 Markdown 标记与空白，并按 Unicode 码点计数。
+     */
+    public int countVisibleCharacters(String markdown) {
+        if (markdown == null || markdown.isBlank()) {
+            return 0;
+        }
+        StringBuilder text = new StringBuilder();
+        parser.parse(markdown).accept(new AbstractVisitor() {
+            @Override
+            public void visit(Text node) {
+                text.append(node.getLiteral());
+            }
+
+            @Override
+            public void visit(Code node) {
+                text.append(node.getLiteral());
+            }
+        });
+        return Math.toIntExact(text.codePoints().filter(codePoint -> !Character.isWhitespace(codePoint)).count());
     }
 
     private static class HeadingIdProvider implements AttributeProvider {
