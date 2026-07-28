@@ -4,6 +4,9 @@
 .post-rating-stars { display: flex; gap: 2px; }
 .post-rating-star { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .post-rating-star-icon { width: 18px; height: 18px; fill: #fff8e7; stroke: #d8b75e; stroke-linejoin: round; stroke-width: 2.75; filter: drop-shadow(0 1px 0 #fff8e8); transition: fill .15s ease, stroke .15s ease, transform .15s ease; }
-.post-rating-star:hover .post-rating-star-icon, .post-rating-star.is-selected .post-rating-star-icon { fill: #efd485; stroke: #cda550; stroke-width: 2.55; transform: scale(1.04); }
+.post-rating-star.is-selected .post-rating-star-icon { fill: #efd485; stroke: #cda550; stroke-width: 2.55; transform: scale(1.04); }
+/* Hovering a score previews the usual cumulative rating: every preceding star lights up too. */
+.post-rating-stars:has(.post-rating-star:hover) .post-rating-star-icon { fill: #fff8e7; stroke: #d8b75e; stroke-width: 2.75; transform: none; }
+.post-rating-star:hover .post-rating-star-icon, .post-rating-star:has(~ .post-rating-star:hover) .post-rating-star-icon { fill: #efd485; stroke: #cda550; stroke-width: 2.55; transform: scale(1.04); }
 .post-rating-average { color: var(--bd-text-subtle, #888); font-size: 12px; white-space: nowrap; }
 @media (max-width: 768px) { .post-rating { right: auto; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px); } }

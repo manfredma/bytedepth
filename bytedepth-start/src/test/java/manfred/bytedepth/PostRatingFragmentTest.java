@@ -32,6 +32,15 @@ class PostRatingFragmentTest {
                 .doesNotContain("? '★' : '☆'");
     }
 
+    @Test
+    void previewsTheCumulativeScoreWhenHoveringAStar() throws IOException {
+        String css = classpathText("/static/css/post-rating.css");
+
+        assertThat(css)
+                .contains(".post-rating-stars:has(.post-rating-star:hover)")
+                .contains(".post-rating-star:has(~ .post-rating-star:hover)");
+    }
+
     private String classpathText(String path) throws IOException {
         try (InputStream in = getClass().getResourceAsStream(path)) {
             assertThat(in).as("classpath resource %s", path).isNotNull();
