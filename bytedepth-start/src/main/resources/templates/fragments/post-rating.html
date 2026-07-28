@@ -2,7 +2,6 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <body>
 <section th:fragment="rating(post, rating, anchor)" class="post-rating" th:id="${anchor}">
-    <span class="post-rating-label">文章有帮助吗？</span>
     <form class="post-rating-stars" method="post" th:action="@{/posts/{slug}/rating(slug=${post.slug})}">
         <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
         <button th:each="score : ${#numbers.sequence(1, 5)}" type="submit" name="score" th:value="${score}"
@@ -14,7 +13,7 @@
         </button>
     </form>
     <span th:if="${rating.ratingCount > 0}" class="post-rating-average"
-          th:text="${#numbers.formatDecimal(rating.averageRating, 1, 1)} + ' / 5'">4.6 / 5</span>
+          th:text="'(' + ${rating.ratingCount} + ' 人打了分，平均分： ' + ${#numbers.formatDecimal(rating.averageRating, 1, 2)} + ')'">(54 人打了分，平均分： 4.30)</span>
 </section>
 </body>
 </html>

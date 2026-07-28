@@ -17,7 +17,8 @@ class PostRatingFragmentTest {
         assertThat(template)
                 .contains("class=\"post-rating-average\"")
                 .contains("${rating.ratingCount > 0}")
-                .contains("' / 5'")
+                .contains("人打了分，平均分：")
+                .contains("formatDecimal(rating.averageRating, 1, 2)")
                 .doesNotContain("成为第一个评分的人");
     }
 
@@ -39,6 +40,17 @@ class PostRatingFragmentTest {
         assertThat(css)
                 .contains(".post-rating-star:hover ~ .post-rating-star.is-selected")
                 .contains(".post-rating-star:has(~ .post-rating-star:hover)");
+    }
+
+    @Test
+    void rendersInlineAtTheEndOfTheArticleInsteadOfFloating() throws IOException {
+        String css = classpathText("/static/css/post-rating.css");
+
+        assertThat(css)
+                .contains("position: static")
+                .contains("display: inline-flex")
+                .doesNotContain("position: fixed")
+                .doesNotContain("bottom: calc(76px");
     }
 
     private String classpathText(String path) throws IOException {
