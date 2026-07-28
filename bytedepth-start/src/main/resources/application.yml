@@ -13,6 +13,14 @@ spring:
     prefix: classpath:/templates/
     suffix: .html
     cache: false
+  web:
+    resources:
+      chain:
+        enabled: true
+        strategy:
+          content:
+            enabled: true
+            paths: /css/**
   data:
     redis:
       host: localhost

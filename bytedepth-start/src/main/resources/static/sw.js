@@ -44,8 +44,6 @@ self.addEventListener('fetch', event => {
 
   // 管理后台和搜索不走缓存（实时性要求高）
   if (url.pathname.startsWith('/admin')) return;
-  if (url.pathname === '/css/admin-layout.css') return;
-
   if (request.mode === 'navigate') {
     // 页面导航：network-first，断网回退离线页
     event.respondWith(
