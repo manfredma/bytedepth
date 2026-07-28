@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,6 +46,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -169,7 +172,10 @@ class PostControllerTest {
                 .andExpect(model().attributeExists("renderedContent"))
                 .andExpect(model().attributeExists("tags"))
                 .andExpect(model().attributeExists("comments"))
-                .andExpect(model().attributeExists("pvCount"));
+                .andExpect(model().attributeExists("pvCount"))
+                .andExpect(content().string(containsString("id=\"post-rating\"")))
+                .andExpect(content().string(not(containsString("post-rating-top"))))
+                .andExpect(content().string(not(containsString("post-rating-end"))));
     }
 
     @Test

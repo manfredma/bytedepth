@@ -788,7 +788,6 @@
            th:text="'#' + ${tag.name}" class="tag">#标签</a>
     </div>
     <div class="content" th:utext="${renderedContent}">文章内容</div>
-    <div th:replace="~{fragments/post-rating :: rating(${post}, ${rating}, 'post-rating-top')}"></div>
     <div class="publish-form" th:if="${canPublish}">
         <form th:action="@{/posts/{slug}/publish(slug=${post.slug})}" method="post">
             <button type="submit" class="btn">发布此文章</button>
@@ -812,7 +811,7 @@
             <div class="nav-title" th:text="${nextPost.title}">下一篇标题</div>
         </a>
     </div>
-    <div th:replace="~{fragments/post-rating :: rating(${post}, ${rating}, 'post-rating-end')}"></div>
+    <div th:replace="~{fragments/post-rating :: rating(${post}, ${rating}, 'post-rating')}"></div>
 
     <!-- 评论区 -->
     <div class="comment-section">
