@@ -37,7 +37,7 @@ class PostRatingFragmentTest {
         String css = classpathText("/static/css/post-rating.css");
 
         assertThat(css)
-                .contains(".post-rating-stars:has(.post-rating-star:hover)")
+                .contains(".post-rating-star:hover ~ .post-rating-star.is-selected")
                 .contains(".post-rating-star:has(~ .post-rating-star:hover)");
     }
 
