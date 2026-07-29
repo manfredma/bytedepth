@@ -4,6 +4,9 @@
 <th:block th:fragment="pwa">
     <!-- PWA: Manifest -->
     <link rel="manifest" href="/manifest.json">
+    <!-- 供不支持 SVG 的搜索引擎和浏览器使用的稳定兜底图标 -->
+    <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png">
+    <link rel="shortcut icon" href="/favicon.ico">
     <!-- PWA: 主题色（Android 地址栏、iOS 状态栏） -->
     <meta name="theme-color" content="#1a1a2e">
     <!-- PWA: 视口 -->
@@ -12,7 +15,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="bytedepth">
-    <link rel="apple-touch-icon" href="/icons/logo.svg">
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/favicon-192.png">
     <!-- Google Search Console 所有权验证 -->
     <meta name="google-site-verification" content="p3YAtkvB-tWByPivO_wiUXVBkOBt8YCZp-VOiaMg3qA">
     <!-- PWA: Service Worker 注册 -->

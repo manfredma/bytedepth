@@ -122,11 +122,35 @@ class ThemeAssetsTest {
         String sw = classpathText("/static/sw.js");
 
         assertThat(sw)
-                .contains("bytedepth-v3")
+                .contains("bytedepth-v4")
+                .contains("/favicon.ico")
+                .contains("/icons/favicon-48.png")
                 .contains("静态资源：cache-first")
                 .contains("if (cached) return cached")
                 .doesNotContain("admin-layout.css")
                 .doesNotContain("isFreshStaticAsset");
+    }
+
+    @Test
+    void siteIconUsesOneHighContrastAssetFamilyForSearchAndPwa() throws Exception {
+        String pwaHead = classpathText("/templates/fragments/pwa-head.html");
+        String manifest = classpathText("/static/manifest.json");
+
+        assertThat(pwaHead)
+                .contains("/icons/favicon-48.png")
+                .contains("/icons/favicon-192.png")
+                .contains("/favicon.ico")
+                .doesNotContain("/icons/logo.svg");
+        assertThat(manifest)
+                .contains("/icons/favicon.svg")
+                .contains("/icons/favicon-192.png")
+                .contains("/icons/favicon-512.png")
+                .doesNotContain("/icons/logo.svg");
+
+        assertThat(getClass().getResource("/static/favicon.ico")).isNotNull();
+        assertThat(getClass().getResource("/static/icons/favicon-48.png")).isNotNull();
+        assertThat(getClass().getResource("/static/icons/favicon-192.png")).isNotNull();
+        assertThat(getClass().getResource("/static/icons/favicon-512.png")).isNotNull();
     }
 
     @Test
