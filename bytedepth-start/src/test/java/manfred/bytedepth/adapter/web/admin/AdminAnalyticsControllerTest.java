@@ -168,6 +168,42 @@ class AdminAnalyticsControllerTest {
         assertThat(fmtCaptor.getValue()).isEqualTo("%Y-%m");
     }
 
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void overviewTrend_forOneDay_fillsEveryHourFromMidnight() throws Exception {
+        when(viewLogStatsMapper.overviewTrend(any(), any(), eq("%H:00")))
+                .thenReturn(List.of(trendPoint("02:00", 4)));
+
+        mockMvc.perform(get("/admin/analytics/api/overview-trend")
+                        .param("from", "2026-07-29")
+                        .param("to", "2026-07-29"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(24))
+                .andExpect(jsonPath("$[0].label").value("00:00"))
+                .andExpect(jsonPath("$[0].viewCount").value(0))
+                .andExpect(jsonPath("$[2].label").value("02:00"))
+                .andExpect(jsonPath("$[2].viewCount").value(4))
+                .andExpect(jsonPath("$[23].label").value("23:00"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void overviewTrend_forMultipleDays_usesDatesAndFillsMissingDays() throws Exception {
+        when(viewLogStatsMapper.overviewTrend(any(), any(), eq("%m-%d")))
+                .thenReturn(List.of(trendPoint("07-02", 3)));
+
+        mockMvc.perform(get("/admin/analytics/api/overview-trend")
+                        .param("from", "2026-06-30")
+                        .param("to", "2026-07-06"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(7))
+                .andExpect(jsonPath("$[0].label").value("06-30"))
+                .andExpect(jsonPath("$[0].viewCount").value(0))
+                .andExpect(jsonPath("$[2].label").value("07-02"))
+                .andExpect(jsonPath("$[2].viewCount").value(3))
+                .andExpect(jsonPath("$[6].label").value("07-06"));
+    }
+
     // ── 静态工具方法单元测试 ───────────────────────────────
 
     @Test
@@ -220,6 +256,14 @@ class AdminAnalyticsControllerTest {
     }
 
     @Test
+    void toDateFormat_acrossTwoDates_returnsDayFormatToAvoidMergingHours() {
+        assertThat(AdminAnalyticsController.toDateFormat(
+                LocalDateTime.of(2026, 7, 28, 0, 0),
+                LocalDateTime.of(2026, 7, 29, 12, 0)))
+                .isEqualTo("%m-%d");
+    }
+
+    @Test
     void toDateFormat_30Days_returnsDayFormat() {
         LocalDateTime start = LocalDateTime.now().minusDays(30);
         assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.now()))
@@ -231,5 +275,12 @@ class AdminAnalyticsControllerTest {
         LocalDateTime start = LocalDateTime.now().minusDays(365);
         assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.now()))
                 .isEqualTo("%Y-%m");
+    }
+
+    private static TrendPoint trendPoint(String label, long viewCount) {
+        TrendPoint point = new TrendPoint();
+        point.setLabel(label);
+        point.setViewCount(viewCount);
+        return point;
     }
 }

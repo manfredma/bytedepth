@@ -14,9 +14,14 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 访问统计分析后台。
@@ -90,7 +95,8 @@ public class AdminAnalyticsController {
             @RequestParam(required = false) String to) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
-        return viewLogStatsMapper.postTrend(postId, start, end, toDateFormat(start, end));
+        String format = toDateFormat(start, end);
+        return completeTrend(viewLogStatsMapper.postTrend(postId, start, end, format), start, end, format);
     }
 
     @GetMapping("/api/overview-trend")
@@ -101,7 +107,8 @@ public class AdminAnalyticsController {
             @RequestParam(required = false) String to) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
-        return viewLogStatsMapper.overviewTrend(start, end, toDateFormat(start, end));
+        String format = toDateFormat(start, end);
+        return completeTrend(viewLogStatsMapper.overviewTrend(start, end, format), start, end, format);
     }
 
     // ── 工具方法（package-private 供测试直接调用）─────────────────────────
@@ -129,17 +136,58 @@ public class AdminAnalyticsController {
             return LocalDate.parse(to).atTime(23, 59, 59);
         }
         if ("today".equals(period)) {
-            return LocalDate.now().atTime(23, 59, 59);
+            return LocalDateTime.now();
         }
         return LocalDateTime.now();
     }
 
-    /** 按时间跨度自动选择 DATE_FORMAT 格式字符串。 */
+    /** 按时间跨度自动选择 DATE_FORMAT 格式字符串。跨天时绝不按小时聚合，避免相同小时被合并。 */
     static String toDateFormat(LocalDateTime start, LocalDateTime end) {
-        long days = ChronoUnit.DAYS.between(start, end);
-        if (days <= 2)  return "%H:00";
+        if (start.toLocalDate().equals(end.toLocalDate())) return "%H:00";
+        long days = ChronoUnit.DAYS.between(start.toLocalDate(), end.toLocalDate());
         if (days <= 60) return "%m-%d";
         return "%Y-%m";
+    }
+
+    /**
+     * SQL 仅返回有访问的桶；在这里补齐零值桶，让坐标轴反映实际时间范围。
+     */
+    static List<TrendPoint> completeTrend(List<TrendPoint> source, LocalDateTime start,
+                                          LocalDateTime end, String format) {
+        Map<String, Long> counts = new HashMap<>();
+        source.forEach(point -> counts.merge(point.getLabel(), point.getViewCount(), Long::sum));
+
+        List<TrendPoint> result = new ArrayList<>();
+        if ("%H:00".equals(format)) {
+            LocalDateTime cursor = start.truncatedTo(ChronoUnit.HOURS);
+            LocalDateTime last = end.truncatedTo(ChronoUnit.HOURS);
+            while (!cursor.isAfter(last)) {
+                addTrendPoint(result, cursor.format(DateTimeFormatter.ofPattern("HH:00")), counts);
+                cursor = cursor.plusHours(1);
+            }
+        } else if ("%m-%d".equals(format)) {
+            LocalDate cursor = start.toLocalDate();
+            LocalDate last = end.toLocalDate();
+            while (!cursor.isAfter(last)) {
+                addTrendPoint(result, cursor.format(DateTimeFormatter.ofPattern("MM-dd")), counts);
+                cursor = cursor.plusDays(1);
+            }
+        } else {
+            YearMonth cursor = YearMonth.from(start);
+            YearMonth last = YearMonth.from(end);
+            while (!cursor.isAfter(last)) {
+                addTrendPoint(result, cursor.toString(), counts);
+                cursor = cursor.plusMonths(1);
+            }
+        }
+        return result;
+    }
+
+    private static void addTrendPoint(List<TrendPoint> result, String label, Map<String, Long> counts) {
+        TrendPoint point = new TrendPoint();
+        point.setLabel(label);
+        point.setViewCount(counts.getOrDefault(label, 0L));
+        result.add(point);
     }
 
     private static double pct(long value, long total) {
