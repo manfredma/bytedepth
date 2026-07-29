@@ -1,6 +1,7 @@
 package manfred.bytedepth.app.series;
 
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.app.post.MarkdownTextExtractor;
 import manfred.bytedepth.domain.series.Series;
 import manfred.bytedepth.domain.series.SeriesPostItem;
 import manfred.bytedepth.domain.series.SeriesRepository;
@@ -35,7 +36,7 @@ public class GetSeriesForPortalQryExe {
             dto.setSlug(item.slug());
             dto.setTitle(item.title());
             dto.setSeriesOrder(item.seriesOrder());
-            dto.setSummary(summarize(item.content(), 160));
+            dto.setSummary(MarkdownTextExtractor.excerpt(item.content(), 160));
             dto.setPublishedAt(item.publishedAt());
             return dto;
         }).collect(Collectors.toList());
@@ -52,14 +53,4 @@ public class GetSeriesForPortalQryExe {
         return result;
     }
 
-    private String summarize(String content, int maxLen) {
-        if (content == null || content.isBlank()) return "";
-        String plain = content.replaceAll("#+\\s", "")
-                              .replaceAll("\\*{1,2}([^*]+)\\*{1,2}", "$1")
-                              .replaceAll("`[^`]+`", "")
-                              .replaceAll("\\[([^]]+)]\\([^)]+\\)", "$1")
-                              .replaceAll("\\n+", " ")
-                              .trim();
-        return plain.length() > maxLen ? plain.substring(0, maxLen) + "…" : plain;
-    }
 }

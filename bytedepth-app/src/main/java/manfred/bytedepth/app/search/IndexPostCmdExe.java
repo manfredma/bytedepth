@@ -1,6 +1,7 @@
 package manfred.bytedepth.app.search;
 
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.app.post.MarkdownTextExtractor;
 import manfred.bytedepth.domain.category.CategoryRepository;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
@@ -51,7 +52,7 @@ public class IndexPostCmdExe {
                 .id(postId)
                 .slug(post.getSlug())
                 .title(post.getTitle())
-                .content(post.getContent())
+                .content(MarkdownTextExtractor.plainText(post.getContent()))
                 .categoryName(categoryName)
                 .categorySlug(categorySlug)
                 .tags(tags)

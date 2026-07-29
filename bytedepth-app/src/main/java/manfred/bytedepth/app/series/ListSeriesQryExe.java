@@ -1,6 +1,7 @@
 package manfred.bytedepth.app.series;
 
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.app.post.MarkdownTextExtractor;
 import manfred.bytedepth.domain.series.Series;
 import manfred.bytedepth.domain.series.SeriesPostItem;
 import manfred.bytedepth.domain.series.SeriesRepository;
@@ -35,21 +36,11 @@ public class ListSeriesQryExe {
             card.setSlug(s.getSlug());
             card.setDescription(s.getDescription());
             card.setPostCount(posts.size());
-            card.setFirstSummary(posts.isEmpty() ? null : summarize(posts.get(0).content(), 160));
+            card.setFirstSummary(posts.isEmpty() ? null : MarkdownTextExtractor.excerpt(posts.get(0).content(), 160));
             return card;
         }).collect(Collectors.toList());
 
         return new PageResult(cards, total, page, totalPages);
     }
 
-    private String summarize(String content, int maxLen) {
-        if (content == null || content.isBlank()) return "";
-        String plain = content.replaceAll("#+\\s", "")
-                              .replaceAll("\\*{1,2}([^*]+)\\*{1,2}", "$1")
-                              .replaceAll("`[^`]+`", "")
-                              .replaceAll("\\[([^]]+)]\\([^)]+\\)", "$1")
-                              .replaceAll("\\n+", " ")
-                              .trim();
-        return plain.length() > maxLen ? plain.substring(0, maxLen) + "…" : plain;
-    }
 }

@@ -63,7 +63,7 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
         int offset = (page - 1) * size;
         try {
             var response = restClient.get()
-                    .uri("/indexes/{index}/search?q={q}&limit={limit}&offset={offset}&attributesToHighlight=title,content&highlightPreTag=<em>&highlightPostTag=</em>",
+                    .uri("/indexes/{index}/search?q={q}&limit={limit}&offset={offset}&attributesToHighlight=title,content&attributesToCrop=content:240&highlightPreTag=<em>&highlightPostTag=</em>",
                             INDEX, query, size, offset)
                     .retrieve()
                     .body(Map.class);
