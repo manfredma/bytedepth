@@ -155,7 +155,7 @@
             <span th:if="${sort != 'hot'}" class="home-hot-rank">·</span>
             <div>
                 <a class="home-hot-title" th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a>
-                <p class="home-hot-excerpt" th:text="${T(manfred.bytedepth.app.post.MarkdownTextExtractor).excerpt(post.content, 150)}">文章摘要</p>
+                <p class="home-hot-excerpt" th:text="${@markdownExcerpt.excerpt(post.content, 150)}">文章摘要</p>
                 <div class="home-hot-meta">
                     <span th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</span>
                     <span th:if="${sort == 'hot'}" th:text="|👁 ${post.viewCount} 次阅读|">👁 0 次阅读</span>

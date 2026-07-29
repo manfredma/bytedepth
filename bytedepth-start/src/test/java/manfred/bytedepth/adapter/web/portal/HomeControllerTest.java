@@ -5,6 +5,7 @@ import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
 import manfred.bytedepth.app.project.ListProjectsQryExe;
 import manfred.bytedepth.app.project.ProjectDTO;
+import manfred.bytedepth.adapter.web.util.MarkdownExcerpt;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -41,6 +42,9 @@ class HomeControllerTest {
 
     @MockBean
     private ListCategoriesQryExe listCategoriesQryExe;
+
+    @MockBean(name = "markdownExcerpt")
+    private MarkdownExcerpt markdownExcerpt;
 
     @Test
     void home_returnsOkWithCorrectView() throws Exception {

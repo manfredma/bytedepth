@@ -6,9 +6,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class SearchHighlightTest {
 
+    private final SearchHighlight searchHighlight = new SearchHighlight();
+
     @Test
     void rendersOnlySearchEmphasisAsHtmlAndRemovesMarkdown() {
-        String rendered = SearchHighlight.snippet("> **高性能** 的 <em>位运算</em> 技巧。<script>alert(1)</script>");
+        String rendered = searchHighlight.snippet("> **高性能** 的 <em>位运算</em> 技巧。<script>alert(1)</script>");
 
         assertThat(rendered)
                 .contains("高性能 的 <em>位运算</em> 技巧。")

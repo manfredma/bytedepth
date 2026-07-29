@@ -99,7 +99,7 @@
 
     <div th:each="r : ${results}" class="result-item">
         <h2 class="result-title">
-            <a th:href="@{/posts/{slug}(slug=${r.slug})}" th:utext="${T(manfred.bytedepth.adapter.web.util.SearchHighlight).title(r.title)}">标题</a>
+            <a th:href="@{/posts/{slug}(slug=${r.slug})}" th:utext="${@searchHighlight.title(r.title)}">标题</a>
         </h2>
         <div class="result-meta">
             <a th:if="${r.categoryName != ''}"
@@ -109,7 +109,7 @@
             <span th:each="tag : ${r.tags}" th:text="'#' + ${tag}" class="meta-tag"></span>
         </div>
         <div th:if="${r.content != ''}" class="result-snippet"
-             th:utext="${T(manfred.bytedepth.adapter.web.util.SearchHighlight).snippet(r.content)}"></div>
+             th:utext="${@searchHighlight.snippet(r.content)}"></div>
     </div>
 </div>
 </body>
