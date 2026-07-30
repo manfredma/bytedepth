@@ -78,6 +78,44 @@ public class RateLimitFilter extends OncePerRequestFilter {
         retryAfterSeconds = Math.max(1, retryAfterSeconds);
         response.setStatus(429);
         response.setHeader("Retry-After", Long.toString(retryAfterSeconds));
+        response.setHeader("Cache-Control", "no-store");
+        response.setContentType("text/html;charset=UTF-8");
+        response.getWriter().write(rateLimitPage(retryAfterSeconds));
+    }
+
+    private String rateLimitPage(long retryAfterSeconds) {
+        return """
+                <!doctype html>
+                <html lang="zh-CN">
+                <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                  <title>请稍后再试 · ByteDepth</title>
+                  <style>
+                    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+                    * { box-sizing: border-box; }
+                    body { align-items: center; background: #17172b; color: #f8f8fc; display: flex; justify-content: center; margin: 0; min-height: 100vh; padding: 24px; }
+                    main { background: #23233b; border: 1px solid #3b3b59; border-radius: 20px; box-shadow: 0 24px 64px #08081288; max-width: 480px; padding: 44px 36px; text-align: center; width: 100%; }
+                    .code { color: #d93659; font-size: 14px; font-weight: 700; letter-spacing: .12em; }
+                    h1 { font-size: 28px; margin: 14px 0 12px; }
+                    p { color: #c2c2d2; line-height: 1.7; margin: 0; }
+                    .wait { background: #2d2d48; border-radius: 12px; color: #e7e7f2; margin: 28px 0; padding: 16px; }
+                    strong { color: #ff6685; font-size: 20px; }
+                    a { color: #fff; display: inline-block; font-weight: 650; text-decoration: none; }
+                    a:hover { color: #ff8aa1; }
+                  </style>
+                </head>
+                <body>
+                  <main>
+                    <div class="code">429 · TOO MANY REQUESTS</div>
+                    <h1>操作有点频繁</h1>
+                    <p>为保护站点，请稍后再试。</p>
+                    <div class="wait">请在 <strong>{{retryAfterSeconds}} 秒</strong> 后重试</div>
+                    <a href="/">返回首页</a>
+                  </main>
+                </body>
+                </html>
+                """.replace("{{retryAfterSeconds}}", Long.toString(retryAfterSeconds));
     }
 
     private String pathWithinApplication(HttpServletRequest request) {
