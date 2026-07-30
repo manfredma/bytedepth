@@ -35,7 +35,6 @@ services:
     volumes:
       - ./nginx/external.conf.template:/etc/nginx/templates/default.conf.template:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
-    environment:
-      BYTEDEPTH_FILE_SERVER_URL: ${BYTEDEPTH_FILE_SERVER_URL:?BYTEDEPTH_FILE_SERVER_URL must be set in .env}
+      - /mnt/bytedepth-images:/srv/images:ro
     depends_on:
       - app

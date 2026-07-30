@@ -75,7 +75,7 @@ sudo chmod 600 /etc/bytedepth-deploy.conf
 sudo ./deploy/bootstrap-ops-deploy.sh
 ```
 
-`data-access` 仅将 3306、6379、7700 和文件服务 8081 绑定到指定内网 IP，不会绑定到公网地址。应用用户、Redis 密码和 MeiliSearch API key 仍必须按本节限制访问；在云安全组和主机防火墙中只放行应用节点私网 IP。文件服务只读挂载 `/data/images`，应用节点通过它读取 `/images/`，因此多机无需同步上传文件。
+`data-access` 仅将 3306、6379、7700 和可选文件服务 8081 绑定到指定内网 IP，不会绑定到公网地址。应用用户、Redis 密码和 MeiliSearch API key 仍必须按本节限制访问；在云安全组和主机防火墙中只放行应用节点私网 IP。文件服务只读挂载 `/data/images`，可供未使用 NFS 的内部节点读取图片。
 
 应用节点还必须通过 NFS 挂载数据节点的同一目录，确保上传与读取使用同一份文件。安全组仅放行应用节点到数据节点的 `2049/TCP`；不要对公网开放。以数据节点 `10.0.4.15`、应用节点 `10.0.0.5` 为例：
 
@@ -103,7 +103,7 @@ systemctl daemon-reload
 systemctl restart docker
 ```
 
-确认 `mountpoint -q /mnt/bytedepth-images` 后再启动应用节点 Compose。应用容器把该目录挂载到 `/root/bytedepth/images`；Nginx 文件服务也读取数据节点的 `/data/images`，上传文件立即在任一应用节点可见。部署脚本和 Docker service 都会在挂载缺失时拒绝启动，防止写入本地空目录。
+确认 `mountpoint -q /mnt/bytedepth-images` 后再启动应用节点 Compose。应用容器把该目录挂载到 `/root/bytedepth/images`，应用节点 Nginx 也以只读方式直接读取它并提供 `/images/`；上传文件立即在任一应用节点可见。部署脚本和 Docker service 都会在挂载缺失时拒绝启动，防止写入本地空目录。
 
 ## 5. 多机：初始化应用节点
 
@@ -118,7 +118,6 @@ BYTEDEPTH_REDIS_PORT=6379
 BYTEDEPTH_REDIS_PASSWORD=replace_me
 BYTEDEPTH_SEARCH_URL=http://10.0.10.13:7700
 BYTEDEPTH_SEARCH_API_KEY=replace_me
-BYTEDEPTH_FILE_SERVER_URL=http://10.0.10.11:8081
 BYTEDEPTH_REMEMBER_ME_KEY=replace_with_a_random_32_byte_value
 ```
 
