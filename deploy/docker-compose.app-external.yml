@@ -33,7 +33,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/external.conf.template:/etc/nginx/templates/default.conf.template:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
+    environment:
+      BYTEDEPTH_FILE_SERVER_URL: ${BYTEDEPTH_FILE_SERVER_URL:?BYTEDEPTH_FILE_SERVER_URL must be set in .env}
     depends_on:
       - app

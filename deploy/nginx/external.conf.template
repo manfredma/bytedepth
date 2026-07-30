@@ -1,0 +1,54 @@
+upstream app {
+    server app:8080;
+}
+
+server {
+    listen 80;
+    server_name bytedepth.cn www.bytedepth.cn;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 80 default_server;
+    server_name _;
+    client_max_body_size 10m;
+
+    location /images/ {
+        proxy_pass ${BYTEDEPTH_FILE_SERVER_URL};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location / {
+        proxy_pass http://app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name bytedepth.cn www.bytedepth.cn;
+
+    ssl_certificate /etc/letsencrypt/live/bytedepth.cn/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/bytedepth.cn/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    client_max_body_size 10m;
+
+    location /images/ {
+        proxy_pass ${BYTEDEPTH_FILE_SERVER_URL};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location / {
+        proxy_pass http://app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

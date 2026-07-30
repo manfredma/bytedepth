@@ -75,7 +75,7 @@ sudo chmod 600 /etc/bytedepth-deploy.conf
 sudo ./deploy/bootstrap-ops-deploy.sh
 ```
 
-`data-access` 仅将 3306、6379、7700 绑定到指定内网 IP，不会绑定到公网地址。应用用户、Redis 密码和 MeiliSearch API key 仍必须按本节限制访问；在云安全组和主机防火墙中只放行应用节点私网 IP。
+`data-access` 仅将 3306、6379、7700 和文件服务 8081 绑定到指定内网 IP，不会绑定到公网地址。应用用户、Redis 密码和 MeiliSearch API key 仍必须按本节限制访问；在云安全组和主机防火墙中只放行应用节点私网 IP。文件服务只读挂载 `/data/images`，应用节点通过它读取 `/images/`，因此多机无需同步上传文件。
 
 ## 5. 多机：初始化应用节点
 
@@ -90,6 +90,7 @@ BYTEDEPTH_REDIS_PORT=6379
 BYTEDEPTH_REDIS_PASSWORD=replace_me
 BYTEDEPTH_SEARCH_URL=http://10.0.10.13:7700
 BYTEDEPTH_SEARCH_API_KEY=replace_me
+BYTEDEPTH_FILE_SERVER_URL=http://10.0.10.11:8081
 BYTEDEPTH_REMEMBER_ME_KEY=replace_with_a_random_32_byte_value
 ```
 

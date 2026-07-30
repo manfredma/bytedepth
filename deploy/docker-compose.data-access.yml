@@ -1,6 +1,15 @@
 # Add private-network access to the data services of a single-host deployment.
 # It is intentionally not part of docker-compose.yml: public exposure is unsafe.
 services:
+  file-server:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "${BYTEDEPTH_DATA_BIND_IP:?BYTEDEPTH_DATA_BIND_IP must be set in .env}:8081:8080"
+    volumes:
+      - /data/images:/srv/images:ro
+      - ./nginx/files.conf:/etc/nginx/nginx.conf:ro
+
   mysql:
     ports:
       - "${BYTEDEPTH_DATA_BIND_IP:?BYTEDEPTH_DATA_BIND_IP must be set in .env}:3306:3306"
