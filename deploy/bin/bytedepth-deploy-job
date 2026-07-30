@@ -24,6 +24,12 @@ exec >> "$LOG_FILE" 2>&1
 
 cd "$DEPLOY_ROOT"
 current_commit="$(git rev-parse --short HEAD)"
+current_branch="$(git branch --show-current)"
+if [[ "$current_branch" != "main" ]]; then
+    printf 'Refusing deployment because current branch is %s, not main\n' "$current_branch"
+    write_state FAILED "$current_commit"
+    exit 1
+fi
 write_state RUNNING "$current_commit"
 
 if git pull --ff-only && docker compose up --build -d; then
