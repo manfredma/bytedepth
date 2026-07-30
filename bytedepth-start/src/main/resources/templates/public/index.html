@@ -151,8 +151,7 @@
     <div th:if="${#lists.isEmpty(posts)}" class="empty">暂无发布的文章，<a th:href="@{/posts/new}" style="color:var(--bd-accent, #e94560);">写第一篇</a>？</div>
     <div class="home-hot-list">
         <article th:each="post, stat : ${posts}" class="post-card home-hot-card">
-            <span th:if="${sort == 'hot'}" class="home-hot-rank" th:text="|${#numbers.formatInteger(stat.count, 2)}|">01</span>
-            <span th:if="${sort != 'hot'}" class="home-hot-rank">·</span>
+            <span class="home-hot-rank" th:text="|${#numbers.formatInteger((currentPage - 1) * pageSize + stat.count, 2)}|">01</span>
             <div>
                 <a class="home-hot-title" th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a>
                 <p class="home-hot-excerpt" th:text="${@markdownExcerpt.excerpt(post.content, 150)}">文章摘要</p>

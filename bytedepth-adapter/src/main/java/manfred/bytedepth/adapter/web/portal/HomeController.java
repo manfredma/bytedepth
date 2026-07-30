@@ -31,7 +31,7 @@ public class HomeController {
         long totalPages = (total + PAGE_SIZE - 1) / PAGE_SIZE;
         model.addAttribute("posts", posts);
         model.addAttribute("sort", normalizedSort);
-        model.addAttribute("paginationBaseUrl", "hot".equals(normalizedSort) ? "/?sort=hot&" : "/?");
+        model.addAttribute("paginationBaseUrl", "/?sort=" + normalizedSort + "&");
         if ("hot".equals(normalizedSort)) {
             model.addAttribute("recentPosts", listPostsQryExe.executeLatestExcluding(
                     posts.stream().map(post -> post.getId()).toList(), 3));

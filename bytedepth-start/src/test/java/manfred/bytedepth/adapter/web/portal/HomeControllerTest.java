@@ -177,6 +177,7 @@ class HomeControllerTest {
         when(listPostsQryExe.execute(1, 10)).thenReturn(List.of());
         mockMvc.perform(get("/").param("sort", "latest"))
                 .andExpect(status().isOk())
+                .andExpect(model().attribute("paginationBaseUrl", "/?sort=latest&"))
                 .andExpect(content().string(not(containsString("热门文章"))));
     }
 }
