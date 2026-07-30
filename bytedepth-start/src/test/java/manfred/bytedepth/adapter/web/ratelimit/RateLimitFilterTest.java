@@ -10,6 +10,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -61,6 +63,20 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void returnsAtLeastOneSecondForZeroAndNegativeRetryWaits() throws Exception {
+        when(rateLimitService.tryConsume(eq("register-ip"), any(), any()))
+                .thenReturn(RateLimitDecision.rejected(0), RateLimitDecision.rejected(-1));
+
+        MockHttpServletResponse zeroWait = new MockHttpServletResponse();
+        MockHttpServletResponse negativeWait = new MockHttpServletResponse();
+        filter.doFilter(post("/register", "203.0.113.11"), zeroWait, filterChain);
+        filter.doFilter(post("/register", "203.0.113.11"), negativeWait, filterChain);
+
+        assertThat(zeroWait.getHeader("Retry-After")).isEqualTo("1");
+        assertThat(negativeWait.getHeader("Retry-After")).isEqualTo("1");
+    }
+
+    @Test
     void usesSeparateLoginUsernameIdentityKeys() throws Exception {
         MockHttpServletRequest first = post("/login", "203.0.113.12");
         first.addParameter("username", "alice");
@@ -74,6 +90,20 @@ class RateLimitFilterTest {
         verify(rateLimitService, org.mockito.Mockito.times(2))
                 .tryConsume(eq("login-username"), any(), identities.capture());
         assertThat(identities.getAllValues()).containsExactly("alice", "alice");
+    }
+
+    @Test
+    void appliesOnlyTheIpRuleWhenLoginUsernameIsMissingOrBlank() throws Exception {
+        MockHttpServletRequest missing = post("/login", "203.0.113.12");
+        MockHttpServletRequest blank = post("/login", "203.0.113.12");
+        blank.addParameter("username", "  ");
+
+        filter.doFilter(missing, new MockHttpServletResponse(), filterChain);
+        filter.doFilter(blank, new MockHttpServletResponse(), filterChain);
+
+        verify(rateLimitService, org.mockito.Mockito.times(2))
+                .tryConsume(eq("login-ip"), any(), eq("203.0.113.12"));
+        verify(rateLimitService, never()).tryConsume(eq("login-username"), any(), any());
     }
 
     @Test
@@ -101,11 +131,12 @@ class RateLimitFilterTest {
     }
 
     @Test
-    void appliesTheSharedRuleToCommentsRatingsAndUploadsOnly() throws Exception {
+    void appliesRulesToCommentsRatingsUploadsAndReadingProgress() throws Exception {
         String[][] protectedRoutes = {
                 {"/posts/example/comments", "comment-rating-ip"},
                 {"/posts/example/rating", "comment-rating-ip"},
-                {"/admin/images/upload", "upload-ip"}
+                {"/admin/images/upload", "upload-ip"},
+                {"/posts/example/reading-progress", "reading-progress-ip"}
         };
 
         for (String[] route : protectedRoutes) {
@@ -114,6 +145,39 @@ class RateLimitFilterTest {
         verify(rateLimitService, org.mockito.Mockito.times(2))
                 .tryConsume(eq("comment-rating-ip"), any(), eq("203.0.113.20"));
         verify(rateLimitService).tryConsume(eq("upload-ip"), any(), eq("203.0.113.20"));
+        ArgumentCaptor<RateLimitProperties.Rule> readingProgressRule =
+                ArgumentCaptor.forClass(RateLimitProperties.Rule.class);
+        verify(rateLimitService).tryConsume(eq("reading-progress-ip"), readingProgressRule.capture(), eq("203.0.113.20"));
+        assertThat(readingProgressRule.getValue().getCapacity()).isEqualTo(30);
+        assertThat(readingProgressRule.getValue().getPeriod()).isEqualTo(Duration.ofMinutes(1));
+    }
+
+    @Test
+    void resolvesContextPathAndFallsBackToRemoteAddressForBlankRealIp() throws Exception {
+        MockHttpServletRequest request = post("/blog/posts/example/reading-progress", "203.0.113.21");
+        request.setContextPath("/blog");
+        request.addHeader("X-Real-IP", " ");
+
+        filter.doFilter(request, new MockHttpServletResponse(), filterChain);
+
+        verify(rateLimitService).tryConsume(eq("reading-progress-ip"), any(), eq("203.0.113.21"));
+    }
+
+    @Test
+    void leavesRequestsOutsideTheContextPathUntouchedAndHandlesNullContextPath() throws Exception {
+        MockHttpServletRequest outsideContext = post("/outside", "203.0.113.22");
+        outsideContext.setContextPath("/blog");
+        HttpServletRequest nullContext = mock(HttpServletRequest.class);
+        when(nullContext.getMethod()).thenReturn("POST");
+        when(nullContext.getContextPath()).thenReturn(null);
+        when(nullContext.getRequestURI()).thenReturn("/outside");
+        when(nullContext.getHeader("X-Real-IP")).thenReturn(null);
+        when(nullContext.getRemoteAddr()).thenReturn("203.0.113.23");
+
+        filter.doFilter(outsideContext, new MockHttpServletResponse(), filterChain);
+        filter.doFilter(nullContext, new MockHttpServletResponse(), filterChain);
+
+        verify(rateLimitService, never()).tryConsume(any(), any(), any());
     }
 
     @Test

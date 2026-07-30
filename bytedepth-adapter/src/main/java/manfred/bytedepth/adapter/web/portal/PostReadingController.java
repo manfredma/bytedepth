@@ -19,6 +19,7 @@ public class PostReadingController {
 
     private final GetPostQryExe getPostQryExe;
     private final PostViewLogMapper postViewLogMapper;
+    private final ReadingProgressTokenService readingProgressTokenService;
 
     @PostMapping("/{slug}/reading-progress")
     public ResponseEntity<Void> recordProgress(@PathVariable String slug,
@@ -29,6 +30,9 @@ public class PostReadingController {
             return ResponseEntity.badRequest().build();
         }
         Long postId = getPostQryExe.executeBySlug(slug).getId();
+        if (!readingProgressTokenService.belongsToPost(request.visitToken(), postId)) {
+            return ResponseEntity.noContent().build();
+        }
         postViewLogMapper.upsertReadingProgress(postId, request.visitToken(), request.activeReadSeconds(),
                 request.maxScrollDepth(), request.completed());
         return ResponseEntity.noContent().build();

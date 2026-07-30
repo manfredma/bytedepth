@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
@@ -17,6 +18,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 @Slf4j
 public class RateLimitFilter extends OncePerRequestFilter {
+
+    private static final RateLimitProperties.Rule READING_PROGRESS_RULE =
+            new RateLimitProperties.Rule(30, Duration.ofMinutes(1));
 
     private final RateLimitService rateLimitService;
     private final RateLimitProperties properties;
@@ -62,6 +66,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
         if (path.matches("/posts/[^/]+/(comments|rating)")) {
             return List.of(new Attempt("comment-rating-ip", properties.getCommentRatingIp(), ip));
+        }
+        if (path.matches("/posts/[^/]+/reading-progress")) {
+            return List.of(new Attempt("reading-progress-ip", READING_PROGRESS_RULE, ip));
         }
         if ("/admin/images/upload".equals(path)) {
             return List.of(new Attempt("upload-ip", properties.getUploadIp(), ip));
