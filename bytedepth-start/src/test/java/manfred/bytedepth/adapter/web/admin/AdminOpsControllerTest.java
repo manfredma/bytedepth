@@ -10,6 +10,8 @@ import manfred.bytedepth.app.ops.OpsRedisStatusDTO;
 import manfred.bytedepth.app.ops.OpsTableDataDTO;
 import manfred.bytedepth.app.ops.OpsTableQryExe;
 import manfred.bytedepth.adapter.web.security.SecurityConfig;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitService;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +53,10 @@ class AdminOpsControllerTest {
     private PasswordEncoder passwordEncoder;
     @MockBean
     private DataSource dataSource;
+    @MockBean
+    private RateLimitService rateLimitService;
+    @MockBean
+    private RateLimitProperties rateLimitProperties;
     @MockBean
     private OpsDatabasePort databasePort;
     @MockBean
