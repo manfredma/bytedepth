@@ -42,12 +42,20 @@ class PostReadingAssetsTest {
     @Test
     void seriesTriggerMovesOutOfThePanelContentWhenThePanelIsOpen() throws IOException {
         String template = classpathText("/templates/public/posts/detail.html");
+        String navigationScript = classpathText("/static/js/series-navigation.js");
 
         assertThat(template)
                 .contains(".series-trigger.open {")
                 .contains("transform: translateX(-100%) translateY(-50%)")
                 .contains("pointer-events: none")
-                .contains("trigger.classList.toggle('open')");
+                .contains("trigger.classList.toggle('open')")
+                .contains("@{/js/series-navigation.js}")
+                .contains("id=\"post-article\"");
+        assertThat(navigationScript)
+                .contains("fetch(targetUrl.href")
+                .contains("article.replaceWith(nextArticle)")
+                .contains("panel.querySelectorAll('.series-item')")
+                .contains("window.history.pushState");
     }
 
     private String classpathText(String path) throws IOException {

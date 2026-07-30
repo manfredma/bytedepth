@@ -761,6 +761,7 @@
             </a>
         </div>
     </th:block>
+    <script th:src="@{/js/series-navigation.js}"></script>
     <script>
     function toggleSeries() {
         var panel = document.getElementById('seriesPanel');
@@ -778,6 +779,7 @@
     }
     </script>
 
+    <article id="post-article">
     <h1 th:text="${post.title}">文章标题</h1>
     <div class="meta">
         <span th:if="${post.publishedAt != null}"
@@ -862,6 +864,7 @@
             后才能发表评论
         </div>
     </div>
+    </article>
 
 </div>
 <!-- Mermaid 图表渲染 -->
