@@ -95,24 +95,35 @@ public class RateLimitFilter extends OncePerRequestFilter {
                     :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
                     * { box-sizing: border-box; }
                     body { align-items: center; background: #17172b; color: #f8f8fc; display: flex; justify-content: center; margin: 0; min-height: 100vh; padding: 24px; }
-                    main { background: #23233b; border: 1px solid #3b3b59; border-radius: 20px; box-shadow: 0 24px 64px #08081288; max-width: 480px; padding: 44px 36px; text-align: center; width: 100%; }
-                    .code { color: #d93659; font-size: 14px; font-weight: 700; letter-spacing: .12em; }
-                    h1 { font-size: 28px; margin: 14px 0 12px; }
+                    main { background: #252542; border: 1px solid #454568; border-radius: 28px; box-shadow: 0 24px 64px #08081288; max-width: 480px; padding: 44px 36px; text-align: center; width: 100%; }
+                    .icon { background: #39395d; border-radius: 50%; display: inline-grid; font-size: 30px; height: 66px; place-items: center; width: 66px; }
+                    h1 { font-size: 28px; margin: 20px 0 12px; }
                     p { color: #c2c2d2; line-height: 1.7; margin: 0; }
-                    .wait { background: #2d2d48; border-radius: 12px; color: #e7e7f2; margin: 28px 0; padding: 16px; }
-                    strong { color: #ff6685; font-size: 20px; }
-                    a { color: #fff; display: inline-block; font-weight: 650; text-decoration: none; }
-                    a:hover { color: #ff8aa1; }
+                    .wait { background: #323255; border-radius: 16px; color: #e7e7f2; margin: 28px 0 20px; padding: 16px; }
+                    strong { color: #ff9db0; font-size: 24px; }
+                    a { background: #e94560; border-radius: 10px; color: #fff; display: inline-block; font-weight: 650; padding: 12px 22px; text-decoration: none; }
+                    a:hover { background: #f15d76; }
+                    small { color: #9c9cb4; display: block; margin-top: 22px; }
                   </style>
                 </head>
                 <body>
                   <main>
-                    <div class="code">429 · TOO MANY REQUESTS</div>
-                    <h1>操作有点频繁</h1>
-                    <p>为保护站点，请稍后再试。</p>
-                    <div class="wait">请在 <strong>{{retryAfterSeconds}} 秒</strong> 后重试</div>
-                    <a href="/">返回首页</a>
+                    <div class="icon" aria-hidden="true">🌿</div>
+                    <h1>慢一点，休息一下</h1>
+                    <p>你刚刚操作得有些快。稍等片刻，就可以继续啦。</p>
+                    <div class="wait">大约还有 <strong id="countdown">{{retryAfterSeconds}}</strong> 秒</div>
+                    <a href="/">回到首页</a>
+                    <small>不用着急，我们马上见。</small>
                   </main>
+                  <script>
+                    let remaining = {{retryAfterSeconds}};
+                    const countdown = document.getElementById('countdown');
+                    const timer = setInterval(() => {
+                      remaining -= 1;
+                      countdown.textContent = Math.max(0, remaining);
+                      if (remaining <= 0) clearInterval(timer);
+                    }, 1000);
+                  </script>
                 </body>
                 </html>
                 """.replace("{{retryAfterSeconds}}", Long.toString(retryAfterSeconds));

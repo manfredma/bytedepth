@@ -56,7 +56,7 @@ class RateLimitFilterTest {
         assertThat(response.getHeader("Retry-After")).isEqualTo("1");
         assertThat(response.getHeader("Cache-Control")).isEqualTo("no-store");
         assertThat(response.getContentType()).isEqualTo("text/html;charset=UTF-8");
-        assertThat(response.getContentAsString()).contains("操作有点频繁", "1 秒");
+        assertThat(response.getContentAsString()).contains("慢一点，休息一下", "id=\"countdown\">1");
         verify(filterChain, never()).doFilter(any(), any());
     }
 
