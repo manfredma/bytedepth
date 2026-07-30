@@ -5,7 +5,7 @@
   后台侧边栏 fragment。
   用法：<aside th:replace="~{fragments/admin-sidebar :: sidebar('posts')}"></aside>
   active 可选值：dashboard | posts | comments | categories | tags | series
-               | users | analytics | view-logs | projects
+               | users | analytics | view-logs | projects | ops
 -->
 <th:block th:fragment="sidebar(active)">
 <button type="button"
@@ -55,6 +55,13 @@
     <a href="/admin/view-logs" class="admin-sidebar-item"
        th:classappend="${active == 'view-logs'} ? ' active' : ''">
         <span class="si-icon">📋</span>访问日志
+    </a>
+
+    <!-- 系统运维 -->
+    <div class="admin-sidebar-section">系统运维</div>
+    <a href="/admin/ops" class="admin-sidebar-item"
+       th:classappend="${active == 'ops'} ? ' active' : ''">
+        <span class="si-icon">🛠️</span>系统运维
     </a>
 
     <!-- 网站 -->

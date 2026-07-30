@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
+    <link rel="stylesheet" th:href="@{/css/ops-monitor.css}">
+    <title>系统运维 - bytedepth</title>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar(false)}"></nav>
+<div class="admin-shell">
+    <aside th:replace="~{fragments/admin-sidebar :: sidebar('ops')}"></aside>
+    <main class="admin-main ops-page">
+        <section class="ops-content" aria-labelledby="ops-page-title">
+            <header class="ops-header">
+                <div>
+                    <p class="ops-eyebrow">READ ONLY</p>
+                    <h1 id="ops-page-title" class="ops-title">系统运维</h1>
+                    <p class="ops-description">应用与依赖服务的实时只读状态。</p>
+                </div>
+                <button class="ops-refresh-button" id="ops-refresh-overview" type="button">刷新状态</button>
+            </header>
+
+            <p class="ops-message" id="ops-overview-message" role="status">正在加载最新状态…</p>
+
+            <section class="ops-service-grid" aria-label="服务状态">
+                <article class="ops-service-card">
+                    <div class="ops-card-heading"><span class="ops-service-name">应用</span><span class="ops-status ops-status-pending" id="ops-app-status">加载中</span></div>
+                    <p class="ops-card-value" id="ops-uptime">--</p>
+                    <p class="ops-card-label">运行时长</p>
+                </article>
+                <article class="ops-service-card">
+                    <div class="ops-card-heading"><span class="ops-service-name">MySQL</span><span class="ops-status ops-status-pending" id="ops-mysql-status">加载中</span></div>
+                    <p class="ops-card-value" id="ops-database-name">--</p>
+                    <p class="ops-card-label">当前数据库</p>
+                </article>
+                <article class="ops-service-card">
+                    <div class="ops-card-heading"><span class="ops-service-name">Redis</span><span class="ops-status ops-status-pending" id="ops-redis-status">加载中</span></div>
+                    <p class="ops-card-value" id="ops-redis-memory">--</p>
+                    <p class="ops-card-label">已用内存</p>
+                </article>
+                <article class="ops-service-card">
+                    <div class="ops-card-heading"><span class="ops-service-name">MeiliSearch</span><span class="ops-status ops-status-pending" id="ops-meili-status">加载中</span></div>
+                    <p class="ops-card-value" id="ops-meili-stats">--</p>
+                    <p class="ops-card-label">索引统计可用性</p>
+                </article>
+            </section>
+
+            <section class="ops-summary-grid" aria-label="服务摘要">
+                <article class="ops-summary-card">
+                    <h2 class="ops-section-title">MySQL 摘要</h2>
+                    <dl class="ops-definition-list">
+                        <div class="ops-definition-row"><dt>状态</dt><dd id="ops-mysql-summary-status">--</dd></div>
+                        <div class="ops-definition-row"><dt>数据库</dt><dd id="ops-mysql-summary-name">--</dd></div>
+                    </dl>
+                </article>
+                <article class="ops-summary-card">
+                    <h2 class="ops-section-title">Redis 摘要</h2>
+                    <dl class="ops-definition-list">
+                        <div class="ops-definition-row"><dt>客户端</dt><dd id="ops-redis-clients">--</dd></div>
+                        <div class="ops-definition-row"><dt>命中 / 未命中</dt><dd id="ops-redis-hit-rate">--</dd></div>
+                        <div class="ops-definition-row"><dt>文章浏览键</dt><dd id="ops-redis-post-keys">--</dd></div>
+                        <div class="ops-definition-row"><dt>会话键</dt><dd id="ops-redis-session-keys">--</dd></div>
+                    </dl>
+                </article>
+            </section>
+
+            <section class="ops-table-section" aria-labelledby="ops-tables-title">
+                <div class="ops-table-header">
+                    <div>
+                        <h2 class="ops-section-title" id="ops-tables-title">受控数据查询</h2>
+                        <p class="ops-table-description">只显示白名单字段中最新的 50 条记录。</p>
+                    </div>
+                    <div class="ops-table-actions" aria-label="选择数据表">
+                        <button class="ops-table-button" type="button" data-ops-table="post">文章</button>
+                        <button class="ops-table-button" type="button" data-ops-table="comment">评论</button>
+                        <button class="ops-table-button" type="button" data-ops-table="user">用户</button>
+                    </div>
+                </div>
+                <p class="ops-message" id="ops-table-message" role="status">请选择一个数据表。</p>
+                <div class="ops-table-wrap" tabindex="0">
+                    <table class="ops-data-table" id="ops-data-table">
+                        <thead id="ops-table-head"></thead>
+                        <tbody id="ops-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+    </main>
+</div>
+<script>
+(() => {
+    const overviewMessage = document.getElementById('ops-overview-message');
+    const tableMessage = document.getElementById('ops-table-message');
+    const tableHead = document.getElementById('ops-table-head');
+    const tableBody = document.getElementById('ops-table-body');
+
+    const setText = (id, value) => {
+        document.getElementById(id).textContent = value ?? '--';
+    };
+
+    const formatUptime = (millis) => {
+        const seconds = Math.max(0, Math.floor((millis || 0) / 1000));
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        return `${days}天 ${hours}小时 ${minutes}分`;
+    };
+
+    const setStatus = (id, available) => {
+        const element = document.getElementById(id);
+        element.textContent = available ? 'UP' : 'DOWN';
+        element.className = `ops-status ${available ? 'ops-status-up' : 'ops-status-down'}`;
+    };
+
+    const renderOverview = (overview) => {
+        const database = overview.database || {};
+        const redis = overview.redis || {};
+        const meili = overview.meiliSearch || {};
+        const meiliAvailable = Boolean(meili.healthAvailable && meili.statsAvailable);
+
+        setStatus('ops-app-status', true);
+        setStatus('ops-mysql-status', Boolean(database.available));
+        setStatus('ops-redis-status', Boolean(redis.available));
+        setStatus('ops-meili-status', meiliAvailable);
+        setText('ops-uptime', formatUptime(overview.uptimeMillis));
+        setText('ops-database-name', database.available ? database.databaseName : '服务不可用');
+        setText('ops-redis-memory', redis.available ? redis.usedMemoryHuman : '服务不可用');
+        setText('ops-meili-stats', meiliAvailable ? '可用' : '服务不可用');
+        setText('ops-mysql-summary-status', database.available ? 'UP' : 'DOWN');
+        setText('ops-mysql-summary-name', database.available ? database.databaseName : '--');
+        setText('ops-redis-clients', redis.available ? redis.connectedClients : '--');
+        setText('ops-redis-hit-rate', redis.available ? `${redis.keyspaceHits} / ${redis.keyspaceMisses}` : '--');
+        setText('ops-redis-post-keys', redis.available ? redis.postViewKeyCount : '--');
+        setText('ops-redis-session-keys', redis.available ? redis.sessionKeyCount : '--');
+    };
+
+    const loadOverview = async () => {
+        overviewMessage.textContent = '正在加载最新状态…';
+        try {
+            const response = await fetch('/admin/ops/api/overview');
+            if (!response.ok) throw new Error('overview request failed');
+            renderOverview(await response.json());
+            overviewMessage.textContent = '状态已手动刷新。';
+        } catch (error) {
+            overviewMessage.textContent = '暂时无法加载状态，请手动重试。';
+        }
+    };
+
+    const renderTable = (data) => {
+        tableHead.replaceChildren();
+        tableBody.replaceChildren();
+        const headerRow = document.createElement('tr');
+        (data.columns || []).forEach((column) => {
+            const header = document.createElement('th');
+            header.scope = 'col';
+            header.textContent = column;
+            headerRow.appendChild(header);
+        });
+        tableHead.appendChild(headerRow);
+
+        (data.rows || []).forEach((row) => {
+            const tableRow = document.createElement('tr');
+            (data.columns || []).forEach((column) => {
+                const cell = document.createElement('td');
+                const value = row[column];
+                cell.textContent = value == null ? '' : String(value);
+                tableRow.appendChild(cell);
+            });
+            tableBody.appendChild(tableRow);
+        });
+    };
+
+    const loadTable = async (tableName, button) => {
+        tableMessage.textContent = '正在加载表数据…';
+        document.querySelectorAll('.ops-table-button').forEach((item) => item.classList.remove('ops-table-button-active'));
+        button.classList.add('ops-table-button-active');
+        try {
+            const response = await fetch(`/admin/ops/api/tables/${encodeURIComponent(tableName)}`);
+            if (!response.ok) throw new Error('table request failed');
+            const data = await response.json();
+            renderTable(data);
+            tableMessage.textContent = `${data.tableName}：显示 ${data.rows.length} 条记录。`;
+        } catch (error) {
+            tableHead.replaceChildren();
+            tableBody.replaceChildren();
+            tableMessage.textContent = '暂时无法加载表数据，请手动重试。';
+        }
+    };
+
+    document.getElementById('ops-refresh-overview').addEventListener('click', loadOverview);
+    document.querySelectorAll('.ops-table-button').forEach((button) => {
+        button.addEventListener('click', () => loadTable(button.dataset.opsTable, button));
+    });
+    loadOverview();
+})();
+</script>
+</body>
+</html>
