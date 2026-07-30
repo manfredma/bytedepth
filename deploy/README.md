@@ -80,9 +80,10 @@ sudo ./deploy/bootstrap-ops-deploy.sh
 应用节点还必须通过 NFS 挂载数据节点的同一目录，确保上传与读取使用同一份文件。安全组仅放行应用节点到数据节点的 `2049/TCP`；不要对公网开放。以数据节点 `10.0.4.15`、应用节点 `10.0.0.5` 为例：
 
 ```bash
-# 数据节点（root）：仅允许应用节点读写图片目录
+# 数据节点（root）：仅允许应用节点以受限图片账号读写，不能取得数据节点 root 权限
 apt-get update && apt-get install -y nfs-kernel-server
-printf '/data/images 10.0.0.5(rw,sync,no_subtree_check,no_root_squash)\n' \
+chown -R 10001:10001 /data/images
+printf '/data/images 10.0.0.5(rw,sync,no_subtree_check,all_squash,anonuid=10001,anongid=10001)\n' \
   > /etc/exports.d/bytedepth-images.exports
 exportfs -ra
 
@@ -92,9 +93,17 @@ install -d -m 755 /mnt/bytedepth-images
 printf '10.0.4.15:/data/images /mnt/bytedepth-images nfs4 rw,_netdev,nofail 0 0\n' \
   >> /etc/fstab
 mount /mnt/bytedepth-images
+install -d -m 755 /etc/systemd/system/docker.service.d
+cat > /etc/systemd/system/docker.service.d/bytedepth-images.conf <<'EOF'
+[Unit]
+RequiresMountsFor=/mnt/bytedepth-images
+After=remote-fs.target
+EOF
+systemctl daemon-reload
+systemctl restart docker
 ```
 
-确认 `mountpoint -q /mnt/bytedepth-images` 后再启动应用节点 Compose。应用容器把该目录挂载到 `/root/bytedepth/images`；Nginx 文件服务也读取数据节点的 `/data/images`，上传文件立即在任一应用节点可见。
+确认 `mountpoint -q /mnt/bytedepth-images` 后再启动应用节点 Compose。应用容器把该目录挂载到 `/root/bytedepth/images`；Nginx 文件服务也读取数据节点的 `/data/images`，上传文件立即在任一应用节点可见。部署脚本和 Docker service 都会在挂载缺失时拒绝启动，防止写入本地空目录。
 
 ## 5. 多机：初始化应用节点
 

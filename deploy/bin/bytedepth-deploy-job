@@ -48,6 +48,11 @@ case "$deploy_mode" in
         ;;
     external-services)
         compose_args=(--env-file .env -f deploy/docker-compose.app-external.yml)
+        if ! mountpoint -q /mnt/bytedepth-images; then
+            printf 'Refusing external-services deployment: /mnt/bytedepth-images is not mounted\n'
+            write_state FAILED "$current_commit"
+            exit 1
+        fi
         ;;
     *)
         printf 'Refusing deployment because mode %s is not allowed\n' "$deploy_mode"
