@@ -10,6 +10,7 @@
 - 网页部署只会获取 `origin/main` 并执行完整重建，不能传入分支或命令。
 - Git remote 固定为 `git@github.com:manfredma/bytedepth.git`；部署脚本拒绝 HTTPS remote，避免服务器出网策略变化导致发布卡住。
 - 数据库、Redis、MeiliSearch 只应在内网/VPN 可达，不能暴露到公网。
+- 本手册是仓库内唯一的部署、发布、切流、回滚和灾备操作说明；`docs/superpowers/` 下的计划与设计稿仅作历史记录，不能作为执行依据。
 
 ## 1. 选择拓扑
 
@@ -21,13 +22,22 @@
 
 单机 Compose 会在同一机器运行 MySQL、Redis、MeiliSearch、应用和 Nginx，并把数据写入 `/data/mysql`、`/data/redis`、`/data/meilisearch`。多机模式只在应用节点运行应用和 Nginx；数据库、Redis 与 MeiliSearch 由独立机器或托管服务提供。
 
+### 当前生产拓扑
+
+| 角色 | 公网 / 内网地址 | 部署模式 | 职责 |
+| --- | --- | --- | --- |
+| 数据节点 | `175.24.197.202` / `10.0.4.15` | `data-access` | MySQL、Redis、MeiliSearch、图片 NFS，以及一套应用和 Nginx |
+| 应用节点 | `124.221.143.25` / `10.0.0.5` | `external-services` | 通过私网使用数据服务和 NFS 图片目录，并运行一套应用和 Nginx |
+
+DNS 或负载均衡完全切走数据节点前，两台机器必须保持相同的已发布提交。网页“部署 main”只能更新当前节点，不能替代双机发布。
+
 ## 2. 所有机器的前置条件
 
 1. Ubuntu/Linux，已安装 Git、Docker Engine 与 Docker Compose 插件。
 2. GitHub deploy key 已放入仓库所有者的 `~/.ssh/id_ed25519`，并通过 `ssh -T git@github.com` 验证；仓库使用 SSH URL。安装脚本会将该路径写入 root-only 的 `/etc/bytedepth-deploy.conf`，供网页部署服务使用。
-2. 应用节点开放 80/443；数据节点只对应用节点的私网地址开放 3306、6379、7700。
-3. DNS 已指向应用节点；HTTPS 模式要求 `/etc/letsencrypt` 中已有对应证书。没有证书时，先使用 HTTP 或调整 `nginx/nginx.conf`，不要直接启动当前 HTTPS 配置。
-4. 已准备 GeoIP 数据库时，将其放在应用节点 `/data/geoip/GeoLite2-City.mmdb`；缺失时应用仍可启动，但不会提供 GeoIP 信息。
+3. 应用节点开放 80/443；数据节点只对应用节点的私网地址开放 3306、6379、7700 和 NFS `2049/TCP`。
+4. DNS 已指向应用节点；HTTPS 模式要求 `/etc/letsencrypt` 中已有对应证书。没有证书时，先使用 HTTP 或调整 Nginx 配置，不能直接启动当前 HTTPS 配置。
+5. 已准备 GeoIP 数据库时，将其放在应用节点 `/data/geoip/GeoLite2-City.mmdb`；缺失时应用仍可启动，但不会提供 GeoIP 信息。
 
 ## 3. 单机从零初始化
 
@@ -65,7 +75,7 @@ curl -kfsS -o /dev/null -w '%{http_code}\n' https://你的域名
 | Redis 7 | 密码、AOF 持久化；独立逻辑库可使用 DB 0 | 仅应用节点可连 6379 |
 | MeiliSearch 1.7 | 强随机 master key；持久卷 | 仅应用节点可连 7700 |
 
-不要给应用使用 MySQL `root` 账号；应创建只对 `bytedepth` 库有权限的账号。为数据服务启用备份、监控和恢复演练；本仓库不会替代这些能力。
+新建部署应使用只对 `bytedepth` 库有权限的应用账号。已迁移节点如因所有者决定而复用既有数据账号，不得由人或 AI 擅自改账号、改密码或调整授权；此类变更须先确认。为数据服务启用备份、监控和恢复演练；本仓库不会替代这些能力。
 
 ### 将现有单机改为数据访问节点
 
@@ -93,7 +103,7 @@ sudo ./deploy/bootstrap-ops-deploy.sh
 
 ## 5. 多机：初始化应用节点
 
-克隆代码后，从 [`.env.external.example`](.env.external.example) 创建 `.env`，再替换其中所有值（示例地址只表示格式，不可直接使用）：
+先准备代码目录与 SSH Git remote，再从 [`.env.external.example`](.env.external.example) 创建 `.env`。示例地址只表示格式，不可直接使用：
 
 ```dotenv
 BYTEDEPTH_DATASOURCE_URL=jdbc:mysql://10.0.10.11:3306/bytedepth?useSSL=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
@@ -108,76 +118,87 @@ BYTEDEPTH_REMEMBER_ME_KEY=replace_with_a_random_32_byte_value
 ```
 
 ```bash
+sudo install -d -o "$USER" -g "$USER" /opt
+git clone git@github.com:manfredma/bytedepth.git /opt/bytedepth
 cd /opt/bytedepth
 cp deploy/.env.external.example .env
 chmod 600 .env
 ```
 
-然后执行：
+然后固定为外部服务模式，并使用唯一部署入口：
 
 ```bash
 cd /opt/bytedepth
 chmod 600 .env
-sudo ./deploy/install-host-service.sh
-sudo docker compose --env-file .env -f deploy/docker-compose.app-external.yml up --build -d
-sudo docker compose --env-file .env -f deploy/docker-compose.app-external.yml ps
+sudo sh -c 'printf "BYTEDEPTH_DEPLOY_MODE=external-services\\n" > /etc/bytedepth-deploy.conf'
+sudo chmod 600 /etc/bytedepth-deploy.conf
+sudo ./deploy/bootstrap-ops-deploy.sh
 ```
 
 此 Compose 文件不启动本地 MySQL/Redis/MeiliSearch，也不含它们的 `depends_on`；Flyway 会在应用启动时连接外部 MySQL 并执行迁移。先完成第 4 节的网络连通性与备份配置，再启动应用节点。
 
-多机应用节点上的网页“部署 main”也可用。执行一次以下配置后，它固定使用外部资源 Compose；可选值只有 `single-host`、`data-access` 和 `external-services`，网页不能传递 Compose 文件或任意命令。
-
-```bash
-sudo sh -c 'printf "BYTEDEPTH_DEPLOY_MODE=external-services\\n" > /etc/bytedepth-deploy.conf'
-sudo chmod 600 /etc/bytedepth-deploy.conf
-sudo ./deploy/install-host-service.sh
-```
+多机应用节点上的网页“部署 main”也可用。上一步已将它固定为外部资源 Compose；可选值只有 `single-host`、`data-access` 和 `external-services`，网页不能传递 Compose 文件或任意命令。
 
 ## 6. 日常代码发布
 
-单机模式：
+对当前双机生产，每次都按以下顺序发布；任一步失败都停止，不能只更新另一台机器。单机环境仅执行其对应的一条。
 
 ```bash
-cd /opt/bytedepth
-git pull --ff-only # SSH remote；部署脚本会拒绝 HTTPS remote
-sudo ./deploy/bootstrap-ops-deploy.sh
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@175.24.197.202 \
+  'cd /opt/bytedepth && git pull --ff-only && sudo ./deploy/bootstrap-ops-deploy.sh'
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
+  'cd /opt/bytedepth && git pull --ff-only && sudo ./deploy/bootstrap-ops-deploy.sh'
 ```
 
-多机应用节点：
+每次发布后，在两台机器分别确认 Socket、对应 Compose 服务与 NFS（应用节点）状态，并确认应用日志中没有 Flyway、MySQL、Redis 或 MeiliSearch 连接错误。再从本机或可信监控节点执行域名 SNI 验收，不能只请求裸 IP：
 
 ```bash
-cd /opt/bytedepth
-git pull --ff-only
-sudo ./deploy/install-host-service.sh
-sudo docker compose --env-file .env -f deploy/docker-compose.app-external.yml up --build -d
+curl --noproxy '*' --resolve bytedepth.cn:443:175.24.197.202 \
+  -fsS -o /dev/null -w '%{http_code}\n' https://bytedepth.cn/
+curl --noproxy '*' --resolve bytedepth.cn:443:124.221.143.25 \
+  -fsS -o /dev/null -w '%{http_code}\n' https://bytedepth.cn/
 ```
 
-每次发布后执行第 3 节验收命令，并确认应用日志中没有 Flyway、MySQL、Redis 或 MeiliSearch 连接错误。
+两次均应返回 `200`，并额外确认一个现有 `/images/` 文件可通过 HTTPS 读取。DNS 或负载均衡切流仅在全部验收通过后进行；先记录当前解析和 TTL，失败时立即回退。
 
-## 7. 故障处理与回滚
+## 7. TLS、备份与恢复
+
+两个提供 HTTPS 的节点都必须具备 `bytedepth.cn` 的有效证书与私钥；证书续期后应在到期前同步到每个入口节点并重载其完整 Compose 服务。证书私钥只能在受控主机间以受限权限传递，不得写入仓库、终端回显、部署日志或聊天记录。
+
+数据节点是 MySQL、Redis、MeiliSearch 与 `/data/images` 的唯一持久化来源。至少每天执行一次离机备份，且必须包含：
+
+1. MySQL 的一致性备份；
+2. Redis 的持久化数据或一致性快照；
+3. MeiliSearch 的 dump/snapshot；
+4. `/data/images` 的文件备份；
+5. 备份时间、对象位置、校验结果与保留周期。
+
+备份目标必须不是该数据节点本机。每月至少在隔离环境演练一次恢复，并记录可恢复的提交、数据时间点和恢复耗时；未经演练的备份不视为可用。
+
+## 8. 故障处理与回滚
 
 1. 先保存 `docker compose logs app --tail=200` 与 `journalctl -u bytedepth-deploy.socket`。
 2. 回滚代码时，只能切换到已验证的 Git 提交，再完整 `up --build -d`；不要回滚或修改已执行的 Flyway 迁移文件。
 3. 数据恢复必须使用数据库/Redis/MeiliSearch 自身的备份方案，并在隔离环境验证后实施。
 4. 网页部署日志位于 `/var/log/bytedepth-deploy.log`；Socket 状态用 `sudo systemctl status bytedepth-deploy.socket --no-pager` 查看。
 
-## 8. AI 执行清单
+## 9. AI 执行清单
 
 ```text
-1. 确认目标拓扑（single-host 或 external-services）。
+1. 确认目标拓扑（single-host、data-access 或 external-services）及当前节点角色。
 2. 确认 .env 存在、权限为 0600；不得输出其中内容。
 3. 确认 Docker、Compose、Git、证书与内网连通性。
 4. 验证 Git SSH：ssh -T git@github.com；确认 origin 为 git@github.com:manfredma/bytedepth.git。
 5. external-services：确认 mountpoint -q /mnt/bytedepth-images。
-6. single-host：执行 sudo ./deploy/bootstrap-ops-deploy.sh。
-7. external-services：执行 sudo ./deploy/bootstrap-ops-deploy.sh。
+6. 按节点模式执行 sudo ./deploy/bootstrap-ops-deploy.sh；双机发布时先数据节点、再应用节点。
+7. 不执行任何直接 docker compose 发布命令。
 8. 验证 systemd socket=active、compose 服务状态、HTTPS=200、图片 HTTPS=200。
 9. 若 Docker 拉取镜像失败，先测试镜像源的 /v2/ 可达性；不要让长任务的进度输出占用交互 SSH 通道，应重定向到服务器日志再轮询。
 10. Nginx 已在请求时经 Docker DNS 解析 app；app 重建后无需依赖旧容器 IP。
 11. 仅在所有验收通过后报告部署完成；否则保留日志并报告失败点。
 ```
 
-## 9. 本次双机部署复盘
+## 10. 本次双机部署复盘
 
 - Compose 不会为未变化的 Nginx 自动重建；app 重建后的 Docker IP 可能改变。Nginx 配置已改为使用 Docker DNS (`127.0.0.11`) 动态解析 `app`，部署脚本还会强制重建 Nginx 以应用配置文件变更。
 - 第二台初始 remote 为 HTTPS，GitHub HTTPS 连接超时；两台实际上已有相同 deploy key。现在固定 SSH remote，并在部署前校验。
