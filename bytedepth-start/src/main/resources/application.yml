@@ -112,3 +112,27 @@ bytedepth:
         field: user-agent
         match: contains
         value: spider
+  rate-limit:
+    # Redis is shared by every application instance, so these quotas are global
+    # rather than per-JVM. Environment variables can override all connection values.
+    redis:
+      host: ${BYTEDEPTH_RATE_LIMIT_REDIS_HOST:${spring.data.redis.host}}
+      port: ${BYTEDEPTH_RATE_LIMIT_REDIS_PORT:${spring.data.redis.port}}
+      password: ${BYTEDEPTH_RATE_LIMIT_REDIS_PASSWORD:${spring.data.redis.password:}}
+      database: ${BYTEDEPTH_RATE_LIMIT_REDIS_DATABASE:0}
+      timeout: ${BYTEDEPTH_RATE_LIMIT_REDIS_TIMEOUT:1s}
+    login-ip:
+      capacity: 5
+      period: 1m
+    login-username:
+      capacity: 10
+      period: 15m
+    register-ip:
+      capacity: 3
+      period: 1h
+    comment-rating-ip:
+      capacity: 10
+      period: 1m
+    upload-ip:
+      capacity: 20
+      period: 1h

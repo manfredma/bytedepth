@@ -2,10 +2,14 @@ package manfred.bytedepth.adapter.web.security;
 
 import jakarta.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitFilter;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,12 +20,26 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity   // 开启 @PreAuthorize 方法级权限
 public class SecurityConfig {
+
+    @Bean
+    public RateLimitFilter rateLimitFilter(RateLimitService rateLimitService, RateLimitProperties properties) {
+        return new RateLimitFilter(rateLimitService, properties);
+    }
+
+    /** The filter is invoked by Spring Security only; registering it with the servlet too would charge twice. */
+    @Bean
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration(RateLimitFilter rateLimitFilter) {
+        FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(rateLimitFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
 
     @Bean
     public PersistentTokenRepository persistentTokenRepository(DataSource dataSource) {
@@ -48,6 +66,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            PersistentTokenRepository persistentTokenRepository,
+                                           RateLimitFilter rateLimitFilter,
                                            @Value("${BYTEDEPTH_REMEMBER_ME_KEY:bytedepth-local-remember-me-key}") String rememberMeKey,
                                            @Value("${BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE:false}") boolean rememberMeCookieSecure) throws Exception {
         // CSRF：默认 HttpSessionCsrfTokenRepository + Thymeleaf 自动注入 _csrf hidden input。
@@ -55,6 +74,7 @@ public class SecurityConfig {
         // XSRF-TOKEN cookie 却不重新下发，导致后续 POST 表单（退出等）403。session 仓库
         // 把 token 存 session、提交时从 session 校验，不依赖 cookie 下发，更可靠。
         http
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers("/admin/search/**")
                 .ignoringRequestMatchers(new AntPathRequestMatcher("/posts/*/reading-progress", HttpMethod.POST.name()))

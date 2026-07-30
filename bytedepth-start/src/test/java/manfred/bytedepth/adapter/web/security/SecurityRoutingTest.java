@@ -1,9 +1,13 @@
 package manfred.bytedepth.adapter.web.security;
 
 import manfred.bytedepth.adapter.web.portal.CommentController;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitDecision;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitService;
 import manfred.bytedepth.app.comment.SubmitCommentCmdExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -16,6 +20,8 @@ import org.springframework.security.web.authentication.rememberme.PersistentToke
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,6 +38,14 @@ class SecurityRoutingTest {
     @MockBean private PersistentTokenRepository persistentTokenRepository;
     @MockBean private SubmitCommentCmdExe submitCommentCmdExe;
     @MockBean private PostRepository postRepository;
+    @MockBean private RateLimitService rateLimitService;
+    @MockBean private RateLimitProperties rateLimitProperties;
+
+    @BeforeEach
+    void allowRateLimitedRequests() {
+        when(rateLimitProperties.getCommentRatingIp()).thenReturn(new RateLimitProperties.Rule());
+        when(rateLimitService.tryConsume(any(), any(), any())).thenReturn(RateLimitDecision.permit());
+    }
 
     @Test
     void anonymousCommentSubmission_redirectsToLoginBeforeReachingController() throws Exception {

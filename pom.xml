@@ -30,6 +30,9 @@
         <!-- 升级 Testcontainers：1.20.x 内置 docker-java 3.4+，兼容 Colima 29.x（API>=1.44） -->
         <testcontainers.version>1.20.1</testcontainers.version>
         <owasp.html.sanitizer.version>20260313.1</owasp.html.sanitizer.version>
+        <!-- Bucket4j 8.18.0 is not published to Maven Central; 8.14.0 is the
+             newest Java 17/Lettuce line available from the public repository. -->
+        <bucket4j.version>8.14.0</bucket4j.version>
     </properties>
 
     <dependencyManagement>
