@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+readonly DEPLOY_ROOT=/opt/bytedepth
+readonly STATE_DIR=/var/lib/bytedepth-deploy
+readonly STATE_FILE="$STATE_DIR/status"
+readonly LOG_FILE=/var/log/bytedepth-deploy.log
+
+write_state() {
+    local state="$1"
+    local commit="$2"
+    local temporary
+    mkdir -p "$STATE_DIR"
+    temporary="$(mktemp "$STATE_DIR/status.XXXXXX")"
+    printf 'state=%s\nupdated_at=%s\ncommit=%s\n' \
+        "$state" "$(date -u +%FT%TZ)" "$commit" > "$temporary"
+    chmod 0600 "$temporary"
+    mv "$temporary" "$STATE_FILE"
+}
+
+mkdir -p "$STATE_DIR"
+touch "$LOG_FILE"
+exec >> "$LOG_FILE" 2>&1
+
+cd "$DEPLOY_ROOT"
+current_commit="$(git rev-parse --short HEAD)"
+write_state RUNNING "$current_commit"
+
+if git pull --ff-only && docker compose up --build -d; then
+    write_state SUCCESS "$(git rev-parse --short HEAD)"
+else
+    write_state FAILED "$(git rev-parse --short HEAD)"
+    exit 1
+fi

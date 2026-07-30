@@ -65,6 +65,8 @@ bytedepth:
     # 下载：https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
     # 部署时设置：export BYTEDEPTH_GEOIP_DB_PATH=/opt/bytedepth/GeoLite2-City.mmdb
     db-path: ${BYTEDEPTH_GEOIP_DB_PATH:}
+  deploy:
+    socket-path: ${BYTEDEPTH_DEPLOY_SOCKET_PATH:}
   visit-filter:
     enabled: true
     rules:

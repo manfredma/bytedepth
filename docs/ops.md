@@ -4,9 +4,29 @@
 
 管理后台侧栏的“系统运维”入口（`GET /admin/ops`）用于查看应用及其依赖服务的运行概览。访问该页面和其中的数据接口，账户除具备后台访问资格外，最低还需要 `ops:monitor:view` 权限；该权限默认授予 `ADMIN` 角色。应仅向承担运维监控职责的管理员分配此权限。
 
-页面只提供手动刷新和只读查询：可查看应用、MySQL、Redis、MeiliSearch 的连通状态及脱敏后的运行指标；MySQL 明细仅限 `post`、`comment`、`user` 三张受控表，固定展示白名单字段的最近 50 条记录。Redis 仅统计固定业务前缀的键数量和运行指标，不会读取或展示键值。
+页面提供手动刷新和只读查询：可查看应用、MySQL、Redis、MeiliSearch 的连通状态及脱敏后的运行指标；MySQL 明细仅限 `post`、`comment`、`user` 三张受控表，固定展示白名单字段的最近 50 条记录。Redis 仅统计固定业务前缀的键数量和运行指标，不会读取或展示键值。
 
 该页面不是通用数据库或缓存管理工具：不支持执行任意 SQL、任意 Redis 命令，也不提供键值查询、容器控制或服务重启。Docker 容器状态、日志、主机 CPU、内存、磁盘和网络等监控不属于此页面，应使用下文的容器运维命令或专用主机监控工具处理。
+
+### 网页受控部署
+
+“部署 main”按钮仅向宿主机上的固定服务发送 `deploy-main` 请求。该服务固定在 `/opt/bytedepth` 执行 `git pull --ff-only` 和 `docker compose up --build -d`，因此不能由网页指定分支、路径或 Shell 命令。它需要 `ops:monitor:view` 与 `ops:deploy:execute` 两项权限；后者默认授予 `ADMIN` 角色。
+
+首次启用或更新该服务时，在服务器代码目录执行：
+
+```bash
+cd /opt/bytedepth
+sudo ./deploy/install-host-service.sh
+sudo docker compose up --build -d
+```
+
+安装脚本创建宿主机 Unix Socket；应用容器只挂载该 Socket 所在目录，不挂载 Docker Socket，也不能运行任意宿主机命令。部署日志和服务状态可通过以下命令查看：
+
+```bash
+sudo journalctl -u bytedepth-deploy-job -f
+sudo tail -f /var/log/bytedepth-deploy.log
+sudo systemctl status bytedepth-deploy.socket --no-pager
+```
 
 ## 服务器信息
 
@@ -36,10 +56,10 @@ git push
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@175.24.197.202
 cd /opt/bytedepth
 git pull
-sudo docker compose up --build -d app
+sudo docker compose up --build -d
 ```
 
-> `--build` 会重新执行 Maven 打包，只重建 app 容器，mysql/redis/nginx/meilisearch 不受影响。
+> `--build` 会重新执行 Maven 打包，并按完整 Compose 定义重新协调服务。
 
 ### 备用流程（服务器无法访问 GitHub 时）
 

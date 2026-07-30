@@ -1,0 +1,14 @@
+[Unit]
+Description=bytedepth fixed deployment control socket
+
+[Socket]
+ListenStream=/run/bytedepth-deploy/deploy.sock
+SocketMode=0660
+SocketUser=root
+SocketGroup=root
+DirectoryMode=0755
+Accept=yes
+Service=bytedepth-deploy@.service
+
+[Install]
+WantedBy=sockets.target

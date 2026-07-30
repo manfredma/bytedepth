@@ -2,6 +2,9 @@ package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.app.ops.OpsDatabaseStatusDTO;
 import manfred.bytedepth.app.ops.OpsDatabasePort;
+import manfred.bytedepth.app.ops.OpsDeploymentPort;
+import manfred.bytedepth.app.ops.OpsDeploymentStatusDTO;
+import manfred.bytedepth.app.ops.OpsDeploymentStatusQryExe;
 import manfred.bytedepth.app.ops.OpsMeiliSearchStatusDTO;
 import manfred.bytedepth.app.ops.OpsMeiliSearchPort;
 import manfred.bytedepth.app.ops.OpsOverviewQryExe;
@@ -9,6 +12,7 @@ import manfred.bytedepth.app.ops.OpsRedisPort;
 import manfred.bytedepth.app.ops.OpsRedisStatusDTO;
 import manfred.bytedepth.app.ops.OpsTableDataDTO;
 import manfred.bytedepth.app.ops.OpsTableQryExe;
+import manfred.bytedepth.app.ops.RequestOpsDeploymentCmdExe;
 import manfred.bytedepth.adapter.web.security.SecurityConfig;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitService;
@@ -34,6 +38,8 @@ import static org.mockito.Mockito.when;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -65,6 +71,8 @@ class AdminOpsControllerTest {
     private OpsMeiliSearchPort meiliSearchPort;
     @MockBean
     private OpsTableQryExe tableQryExe;
+    @MockBean
+    private OpsDeploymentPort deploymentPort;
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
@@ -164,6 +172,43 @@ class AdminOpsControllerTest {
                 .andExpect(content().string(not(containsString("jdbc:mysql"))));
     }
 
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view", "ops:monitor:view"})
+    void deploymentStatus_withMonitorPermission_returnsSafeStatus() throws Exception {
+        when(deploymentPort.status()).thenReturn(new OpsDeploymentStatusDTO(
+                true, "SUCCESS", "最近一次部署成功。", "3232ce8", "2026-07-30T12:00:00Z"));
+
+        mockMvc.perform(get("/admin/ops/api/deployment"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("SUCCESS"))
+                .andExpect(jsonPath("$.commit").value("3232ce8"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view", "ops:monitor:view"})
+    void deploymentRequest_withoutDeployPermission_returnsForbidden() throws Exception {
+        mockMvc.perform(post("/admin/ops/api/deployment").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view", "ops:deploy:execute"})
+    void deploymentRequest_withoutMonitorPermission_returnsForbidden() throws Exception {
+        mockMvc.perform(post("/admin/ops/api/deployment").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view", "ops:monitor:view", "ops:deploy:execute"})
+    void deploymentRequest_withDeployPermission_queuesFixedDeployment() throws Exception {
+        when(deploymentPort.deployMain()).thenReturn(new OpsDeploymentStatusDTO(
+                true, "QUEUED", "部署请求已接收。", null, "2026-07-30T12:00:00Z"));
+
+        mockMvc.perform(post("/admin/ops/api/deployment").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("QUEUED"));
+    }
+
     private void givenOverview(boolean databaseAvailable, boolean redisAvailable, boolean meiliAvailable) {
         when(databasePort.inspect()).thenReturn(new OpsDatabaseStatusDTO(
                 databaseAvailable, databaseAvailable ? "bytedepth" : null));
@@ -180,6 +225,16 @@ class AdminOpsControllerTest {
         OpsOverviewQryExe opsOverviewQryExe(OpsDatabasePort databasePort, OpsRedisPort redisPort,
                                             OpsMeiliSearchPort meiliSearchPort) {
             return new OpsOverviewQryExe(databasePort, redisPort, meiliSearchPort);
+        }
+
+        @Bean
+        OpsDeploymentStatusQryExe opsDeploymentStatusQryExe(OpsDeploymentPort deploymentPort) {
+            return new OpsDeploymentStatusQryExe(deploymentPort);
+        }
+
+        @Bean
+        RequestOpsDeploymentCmdExe requestOpsDeploymentCmdExe(OpsDeploymentPort deploymentPort) {
+            return new RequestOpsDeploymentCmdExe(deploymentPort);
         }
     }
 }

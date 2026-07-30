@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <link rel="stylesheet" th:href="@{/css/ops-monitor.css}">
@@ -67,6 +69,22 @@
                 </article>
             </section>
 
+            <section class="ops-deploy-section" aria-labelledby="ops-deploy-title">
+                <div class="ops-deploy-header">
+                    <div>
+                        <h2 class="ops-section-title" id="ops-deploy-title">部署 main</h2>
+                        <p class="ops-table-description">固定拉取 main 分支，并重建完整 Compose 服务；不支持自定义分支或命令。</p>
+                    </div>
+                    <button class="ops-deploy-button" id="ops-deploy-main" type="button">拉取并部署</button>
+                </div>
+                <p class="ops-message" id="ops-deploy-message" role="status">正在读取部署服务状态…</p>
+                <dl class="ops-deploy-details">
+                    <div class="ops-definition-row"><dt>状态</dt><dd id="ops-deploy-state">--</dd></div>
+                    <div class="ops-definition-row"><dt>提交</dt><dd id="ops-deploy-commit">--</dd></div>
+                    <div class="ops-definition-row"><dt>更新时间</dt><dd id="ops-deploy-updated-at">--</dd></div>
+                </dl>
+            </section>
+
             <section class="ops-table-section" aria-labelledby="ops-tables-title">
                 <div class="ops-table-header">
                     <div>
@@ -96,6 +114,10 @@
     const tableMessage = document.getElementById('ops-table-message');
     const tableHead = document.getElementById('ops-table-head');
     const tableBody = document.getElementById('ops-table-body');
+    const deploymentMessage = document.getElementById('ops-deploy-message');
+    const deploymentButton = document.getElementById('ops-deploy-main');
+    const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
 
     const setText = (id, value) => {
         document.getElementById(id).textContent = value ?? '--';
@@ -149,6 +171,44 @@
         }
     };
 
+    const renderDeployment = (deployment) => {
+        const unavailable = !deployment.available;
+        const active = deployment.state === 'QUEUED' || deployment.state === 'RUNNING';
+        setText('ops-deploy-state', deployment.state);
+        setText('ops-deploy-commit', deployment.commit);
+        setText('ops-deploy-updated-at', deployment.updatedAt);
+        deploymentMessage.textContent = deployment.message || '部署服务暂不可用。';
+        deploymentButton.disabled = unavailable || active;
+        deploymentButton.textContent = active ? '部署进行中' : '拉取并部署';
+    };
+
+    const loadDeployment = async () => {
+        try {
+            const response = await fetch('/admin/ops/api/deployment');
+            if (!response.ok) throw new Error('deployment status request failed');
+            renderDeployment(await response.json());
+        } catch (error) {
+            renderDeployment({available: false, state: 'UNAVAILABLE', message: '部署服务暂不可用。'});
+        }
+    };
+
+    const requestDeployment = async () => {
+        if (!window.confirm('确认拉取 main 并重建完整 Compose 服务？部署期间网站会短暂重启。')) return;
+        deploymentButton.disabled = true;
+        deploymentMessage.textContent = '正在提交部署请求…';
+        try {
+            const headers = {};
+            if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
+            const response = await fetch('/admin/ops/api/deployment', {method: 'POST', headers});
+            if (!response.ok) throw new Error('deployment request failed');
+            renderDeployment(await response.json());
+            window.setTimeout(loadDeployment, 2000);
+        } catch (error) {
+            deploymentMessage.textContent = '部署请求未能提交，请稍后重试。';
+            deploymentButton.disabled = false;
+        }
+    };
+
     const renderTable = (data) => {
         tableHead.replaceChildren();
         tableBody.replaceChildren();
@@ -191,10 +251,12 @@
     };
 
     document.getElementById('ops-refresh-overview').addEventListener('click', loadOverview);
+    deploymentButton.addEventListener('click', requestDeployment);
     document.querySelectorAll('.ops-table-button').forEach((button) => {
         button.addEventListener('click', () => loadTable(button.dataset.opsTable, button));
     });
     loadOverview();
+    loadDeployment();
 })();
 </script>
 </body>

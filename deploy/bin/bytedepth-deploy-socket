@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+readonly STATE_DIR=/var/lib/bytedepth-deploy
+readonly STATE_FILE="$STATE_DIR/status"
+readonly JOB_UNIT=bytedepth-deploy-job.service
+
+print_status() {
+    if [[ -f "$STATE_FILE" ]]; then
+        cat "$STATE_FILE"
+    else
+        printf 'state=IDLE\nupdated_at=\ncommit=\n'
+    fi
+}
+
+read -r request || exit 0
+case "$request" in
+    status)
+        print_status
+        ;;
+    deploy-main)
+        if systemctl is-active --quiet "$JOB_UNIT"; then
+            printf 'state=BUSY\nupdated_at=\ncommit=\n'
+        elif systemd-run --unit="$JOB_UNIT" --collect --no-block \
+            /usr/local/lib/bytedepth-deploy/bytedepth-deploy-job >/dev/null; then
+            printf 'state=QUEUED\nupdated_at=%s\ncommit=\n' "$(date -u +%FT%TZ)"
+        else
+            printf 'state=REJECTED\nupdated_at=\ncommit=\n'
+        fi
+        ;;
+    *)
+        printf 'state=REJECTED\nupdated_at=\ncommit=\n'
+        ;;
+esac

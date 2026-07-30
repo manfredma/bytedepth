@@ -1,0 +1,10 @@
+[Unit]
+Description=bytedepth fixed deployment request handler
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/bytedepth-deploy/bytedepth-deploy-socket
+StandardInput=socket
+StandardOutput=socket
+User=root
+Group=root

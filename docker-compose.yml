@@ -56,10 +56,12 @@ services:
       BYTEDEPTH_REMEMBER_ME_KEY: ${BYTEDEPTH_REMEMBER_ME_KEY:?BYTEDEPTH_REMEMBER_ME_KEY must be set in .env}
       BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE: "true"
       BYTEDEPTH_SESSION_COOKIE_SECURE: "true"
+      BYTEDEPTH_DEPLOY_SOCKET_PATH: /run/bytedepth-deploy/deploy.sock
       JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
     volumes:
       - /data/images:/root/bytedepth/images
       - /data/geoip:/data/geoip:ro
+      - /run/bytedepth-deploy:/run/bytedepth-deploy
     depends_on:
       mysql:
         condition: service_healthy
