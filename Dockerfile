@@ -24,6 +24,7 @@ COPY bytedepth-app/pom.xml bytedepth-app/
 COPY bytedepth-infrastructure/pom.xml bytedepth-infrastructure/
 COPY bytedepth-adapter/pom.xml bytedepth-adapter/
 COPY bytedepth-start/pom.xml bytedepth-start/
+COPY bytedepth-coverage/pom.xml bytedepth-coverage/
 RUN mvn dependency:go-offline -Dsort.skip=true -q
 
 # 复制源码并打包
