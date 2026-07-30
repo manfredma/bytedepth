@@ -3,143 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
-    <title>写文章 - bytedepth</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
-        .container { max-width: 860px; margin: 40px auto; padding: 0 20px; }
-        .form-card { background: white; padding: 36px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-        h1 { margin-top: 0; color: #1a1a2e; }
-        .field { margin-bottom: 20px; }
-        .field label { display: block; font-weight: 500; margin-bottom: 6px; color: #444; }
-        input[name=title], input[name=slug] { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
-        input[name=title] { font-size: 1.1em; }
-        input[name=title]:focus, input[name=slug]:focus { border-color: #e94560; }
-        input[name=slug] { font-size: 0.95em; font-family: 'SFMono-Regular', Consolas, monospace; }
-        input[readonly] { background: #f8f8f8; color: #888; cursor: not-allowed; }
-        textarea[name=content] { width: 100%; height: 420px; padding: 12px 14px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.95em; border: 1px solid #ddd; border-radius: 4px; resize: vertical; outline: none; line-height: 1.6; }
-        textarea[name=content]:focus { border-color: #e94560; }
-        .btn { padding: 10px 28px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; font-weight: 500; }
-        .btn:hover { background: #c73652; }
-        .hint { font-size: 0.85em; color: #999; margin-top: 6px; }
-        .toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
-        .toolbar-btn { padding: 5px 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
-        .toolbar-btn:hover { background: #e0e0e0; }
-        #upload-input { display: none; }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/post-editor.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.11.2/dist/index.css">
+    <title th:text="${post != null} ? '编辑文章 - bytedepth' : '写文章 - bytedepth'">写文章 - bytedepth</title>
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar(false)}"></nav>
 <div class="admin-shell">
 <aside th:replace="~{fragments/admin-sidebar :: sidebar('posts')}"></aside>
-<div class="admin-main">
-<div class="container">
-    <div class="form-card">
-        <h1 th:text="${post != null} ? '编辑文章' : '写文章'">写文章</h1>
+<main class="admin-main">
+    <div class="post-editor-page">
+        <header class="post-editor-header">
+            <div>
+                <p class="post-editor-eyebrow">文章管理</p>
+                <h1 th:text="${post != null} ? '编辑文章' : '写文章'">写文章</h1>
+            </div>
+            <a th:href="@{/admin/posts}" class="post-editor-back">← 返回文章列表</a>
+        </header>
 
         <!-- 编辑模式 -->
-        <form th:if="${post != null}"
+        <form class="post-editor-form" th:if="${post != null}"
               th:action="@{/admin/posts/{id}(id=${post.id})}" method="post">
-            <div class="field">
-                <label>标题</label>
-                <input type="text" name="title" placeholder="文章标题" th:value="${post.title}" required>
-            </div>
-            <div class="field">
-                <label>Slug（URL 标识）</label>
-                <input type="text" th:value="${post.slug}" readonly
-                       title="slug 创建后不可修改（修改会导致旧链接失效）">
-                <p class="hint">URL：<code>/posts/<span th:text="${post.slug}"></span></code>（创建后不可改）</p>
-            </div>
-            <div class="field" th:if="${categories != null and not #lists.isEmpty(categories)}">
-                <label>分类 <span style="color:#e94560">*</span></label>
-                <select name="categoryId" required style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:4px;font-size:0.95em;">
-                    <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"
-                            th:selected="${post.categoryId != null and post.categoryId == c.id}">分类名</option>
-                </select>
-            </div>
-            <div class="field">
-                <label>正文</label>
-                <div class="toolbar">
-                    <button type="button" class="toolbar-btn" onclick="document.getElementById('upload-input').click()">📷 插入图片</button>
-                    <input type="file" id="upload-input" accept="image/*" onchange="uploadImage(this)">
+            <section class="post-editor-writing" aria-label="文章内容">
+                <label class="post-editor-label" for="post-title">标题</label>
+                <input class="post-editor-title" id="post-title" type="text" name="title"
+                       placeholder="给这篇文章起个标题" th:value="${post.title}" required>
+                <textarea class="post-editor-source" id="content-editor" name="content" hidden
+                          th:text="${post.content}"></textarea>
+                <div class="post-editor-vditor" id="vditor-editor"></div>
+                <p class="post-editor-status">内容以 Markdown 原文保存；可直接粘贴图片或通过工具栏上传。</p>
+            </section>
+
+            <aside class="post-editor-settings" aria-label="文章设置">
+                <div class="post-editor-settings-heading">
+                    <h2>发布设置</h2>
+                    <p>管理文章地址和分类</p>
                 </div>
-                <textarea id="content-editor" name="content" placeholder="支持 Markdown 格式..." th:text="${post.content}"></textarea>
-                <p class="hint">保存后更新文章内容。</p>
-            </div>
-            <button type="submit" class="btn">保存修改</button>
-            <a th:href="@{/admin/posts}" style="margin-left:12px;color:#888;text-decoration:none;font-size:0.9em;">取消</a>
+                <div class="post-editor-field">
+                    <label for="post-slug">Slug（URL 标识）</label>
+                    <input id="post-slug" type="text" th:value="${post.slug}" readonly>
+                    <p>创建后不可修改，地址：<code th:text="${'/posts/' + post.slug}">/posts/slug</code></p>
+                </div>
+                <div class="post-editor-field" th:if="${categories != null and not #lists.isEmpty(categories)}">
+                    <label for="post-category">分类 <span aria-hidden="true">*</span></label>
+                    <select id="post-category" name="categoryId" required>
+                        <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"
+                                th:selected="${post.categoryId != null and post.categoryId == c.id}">分类名</option>
+                    </select>
+                </div>
+                <div class="post-editor-actions">
+                    <button type="submit" class="post-editor-save">保存修改</button>
+                    <a th:href="@{/admin/posts}" class="post-editor-cancel">取消</a>
+                </div>
+            </aside>
         </form>
 
-        <!-- 标签编辑（编辑模式独立表单） -->
-        <div th:if="${post != null}" style="margin-top:28px;padding-top:24px;border-top:1px solid #f0f0f0;">
+        <section class="post-editor-tags" th:if="${post != null}" aria-label="文章标签">
             <form th:action="@{/admin/posts/{id}/tags(id=${post.id})}" method="post">
-                <div class="field">
-                    <label>标签
-                        <span style="font-weight:400;color:#aaa;font-size:0.85em;">（用英文逗号或空格分隔，如 gc,jvm,理论）</span>
-                    </label>
+                <div class="post-editor-tags-copy">
+                    <h2>标签</h2>
+                    <p>用英文逗号或空格分隔，例如 <code>gc, jvm, 理论</code>。</p>
+                </div>
+                <div class="post-editor-tags-control">
                     <input type="text" name="rawTags"
-                           style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:4px;font-size:0.95em;"
                            th:value="${post.tagSlugs != null ? #strings.listJoin(post.tagSlugs, ', ') : ''}"
                            placeholder="gc, jvm, memory-management">
-                    <p class="hint">保存后立即生效，不影响文章内容。</p>
+                    <button type="submit">保存标签</button>
                 </div>
-                <button type="submit" class="btn" style="background:#555;">保存标签</button>
             </form>
-        </div>
+        </section>
 
         <!-- 新建模式 -->
-        <form th:if="${post == null}"
+        <form class="post-editor-form" th:if="${post == null}"
               th:action="@{/admin/posts}" method="post" th:object="${cmd}">
-            <div class="field">
-                <label>标题</label>
-                <input type="text" name="title" placeholder="文章标题" th:field="*{title}" required>
-            </div>
-            <div class="field">
-                <label>Slug（URL 标识）<span style="font-weight:400;color:#aaa;font-size:0.85em;">可选，留空自动生成</span></label>
-                <input type="text" name="slug" th:field="*{slug}"
-                       placeholder="如 java-gc-intro（小写英文 + 数字 + 连字符）"
-                       pattern="[a-z0-9][a-z0-9\-]*[a-z0-9]"
-                       title="只允许小写英文、数字和连字符（-），首尾须为英数字">
-                <p class="hint">格式：<code>[a-z0-9-]</code>，如 <code>mysql-index-tuning</code>。留空则根据标题自动生成。</p>
-            </div>
-            <div class="field" th:if="${categories != null and not #lists.isEmpty(categories)}">
-                <label>分类 <span style="color:#e94560">*</span></label>
-                <select name="categoryId" required style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:4px;font-size:0.95em;">
-                    <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}">分类名</option>
-                </select>
-            </div>
-            <div class="field">
-                <label>正文</label>
-                <div class="toolbar">
-                    <button type="button" class="toolbar-btn" onclick="document.getElementById('upload-input').click()">📷 插入图片</button>
-                    <input type="file" id="upload-input" accept="image/*" onchange="uploadImage(this)">
+            <section class="post-editor-writing" aria-label="文章内容">
+                <label class="post-editor-label" for="post-title">标题</label>
+                <input class="post-editor-title" id="post-title" type="text" name="title"
+                       placeholder="给这篇文章起个标题" th:field="*{title}" required>
+                <textarea class="post-editor-source" id="content-editor" name="content" hidden
+                          th:field="*{content}"></textarea>
+                <div class="post-editor-vditor" id="vditor-editor"></div>
+                <p class="post-editor-status">内容以 Markdown 原文保存；可直接粘贴图片或通过工具栏上传。</p>
+            </section>
+
+            <aside class="post-editor-settings" aria-label="文章设置">
+                <div class="post-editor-settings-heading">
+                    <h2>发布设置</h2>
+                    <p>新文章会先保存为草稿</p>
                 </div>
-                <textarea id="content-editor" name="content" placeholder="支持 Markdown 格式..." th:field="*{content}"></textarea>
-                <p class="hint">保存后为草稿，在文章列表点击「发布」即可上线。</p>
-            </div>
-            <button type="submit" class="btn">保存草稿</button>
+                <div class="post-editor-field">
+                    <label for="post-slug">Slug（URL 标识）</label>
+                    <input id="post-slug" type="text" name="slug" th:field="*{slug}"
+                           placeholder="如 java-gc-intro"
+                           pattern="[a-z0-9][a-z0-9\-]*[a-z0-9]"
+                           title="只允许小写英文、数字和连字符（-），首尾须为英数字">
+                    <p>留空将根据标题自动生成。</p>
+                </div>
+                <div class="post-editor-field" th:if="${categories != null and not #lists.isEmpty(categories)}">
+                    <label for="post-category">分类 <span aria-hidden="true">*</span></label>
+                    <select id="post-category" name="categoryId" required>
+                        <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}">分类名</option>
+                    </select>
+                </div>
+                <div class="post-editor-actions">
+                    <button type="submit" class="post-editor-save">保存草稿</button>
+                    <a th:href="@{/admin/posts}" class="post-editor-cancel">取消</a>
+                </div>
+            </aside>
         </form>
     </div>
+</main>
 </div>
-<script>
-async function uploadImage(input) {
-    if (!input.files || !input.files[0]) return;
-    const formData = new FormData();
-    formData.append('file', input.files[0]);
-    const resp = await fetch('/admin/images/upload', { method: 'POST', body: formData });
-    const data = await resp.json();
-    const editor = document.getElementById('content-editor');
-    const md = `![图片](${data.url})`;
-    const start = editor.selectionStart;
-    editor.value = editor.value.slice(0, start) + md + editor.value.slice(editor.selectionEnd);
-    editor.selectionStart = editor.selectionEnd = start + md.length;
-    editor.focus();
-    input.value = '';
-}
-</script>
-</div>
-</div>
+<script src="https://cdn.jsdelivr.net/npm/vditor@3.11.2/dist/index.min.js"></script>
+<script th:src="@{/js/post-editor.js}"></script>
 </body>
 </html>

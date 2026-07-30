@@ -118,6 +118,34 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void postEditorUsesScopedVditorAssetsAndSynchronizesMarkdownBeforeSaving() throws Exception {
+        String template = classpathText("/templates/admin/posts/edit.html");
+        String css = classpathText("/static/css/post-editor.css");
+        String js = classpathText("/static/js/post-editor.js");
+
+        assertThat(template)
+                .contains("@{/css/post-editor.css}")
+                .contains("vditor@3.11.2")
+                .contains("name=\"_csrf\"")
+                .contains("name=\"_csrf_header\"")
+                .contains("id=\"content-editor\"")
+                .contains("id=\"vditor-editor\"");
+        assertThat(css)
+                .contains(".post-editor-page")
+                .contains(".post-editor-form")
+                .contains("@media (max-width: 980px)")
+                .doesNotContain("body {")
+                .doesNotContain("\nhtml {")
+                .doesNotContain("\n* {");
+        assertThat(js)
+                .contains("new Vditor")
+                .contains("source.value = editor.getValue()")
+                .contains("/admin/images/upload")
+                .contains("csrfHeaders")
+                .contains("headers: csrfHeaders()");
+    }
+
+    @Test
     void serviceWorkerUsesVersionedCacheFirstStaticAssets() throws Exception {
         String sw = classpathText("/static/sw.js");
 
