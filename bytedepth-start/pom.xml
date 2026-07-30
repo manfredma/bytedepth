@@ -68,18 +68,6 @@
     <build>
         <plugins>
             <plugin>
-                <!-- Testcontainers + Colima：将 Docker socket 传给 forked JVM -->
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <!-- forkCount=0：在 Maven JVM 内运行测试，继承 shell 环境变量（含 DOCKER_HOST）
-                         本地开发用：export DOCKER_HOST=unix://$HOME/.colima/default/docker.sock -->
-                    <forkCount>0</forkCount>
-                    <argLine>-DDOCKER_HOST=unix:///Users/maxingfang/.colima/default/docker.sock
-                        -Ddocker.host=unix:///Users/maxingfang/.colima/default/docker.sock</argLine>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring.boot.version}</version>
