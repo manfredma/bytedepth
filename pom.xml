@@ -16,6 +16,7 @@
         <module>bytedepth-infrastructure</module>
         <module>bytedepth-adapter</module>
         <module>bytedepth-start</module>
+        <module>bytedepth-coverage</module>
     </modules>
 
     <properties>
@@ -33,6 +34,8 @@
         <!-- Bucket4j 8.18.0 is not published to Maven Central; 8.14.0 is the
              newest Java 17/Lettuce line available from the public repository. -->
         <bucket4j.version>8.14.0</bucket4j.version>
+        <jacoco.version>0.8.15</jacoco.version>
+        <coverage.data-file>${maven.multiModuleProjectDirectory}/bytedepth-coverage/target/jacoco-merged.exec</coverage.data-file>
     </properties>
 
     <dependencyManagement>
@@ -131,4 +134,70 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <profiles>
+        <!--
+            仅在显式指定 coverage.includes 时启用。JaCoCo 会对匹配的生产类要求
+            行、分支和方法均零遗漏；避免历史未覆盖代码阻断与本次改动无关的提交。
+        -->
+        <profile>
+            <id>changed-coverage</id>
+            <activation>
+                <property>
+                    <name>coverage.includes</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco.version}</version>
+                        <executions>
+                            <execution>
+                                <id>prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>check-changed-classes</id>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                                <configuration>
+                                    <dataFile>${coverage.data-file}</dataFile>
+                                    <includes>
+                                        <include>${coverage.includes}</include>
+                                    </includes>
+                                    <rules>
+                                        <rule>
+                                            <element>CLASS</element>
+                                            <limits>
+                                                <limit>
+                                                    <counter>LINE</counter>
+                                                    <value>MISSEDCOUNT</value>
+                                                    <maximum>0</maximum>
+                                                </limit>
+                                                <limit>
+                                                    <counter>BRANCH</counter>
+                                                    <value>MISSEDCOUNT</value>
+                                                    <maximum>0</maximum>
+                                                </limit>
+                                                <limit>
+                                                    <counter>METHOD</counter>
+                                                    <value>MISSEDCOUNT</value>
+                                                    <maximum>0</maximum>
+                                                </limit>
+                                            </limits>
+                                        </rule>
+                                    </rules>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
