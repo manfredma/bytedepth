@@ -8,8 +8,19 @@ fi
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
+readonly GIT_REMOTE_URL=git@github.com:manfredma/bytedepth.git
+
+require_ssh_origin() {
+    local origin_url
+    origin_url="$(git remote get-url origin)"
+    if [[ "$origin_url" != "$GIT_REMOTE_URL" ]]; then
+        printf 'Refusing deployment: origin must be %s, got %s\n' "$GIT_REMOTE_URL" "$origin_url" >&2
+        exit 1
+    fi
+}
 
 cd "$SOURCE_ROOT"
+require_ssh_origin
 ./deploy/install-host-service.sh
 
 deploy_mode=single-host

@@ -8,6 +8,7 @@
 - `.env` 是机器私有密钥文件，绝不提交、复制到日志或聊天记录。
 - 不使用 `docker restart`，也不只执行 `up --build -d app`；必须重建完整 Compose 定义。
 - 网页部署只会获取 `origin/main` 并执行完整重建，不能传入分支或命令。
+- Git remote 固定为 `git@github.com:manfredma/bytedepth.git`；部署脚本拒绝 HTTPS remote，避免服务器出网策略变化导致发布卡住。
 - 数据库、Redis、MeiliSearch 只应在内网/VPN 可达，不能暴露到公网。
 
 ## 1. 选择拓扑
@@ -23,6 +24,7 @@
 ## 2. 所有机器的前置条件
 
 1. Ubuntu/Linux，已安装 Git、Docker Engine 与 Docker Compose 插件。
+2. GitHub deploy key 已放入 `~/.ssh/id_ed25519`，并通过 `ssh -T git@github.com` 验证；仓库使用 SSH URL。
 2. 应用节点开放 80/443；数据节点只对应用节点的私网地址开放 3306、6379、7700。
 3. DNS 已指向应用节点；HTTPS 模式要求 `/etc/letsencrypt` 中已有对应证书。没有证书时，先使用 HTTP 或调整 `nginx/nginx.conf`，不要直接启动当前 HTTPS 配置。
 4. 已准备 GeoIP 数据库时，将其放在应用节点 `/data/geoip/GeoLite2-City.mmdb`；缺失时应用仍可启动，但不会提供 GeoIP 信息。
@@ -33,7 +35,7 @@
 
 ```bash
 sudo install -d -o "$USER" -g "$USER" /opt
-git clone https://github.com/manfredma/bytedepth.git /opt/bytedepth
+git clone git@github.com:manfredma/bytedepth.git /opt/bytedepth
 cd /opt/bytedepth
 cp .env.example .env
 chmod 600 .env
@@ -81,26 +83,10 @@ sudo ./deploy/bootstrap-ops-deploy.sh
 
 ```bash
 # 数据节点（root）：仅允许应用节点以受限图片账号读写，不能取得数据节点 root 权限
-apt-get update && apt-get install -y nfs-kernel-server
-chown -R 10001:10001 /data/images
-printf '/data/images 10.0.0.5(rw,sync,no_subtree_check,all_squash,anonuid=10001,anongid=10001)\n' \
-  > /etc/exports.d/bytedepth-images.exports
-exportfs -ra
+./deploy/setup-shared-images-nfs.sh data-node 10.0.0.5
 
-# 应用节点（root）：持久挂载共享目录
-apt-get update && apt-get install -y nfs-common
-install -d -m 755 /mnt/bytedepth-images
-printf '10.0.4.15:/data/images /mnt/bytedepth-images nfs4 rw,_netdev,nofail 0 0\n' \
-  >> /etc/fstab
-mount /mnt/bytedepth-images
-install -d -m 755 /etc/systemd/system/docker.service.d
-cat > /etc/systemd/system/docker.service.d/bytedepth-images.conf <<'EOF'
-[Unit]
-RequiresMountsFor=/mnt/bytedepth-images
-After=remote-fs.target
-EOF
-systemctl daemon-reload
-systemctl restart docker
+# 应用节点（root）：持久挂载共享目录，并让 Docker 依赖该挂载
+./deploy/setup-shared-images-nfs.sh app-node 10.0.4.15
 ```
 
 确认 `mountpoint -q /mnt/bytedepth-images` 后再启动应用节点 Compose。应用容器把该目录挂载到 `/root/bytedepth/images`，应用节点 Nginx 也以只读方式直接读取它并提供 `/images/`；上传文件立即在任一应用节点可见。部署脚本和 Docker service 都会在挂载缺失时拒绝启动，防止写入本地空目录。
@@ -153,7 +139,7 @@ sudo ./deploy/install-host-service.sh
 
 ```bash
 cd /opt/bytedepth
-git pull --ff-only
+git pull --ff-only # SSH remote；部署脚本会拒绝 HTTPS remote
 sudo ./deploy/bootstrap-ops-deploy.sh
 ```
 
@@ -181,8 +167,19 @@ sudo docker compose --env-file .env -f deploy/docker-compose.app-external.yml up
 1. 确认目标拓扑（single-host 或 external-services）。
 2. 确认 .env 存在、权限为 0600；不得输出其中内容。
 3. 确认 Docker、Compose、Git、证书与内网连通性。
-4. single-host：执行 sudo ./deploy/bootstrap-ops-deploy.sh。
-5. external-services：执行 install-host-service，再以 app-external Compose 完整重建。
-6. 验证 systemd socket=active、compose 服务状态、HTTPS=200。
-7. 仅在所有验收通过后报告部署完成；否则保留日志并报告失败点。
+4. 验证 Git SSH：ssh -T git@github.com；确认 origin 为 git@github.com:manfredma/bytedepth.git。
+5. external-services：确认 mountpoint -q /mnt/bytedepth-images。
+6. single-host：执行 sudo ./deploy/bootstrap-ops-deploy.sh。
+7. external-services：执行 sudo ./deploy/bootstrap-ops-deploy.sh。
+8. 验证 systemd socket=active、compose 服务状态、HTTPS=200、图片 HTTPS=200。
+9. 若 Docker 拉取镜像失败，先测试镜像源的 /v2/ 可达性；不要让长任务的进度输出占用交互 SSH 通道，应重定向到服务器日志再轮询。
+10. Nginx 已在请求时经 Docker DNS 解析 app；app 重建后无需依赖旧容器 IP。
+11. 仅在所有验收通过后报告部署完成；否则保留日志并报告失败点。
 ```
+
+## 9. 本次双机部署复盘
+
+- Compose 不会为未变化的 Nginx 自动重建；app 重建后的 Docker IP 可能改变。Nginx 配置已改为使用 Docker DNS (`127.0.0.11`) 动态解析 `app`。
+- 第二台初始 remote 为 HTTPS，GitHub HTTPS 连接超时；两台实际上已有相同 deploy key。现在固定 SSH remote，并在部署前校验。
+- 失效 Docker mirror 会导致基础镜像拉取卡住。部署前应先检查镜像源可达性，自动化任务写日志后轮询，避免终端进度输出阻塞 SSH。
+- 图片不能靠一次性复制实现高可用。现在以 NFS 共享唯一目录，使用 `all_squash` 映射至 UID/GID 10001，Docker 启动依赖 NFS 挂载，防止断挂载时写入本地空目录。

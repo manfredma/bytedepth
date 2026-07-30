@@ -6,6 +6,7 @@ readonly STATE_DIR=/var/lib/bytedepth-deploy
 readonly STATE_FILE="$STATE_DIR/status"
 readonly LOG_FILE=/var/log/bytedepth-deploy.log
 readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
+readonly GIT_REMOTE_URL=git@github.com:manfredma/bytedepth.git
 
 write_state() {
     local state="$1"
@@ -25,6 +26,12 @@ exec >> "$LOG_FILE" 2>&1
 
 cd "$DEPLOY_ROOT"
 current_commit="$(git rev-parse --short HEAD)"
+origin_url="$(git remote get-url origin)"
+if [[ "$origin_url" != "$GIT_REMOTE_URL" ]]; then
+    printf 'Refusing deployment because origin is %s, expected %s\n' "$origin_url" "$GIT_REMOTE_URL"
+    write_state FAILED "$current_commit"
+    exit 1
+fi
 current_branch="$(git branch --show-current)"
 if [[ "$current_branch" != "main" ]]; then
     printf 'Refusing deployment because current branch is %s, not main\n' "$current_branch"
@@ -61,7 +68,7 @@ case "$deploy_mode" in
         ;;
 esac
 
-if git fetch --no-tags origin main && git merge --ff-only FETCH_HEAD \
+if GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch --no-tags origin main && git merge --ff-only FETCH_HEAD \
     && docker compose "${compose_args[@]}" up --build -d; then
     write_state SUCCESS "$(git rev-parse --short HEAD)"
 else
