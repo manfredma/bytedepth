@@ -1,0 +1,39 @@
+# Application-node Compose file for a multi-machine deployment.
+# Run from the repository root:
+# docker compose --env-file .env -f deploy/docker-compose.app-external.yml up --build -d
+services:
+  app:
+    build:
+      context: ..
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: ${BYTEDEPTH_DATASOURCE_URL:?BYTEDEPTH_DATASOURCE_URL must be set in .env}
+      SPRING_DATASOURCE_USERNAME: ${BYTEDEPTH_DATASOURCE_USERNAME:?BYTEDEPTH_DATASOURCE_USERNAME must be set in .env}
+      SPRING_DATASOURCE_PASSWORD: ${BYTEDEPTH_DATASOURCE_PASSWORD:?BYTEDEPTH_DATASOURCE_PASSWORD must be set in .env}
+      SPRING_DATA_REDIS_HOST: ${BYTEDEPTH_REDIS_HOST:?BYTEDEPTH_REDIS_HOST must be set in .env}
+      SPRING_DATA_REDIS_PORT: ${BYTEDEPTH_REDIS_PORT:-6379}
+      SPRING_DATA_REDIS_PASSWORD: ${BYTEDEPTH_REDIS_PASSWORD:?BYTEDEPTH_REDIS_PASSWORD must be set in .env}
+      BYTEDEPTH_SEARCH_URL: ${BYTEDEPTH_SEARCH_URL:?BYTEDEPTH_SEARCH_URL must be set in .env}
+      BYTEDEPTH_SEARCH_API_KEY: ${BYTEDEPTH_SEARCH_API_KEY:?BYTEDEPTH_SEARCH_API_KEY must be set in .env}
+      BYTEDEPTH_GEOIP_DB_PATH: /data/geoip/GeoLite2-City.mmdb
+      BYTEDEPTH_REMEMBER_ME_KEY: ${BYTEDEPTH_REMEMBER_ME_KEY:?BYTEDEPTH_REMEMBER_ME_KEY must be set in .env}
+      BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE: "true"
+      BYTEDEPTH_SESSION_COOKIE_SECURE: "true"
+      BYTEDEPTH_DEPLOY_SOCKET_PATH: /run/bytedepth-deploy/deploy.sock
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+    volumes:
+      - /data/images:/root/bytedepth/images
+      - /data/geoip:/data/geoip:ro
+      - /run/bytedepth-deploy:/run/bytedepth-deploy:ro
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - app

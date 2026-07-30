@@ -5,6 +5,7 @@ readonly DEPLOY_ROOT=/opt/bytedepth
 readonly STATE_DIR=/var/lib/bytedepth-deploy
 readonly STATE_FILE="$STATE_DIR/status"
 readonly LOG_FILE=/var/log/bytedepth-deploy.log
+readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 
 write_state() {
     local state="$1"
@@ -32,7 +33,28 @@ if [[ "$current_branch" != "main" ]]; then
 fi
 write_state RUNNING "$current_commit"
 
-if git fetch --no-tags origin main && git merge --ff-only FETCH_HEAD && docker compose up --build -d; then
+deploy_mode=single-host
+if [[ -f "$CONFIG_FILE" ]]; then
+    configured_mode="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value=$2} END {print value}' "$CONFIG_FILE")"
+    deploy_mode="${configured_mode:-$deploy_mode}"
+fi
+
+case "$deploy_mode" in
+    single-host)
+        compose_args=()
+        ;;
+    external-services)
+        compose_args=(--env-file .env -f deploy/docker-compose.app-external.yml)
+        ;;
+    *)
+        printf 'Refusing deployment because mode %s is not allowed\n' "$deploy_mode"
+        write_state FAILED "$current_commit"
+        exit 1
+        ;;
+esac
+
+if git fetch --no-tags origin main && git merge --ff-only FETCH_HEAD \
+    && docker compose "${compose_args[@]}" up --build -d; then
     write_state SUCCESS "$(git rev-parse --short HEAD)"
 else
     write_state FAILED "$(git rev-parse --short HEAD)"
