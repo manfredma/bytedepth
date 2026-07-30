@@ -10,6 +10,8 @@ git pull origin main
 
 echo "[2/3] 重新构建并启动完整服务栈..."
 sudo docker compose up -d --build
+# 应用容器重建后 IP 会变化；重启 Nginx 以刷新 upstream 的 Docker DNS 解析。
+sudo docker compose restart nginx
 
 echo "[3/3] 等待 HTTPS 入口可用..."
 STATUS='000'
