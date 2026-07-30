@@ -41,9 +41,17 @@ fi
 write_state RUNNING "$current_commit"
 
 deploy_mode=single-host
+deploy_ssh_key=
 if [[ -f "$CONFIG_FILE" ]]; then
     configured_mode="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value=$2} END {print value}' "$CONFIG_FILE")"
     deploy_mode="${configured_mode:-$deploy_mode}"
+    deploy_ssh_key="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_SSH_KEY" {value=$2} END {print value}' "$CONFIG_FILE")"
+fi
+
+if [[ -z "$deploy_ssh_key" || ! -r "$deploy_ssh_key" ]]; then
+    printf 'Refusing deployment because BYTEDEPTH_DEPLOY_SSH_KEY is missing or unreadable\n'
+    write_state FAILED "$current_commit"
+    exit 1
 fi
 
 case "$deploy_mode" in
@@ -68,7 +76,7 @@ case "$deploy_mode" in
         ;;
 esac
 
-if GIT_SSH_COMMAND='ssh -o BatchMode=yes' git fetch --no-tags origin main && git merge --ff-only FETCH_HEAD \
+if GIT_SSH_COMMAND="ssh -i $deploy_ssh_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new" git fetch --no-tags origin main && git merge --ff-only FETCH_HEAD \
     && docker compose "${compose_args[@]}" up --build -d; then
     write_state SUCCESS "$(git rev-parse --short HEAD)"
 else

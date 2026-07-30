@@ -23,7 +23,7 @@ curl -s https://bytedepth.cn -o /dev/null -w "%{http_code}"
 
 ```bash
 sudo install -d -o "$USER" -g "$USER" /opt
-git clone https://github.com/manfredma/bytedepth.git /opt/bytedepth
+git clone git@github.com:manfredma/bytedepth.git /opt/bytedepth
 cd /opt/bytedepth
 cp .env.example .env
 # 编辑 .env，为所有密码和密钥填写生产随机值

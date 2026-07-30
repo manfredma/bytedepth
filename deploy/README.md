@@ -24,7 +24,7 @@
 ## 2. 所有机器的前置条件
 
 1. Ubuntu/Linux，已安装 Git、Docker Engine 与 Docker Compose 插件。
-2. GitHub deploy key 已放入 `~/.ssh/id_ed25519`，并通过 `ssh -T git@github.com` 验证；仓库使用 SSH URL。
+2. GitHub deploy key 已放入仓库所有者的 `~/.ssh/id_ed25519`，并通过 `ssh -T git@github.com` 验证；仓库使用 SSH URL。安装脚本会将该路径写入 root-only 的 `/etc/bytedepth-deploy.conf`，供网页部署服务使用。
 2. 应用节点开放 80/443；数据节点只对应用节点的私网地址开放 3306、6379、7700。
 3. DNS 已指向应用节点；HTTPS 模式要求 `/etc/letsencrypt` 中已有对应证书。没有证书时，先使用 HTTP 或调整 `nginx/nginx.conf`，不要直接启动当前 HTTPS 配置。
 4. 已准备 GeoIP 数据库时，将其放在应用节点 `/data/geoip/GeoLite2-City.mmdb`；缺失时应用仍可启动，但不会提供 GeoIP 信息。
