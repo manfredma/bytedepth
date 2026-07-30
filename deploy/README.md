@@ -43,7 +43,7 @@ chmod 600 .env
 sudo ./deploy/bootstrap-ops-deploy.sh
 ```
 
-`bootstrap-ops-deploy.sh` 会安装 systemd Socket 服务、重启它以加载最新配置、再执行 `docker compose up --build -d`。
+`bootstrap-ops-deploy.sh` 会安装 systemd Socket 服务、重启它以加载最新配置、再执行完整 `docker compose up --build -d`，并强制重建 Nginx，使配置更新立即生效。
 
 验收：
 
@@ -179,7 +179,7 @@ sudo docker compose --env-file .env -f deploy/docker-compose.app-external.yml up
 
 ## 9. 本次双机部署复盘
 
-- Compose 不会为未变化的 Nginx 自动重建；app 重建后的 Docker IP 可能改变。Nginx 配置已改为使用 Docker DNS (`127.0.0.11`) 动态解析 `app`。
+- Compose 不会为未变化的 Nginx 自动重建；app 重建后的 Docker IP 可能改变。Nginx 配置已改为使用 Docker DNS (`127.0.0.11`) 动态解析 `app`，部署脚本还会强制重建 Nginx 以应用配置文件变更。
 - 第二台初始 remote 为 HTTPS，GitHub HTTPS 连接超时；两台实际上已有相同 deploy key。现在固定 SSH remote，并在部署前校验。
 - 失效 Docker mirror 会导致基础镜像拉取卡住。部署前应先检查镜像源可达性，自动化任务写日志后轮询，避免终端进度输出阻塞 SSH。
 - 图片不能靠一次性复制实现高可用。现在以 NFS 共享唯一目录，使用 `all_squash` 映射至 UID/GID 10001，Docker 启动依赖 NFS 挂载，防止断挂载时写入本地空目录。

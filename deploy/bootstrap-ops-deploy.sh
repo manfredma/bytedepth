@@ -50,4 +50,5 @@ case "$deploy_mode" in
 esac
 
 docker compose "${compose_args[@]}" up --build -d
+docker compose "${compose_args[@]}" up -d --force-recreate nginx
 docker compose "${compose_args[@]}" ps

@@ -77,7 +77,8 @@ case "$deploy_mode" in
 esac
 
 if GIT_SSH_COMMAND="ssh -i $deploy_ssh_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new" git fetch --no-tags origin main && git merge --ff-only FETCH_HEAD \
-    && docker compose "${compose_args[@]}" up --build -d; then
+    && docker compose "${compose_args[@]}" up --build -d \
+    && docker compose "${compose_args[@]}" up -d --force-recreate nginx; then
     write_state SUCCESS "$(git rev-parse --short HEAD)"
 else
     write_state FAILED "$(git rev-parse --short HEAD)"
