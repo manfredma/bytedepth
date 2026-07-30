@@ -2,6 +2,7 @@ package manfred.bytedepth.infrastructure.ops;
 
 import manfred.bytedepth.app.ops.OpsMeiliSearchPort;
 import manfred.bytedepth.app.ops.OpsMeiliSearchStatusDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -18,6 +19,7 @@ public class MeiliSearchOpsAdapter implements OpsMeiliSearchPort {
 
     private final RestClient restClient;
 
+    @Autowired
     public MeiliSearchOpsAdapter(@Value("${bytedepth.search.url}") String url,
                                  @Value("${bytedepth.search.api-key}") String apiKey) {
         this(RestClient.builder()
