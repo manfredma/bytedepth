@@ -45,6 +45,8 @@ public class AdminOpsController {
             return tableQryExe.execute(tableName);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported operations table");
+        } catch (RuntimeException e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Operations data unavailable");
         }
     }
 }

@@ -7,8 +7,6 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.util.Map;
-
 @Component
 public class MeiliSearchOpsAdapter implements OpsMeiliSearchPort {
 
@@ -28,10 +26,9 @@ public class MeiliSearchOpsAdapter implements OpsMeiliSearchPort {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public OpsMeiliSearchStatusDTO inspect() {
         restClient.get().uri("/health").retrieve().toBodilessEntity();
-        Map<String, Object> stats = restClient.get().uri("/stats").retrieve().body(Map.class);
-        return new OpsMeiliSearchStatusDTO(true, true, stats);
+        restClient.get().uri("/stats").retrieve().toBodilessEntity();
+        return new OpsMeiliSearchStatusDTO(true, true);
     }
 }

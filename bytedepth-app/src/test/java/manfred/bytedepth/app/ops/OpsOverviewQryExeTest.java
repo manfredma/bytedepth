@@ -2,8 +2,6 @@ package manfred.bytedepth.app.ops;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -15,8 +13,7 @@ class OpsOverviewQryExeTest {
         OpsRedisPort redis = () -> {
             throw new IllegalStateException("Redis unavailable");
         };
-        OpsMeiliSearchPort meiliSearch = () -> new OpsMeiliSearchStatusDTO(true, true,
-                Map.of("databaseSize", 42));
+        OpsMeiliSearchPort meiliSearch = () -> new OpsMeiliSearchStatusDTO(true, true);
 
         OpsOverviewDTO overview = new OpsOverviewQryExe(database, redis, meiliSearch).execute();
 

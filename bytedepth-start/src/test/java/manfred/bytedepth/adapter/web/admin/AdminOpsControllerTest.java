@@ -29,7 +29,10 @@ import java.util.Map;
 
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -91,7 +94,7 @@ class AdminOpsControllerTest {
     void overview_whenOneDependencyIsDown_stillReturnsOk() throws Exception {
         when(databasePort.inspect()).thenReturn(new OpsDatabaseStatusDTO(true, "bytedepth"));
         doThrow(new IllegalStateException("Redis unavailable")).when(redisPort).inspect();
-        when(meiliSearchPort.inspect()).thenReturn(new OpsMeiliSearchStatusDTO(true, true, Map.of("documents", 2)));
+        when(meiliSearchPort.inspect()).thenReturn(new OpsMeiliSearchStatusDTO(true, true));
 
         mockMvc.perform(get("/admin/ops/api/overview"))
                 .andExpect(status().isOk())
@@ -125,13 +128,25 @@ class AdminOpsControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view", "ops:monitor:view"})
+    void tableFailure_returnsGenericResponseWithoutExceptionDetails() throws Exception {
+        doThrow(new IllegalStateException("jdbc:mysql://db/bytedepth?password=db-secret"))
+                .when(tableQryExe).execute("post");
+
+        mockMvc.perform(get("/admin/ops/api/tables/post"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().string(not(containsString("db-secret"))))
+                .andExpect(content().string(not(containsString("jdbc:mysql"))));
+    }
+
     private void givenOverview(boolean databaseAvailable, boolean redisAvailable, boolean meiliAvailable) {
         when(databasePort.inspect()).thenReturn(new OpsDatabaseStatusDTO(
                 databaseAvailable, databaseAvailable ? "bytedepth" : null));
         when(redisPort.inspect()).thenReturn(new OpsRedisStatusDTO(
                 redisAvailable, redisAvailable ? "12M" : null, 3, 7, 2, 5, 1));
         when(meiliSearchPort.inspect()).thenReturn(new OpsMeiliSearchStatusDTO(
-                meiliAvailable, meiliAvailable, Map.of("documents", 2)));
+                meiliAvailable, meiliAvailable));
     }
 
     @TestConfiguration
