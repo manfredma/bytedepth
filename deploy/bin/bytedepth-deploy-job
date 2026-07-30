@@ -43,6 +43,9 @@ case "$deploy_mode" in
     single-host)
         compose_args=()
         ;;
+    data-access)
+        compose_args=(-f docker-compose.yml -f deploy/docker-compose.data-access.yml)
+        ;;
     external-services)
         compose_args=(--env-file .env -f deploy/docker-compose.app-external.yml)
         ;;

@@ -15,6 +15,7 @@
 | 拓扑 | 适用场景 | Compose 文件 |
 | --- | --- | --- |
 | 单机 | 小型站点、首次部署 | `docker-compose.yml` |
+| 数据访问节点 | 单机服务外供给第二个应用节点 | 基础 Compose + `docker-compose.data-access.yml` |
 | 应用与数据分离 | 多机生产、数据库/缓存已有托管实例 | `deploy/docker-compose.app-external.yml`（应用节点） |
 
 单机 Compose 会在同一机器运行 MySQL、Redis、MeiliSearch、应用和 Nginx，并把数据写入 `/data/mysql`、`/data/redis`、`/data/meilisearch`。多机模式只在应用节点运行应用和 Nginx；数据库、Redis 与 MeiliSearch 由独立机器或托管服务提供。
@@ -64,6 +65,18 @@ curl -kfsS -o /dev/null -w '%{http_code}\n' https://你的域名
 
 不要给应用使用 MySQL `root` 账号；应创建只对 `bytedepth` 库有权限的账号。为数据服务启用备份、监控和恢复演练；本仓库不会替代这些能力。
 
+### 将现有单机改为数据访问节点
+
+在现有服务机器的 `.env` 中增加其**内网**地址，例如 `BYTEDEPTH_DATA_BIND_IP=10.0.4.15`。再固定部署模式：
+
+```bash
+sudo sh -c 'printf "BYTEDEPTH_DEPLOY_MODE=data-access\\n" > /etc/bytedepth-deploy.conf'
+sudo chmod 600 /etc/bytedepth-deploy.conf
+sudo ./deploy/bootstrap-ops-deploy.sh
+```
+
+`data-access` 仅将 3306、6379、7700 绑定到指定内网 IP，不会绑定到公网地址。应用用户、Redis 密码和 MeiliSearch API key 仍必须按本节限制访问；在云安全组和主机防火墙中只放行应用节点私网 IP。
+
 ## 5. 多机：初始化应用节点
 
 克隆代码后，从 [`.env.external.example`](.env.external.example) 创建 `.env`，再替换其中所有值（示例地址只表示格式，不可直接使用）：
@@ -98,7 +111,7 @@ sudo docker compose --env-file .env -f deploy/docker-compose.app-external.yml ps
 
 此 Compose 文件不启动本地 MySQL/Redis/MeiliSearch，也不含它们的 `depends_on`；Flyway 会在应用启动时连接外部 MySQL 并执行迁移。先完成第 4 节的网络连通性与备份配置，再启动应用节点。
 
-多机应用节点上的网页“部署 main”也可用。执行一次以下配置后，它固定使用外部资源 Compose；可选值只有 `single-host` 和 `external-services`，网页不能传递 Compose 文件或任意命令。
+多机应用节点上的网页“部署 main”也可用。执行一次以下配置后，它固定使用外部资源 Compose；可选值只有 `single-host`、`data-access` 和 `external-services`，网页不能传递 Compose 文件或任意命令。
 
 ```bash
 sudo sh -c 'printf "BYTEDEPTH_DEPLOY_MODE=external-services\\n" > /etc/bytedepth-deploy.conf'

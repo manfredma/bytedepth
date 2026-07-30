@@ -7,8 +7,32 @@ if [[ "${EUID}" -ne 0 ]]; then
 fi
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 
 cd "$SOURCE_ROOT"
 ./deploy/install-host-service.sh
-docker compose up --build -d
-docker compose ps
+
+deploy_mode=single-host
+if [[ -f "$CONFIG_FILE" ]]; then
+    configured_mode="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value=$2} END {print value}' "$CONFIG_FILE")"
+    deploy_mode="${configured_mode:-$deploy_mode}"
+fi
+
+case "$deploy_mode" in
+    single-host)
+        compose_args=()
+        ;;
+    data-access)
+        compose_args=(-f docker-compose.yml -f deploy/docker-compose.data-access.yml)
+        ;;
+    external-services)
+        compose_args=(--env-file .env -f deploy/docker-compose.app-external.yml)
+        ;;
+    *)
+        printf 'Unsupported BYTEDEPTH_DEPLOY_MODE: %s\n' "$deploy_mode" >&2
+        exit 1
+        ;;
+esac
+
+docker compose "${compose_args[@]}" up --build -d
+docker compose "${compose_args[@]}" ps

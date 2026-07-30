@@ -1,0 +1,14 @@
+# Add private-network access to the data services of a single-host deployment.
+# It is intentionally not part of docker-compose.yml: public exposure is unsafe.
+services:
+  mysql:
+    ports:
+      - "${BYTEDEPTH_DATA_BIND_IP:?BYTEDEPTH_DATA_BIND_IP must be set in .env}:3306:3306"
+
+  redis:
+    ports:
+      - "${BYTEDEPTH_DATA_BIND_IP:?BYTEDEPTH_DATA_BIND_IP must be set in .env}:6379:6379"
+
+  meilisearch:
+    ports:
+      - "${BYTEDEPTH_DATA_BIND_IP:?BYTEDEPTH_DATA_BIND_IP must be set in .env}:7700:7700"
