@@ -5,7 +5,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -71,7 +70,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private void reject(HttpServletResponse response, long nanosToWait) throws IOException {
-        long retryAfterSeconds = Math.max(0, Duration.ofNanos(Math.max(0, nanosToWait)).toSeconds());
+        long nonNegativeNanos = Math.max(0, nanosToWait);
+        long retryAfterSeconds = nonNegativeNanos / 1_000_000_000L;
+        if (nonNegativeNanos % 1_000_000_000L != 0) {
+            retryAfterSeconds++;
+        }
+        retryAfterSeconds = Math.max(1, retryAfterSeconds);
         response.setStatus(429);
         response.setHeader("Retry-After", Long.toString(retryAfterSeconds));
     }

@@ -44,7 +44,7 @@ class RateLimitFilterTest {
     }
 
     @Test
-    void returns429AndNonNegativeRetryAfterWhenBucketIsExhausted() throws Exception {
+    void returns429AndRoundsRetryAfterUpWhenBucketIsExhausted() throws Exception {
         when(rateLimitService.tryConsume(eq("register-ip"), any(), any()))
                 .thenReturn(RateLimitDecision.rejected(999_999_999));
         MockHttpServletRequest request = post("/register", "203.0.113.11");
@@ -53,7 +53,7 @@ class RateLimitFilterTest {
         filter.doFilter(request, response, filterChain);
 
         assertThat(response.getStatus()).isEqualTo(429);
-        assertThat(response.getHeader("Retry-After")).isEqualTo("0");
+        assertThat(response.getHeader("Retry-After")).isEqualTo("1");
         verify(filterChain, never()).doFilter(any(), any());
     }
 
