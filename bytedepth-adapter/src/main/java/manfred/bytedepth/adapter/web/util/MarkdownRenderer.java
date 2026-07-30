@@ -9,10 +9,14 @@ import org.commonmark.node.AbstractVisitor;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.AttributeProvider;
 import org.commonmark.renderer.html.HtmlRenderer;
+import org.owasp.html.HtmlPolicyBuilder;
+import org.owasp.html.PolicyFactory;
+import org.owasp.html.Sanitizers;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Component
 public class MarkdownRenderer {
@@ -20,10 +24,26 @@ public class MarkdownRenderer {
     private static final List<org.commonmark.Extension> EXTENSIONS =
             List.of(TablesExtension.create());
 
+    private static final PolicyFactory CONTENT_POLICY = Sanitizers.BLOCKS
+            .and(Sanitizers.FORMATTING)
+            .and(Sanitizers.LINKS)
+            .and(Sanitizers.TABLES)
+            .and(Sanitizers.IMAGES)
+            .and(new HtmlPolicyBuilder()
+                    .allowElements("pre", "code")
+                    .allowAttributes("class")
+                    .matching(Pattern.compile("language-[A-Za-z0-9_-]{1,64}"))
+                    .onElements("code")
+                    .allowAttributes("id").onElements("h1", "h2", "h3", "h4", "h5", "h6")
+                    .toFactory());
+
     private final Parser parser = Parser.builder().extensions(EXTENSIONS).build();
 
     private final HtmlRenderer renderer = HtmlRenderer.builder()
             .extensions(EXTENSIONS)
+            // 文章正文使用 th:utext 输出；原始 HTML 必须转义，避免存储型 XSS。
+            .escapeHtml(true)
+            .sanitizeUrls(true)
             .attributeProviderFactory(ctx -> new HeadingIdProvider())
             .build();
 
@@ -31,7 +51,7 @@ public class MarkdownRenderer {
         if (markdown == null || markdown.isBlank()) {
             return "";
         }
-        return renderer.render(parser.parse(markdown));
+        return CONTENT_POLICY.sanitize(renderer.render(parser.parse(markdown)));
     }
 
     /**

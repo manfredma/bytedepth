@@ -18,4 +18,35 @@ class MarkdownRendererTest {
     void returnsZeroForBlankContent() {
         assertThat(renderer.countVisibleCharacters(" \n\t")).isZero();
     }
+
+    @Test
+    void escapesRawHtmlAndUnsafeLinkProtocols() {
+        String rendered = renderer.render("<img src=x onerror=alert(1)>\n\n[危险链接](javascript:alert(1))");
+
+        assertThat(rendered)
+                .contains("&lt;img")
+                .doesNotContain("<img src=x onerror=alert(1)>")
+                .doesNotContain("onerror=")
+                .doesNotContain("javascript:");
+    }
+
+    @Test
+    void preservesStandardMarkdownStructureAfterSanitizing() {
+        String rendered = renderer.render("# 标题\n\n```java\nint value = 1;\n```\n\n| 名称 | 值 |\n| --- | --- |\n| A | 1 |");
+
+        assertThat(rendered)
+                .contains("<h1>标题</h1>")
+                .contains("<pre><code")
+                .contains("int value &#61; 1;")
+                .contains("<table>");
+    }
+
+    @Test
+    void preservesRestrictedLanguageClassForFencedMermaidCode() {
+        String rendered = renderer.render("```mermaid\ngraph TD\n  A --> B\n```");
+
+        assertThat(rendered)
+                .contains("<pre><code class=\"language-mermaid\">")
+                .contains("graph TD");
+    }
 }

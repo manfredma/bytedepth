@@ -29,6 +29,7 @@
         <sort.skip>true</sort.skip>
         <!-- 升级 Testcontainers：1.20.x 内置 docker-java 3.4+，兼容 Colima 29.x（API>=1.44） -->
         <testcontainers.version>1.20.1</testcontainers.version>
+        <owasp.html.sanitizer.version>20260313.1</owasp.html.sanitizer.version>
     </properties>
 
     <dependencyManagement>
@@ -73,6 +74,11 @@
                 <groupId>org.commonmark</groupId>
                 <artifactId>commonmark-ext-gfm-tables</artifactId>
                 <version>0.21.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
+                <artifactId>owasp-java-html-sanitizer</artifactId>
+                <version>${owasp.html.sanitizer.version}</version>
             </dependency>
             <dependency>
                 <groupId>manfred.bytedepth</groupId>
