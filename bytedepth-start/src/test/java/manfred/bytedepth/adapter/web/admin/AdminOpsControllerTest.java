@@ -91,16 +91,34 @@ class AdminOpsControllerTest {
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view", "ops:monitor:view"})
-    void overview_whenOneDependencyIsDown_stillReturnsOk() throws Exception {
-        when(databasePort.inspect()).thenReturn(new OpsDatabaseStatusDTO(true, "bytedepth"));
-        doThrow(new IllegalStateException("Redis unavailable")).when(redisPort).inspect();
-        when(meiliSearchPort.inspect()).thenReturn(new OpsMeiliSearchStatusDTO(true, true));
+    void overview_whenDependenciesAreDown_returnsSafeFixedDiagnostics() throws Exception {
+        doThrow(new IllegalStateException(
+                "jdbc:mysql://db.internal/bytedepth?password=mysql-secret\n"
+                        + "at com.mysql.Driver.connect(Driver.java:42)"))
+                .when(databasePort).inspect();
+        doThrow(new IllegalStateException(
+                "redis://:redis-secret@cache.internal:6379\n"
+                        + "at io.lettuce.core.RedisClient.connect(RedisClient.java:42)"))
+                .when(redisPort).inspect();
+        doThrow(new IllegalStateException(
+                "https://search.internal?apiKey=meili-secret\n"
+                        + "at org.springframework.web.client.RestClient.get(RestClient.java:42)"))
+                .when(meiliSearchPort).inspect();
 
         mockMvc.perform(get("/admin/ops/api/overview"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.database.available").value(true))
+                .andExpect(jsonPath("$.database.available").value(false))
+                .andExpect(jsonPath("$.database.error").value("MySQL health check failed"))
                 .andExpect(jsonPath("$.redis.available").value(false))
-                .andExpect(jsonPath("$.meiliSearch.statsAvailable").value(true));
+                .andExpect(jsonPath("$.redis.error").value("Redis health check failed"))
+                .andExpect(jsonPath("$.meiliSearch.healthAvailable").value(false))
+                .andExpect(jsonPath("$.meiliSearch.statsAvailable").value(false))
+                .andExpect(jsonPath("$.meiliSearch.error").value("MeiliSearch health check failed"))
+                .andExpect(content().string(not(containsString("internal"))))
+                .andExpect(content().string(not(containsString("secret"))))
+                .andExpect(content().string(not(containsString("Driver.java"))))
+                .andExpect(content().string(not(containsString("RedisClient.java"))))
+                .andExpect(content().string(not(containsString("RestClient.java"))));
     }
 
     @Test

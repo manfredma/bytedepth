@@ -5,7 +5,7 @@
 - Added `app.ops` query DTOs, query executors, and ports for the operations overview and controlled table detail queries.
 - The overview derives JVM start time and uptime from `RuntimeMXBean`, and independently degrades MySQL, Redis, and MeiliSearch failures to unavailable status DTOs.
 - Added JDBC adapters for MySQL connectivity/database name and fixed, `LIMIT 50` table queries.
-- Added a Redis adapter that performs `PING`, parses `INFO`, and counts `pv:post:` plus `bytedepth:session:` keys with `SCAN`.
+- Added a Redis adapter that parses `INFO` and counts `pv:post:` plus `bytedepth:session:` keys with prefix-scoped `SCAN`; it issues no other Redis commands.
 - Added a MeiliSearch adapter using the existing URL/API-key configuration and authenticated `RestClient` pattern to request `/health` and `/stats`.
 - The table whitelist is an enum containing exactly the required table and column lists. Infrastructure maps each enum constant to a fixed SQL literal; no request input is concatenated into SQL.
 
