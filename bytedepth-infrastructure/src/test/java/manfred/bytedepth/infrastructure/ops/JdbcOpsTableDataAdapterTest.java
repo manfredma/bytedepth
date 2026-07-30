@@ -16,7 +16,7 @@ class JdbcOpsTableDataAdapterTest {
     @Test
     void list_usesTheFixedWhitelistedPostQuery() {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
-        String query = "SELECT id, title, status, author_id, created_at, updated_at FROM `post` LIMIT 50";
+        String query = "SELECT id, title, status, author_id, created_at, updated_at FROM `post` ORDER BY id DESC LIMIT 50";
         when(jdbcTemplate.queryForList(query)).thenReturn(List.of(Map.of("id", 1L, "title", "Post")));
 
         var result = new JdbcOpsTableDataAdapter(jdbcTemplate).list(OpsTable.POST);

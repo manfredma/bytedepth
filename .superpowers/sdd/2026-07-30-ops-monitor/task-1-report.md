@@ -34,3 +34,11 @@
 
 - Redis `RedisConnection.execute("INFO")` and `scan(ScanOptions)` are marked deprecated by the current Spring Data Redis API. They remain compatible with the installed Spring Boot 3.2.5 stack and directly satisfy the raw INFO/SCAN requirements; a future Spring Data upgrade may require moving to its newer command APIs.
 - The Maven model reports a pre-existing missing explicit Surefire plugin version warning in `bytedepth-start`; this task does not alter that build configuration.
+
+## Review fix round 1
+
+- Added `ORDER BY id DESC LIMIT 50` to each of the three fixed table-detail SQL statements and updated the exact post-query unit-test expectation.
+- Removed Redis `PING`; availability now follows successful INFO parsing and the two prefix-limited SCAN counts only.
+- Expanded Redis SCAN tests to capture and assert `pv:post:*` and `bytedepth:session:*` patterns independently.
+- Refreshed local module artifacts with `JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn clean install -DskipTests -Dsort.skip=true` — passed.
+- Ran `JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn -pl bytedepth-infrastructure test -Dsort.skip=true` — passed, 5 tests, 0 failures, 0 errors, 0 skipped.

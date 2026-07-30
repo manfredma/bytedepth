@@ -13,9 +13,9 @@ import java.util.Map;
 public class JdbcOpsTableDataAdapter implements OpsTableDataPort {
 
     private static final Map<OpsTable, String> QUERIES = Map.of(
-            OpsTable.POST, "SELECT id, title, status, author_id, created_at, updated_at FROM `post` LIMIT 50",
-            OpsTable.COMMENT, "SELECT id, post_id, author_id, content, created_at FROM `comment` LIMIT 50",
-            OpsTable.USER, "SELECT id, username, email, status, created_at, updated_at FROM `user` LIMIT 50"
+            OpsTable.POST, "SELECT id, title, status, author_id, created_at, updated_at FROM `post` ORDER BY id DESC LIMIT 50",
+            OpsTable.COMMENT, "SELECT id, post_id, author_id, content, created_at FROM `comment` ORDER BY id DESC LIMIT 50",
+            OpsTable.USER, "SELECT id, username, email, status, created_at, updated_at FROM `user` ORDER BY id DESC LIMIT 50"
     );
 
     private final JdbcTemplate jdbcTemplate;

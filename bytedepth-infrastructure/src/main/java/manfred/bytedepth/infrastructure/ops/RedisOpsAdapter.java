@@ -26,11 +26,6 @@ public class RedisOpsAdapter implements OpsRedisPort {
 
     @Override
     public OpsRedisStatusDTO inspect() {
-        String ping = redisTemplate.execute(RedisConnection::ping);
-        if (!"PONG".equalsIgnoreCase(ping)) {
-            throw new IllegalStateException("Redis ping did not return PONG");
-        }
-
         Map<String, String> info = RedisInfoParser.parse(redisTemplate.execute(this::redisInfo));
         return new OpsRedisStatusDTO(
                 true,
