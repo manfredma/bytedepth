@@ -39,6 +39,17 @@ class PostReadingAssetsTest {
                 .contains("未完成");
     }
 
+    @Test
+    void seriesTriggerMovesOutOfThePanelContentWhenThePanelIsOpen() throws IOException {
+        String template = classpathText("/templates/public/posts/detail.html");
+
+        assertThat(template)
+                .contains(".series-trigger.open {")
+                .contains("transform: translateX(-100%) translateY(-50%)")
+                .contains("pointer-events: none")
+                .contains("trigger.classList.toggle('open')");
+    }
+
     private String classpathText(String path) throws IOException {
         try (InputStream in = getClass().getResourceAsStream(path)) {
             assertThat(in).as("classpath resource %s", path).isNotNull();

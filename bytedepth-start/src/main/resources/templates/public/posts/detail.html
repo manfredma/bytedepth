@@ -355,7 +355,11 @@
             text-transform: uppercase;
         }
         .series-trigger-icon { font-size: 0.65rem; color: var(--navy-fg); transition: transform .25s; }
-        .series-trigger.open .series-trigger-icon { transform: rotate(180deg); }
+        .series-trigger.open {
+            transform: translateX(-100%) translateY(-50%);
+            opacity: 0;
+            pointer-events: none;
+        }
 
         /* ── 专栏面板 ────────────────────────── */
         .series-panel {
