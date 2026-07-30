@@ -19,7 +19,7 @@ class OpsTableDataDTOTest {
                 "redisValue", "cached-secret",
                 "connectionUrl", "jdbc:mysql://db/bytedepth")));
 
-        Map<String, Object> row = data.rows().getFirst();
+        Map<String, Object> row = data.rows().get(0);
 
         assertEquals(7L, row.get("id"));
         assertEquals("admin", row.get("username"));
