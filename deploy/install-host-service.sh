@@ -11,5 +11,6 @@ install -m 0644 "$SOURCE_ROOT/deploy/systemd/bytedepth-deploy.socket" /etc/syste
 install -m 0644 "$SOURCE_ROOT/deploy/systemd/bytedepth-deploy@.service" /etc/systemd/system/bytedepth-deploy@.service
 
 systemctl daemon-reload
-systemctl enable --now bytedepth-deploy.socket
+systemctl enable bytedepth-deploy.socket
+systemctl restart bytedepth-deploy.socket
 systemctl status bytedepth-deploy.socket --no-pager

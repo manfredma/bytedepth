@@ -12,13 +12,14 @@
 
 “部署 main”按钮仅向宿主机上的固定服务发送 `deploy-main` 请求。该服务固定在 `/opt/bytedepth` 执行 `git fetch origin main`、仅快进合并该远端分支，以及 `docker compose up --build -d`，因此不能由网页指定分支、路径或 Shell 命令。它需要 `ops:monitor:view` 与 `ops:deploy:execute` 两项权限；后者默认授予 `ADMIN` 角色。
 
-首次启用或更新该服务时，在服务器代码目录执行：
+首次启用、更新服务或迁移到新服务器时，在服务器代码目录执行自动化入口：
 
 ```bash
 cd /opt/bytedepth
-sudo ./deploy/install-host-service.sh
-sudo docker compose up --build -d
+sudo ./deploy/bootstrap-ops-deploy.sh
 ```
+
+新服务器的完整初始化步骤见 [部署指南](agent-guides/deploy.md#新服务器初始化)；代码更新时可执行 `git pull --ff-only && sudo ./deploy/bootstrap-ops-deploy.sh`。该入口会重新加载并重启 Socket 单元，避免修改 systemd 配置后仍使用旧配置。
 
 安装脚本创建宿主机 Unix Socket；应用容器只挂载该 Socket 所在目录，不挂载 Docker Socket，也不能运行任意宿主机命令。部署日志和服务状态可通过以下命令查看：
 
