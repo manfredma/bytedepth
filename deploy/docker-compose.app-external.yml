@@ -22,7 +22,7 @@ services:
       BYTEDEPTH_DEPLOY_SOCKET_PATH: /run/bytedepth-deploy/deploy.sock
       JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
     volumes:
-      - /data/images:/root/bytedepth/images
+      - /mnt/bytedepth-images:/root/bytedepth/images
       - /data/geoip:/data/geoip:ro
       - /run/bytedepth-deploy:/run/bytedepth-deploy:ro
 

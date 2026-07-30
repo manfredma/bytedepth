@@ -77,6 +77,25 @@ sudo ./deploy/bootstrap-ops-deploy.sh
 
 `data-access` 仅将 3306、6379、7700 和文件服务 8081 绑定到指定内网 IP，不会绑定到公网地址。应用用户、Redis 密码和 MeiliSearch API key 仍必须按本节限制访问；在云安全组和主机防火墙中只放行应用节点私网 IP。文件服务只读挂载 `/data/images`，应用节点通过它读取 `/images/`，因此多机无需同步上传文件。
 
+应用节点还必须通过 NFS 挂载数据节点的同一目录，确保上传与读取使用同一份文件。安全组仅放行应用节点到数据节点的 `2049/TCP`；不要对公网开放。以数据节点 `10.0.4.15`、应用节点 `10.0.0.5` 为例：
+
+```bash
+# 数据节点（root）：仅允许应用节点读写图片目录
+apt-get update && apt-get install -y nfs-kernel-server
+printf '/data/images 10.0.0.5(rw,sync,no_subtree_check,no_root_squash)\n' \
+  > /etc/exports.d/bytedepth-images.exports
+exportfs -ra
+
+# 应用节点（root）：持久挂载共享目录
+apt-get update && apt-get install -y nfs-common
+install -d -m 755 /mnt/bytedepth-images
+printf '10.0.4.15:/data/images /mnt/bytedepth-images nfs4 rw,_netdev,nofail 0 0\n' \
+  >> /etc/fstab
+mount /mnt/bytedepth-images
+```
+
+确认 `mountpoint -q /mnt/bytedepth-images` 后再启动应用节点 Compose。应用容器把该目录挂载到 `/root/bytedepth/images`；Nginx 文件服务也读取数据节点的 `/data/images`，上传文件立即在任一应用节点可见。
+
 ## 5. 多机：初始化应用节点
 
 克隆代码后，从 [`.env.external.example`](.env.external.example) 创建 `.env`，再替换其中所有值（示例地址只表示格式，不可直接使用）：
