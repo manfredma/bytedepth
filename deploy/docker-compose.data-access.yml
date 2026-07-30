@@ -8,7 +8,7 @@ services:
       - "${BYTEDEPTH_DATA_BIND_IP:?BYTEDEPTH_DATA_BIND_IP must be set in .env}:8081:8080"
     volumes:
       - /data/images:/srv/images:ro
-      - ./nginx/files.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/files.conf:/etc/nginx/nginx.conf:ro
 
   mysql:
     ports:
