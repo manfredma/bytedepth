@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
+    <title>稍后再试 - bytedepth</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { align-items: center; background: #0d1b2a; color: #dbe5f0; display: flex;
+               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; justify-content: center;
+               margin: 0; min-height: 100vh; padding: 24px; }
+        main { background: #12263a; border: 1px solid #274967; border-radius: 24px;
+               box-shadow: 0 24px 64px #05080f88; max-width: 480px; padding: 46px 36px; text-align: center; width: 100%; }
+        .icon { background: #183c57; border-radius: 50%; display: inline-grid; font-size: 34px;
+                height: 70px; place-items: center; width: 70px; }
+        h1 { color: #edf5ff; font-size: 29px; margin: 22px 0 12px; }
+        p { color: #91a8bf; line-height: 1.8; margin: 0; }
+        a { background: #e94560; border-radius: 10px; color: #fff; display: inline-block;
+            font-weight: 650; margin-top: 28px; padding: 12px 22px; text-decoration: none; }
+        a:hover { background: #f15d76; }
+    </style>
+</head>
+<body>
+<main>
+    <div class="icon" aria-hidden="true">🌊</div>
+    <h1>海面起了点浪</h1>
+    <p>我们已经记下这个小插曲。<br>稍后再试，或先回到首页看看。</p>
+    <a th:href="@{/}">回到首页</a>
+</main>
+</body>
+</html>

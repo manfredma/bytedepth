@@ -1,6 +1,9 @@
 package manfred.bytedepth.adapter.web;
 
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ResponseStatusException;
@@ -9,6 +12,7 @@ import org.springframework.web.servlet.ModelAndView;
 import java.util.NoSuchElementException;
 
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     /** 文章不存在 or 已删除 → 404 页面 */
@@ -21,6 +25,21 @@ public class GlobalExceptionHandler {
         }
         ModelAndView mav = new ModelAndView("error/404");
         mav.setStatus(HttpStatus.NOT_FOUND);
+        return mav;
+    }
+
+    /** 授权失败交回 Spring Security 的 AccessDeniedHandler，保持原有 403 响应。 */
+    @ExceptionHandler(AccessDeniedException.class)
+    public void handleAccessDenied(AccessDeniedException ex) {
+        throw ex;
+    }
+
+    /** 未预期异常 → 不泄露内部信息，记录完整日志并展示站内 500 页面。 */
+    @ExceptionHandler(Exception.class)
+    public ModelAndView handleUnexpected(Exception ex, HttpServletRequest request) {
+        log.error("Unhandled request failure: method={}, path={}", request.getMethod(), request.getRequestURI(), ex);
+        ModelAndView mav = new ModelAndView("error/500");
+        mav.setStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         return mav;
     }
 }
