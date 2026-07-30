@@ -61,7 +61,7 @@ services:
     volumes:
       - /data/images:/root/bytedepth/images
       - /data/geoip:/data/geoip:ro
-      - /run/bytedepth-deploy:/run/bytedepth-deploy
+      - /run/bytedepth-deploy:/run/bytedepth-deploy:ro
     depends_on:
       mysql:
         condition: service_healthy

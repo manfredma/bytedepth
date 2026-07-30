@@ -32,7 +32,7 @@ if [[ "$current_branch" != "main" ]]; then
 fi
 write_state RUNNING "$current_commit"
 
-if git pull --ff-only && docker compose up --build -d; then
+if git fetch --no-tags origin main && git merge --ff-only FETCH_HEAD && docker compose up --build -d; then
     write_state SUCCESS "$(git rev-parse --short HEAD)"
 else
     write_state FAILED "$(git rev-parse --short HEAD)"

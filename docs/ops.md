@@ -10,7 +10,7 @@
 
 ### 网页受控部署
 
-“部署 main”按钮仅向宿主机上的固定服务发送 `deploy-main` 请求。该服务固定在 `/opt/bytedepth` 执行 `git pull --ff-only` 和 `docker compose up --build -d`，因此不能由网页指定分支、路径或 Shell 命令。它需要 `ops:monitor:view` 与 `ops:deploy:execute` 两项权限；后者默认授予 `ADMIN` 角色。
+“部署 main”按钮仅向宿主机上的固定服务发送 `deploy-main` 请求。该服务固定在 `/opt/bytedepth` 执行 `git fetch origin main`、仅快进合并该远端分支，以及 `docker compose up --build -d`，因此不能由网页指定分支、路径或 Shell 命令。它需要 `ops:monitor:view` 与 `ops:deploy:execute` 两项权限；后者默认授予 `ADMIN` 角色。
 
 首次启用或更新该服务时，在服务器代码目录执行：
 
