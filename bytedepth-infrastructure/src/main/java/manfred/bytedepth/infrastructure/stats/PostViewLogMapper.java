@@ -1,6 +1,7 @@
 package manfred.bytedepth.infrastructure.stats;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import manfred.bytedepth.app.analytics.PostViewLogDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Insert;
@@ -45,7 +46,7 @@ public interface PostViewLogMapper extends BaseMapper<PostViewLogDO> {
             ORDER BY pvl.visited_at DESC
             LIMIT #{offset}, #{size}
             """)
-    List<PostViewLogDO> findPage(@Param("postId") Long postId,
+    List<PostViewLogDTO> findPage(@Param("postId") Long postId,
                                   @Param("userId") Long userId,
                                   @Param("offset") int offset,
                                   @Param("size") int size);

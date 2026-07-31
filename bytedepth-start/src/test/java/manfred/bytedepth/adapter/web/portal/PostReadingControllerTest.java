@@ -1,8 +1,9 @@
 package manfred.bytedepth.adapter.web.portal;
 
+import manfred.bytedepth.app.analytics.PostViewLogPort;
+import manfred.bytedepth.app.analytics.ReadingProgressTokenPort;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
-import manfred.bytedepth.infrastructure.stats.PostViewLogMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -26,23 +27,23 @@ class PostReadingControllerTest {
     @MockBean
     private GetPostQryExe getPostQryExe;
     @MockBean
-    private PostViewLogMapper postViewLogMapper;
+    private PostViewLogPort postViewLogPort;
     @MockBean
-    private ReadingProgressTokenService readingProgressTokenService;
+    private ReadingProgressTokenPort readingProgressTokenPort;
 
     @Test
     void recordsCumulativeReadingProgressForTheMatchingPost() throws Exception {
         PostDTO post = new PostDTO();
         post.setId(12L);
         when(getPostQryExe.executeBySlug("java")).thenReturn(post);
-        when(readingProgressTokenService.belongsToPost("visit-token", 12L)).thenReturn(true);
+        when(readingProgressTokenPort.belongsToPost("visit-token", 12L)).thenReturn(true);
 
         mockMvc.perform(post("/posts/java/reading-progress")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"visitToken\":\"visit-token\",\"activeReadSeconds\":86,\"maxScrollDepth\":83,\"completed\":true}"))
                 .andExpect(status().isNoContent());
 
-        verify(postViewLogMapper).upsertReadingProgress(12L, "visit-token", 86, 83, true);
+        verify(postViewLogPort).upsertReadingProgress(12L, "visit-token", 86, 83, true);
     }
 
     @Test
@@ -52,7 +53,7 @@ class PostReadingControllerTest {
                         .content("{\"visitToken\":\"visit-token\",\"activeReadSeconds\":-1,\"maxScrollDepth\":101,\"completed\":false}"))
                 .andExpect(status().isBadRequest());
 
-        verifyNoInteractions(postViewLogMapper);
+        verifyNoInteractions(postViewLogPort);
     }
 
     @Test
@@ -73,7 +74,7 @@ class PostReadingControllerTest {
                     .andExpect(status().isBadRequest());
         }
 
-        verifyNoInteractions(postViewLogMapper, readingProgressTokenService);
+        verifyNoInteractions(postViewLogPort, readingProgressTokenPort);
     }
 
     @Test
@@ -81,13 +82,13 @@ class PostReadingControllerTest {
         PostDTO post = new PostDTO();
         post.setId(12L);
         when(getPostQryExe.executeBySlug("java")).thenReturn(post);
-        when(readingProgressTokenService.belongsToPost("forged-token", 12L)).thenReturn(false);
+        when(readingProgressTokenPort.belongsToPost("forged-token", 12L)).thenReturn(false);
 
         mockMvc.perform(post("/posts/java/reading-progress")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"visitToken\":\"forged-token\",\"activeReadSeconds\":1,\"maxScrollDepth\":1,\"completed\":false}"))
                 .andExpect(status().isNoContent());
 
-        verifyNoInteractions(postViewLogMapper);
+        verifyNoInteractions(postViewLogPort);
     }
 }

@@ -1,8 +1,8 @@
 package manfred.bytedepth.infrastructure.stats;
 
-import manfred.bytedepth.infrastructure.stats.dto.CountryViewStat;
-import manfred.bytedepth.infrastructure.stats.dto.PostViewRank;
-import manfred.bytedepth.infrastructure.stats.dto.TrendPoint;
+import manfred.bytedepth.app.analytics.CountryViewStatDTO;
+import manfred.bytedepth.app.analytics.PostViewRankDTO;
+import manfred.bytedepth.app.analytics.TrendPointDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -16,24 +16,24 @@ import java.util.List;
 @Mapper
 public interface ViewLogStatsMapper {
 
-    List<PostViewRank> topPosts(@Param("startTime") LocalDateTime startTime,
+    List<PostViewRankDTO> topPosts(@Param("startTime") LocalDateTime startTime,
                                 @Param("endTime") LocalDateTime endTime,
                                 @Param("limit") int limit);
 
-    List<CountryViewStat> countryStats(@Param("startTime") LocalDateTime startTime,
+    List<CountryViewStatDTO> countryStats(@Param("startTime") LocalDateTime startTime,
                                        @Param("endTime") LocalDateTime endTime);
 
-    List<PostViewRank> countryTopPosts(@Param("country") String country,
+    List<PostViewRankDTO> countryTopPosts(@Param("country") String country,
                                        @Param("startTime") LocalDateTime startTime,
                                        @Param("endTime") LocalDateTime endTime,
                                        @Param("limit") int limit);
 
-    List<TrendPoint> postTrend(@Param("postId") Long postId,
+    List<TrendPointDTO> postTrend(@Param("postId") Long postId,
                                @Param("startTime") LocalDateTime startTime,
                                @Param("endTime") LocalDateTime endTime,
                                @Param("format") String format);
 
-    List<TrendPoint> overviewTrend(@Param("startTime") LocalDateTime startTime,
+    List<TrendPointDTO> overviewTrend(@Param("startTime") LocalDateTime startTime,
                                    @Param("endTime") LocalDateTime endTime,
                                    @Param("format") String format);
 }

@@ -1,9 +1,9 @@
-package manfred.bytedepth.infrastructure.stats.dto;
+package manfred.bytedepth.app.analytics;
 
 import lombok.Data;
 
 @Data
-public class TrendPoint {
+public class TrendPointDTO {
     private String label;
     private long viewCount;
 }

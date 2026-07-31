@@ -1,7 +1,7 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
-import manfred.bytedepth.infrastructure.stats.PostViewLogMapper;
+import manfred.bytedepth.app.analytics.PostViewLogPort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +20,7 @@ public class AdminViewLogController {
 
     private static final int PAGE_SIZE = 20;
 
-    private final PostViewLogMapper postViewLogMapper;
+    private final PostViewLogPort postViewLogPort;
 
     @GetMapping
     public String list(Model model,
@@ -28,8 +28,8 @@ public class AdminViewLogController {
                        @RequestParam(required = false) Long userId,
                        @RequestParam(defaultValue = "1") int page) {
         int offset = (page - 1) * PAGE_SIZE;
-        var logs = postViewLogMapper.findPage(postId, userId, offset, PAGE_SIZE);
-        long total = postViewLogMapper.countPage(postId, userId);
+        var logs = postViewLogPort.findPage(postId, userId, offset, PAGE_SIZE);
+        long total = postViewLogPort.countPage(postId, userId);
         int totalPages = (int) Math.max(1, Math.ceil((double) total / PAGE_SIZE));
 
         model.addAttribute("logs", logs);

@@ -1,9 +1,9 @@
 package manfred.bytedepth.adapter.web.admin;
 
-import manfred.bytedepth.infrastructure.stats.ViewLogStatsMapper;
-import manfred.bytedepth.infrastructure.stats.dto.CountryViewStat;
-import manfred.bytedepth.infrastructure.stats.dto.PostViewRank;
-import manfred.bytedepth.infrastructure.stats.dto.TrendPoint;
+import manfred.bytedepth.app.analytics.CountryViewStatDTO;
+import manfred.bytedepth.app.analytics.PostViewRankDTO;
+import manfred.bytedepth.app.analytics.TrendPointDTO;
+import manfred.bytedepth.app.analytics.ViewLogStatsPort;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +38,7 @@ class AdminAnalyticsControllerTest {
     @MockBean
     private PasswordEncoder passwordEncoder;
     @MockBean
-    private ViewLogStatsMapper viewLogStatsMapper;
+    private ViewLogStatsPort viewLogStatsPort;
 
     // ── 认证守卫 ──────────────────────────────────────────
 
@@ -69,12 +69,12 @@ class AdminAnalyticsControllerTest {
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
     void topPosts_returnsJsonWithCorrectPercent() throws Exception {
-        PostViewRank r1 = new PostViewRank();
+        PostViewRankDTO r1 = new PostViewRankDTO();
         r1.setPostId(1L); r1.setPostTitle("Spring入门"); r1.setViewCount(80);
-        PostViewRank r2 = new PostViewRank();
+        PostViewRankDTO r2 = new PostViewRankDTO();
         r2.setPostId(2L); r2.setPostTitle("Docker实战"); r2.setViewCount(20);
 
-        when(viewLogStatsMapper.topPosts(any(), any(), eq(20)))
+        when(viewLogStatsPort.topPosts(any(), any(), eq(20)))
                 .thenReturn(List.of(r1, r2));
 
         mockMvc.perform(get("/admin/analytics/api/top-posts").param("period", "week"))
@@ -87,7 +87,7 @@ class AdminAnalyticsControllerTest {
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
     void topPosts_emptyResult_returnsEmptyArray() throws Exception {
-        when(viewLogStatsMapper.topPosts(any(), any(), anyInt())).thenReturn(List.of());
+        when(viewLogStatsPort.topPosts(any(), any(), anyInt())).thenReturn(List.of());
 
         mockMvc.perform(get("/admin/analytics/api/top-posts"))
                 .andExpect(status().isOk())
@@ -100,7 +100,7 @@ class AdminAnalyticsControllerTest {
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
     void topPosts_customFromParam_parsedAsStartOfDay() throws Exception {
-        when(viewLogStatsMapper.topPosts(any(), any(), anyInt())).thenReturn(List.of());
+        when(viewLogStatsPort.topPosts(any(), any(), anyInt())).thenReturn(List.of());
 
         mockMvc.perform(get("/admin/analytics/api/top-posts")
                         .param("from", "2026-06-01")
@@ -108,7 +108,7 @@ class AdminAnalyticsControllerTest {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<LocalDateTime> startCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
-        verify(viewLogStatsMapper).topPosts(startCaptor.capture(), any(), anyInt());
+        verify(viewLogStatsPort).topPosts(startCaptor.capture(), any(), anyInt());
         assertThat(startCaptor.getValue())
                 .isEqualTo(LocalDate.of(2026, 6, 1).atStartOfDay());
     }
@@ -118,12 +118,12 @@ class AdminAnalyticsControllerTest {
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
     void countries_returnsJsonWithPercent() throws Exception {
-        CountryViewStat cn = new CountryViewStat();
+        CountryViewStatDTO cn = new CountryViewStatDTO();
         cn.setCountry("中国"); cn.setViewCount(60);
-        CountryViewStat us = new CountryViewStat();
+        CountryViewStatDTO us = new CountryViewStatDTO();
         us.setCountry("美国"); us.setViewCount(40);
 
-        when(viewLogStatsMapper.countryStats(any(), any())).thenReturn(List.of(cn, us));
+        when(viewLogStatsPort.countryStats(any(), any())).thenReturn(List.of(cn, us));
 
         mockMvc.perform(get("/admin/analytics/api/countries").param("period", "month"))
                 .andExpect(status().isOk())
@@ -132,12 +132,41 @@ class AdminAnalyticsControllerTest {
                 .andExpect(jsonPath("$[1].percent").value(40.0));
     }
 
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void countries_withZeroTotal_returnsZeroPercent() throws Exception {
+        CountryViewStatDTO country = new CountryViewStatDTO();
+        country.setCountry("未知");
+        country.setViewCount(0L);
+        when(viewLogStatsPort.countryStats(any(), any())).thenReturn(List.of(country));
+
+        mockMvc.perform(get("/admin/analytics/api/countries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].percent").value(0.0));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void countryPosts_returnsJsonWithPercent() throws Exception {
+        PostViewRankDTO rank = new PostViewRankDTO();
+        rank.setPostId(3L);
+        rank.setPostTitle("Java");
+        rank.setViewCount(10L);
+        when(viewLogStatsPort.countryTopPosts(eq("中国"), any(), any(), eq(20)))
+                .thenReturn(List.of(rank));
+
+        mockMvc.perform(get("/admin/analytics/api/country-posts").param("country", "中国"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].postId").value(3))
+                .andExpect(jsonPath("$[0].percent").value(100.0));
+    }
+
     // ── post-trend：format 由时间跨度决定 ─────────────────
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
     void postTrend_oneWeekSpan_usesDayFormat() throws Exception {
-        when(viewLogStatsMapper.postTrend(any(), any(), any(), any()))
+        when(viewLogStatsPort.postTrend(any(), any(), any(), any()))
                 .thenReturn(List.of());
 
         // 用显式 from/to 指定一周跨度，避免依赖"今天是周几"导致边界不稳定
@@ -148,14 +177,14 @@ class AdminAnalyticsControllerTest {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
-        verify(viewLogStatsMapper).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
+        verify(viewLogStatsPort).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
         assertThat(fmtCaptor.getValue()).isEqualTo("%m-%d");
     }
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
     void postTrend_yearPeriod_usesMonthFormat() throws Exception {
-        when(viewLogStatsMapper.postTrend(any(), any(), any(), any()))
+        when(viewLogStatsPort.postTrend(any(), any(), any(), any()))
                 .thenReturn(List.of());
 
         mockMvc.perform(get("/admin/analytics/api/post-trend")
@@ -164,14 +193,30 @@ class AdminAnalyticsControllerTest {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
-        verify(viewLogStatsMapper).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
+        verify(viewLogStatsPort).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
         assertThat(fmtCaptor.getValue()).isEqualTo("%Y-%m");
     }
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
+    void postTrend_returnsCompletedTrend() throws Exception {
+        when(viewLogStatsPort.postTrend(any(), any(), any(), eq("%m-%d")))
+                .thenReturn(List.of(trendPoint("07-02", 3)));
+
+        mockMvc.perform(get("/admin/analytics/api/post-trend")
+                        .param("postId", "42")
+                        .param("from", "2026-07-01")
+                        .param("to", "2026-07-03"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[1].label").value("07-02"))
+                .andExpect(jsonPath("$[1].viewCount").value(3));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
     void overviewTrend_forOneDay_fillsEveryHourFromMidnight() throws Exception {
-        when(viewLogStatsMapper.overviewTrend(any(), any(), eq("%H:00")))
+        when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
                 .thenReturn(List.of(trendPoint("02:00", 4)));
 
         mockMvc.perform(get("/admin/analytics/api/overview-trend")
@@ -189,7 +234,7 @@ class AdminAnalyticsControllerTest {
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
     void overviewTrend_forMultipleDays_usesDatesAndFillsMissingDays() throws Exception {
-        when(viewLogStatsMapper.overviewTrend(any(), any(), eq("%m-%d")))
+        when(viewLogStatsPort.overviewTrend(any(), any(), eq("%m-%d")))
                 .thenReturn(List.of(trendPoint("07-02", 3)));
 
         mockMvc.perform(get("/admin/analytics/api/overview-trend")
@@ -249,6 +294,14 @@ class AdminAnalyticsControllerTest {
     }
 
     @Test
+    void toEndTime_usesExplicitEndOfDayAndCurrentTimeForTodayOrOtherPeriods() {
+        assertThat(AdminAnalyticsController.toEndTime("week", "2026-06-30"))
+                .isEqualTo(LocalDateTime.of(2026, 6, 30, 23, 59, 59));
+        assertThat(AdminAnalyticsController.toEndTime("today", null)).isBeforeOrEqualTo(LocalDateTime.now());
+        assertThat(AdminAnalyticsController.toEndTime("week", null)).isBeforeOrEqualTo(LocalDateTime.now());
+    }
+
+    @Test
     void toDateFormat_within2Days_returnsHourFormat() {
         LocalDateTime start = LocalDateTime.now().minusHours(10);
         assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.now()))
@@ -277,8 +330,8 @@ class AdminAnalyticsControllerTest {
                 .isEqualTo("%Y-%m");
     }
 
-    private static TrendPoint trendPoint(String label, long viewCount) {
-        TrendPoint point = new TrendPoint();
+    private static TrendPointDTO trendPoint(String label, long viewCount) {
+        TrendPointDTO point = new TrendPointDTO();
         point.setLabel(label);
         point.setViewCount(viewCount);
         return point;

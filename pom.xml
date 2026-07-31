@@ -35,6 +35,7 @@
              newest Java 17/Lettuce line available from the public repository. -->
         <bucket4j.version>8.14.0</bucket4j.version>
         <jacoco.version>0.8.15</jacoco.version>
+        <archunit.version>1.4.2</archunit.version>
         <coverage.data-file>${maven.multiModuleProjectDirectory}/bytedepth-coverage/target/jacoco-merged.exec</coverage.data-file>
     </properties>
 

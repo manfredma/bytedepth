@@ -1,8 +1,9 @@
 package manfred.bytedepth.adapter.web.portal;
 
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.app.analytics.PostViewLogPort;
+import manfred.bytedepth.app.analytics.ReadingProgressTokenPort;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
-import manfred.bytedepth.infrastructure.stats.PostViewLogMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,8 +19,8 @@ public class PostReadingController {
     private static final int MAX_ACTIVE_READ_SECONDS = 86_400;
 
     private final GetPostQryExe getPostQryExe;
-    private final PostViewLogMapper postViewLogMapper;
-    private final ReadingProgressTokenService readingProgressTokenService;
+    private final PostViewLogPort postViewLogPort;
+    private final ReadingProgressTokenPort readingProgressTokenPort;
 
     @PostMapping("/{slug}/reading-progress")
     public ResponseEntity<Void> recordProgress(@PathVariable String slug,
@@ -30,10 +31,10 @@ public class PostReadingController {
             return ResponseEntity.badRequest().build();
         }
         Long postId = getPostQryExe.executeBySlug(slug).getId();
-        if (!readingProgressTokenService.belongsToPost(request.visitToken(), postId)) {
+        if (!readingProgressTokenPort.belongsToPost(request.visitToken(), postId)) {
             return ResponseEntity.noContent().build();
         }
-        postViewLogMapper.upsertReadingProgress(postId, request.visitToken(), request.activeReadSeconds(),
+        postViewLogPort.upsertReadingProgress(postId, request.visitToken(), request.activeReadSeconds(),
                 request.maxScrollDepth(), request.completed());
         return ResponseEntity.noContent().build();
     }

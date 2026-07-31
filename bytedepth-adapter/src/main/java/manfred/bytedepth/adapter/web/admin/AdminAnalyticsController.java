@@ -1,10 +1,10 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
-import manfred.bytedepth.infrastructure.stats.ViewLogStatsMapper;
-import manfred.bytedepth.infrastructure.stats.dto.CountryViewStat;
-import manfred.bytedepth.infrastructure.stats.dto.PostViewRank;
-import manfred.bytedepth.infrastructure.stats.dto.TrendPoint;
+import manfred.bytedepth.app.analytics.CountryViewStatDTO;
+import manfred.bytedepth.app.analytics.PostViewRankDTO;
+import manfred.bytedepth.app.analytics.TrendPointDTO;
+import manfred.bytedepth.app.analytics.ViewLogStatsPort;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,7 +33,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AdminAnalyticsController {
 
-    private final ViewLogStatsMapper viewLogStatsMapper;
+    private final ViewLogStatsPort viewLogStatsPort;
 
     /** 页面骨架，数据全部由前端 AJAX 拉取。 */
     @GetMapping
@@ -43,36 +43,36 @@ public class AdminAnalyticsController {
 
     @GetMapping("/api/top-posts")
     @ResponseBody
-    public List<PostViewRank> topPosts(
+    public List<PostViewRankDTO> topPosts(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
-        List<PostViewRank> rows = viewLogStatsMapper.topPosts(start, end, limit);
-        long total = rows.stream().mapToLong(PostViewRank::getViewCount).sum();
+        List<PostViewRankDTO> rows = viewLogStatsPort.topPosts(start, end, limit);
+        long total = rows.stream().mapToLong(PostViewRankDTO::getViewCount).sum();
         rows.forEach(r -> r.setPercent(pct(r.getViewCount(), total)));
         return rows;
     }
 
     @GetMapping("/api/countries")
     @ResponseBody
-    public List<CountryViewStat> countries(
+    public List<CountryViewStatDTO> countries(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
-        List<CountryViewStat> rows = viewLogStatsMapper.countryStats(start, end);
-        long total = rows.stream().mapToLong(CountryViewStat::getViewCount).sum();
+        List<CountryViewStatDTO> rows = viewLogStatsPort.countryStats(start, end);
+        long total = rows.stream().mapToLong(CountryViewStatDTO::getViewCount).sum();
         rows.forEach(r -> r.setPercent(pct(r.getViewCount(), total)));
         return rows;
     }
 
     @GetMapping("/api/country-posts")
     @ResponseBody
-    public List<PostViewRank> countryPosts(
+    public List<PostViewRankDTO> countryPosts(
             @RequestParam String country,
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(defaultValue = "20") int limit,
@@ -80,15 +80,15 @@ public class AdminAnalyticsController {
             @RequestParam(required = false) String to) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
-        List<PostViewRank> rows = viewLogStatsMapper.countryTopPosts(country, start, end, limit);
-        long total = rows.stream().mapToLong(PostViewRank::getViewCount).sum();
+        List<PostViewRankDTO> rows = viewLogStatsPort.countryTopPosts(country, start, end, limit);
+        long total = rows.stream().mapToLong(PostViewRankDTO::getViewCount).sum();
         rows.forEach(r -> r.setPercent(pct(r.getViewCount(), total)));
         return rows;
     }
 
     @GetMapping("/api/post-trend")
     @ResponseBody
-    public List<TrendPoint> postTrend(
+    public List<TrendPointDTO> postTrend(
             @RequestParam Long postId,
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
@@ -96,19 +96,19 @@ public class AdminAnalyticsController {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end);
-        return completeTrend(viewLogStatsMapper.postTrend(postId, start, end, format), start, end, format);
+        return completeTrend(viewLogStatsPort.postTrend(postId, start, end, format), start, end, format);
     }
 
     @GetMapping("/api/overview-trend")
     @ResponseBody
-    public List<TrendPoint> overviewTrend(
+    public List<TrendPointDTO> overviewTrend(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end);
-        return completeTrend(viewLogStatsMapper.overviewTrend(start, end, format), start, end, format);
+        return completeTrend(viewLogStatsPort.overviewTrend(start, end, format), start, end, format);
     }
 
     // ── 工具方法（package-private 供测试直接调用）─────────────────────────
@@ -152,12 +152,12 @@ public class AdminAnalyticsController {
     /**
      * SQL 仅返回有访问的桶；在这里补齐零值桶，让坐标轴反映实际时间范围。
      */
-    static List<TrendPoint> completeTrend(List<TrendPoint> source, LocalDateTime start,
+    static List<TrendPointDTO> completeTrend(List<TrendPointDTO> source, LocalDateTime start,
                                           LocalDateTime end, String format) {
         Map<String, Long> counts = new HashMap<>();
         source.forEach(point -> counts.merge(point.getLabel(), point.getViewCount(), Long::sum));
 
-        List<TrendPoint> result = new ArrayList<>();
+        List<TrendPointDTO> result = new ArrayList<>();
         if ("%H:00".equals(format)) {
             LocalDateTime cursor = start.truncatedTo(ChronoUnit.HOURS);
             LocalDateTime last = end.truncatedTo(ChronoUnit.HOURS);
@@ -183,8 +183,8 @@ public class AdminAnalyticsController {
         return result;
     }
 
-    private static void addTrendPoint(List<TrendPoint> result, String label, Map<String, Long> counts) {
-        TrendPoint point = new TrendPoint();
+    private static void addTrendPoint(List<TrendPointDTO> result, String label, Map<String, Long> counts) {
+        TrendPointDTO point = new TrendPointDTO();
         point.setLabel(label);
         point.setViewCount(counts.getOrDefault(label, 0L));
         result.add(point);

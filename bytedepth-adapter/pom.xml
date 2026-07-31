@@ -16,11 +16,6 @@
             <artifactId>bytedepth-app</artifactId>
         </dependency>
         <dependency>
-            <!-- adapter 层需要引用 SiteUserDetails（携带 userId 的 UserDetails 实现） -->
-            <groupId>manfred.bytedepth</groupId>
-            <artifactId>bytedepth-infrastructure</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>

@@ -1,14 +1,11 @@
-package manfred.bytedepth.infrastructure.user;
+package manfred.bytedepth.adapter.web.security;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 
-/**
- * 自定义 UserDetails，携带用户 ID，使 Controller 能通过
- * {@code @AuthenticationPrincipal SiteUserDetails} 直接获取数据库 ID。
- */
+/** Spring Security principal used by web adapters and carrying the local user ID. */
 public class SiteUserDetails implements UserDetails {
 
     private final Long id;
