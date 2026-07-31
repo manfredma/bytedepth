@@ -49,4 +49,22 @@ class MarkdownRendererTest {
                 .contains("<pre><code class=\"language-mermaid\">")
                 .contains("graph TD");
     }
+
+    @Test
+    void preservesValidatedImageWidthFromMarkdownTitle() {
+        String rendered = renderer.render("![架构图](/images/diagram.png \"width=700\")");
+
+        assertThat(rendered)
+                .contains("<img src=\"/images/diagram.png\" alt=\"架构图\" width=\"700\" />")
+                .doesNotContain("title=");
+    }
+
+    @Test
+    void ignoresImageWidthOutsideTheAcceptedRange() {
+        String rendered = renderer.render("![架构图](/images/diagram.png \"width=99\")");
+
+        assertThat(rendered)
+                .contains("<img src=\"/images/diagram.png\" alt=\"架构图\" />")
+                .doesNotContain("width=");
+    }
 }
