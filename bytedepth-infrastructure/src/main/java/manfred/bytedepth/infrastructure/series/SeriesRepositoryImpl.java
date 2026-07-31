@@ -73,6 +73,17 @@ public class SeriesRepositoryImpl implements SeriesRepository {
     }
 
     @Override
+    public List<SeriesPostItem> findCandidatesForSeriesByAuthor(Long seriesId, Long authorId, String keyword, int page, int size) {
+        return seriesMapper.findCandidatesForSeriesByAuthor(seriesId, authorId, keyword, (page - 1) * size, size).stream()
+                .map(this::toSeriesPostItem).collect(Collectors.toList());
+    }
+
+    @Override
+    public long countCandidatesForSeriesByAuthor(Long seriesId, Long authorId, String keyword) {
+        return seriesMapper.countCandidatesForSeriesByAuthor(seriesId, authorId, keyword);
+    }
+
+    @Override
     public int findMaxOrderInSeries(Long seriesId) {
         return seriesMapper.findMaxOrderInSeries(seriesId);
     }
@@ -91,16 +102,26 @@ public class SeriesRepositoryImpl implements SeriesRepository {
         ).stream().map(this::toEntity).collect(Collectors.toList());
     }
 
+    @Override
+    public List<Series> findByAuthorId(Long authorId) {
+        return seriesMapper.selectList(
+                new LambdaQueryWrapper<SeriesDO>()
+                        .eq(SeriesDO::getAuthorId, authorId)
+                        .orderByAsc(SeriesDO::getName)
+        ).stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
     private SeriesDO toDO(Series series) {
         SeriesDO d = new SeriesDO();
         d.setId(series.getId());
         d.setName(series.getName());
         d.setSlug(series.getSlug());
         d.setDescription(series.getDescription());
+        d.setAuthorId(series.getAuthorId());
         return d;
     }
 
     private Series toEntity(SeriesDO d) {
-        return Series.reconstruct(d.getId(), d.getName(), d.getSlug(), d.getDescription());
+        return Series.reconstruct(d.getId(), d.getName(), d.getSlug(), d.getDescription(), d.getAuthorId());
     }
 }

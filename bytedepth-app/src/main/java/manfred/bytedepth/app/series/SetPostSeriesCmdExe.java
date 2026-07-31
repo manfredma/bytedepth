@@ -16,10 +16,10 @@ public class SetPostSeriesCmdExe {
     /**
      * 给文章设置专栏。seriesSlug 不存在时自动创建（name = slug）。
      */
-    public void execute(Long postId, String seriesSlug, String seriesName, Integer seriesOrder) {
+    public void execute(Long postId, String seriesSlug, String seriesName, Integer seriesOrder, Long authorId) {
         Series series = seriesRepository.findBySlug(seriesSlug)
                 .orElseGet(() -> seriesRepository.save(
-                        Series.create(seriesName != null ? seriesName : seriesSlug, seriesSlug, null)
+                        Series.create(seriesName != null ? seriesName : seriesSlug, seriesSlug, null, authorId)
                 ));
         postRepository.setPostSeries(postId, series.getId(), seriesOrder);
     }

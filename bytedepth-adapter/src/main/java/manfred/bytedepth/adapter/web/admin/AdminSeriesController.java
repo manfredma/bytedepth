@@ -1,8 +1,11 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.adapter.web.security.ContentOwnershipGuard;
 import manfred.bytedepth.app.series.SetPostSeriesCmdExe;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,9 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/admin/posts")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('admin:dashboard:view')")
 public class AdminSeriesController {
 
     private final SetPostSeriesCmdExe setPostSeriesCmdExe;
+    private final ContentOwnershipGuard contentOwnershipGuard;
 
     /**
      * POST /admin/posts/{id}/series
@@ -25,11 +30,13 @@ public class AdminSeriesController {
      */
     @PostMapping("/{id}/series")
     public ResponseEntity<Void> setSeries(
+            Authentication authentication,
             @PathVariable Long id,
             @RequestParam String seriesSlug,
             @RequestParam(required = false) String seriesName,
             @RequestParam Integer seriesOrder) {
-        setPostSeriesCmdExe.execute(id, seriesSlug, seriesName, seriesOrder);
+        setPostSeriesCmdExe.execute(id, seriesSlug, seriesName, seriesOrder,
+                contentOwnershipGuard.currentUserId(authentication));
         return ResponseEntity.ok().build();
     }
 }

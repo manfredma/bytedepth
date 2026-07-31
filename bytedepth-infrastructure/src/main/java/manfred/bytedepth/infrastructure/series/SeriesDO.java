@@ -3,9 +3,11 @@ package manfred.bytedepth.infrastructure.series;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @TableName("series")
 public class SeriesDO {
     @TableId(type = IdType.AUTO)
@@ -13,4 +15,5 @@ public class SeriesDO {
     private String name;
     private String slug;
     private String description;
+    private Long authorId;
 }

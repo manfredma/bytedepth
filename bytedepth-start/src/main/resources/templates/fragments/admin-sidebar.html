@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
 <!--
   后台侧边栏 fragment。
@@ -21,52 +21,52 @@
 
     <!-- 内容管理 -->
     <div class="admin-sidebar-section">内容管理</div>
-    <a href="/admin/posts" class="admin-sidebar-item"
+    <a href="/admin/posts" class="admin-sidebar-item" sec:authorize="hasAnyAuthority('admin:dashboard:view', 'blog:post:create')"
        th:classappend="${active == 'posts'} ? ' active' : ''">
         <span class="si-icon">📝</span>文章管理
     </a>
-    <a href="/admin/comments" class="admin-sidebar-item"
+    <a href="/admin/comments" class="admin-sidebar-item" sec:authorize="hasAuthority('admin:dashboard:view')"
        th:classappend="${active == 'comments'} ? ' active' : ''">
         <span class="si-icon">💬</span>评论管理
     </a>
-    <a href="/admin/categories" class="admin-sidebar-item"
+    <a href="/admin/categories" class="admin-sidebar-item" sec:authorize="hasAuthority('admin:dashboard:view')"
        th:classappend="${active == 'categories'} ? ' active' : ''">
         <span class="si-icon">🗂️</span>分类管理
     </a>
-    <a href="/admin/tags" class="admin-sidebar-item"
+    <a href="/admin/tags" class="admin-sidebar-item" sec:authorize="hasAuthority('admin:dashboard:view')"
        th:classappend="${active == 'tags'} ? ' active' : ''">
         <span class="si-icon">🏷️</span>标签管理
     </a>
-    <a href="/admin/series" class="admin-sidebar-item"
+    <a href="/admin/series" class="admin-sidebar-item" sec:authorize="hasAnyAuthority('admin:dashboard:view', 'blog:series:create:own', 'blog:series:edit:own')"
        th:classappend="${active == 'series'} ? ' active' : ''">
         <span class="si-icon">📚</span>专栏管理
     </a>
-    <a href="/admin/users" class="admin-sidebar-item"
+    <a href="/admin/users" class="admin-sidebar-item" sec:authorize="hasAuthority('admin:dashboard:view')"
        th:classappend="${active == 'users'} ? ' active' : ''">
         <span class="si-icon">👥</span>用户审核
     </a>
 
     <!-- 数据分析 -->
-    <div class="admin-sidebar-section">数据分析</div>
-    <a href="/admin/analytics" class="admin-sidebar-item"
+    <div class="admin-sidebar-section" sec:authorize="hasAuthority('admin:dashboard:view')">数据分析</div>
+    <a href="/admin/analytics" class="admin-sidebar-item" sec:authorize="hasAuthority('admin:dashboard:view')"
        th:classappend="${active == 'analytics'} ? ' active' : ''">
         <span class="si-icon">📊</span>访问统计
     </a>
-    <a href="/admin/view-logs" class="admin-sidebar-item"
+    <a href="/admin/view-logs" class="admin-sidebar-item" sec:authorize="hasAuthority('admin:dashboard:view')"
        th:classappend="${active == 'view-logs'} ? ' active' : ''">
         <span class="si-icon">📋</span>访问日志
     </a>
 
     <!-- 系统运维 -->
-    <div class="admin-sidebar-section">系统运维</div>
-    <a href="/admin/ops" class="admin-sidebar-item"
+    <div class="admin-sidebar-section" sec:authorize="hasAuthority('admin:dashboard:view')">系统运维</div>
+    <a href="/admin/ops" class="admin-sidebar-item" sec:authorize="hasAuthority('admin:dashboard:view')"
        th:classappend="${active == 'ops'} ? ' active' : ''">
         <span class="si-icon">🛠️</span>系统运维
     </a>
 
     <!-- 网站 -->
-    <div class="admin-sidebar-section">网站</div>
-    <a href="/admin/projects/new" class="admin-sidebar-item"
+    <div class="admin-sidebar-section" sec:authorize="hasAuthority('admin:dashboard:view')">网站</div>
+    <a href="/admin/projects/new" class="admin-sidebar-item" sec:authorize="hasAuthority('admin:dashboard:view')"
        th:classappend="${active == 'projects'} ? ' active' : ''">
         <span class="si-icon">🚀</span>项目展示
     </a>

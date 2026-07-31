@@ -80,6 +80,16 @@ public class SecurityConfig {
                 .ignoringRequestMatchers(new AntPathRequestMatcher("/posts/*/reading-progress", HttpMethod.POST.name()))
             )
             .authorizeHttpRequests(auth -> auth
+                // 个人内容工作区：Controller 继续按作者归属做数据与操作校验。
+                .requestMatchers(HttpMethod.GET, "/admin")
+                    .hasAnyAuthority("admin:dashboard:view", "blog:post:create", "blog:series:create:own")
+                .requestMatchers(HttpMethod.POST, "/admin/posts/*/series")
+                    .hasAuthority("admin:dashboard:view")
+                .requestMatchers("/admin/posts/**").hasAnyAuthority("admin:dashboard:view", "blog:post:create")
+                .requestMatchers("/admin/series/**")
+                    .hasAnyAuthority("admin:dashboard:view", "blog:series:create:own", "blog:series:edit:own")
+                .requestMatchers(HttpMethod.POST, "/admin/images/upload")
+                    .hasAnyAuthority("admin:dashboard:view", "blog:post:create")
                 // 后台：需要 admin 仪表盘权限（粗粒度守卫，各方法再用 @PreAuthorize 细化）
                 .requestMatchers("/admin/**").hasAuthority("admin:dashboard:view")
                 // 写评论、创建/发布文章：至少需要登录
@@ -104,11 +114,6 @@ public class SecurityConfig {
                 .key(rememberMeKey)
             )
             .logout(logout -> logout
-                .addLogoutHandler((request, response, authentication) -> {
-                    if (authentication != null) {
-                        persistentTokenRepository.removeUserTokens(authentication.getName());
-                    }
-                })
                 .logoutSuccessUrl("/")
                 .permitAll()
             )

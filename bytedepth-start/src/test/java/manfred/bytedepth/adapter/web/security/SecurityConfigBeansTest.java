@@ -1,0 +1,39 @@
+package manfred.bytedepth.adapter.web.security;
+
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitService;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+
+import javax.sql.DataSource;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+
+class SecurityConfigBeansTest {
+
+    private final SecurityConfig config = new SecurityConfig();
+
+    @Test
+    void infrastructureBeans_areConfiguredWithTheirDependencies() {
+        PersistentTokenRepository tokenRepository = config.persistentTokenRepository(mock(DataSource.class));
+        PasswordEncoder encoder = config.passwordEncoder();
+        DaoAuthenticationProvider provider = config.authenticationProvider(mock(org.springframework.security.core.userdetails.UserDetailsService.class), encoder);
+
+        assertNotNull(tokenRepository);
+        assertNotNull(provider);
+        assertTrue(encoder.matches("secret", encoder.encode("secret")));
+    }
+
+    @Test
+    void rateLimitFilterRegistration_isDisabledToAvoidDoubleCharging() {
+        var filter = config.rateLimitFilter(mock(RateLimitService.class), new RateLimitProperties());
+        var registration = config.rateLimitFilterRegistration(filter);
+
+        assertNotNull(filter);
+        assertTrue(!registration.isEnabled());
+    }
+}

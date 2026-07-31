@@ -46,7 +46,7 @@
                 </div>
             </div>
             <div class="nav-auth">
-                <a sec:authorize="hasAuthority('admin:dashboard:view')"
+                <a sec:authorize="hasAnyAuthority('admin:dashboard:view', 'blog:post:create', 'blog:series:create:own')"
                    th:href="@{/admin}" class="nav-admin">后台</a>
                 <a sec:authorize="hasAuthority('blog:post:create')"
                    th:href="@{/posts/new}" class="nav-write">写文章</a>
