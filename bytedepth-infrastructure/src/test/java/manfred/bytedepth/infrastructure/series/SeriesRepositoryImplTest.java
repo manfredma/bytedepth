@@ -55,10 +55,10 @@ class SeriesRepositoryImplTest {
         when(mapper.findCandidatesForSeries(3L, "java", 10, 10)).thenReturn(List.of(item));
         when(mapper.findCandidatesForSeriesByAuthor(3L, 7L, "java", 10, 10)).thenReturn(List.of(item));
 
-        assertEquals("post", repository.findPublishedPostsBySeries(3L).getFirst().slug());
-        assertEquals("内容", repository.findAllPostsBySeries(3L).getFirst().content());
-        assertEquals(9L, repository.findCandidatesForSeries(3L, "java", 2, 10).getFirst().id());
-        assertEquals("DRAFT", repository.findCandidatesForSeriesByAuthor(3L, 7L, "java", 2, 10).getFirst().status());
+        assertEquals("post", repository.findPublishedPostsBySeries(3L).get(0).slug());
+        assertEquals("内容", repository.findAllPostsBySeries(3L).get(0).content());
+        assertEquals(9L, repository.findCandidatesForSeries(3L, "java", 2, 10).get(0).id());
+        assertEquals("DRAFT", repository.findCandidatesForSeriesByAuthor(3L, 7L, "java", 2, 10).get(0).status());
     }
 
     @Test
@@ -86,8 +86,8 @@ class SeriesRepositoryImplTest {
         SeriesDO row = seriesRow();
         when(mapper.selectList(any())).thenReturn(List.of(row));
 
-        assertEquals("Java", repository.findAll().getFirst().getName());
-        assertEquals(7L, repository.findByAuthorId(7L).getFirst().getAuthorId());
+        assertEquals("Java", repository.findAll().get(0).getName());
+        assertEquals(7L, repository.findByAuthorId(7L).get(0).getAuthorId());
     }
 
     private SeriesDO seriesRow() {

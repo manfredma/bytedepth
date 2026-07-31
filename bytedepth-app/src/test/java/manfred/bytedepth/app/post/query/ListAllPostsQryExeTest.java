@@ -33,7 +33,7 @@ class ListAllPostsQryExeTest {
         ListAllPostsQryExe.PageResult result = query.execute(2, 5);
 
         assertEquals(8L, result.total());
-        assertEquals(1L, result.posts().getFirst().getId());
+        assertEquals(1L, result.posts().get(0).getId());
         verify(postRepository).findPage(2, 5);
     }
 
@@ -47,8 +47,8 @@ class ListAllPostsQryExeTest {
         ListAllPostsQryExe.PageResult result = query.executeByAuthor(7L, 1, 20);
 
         assertEquals(1L, result.total());
-        assertEquals("Java", result.posts().getFirst().getSeriesName());
-        assertEquals("java", result.posts().getFirst().getSeriesSlug());
+        assertEquals("Java", result.posts().get(0).getSeriesName());
+        assertEquals("java", result.posts().get(0).getSeriesSlug());
         verify(authorPostRepository).findPageByAuthorId(7L, 1, 20);
         verify(authorPostRepository).countByAuthorId(7L);
     }

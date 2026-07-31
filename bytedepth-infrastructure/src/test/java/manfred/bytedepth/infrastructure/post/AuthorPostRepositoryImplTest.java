@@ -34,9 +34,9 @@ class AuthorPostRepositoryImplTest {
         var posts = repository.findPageByAuthorId(7L, 2, 5);
 
         assertEquals(2, posts.size());
-        assertEquals(9L, posts.getFirst().getId());
-        assertEquals(3L, posts.getFirst().getSeriesId());
-        assertEquals(2, posts.getFirst().getSeriesOrder());
+        assertEquals(9L, posts.get(0).getId());
+        assertEquals(3L, posts.get(0).getSeriesId());
+        assertEquals(2, posts.get(0).getSeriesOrder());
         assertEquals(null, posts.get(1).getSeriesId());
         verify(postMapper).selectPage(any(Page.class), any());
     }
