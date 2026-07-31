@@ -60,6 +60,26 @@ class MarkdownRendererTest {
     }
 
     @Test
+    void rendersStandardMarkdownImageWithoutATitle() {
+        String rendered = renderer.render("![历史图片](/images/cache.png)");
+
+        assertThat(rendered)
+                .contains("<img src=\"/images/cache.png\" alt=\"历史图片\" />")
+                .doesNotContain("width=")
+                .doesNotContain("title=");
+    }
+
+    @Test
+    void rendersLegacyMarkdownImageWithANonWidthTitle() {
+        String rendered = renderer.render("![历史图片](/images/cache.png \"缓存架构图\")");
+
+        assertThat(rendered)
+                .contains("<img src=\"/images/cache.png\" alt=\"历史图片\" />")
+                .doesNotContain("width=")
+                .doesNotContain("title=");
+    }
+
+    @Test
     void ignoresImageWidthOutsideTheAcceptedRange() {
         String rendered = renderer.render("![架构图](/images/diagram.png \"width=99\")");
 

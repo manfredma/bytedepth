@@ -87,8 +87,9 @@ public class MarkdownRenderer {
         @Override
         public void setAttributes(Node node, String tagName, Map<String, String> attributes) {
             if (node instanceof Image image) {
-                var matcher = IMAGE_WIDTH_TITLE.matcher(image.getTitle());
-                if (matcher.matches()) {
+                String imageTitle = image.getTitle();
+                var matcher = imageTitle == null ? null : IMAGE_WIDTH_TITLE.matcher(imageTitle);
+                if (matcher != null && matcher.matches()) {
                     attributes.put("width", matcher.group(1));
                 }
                 attributes.remove("title");
