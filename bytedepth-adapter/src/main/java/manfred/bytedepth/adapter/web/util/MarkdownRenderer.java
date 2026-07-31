@@ -2,6 +2,7 @@ package manfred.bytedepth.adapter.web.util;
 
 import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.Heading;
+import org.commonmark.node.Image;
 import org.commonmark.node.Node;
 import org.commonmark.node.Text;
 import org.commonmark.node.Code;
@@ -34,6 +35,9 @@ public class MarkdownRenderer {
                     .allowAttributes("class")
                     .matching(Pattern.compile("language-[A-Za-z0-9_-]{1,64}"))
                     .onElements("code")
+                    .allowAttributes("width")
+                    .matching(Pattern.compile("(?:[1-9]\\d{2}|1\\d{3}|2[0-4]\\d{2})"))
+                    .onElements("img")
                     .allowAttributes("id").onElements("h1", "h2", "h3", "h4", "h5", "h6")
                     .toFactory());
 
@@ -77,8 +81,18 @@ public class MarkdownRenderer {
     }
 
     private static class HeadingIdProvider implements AttributeProvider {
+        private static final Pattern IMAGE_WIDTH_TITLE =
+                Pattern.compile("^width=((?:[1-9]\\d{2}|1\\d{3}|2[0-4]\\d{2}))$");
+
         @Override
         public void setAttributes(Node node, String tagName, Map<String, String> attributes) {
+            if (node instanceof Image image) {
+                var matcher = IMAGE_WIDTH_TITLE.matcher(image.getTitle());
+                if (matcher.matches()) {
+                    attributes.put("width", matcher.group(1));
+                }
+                attributes.remove("title");
+            }
             if (node instanceof Heading) {
                 String text = extractText(node);
                 attributes.put("id", text);
