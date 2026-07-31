@@ -2,6 +2,7 @@ package manfred.bytedepth.adapter.web.ratelimit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -12,6 +13,8 @@ import static org.mockito.Mockito.when;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
+import manfred.bytedepth.app.ratelimit.RateLimitDecision;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -20,16 +23,16 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 class RateLimitFilterTest {
 
-    private RateLimitService rateLimitService;
+    private RateLimitPort rateLimitPort;
     private FilterChain filterChain;
     private RateLimitFilter filter;
 
     @BeforeEach
     void setUp() {
-        rateLimitService = mock(RateLimitService.class);
+        rateLimitPort = mock(RateLimitPort.class);
         filterChain = mock(FilterChain.class);
-        filter = new RateLimitFilter(rateLimitService, new RateLimitProperties());
-        when(rateLimitService.tryConsume(any(), any(), any())).thenReturn(RateLimitDecision.permit());
+        filter = new RateLimitFilter(rateLimitPort, new RateLimitProperties());
+        when(rateLimitPort.tryConsume(any(), anyLong(), any(), any())).thenReturn(RateLimitDecision.permit());
     }
 
     @Test
@@ -41,13 +44,13 @@ class RateLimitFilterTest {
         filter.doFilter(request, response, filterChain);
 
         verify(filterChain).doFilter(request, response);
-        verify(rateLimitService).tryConsume(eq("login-ip"), any(), eq("203.0.113.10"));
-        verify(rateLimitService).tryConsume(eq("login-username"), any(), eq("alice"));
+        verify(rateLimitPort).tryConsume(eq("login-ip"), anyLong(), any(), eq("203.0.113.10"));
+        verify(rateLimitPort).tryConsume(eq("login-username"), anyLong(), any(), eq("alice"));
     }
 
     @Test
     void returns429AndRoundsRetryAfterUpWhenBucketIsExhausted() throws Exception {
-        when(rateLimitService.tryConsume(eq("register-ip"), any(), any()))
+        when(rateLimitPort.tryConsume(eq("register-ip"), anyLong(), any(), any()))
                 .thenReturn(RateLimitDecision.rejected(999_999_999));
         MockHttpServletRequest request = post("/register", "203.0.113.11");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -64,7 +67,7 @@ class RateLimitFilterTest {
 
     @Test
     void returnsAtLeastOneSecondForZeroAndNegativeRetryWaits() throws Exception {
-        when(rateLimitService.tryConsume(eq("register-ip"), any(), any()))
+        when(rateLimitPort.tryConsume(eq("register-ip"), anyLong(), any(), any()))
                 .thenReturn(RateLimitDecision.rejected(0), RateLimitDecision.rejected(-1));
 
         MockHttpServletResponse zeroWait = new MockHttpServletResponse();
@@ -87,8 +90,8 @@ class RateLimitFilterTest {
         filter.doFilter(second, new MockHttpServletResponse(), filterChain);
 
         ArgumentCaptor<String> identities = ArgumentCaptor.forClass(String.class);
-        verify(rateLimitService, org.mockito.Mockito.times(2))
-                .tryConsume(eq("login-username"), any(), identities.capture());
+        verify(rateLimitPort, org.mockito.Mockito.times(2))
+                .tryConsume(eq("login-username"), anyLong(), any(), identities.capture());
         assertThat(identities.getAllValues()).containsExactly("alice", "alice");
     }
 
@@ -101,9 +104,9 @@ class RateLimitFilterTest {
         filter.doFilter(missing, new MockHttpServletResponse(), filterChain);
         filter.doFilter(blank, new MockHttpServletResponse(), filterChain);
 
-        verify(rateLimitService, org.mockito.Mockito.times(2))
-                .tryConsume(eq("login-ip"), any(), eq("203.0.113.12"));
-        verify(rateLimitService, never()).tryConsume(eq("login-username"), any(), any());
+        verify(rateLimitPort, org.mockito.Mockito.times(2))
+                .tryConsume(eq("login-ip"), anyLong(), any(), eq("203.0.113.12"));
+        verify(rateLimitPort, never()).tryConsume(eq("login-username"), anyLong(), any(), any());
     }
 
     @Test
@@ -114,13 +117,13 @@ class RateLimitFilterTest {
 
         filter.doFilter(request, new MockHttpServletResponse(), filterChain);
 
-        verify(rateLimitService).tryConsume(eq("register-ip"), any(), eq("203.0.113.30"));
+        verify(rateLimitPort).tryConsume(eq("register-ip"), anyLong(), any(), eq("203.0.113.30"));
     }
 
     @Test
     void failsOpenWhenRedisRateLimiterThrows() throws Exception {
         doThrow(new IllegalStateException("redis unavailable"))
-                .when(rateLimitService).tryConsume(eq("comment-rating-ip"), any(), any());
+                .when(rateLimitPort).tryConsume(eq("comment-rating-ip"), anyLong(), any(), any());
         MockHttpServletRequest request = post("/posts/example/comments", "203.0.113.13");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -142,14 +145,15 @@ class RateLimitFilterTest {
         for (String[] route : protectedRoutes) {
             filter.doFilter(post(route[0], "203.0.113.20"), new MockHttpServletResponse(), filterChain);
         }
-        verify(rateLimitService, org.mockito.Mockito.times(2))
-                .tryConsume(eq("comment-rating-ip"), any(), eq("203.0.113.20"));
-        verify(rateLimitService).tryConsume(eq("upload-ip"), any(), eq("203.0.113.20"));
-        ArgumentCaptor<RateLimitProperties.Rule> readingProgressRule =
-                ArgumentCaptor.forClass(RateLimitProperties.Rule.class);
-        verify(rateLimitService).tryConsume(eq("reading-progress-ip"), readingProgressRule.capture(), eq("203.0.113.20"));
-        assertThat(readingProgressRule.getValue().getCapacity()).isEqualTo(30);
-        assertThat(readingProgressRule.getValue().getPeriod()).isEqualTo(Duration.ofMinutes(1));
+        verify(rateLimitPort, org.mockito.Mockito.times(2))
+                .tryConsume(eq("comment-rating-ip"), anyLong(), any(), eq("203.0.113.20"));
+        verify(rateLimitPort).tryConsume(eq("upload-ip"), anyLong(), any(), eq("203.0.113.20"));
+        ArgumentCaptor<Long> readingProgressCapacity = ArgumentCaptor.forClass(Long.class);
+        ArgumentCaptor<Duration> readingProgressPeriod = ArgumentCaptor.forClass(Duration.class);
+        verify(rateLimitPort).tryConsume(eq("reading-progress-ip"), readingProgressCapacity.capture(),
+                readingProgressPeriod.capture(), eq("203.0.113.20"));
+        assertThat(readingProgressCapacity.getValue()).isEqualTo(30L);
+        assertThat(readingProgressPeriod.getValue()).isEqualTo(Duration.ofMinutes(1));
     }
 
     @Test
@@ -160,7 +164,7 @@ class RateLimitFilterTest {
 
         filter.doFilter(request, new MockHttpServletResponse(), filterChain);
 
-        verify(rateLimitService).tryConsume(eq("reading-progress-ip"), any(), eq("203.0.113.21"));
+        verify(rateLimitPort).tryConsume(eq("reading-progress-ip"), anyLong(), any(), eq("203.0.113.21"));
     }
 
     @Test
@@ -177,7 +181,7 @@ class RateLimitFilterTest {
         filter.doFilter(outsideContext, new MockHttpServletResponse(), filterChain);
         filter.doFilter(nullContext, new MockHttpServletResponse(), filterChain);
 
-        verify(rateLimitService, never()).tryConsume(any(), any(), any());
+        verify(rateLimitPort, never()).tryConsume(any(), anyLong(), any(), any());
     }
 
     @Test
@@ -188,7 +192,7 @@ class RateLimitFilterTest {
         filter.doFilter(read, new MockHttpServletResponse(), filterChain);
         filter.doFilter(admin, new MockHttpServletResponse(), filterChain);
 
-        verify(rateLimitService, never()).tryConsume(any(), any(), any());
+        verify(rateLimitPort, never()).tryConsume(any(), anyLong(), any(), any());
     }
 
     private MockHttpServletRequest post(String path, String remoteAddr) {

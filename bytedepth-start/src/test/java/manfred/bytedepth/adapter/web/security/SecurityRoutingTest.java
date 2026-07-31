@@ -1,9 +1,9 @@
 package manfred.bytedepth.adapter.web.security;
 
 import manfred.bytedepth.adapter.web.portal.CommentController;
-import manfred.bytedepth.adapter.web.ratelimit.RateLimitDecision;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
-import manfred.bytedepth.adapter.web.ratelimit.RateLimitService;
+import manfred.bytedepth.app.ratelimit.RateLimitDecision;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import manfred.bytedepth.app.comment.SubmitCommentCmdExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import org.junit.jupiter.api.Test;
@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -39,13 +40,13 @@ class SecurityRoutingTest {
     @MockBean private PersistentTokenRepository persistentTokenRepository;
     @MockBean private SubmitCommentCmdExe submitCommentCmdExe;
     @MockBean private PostRepository postRepository;
-    @MockBean private RateLimitService rateLimitService;
+    @MockBean private RateLimitPort rateLimitPort;
     @MockBean private RateLimitProperties rateLimitProperties;
 
     @BeforeEach
     void allowRateLimitedRequests() {
         when(rateLimitProperties.getCommentRatingIp()).thenReturn(new RateLimitProperties.Rule());
-        when(rateLimitService.tryConsume(any(), any(), any())).thenReturn(RateLimitDecision.permit());
+        when(rateLimitPort.tryConsume(any(), anyLong(), any(), any())).thenReturn(RateLimitDecision.permit());
     }
 
     @Test

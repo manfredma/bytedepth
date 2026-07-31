@@ -15,7 +15,7 @@ import manfred.bytedepth.app.ops.OpsTableQryExe;
 import manfred.bytedepth.app.ops.RequestOpsDeploymentCmdExe;
 import manfred.bytedepth.adapter.web.security.SecurityConfig;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
-import manfred.bytedepth.adapter.web.ratelimit.RateLimitService;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -58,9 +59,11 @@ class AdminOpsControllerTest {
     @MockBean
     private PasswordEncoder passwordEncoder;
     @MockBean
+    private PersistentTokenRepository persistentTokenRepository;
+    @MockBean
     private DataSource dataSource;
     @MockBean
-    private RateLimitService rateLimitService;
+    private RateLimitPort rateLimitPort;
     @MockBean
     private RateLimitProperties rateLimitProperties;
     @MockBean

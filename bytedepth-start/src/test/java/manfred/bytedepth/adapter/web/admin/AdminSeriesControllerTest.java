@@ -2,9 +2,9 @@ package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.app.series.SetPostSeriesCmdExe;
 import manfred.bytedepth.adapter.web.security.ContentOwnershipGuard;
-import manfred.bytedepth.adapter.web.ratelimit.RateLimitDecision;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
-import manfred.bytedepth.adapter.web.ratelimit.RateLimitService;
+import manfred.bytedepth.app.ratelimit.RateLimitDecision;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import manfred.bytedepth.adapter.web.security.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,13 +37,13 @@ class AdminSeriesControllerTest {
     @MockBean private SetPostSeriesCmdExe setPostSeriesCmdExe;
     @MockBean private ContentOwnershipGuard contentOwnershipGuard;
     @MockBean private PersistentTokenRepository persistentTokenRepository;
-    @MockBean private RateLimitService rateLimitService;
+    @MockBean private RateLimitPort rateLimitPort;
     @MockBean private RateLimitProperties rateLimitProperties;
 
     @org.junit.jupiter.api.BeforeEach
     void allowRateLimitedRequests() {
         when(rateLimitProperties.getCommentRatingIp()).thenReturn(new RateLimitProperties.Rule());
-        when(rateLimitService.tryConsume(any(), any(), any())).thenReturn(RateLimitDecision.permit());
+        when(rateLimitPort.tryConsume(any(), anyLong(), any(), any())).thenReturn(RateLimitDecision.permit());
         when(contentOwnershipGuard.currentUserId(any())).thenReturn(1L);
     }
 

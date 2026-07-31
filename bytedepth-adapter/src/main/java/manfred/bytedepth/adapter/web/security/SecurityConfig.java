@@ -1,10 +1,9 @@
 package manfred.bytedepth.adapter.web.security;
 
 import jakarta.servlet.http.HttpServletResponse;
-import javax.sql.DataSource;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitFilter;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
-import manfred.bytedepth.adapter.web.ratelimit.RateLimitService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +17,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
@@ -29,8 +27,8 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 public class SecurityConfig {
 
     @Bean
-    public RateLimitFilter rateLimitFilter(RateLimitService rateLimitService, RateLimitProperties properties) {
-        return new RateLimitFilter(rateLimitService, properties);
+    public RateLimitFilter rateLimitFilter(RateLimitPort rateLimitPort, RateLimitProperties properties) {
+        return new RateLimitFilter(rateLimitPort, properties);
     }
 
     /** The filter is invoked by Spring Security only; registering it with the servlet too would charge twice. */
@@ -39,14 +37,6 @@ public class SecurityConfig {
         FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(rateLimitFilter);
         registration.setEnabled(false);
         return registration;
-    }
-
-    @Bean
-    public PersistentTokenRepository persistentTokenRepository(DataSource dataSource) {
-        JdbcTokenRepositoryImpl repository = new JdbcTokenRepositoryImpl();
-        repository.setDataSource(dataSource);
-        repository.setCreateTableOnStartup(false);
-        return repository;
     }
 
     @Bean

@@ -1,4 +1,4 @@
-package manfred.bytedepth.adapter.web.ratelimit;
+package manfred.bytedepth.app.ratelimit;
 
 public record RateLimitDecision(boolean allowed, long nanosToWaitForRefill) {
 

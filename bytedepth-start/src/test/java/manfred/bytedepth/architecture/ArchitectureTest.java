@@ -40,7 +40,8 @@ class ArchitectureTest {
     void webAdapterDoesNotAccessPersistenceOrRedisApis() {
         noClasses().that().resideInAPackage(ADAPTER)
                 .should().dependOnClassesThat().resideInAnyPackage(
-                        "org.apache.ibatis..", "com.baomidou..", "org.springframework.data.redis..")
+                        "org.apache.ibatis..", "com.baomidou..", "org.springframework.data.redis..",
+                        "org.springframework.jdbc..", "javax.sql..", "io.lettuce..", "io.github.bucket4j..")
                 .check(classes);
     }
 

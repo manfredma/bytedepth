@@ -11,6 +11,8 @@ import java.util.Locale;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import manfred.bytedepth.app.ratelimit.RateLimitDecision;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -22,7 +24,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final RateLimitProperties.Rule READING_PROGRESS_RULE =
             new RateLimitProperties.Rule(30, Duration.ofMinutes(1));
 
-    private final RateLimitService rateLimitService;
+    private final RateLimitPort rateLimitPort;
     private final RateLimitProperties properties;
 
     @Override
@@ -31,7 +33,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         List<Attempt> attempts = matchingAttempts(request);
         for (Attempt attempt : attempts) {
             try {
-                RateLimitDecision decision = rateLimitService.tryConsume(attempt.ruleName(), attempt.rule(), attempt.identity());
+                RateLimitDecision decision = rateLimitPort.tryConsume(attempt.ruleName(), attempt.rule().getCapacity(),
+                        attempt.rule().getPeriod(), attempt.identity());
                 if (!decision.allowed()) {
                     reject(response, decision.nanosToWaitForRefill());
                     return;
