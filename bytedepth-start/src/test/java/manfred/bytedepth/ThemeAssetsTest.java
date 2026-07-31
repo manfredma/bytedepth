@@ -191,6 +191,15 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void redisSessionNamespaceIsVersionedToRejectIncompatibleLegacySessions() throws Exception {
+        String config = classpathText("/application.yml");
+
+        assertThat(config)
+                .contains("namespace: bytedepth:session:v2")
+                .doesNotContain("namespace: bytedepth:session\n");
+    }
+
+    @Test
     void publicTemplatesLoadThemeAssets() throws Exception {
         List<String> templates = List.of(
                 "/templates/public/index.html",

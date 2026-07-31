@@ -33,7 +33,9 @@ spring:
     store-type: redis
     timeout: 60m
     redis:
-      namespace: bytedepth:session
+      # 登录主体类曾调整包路径；升级命名空间可使旧 Redis 会话自然失效，
+      # 避免旧序列化数据在请求开始阶段反序列化失败。
+      namespace: bytedepth:session:v2
 
 server:
   port: 8080
