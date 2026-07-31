@@ -53,17 +53,19 @@ public class ImageController {
         if (file.isEmpty() || file.getSize() > MAX_FILE_SIZE) {
             throw badRequest("图片必须大于 0 且不超过 10MB");
         }
+        if (hasSvgExtension(file.getOriginalFilename())) {
+            return new ImageMetadata("svg");
+        }
         try (ImageInputStream input = ImageIO.createImageInputStream(file.getInputStream())) {
-            if (input == null) throw badRequest("无法识别图片格式");
             Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
-            if (!readers.hasNext()) throw badRequest("仅支持 PNG、JPEG 和 GIF 图片");
+            if (!readers.hasNext()) throw badRequest("仅支持 PNG、JPEG、GIF 和 SVG 图片");
             ImageReader reader = readers.next();
             try {
                 String format = reader.getFormatName().toLowerCase(Locale.ROOT);
-                if (!SUPPORTED_FORMATS.contains(format)) throw badRequest("仅支持 PNG、JPEG 和 GIF 图片");
+                if (!SUPPORTED_FORMATS.contains(format)) throw badRequest("仅支持 PNG、JPEG、GIF 和 SVG 图片");
                 reader.setInput(input, true, true);
                 long pixels = (long) reader.getWidth(0) * reader.getHeight(0);
-                if (pixels <= 0 || pixels > MAX_PIXELS) throw badRequest("图片尺寸超过 4000 万像素限制");
+                validatePixelCount(pixels);
                 return new ImageMetadata("jpeg".equals(format) ? "jpg" : format);
             } finally {
                 reader.dispose();
@@ -75,6 +77,16 @@ public class ImageController {
 
     private ResponseStatusException badRequest(String reason) {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, reason);
+    }
+
+    private boolean hasSvgExtension(String originalFilename) {
+        return originalFilename != null && originalFilename.toLowerCase(Locale.ROOT).endsWith(".svg");
+    }
+
+    static void validatePixelCount(long pixels) {
+        if (pixels <= 0 || pixels > MAX_PIXELS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "图片尺寸超过 4000 万像素限制");
+        }
     }
 
     private record ImageMetadata(String extension) { }
