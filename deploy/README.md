@@ -161,6 +161,41 @@ curl --noproxy '*' --resolve bytedepth.cn:443:124.221.143.25 \
 
 两次均应返回 `200`，并额外确认一个现有 `/images/` 文件可通过 HTTPS 读取。DNS 或负载均衡切流仅在全部验收通过后进行；先记录当前解析和 TTL，失败时立即回退。
 
+### 部署后查询功能回归
+
+容器健康与首页 `200` 只说明服务已启动，不能证明查询链路（MySQL、Redis、MeiliSearch 和模板渲染）可用。每次发布后、宣布上线前，必须对**每个已承载流量的节点**执行以下只读回归；双机发布时先用 `--resolve` 分别验证，再验证实际域名。不要在这一步执行创建、编辑、删除、评分或评论等写操作。
+
+其中 `<已发布文章 slug>`（应选择一篇含图片的文章）与 `<已发布专栏 slug>` 应从当前站点选择真实存在的内容，不能使用示例占位路径。所有请求预期为 `200`；旧 ID 文章地址预期先返回 `3xx`，并在跟随跳转后返回 `200`。
+
+```bash
+# 以实际域名验收；双机时，将 BASE_URL 替换为带 --resolve 的同一组 curl 请求分别执行。
+BASE_URL='https://bytedepth.cn'
+POST_SLUG='<已发布文章 slug>'
+POST_ID='<该文章的数字 ID>'
+SERIES_SLUG='<已发布专栏 slug>'
+
+# 首页查询：最新、翻页、热门三种路径均须覆盖，防止排序或分页参数回退。
+curl -fsS -o /dev/null -w 'home latest p1: %{http_code}\n' "$BASE_URL/?sort=latest&page=1"
+curl -fsS -o /dev/null -w 'home latest p2: %{http_code}\n' "$BASE_URL/?sort=latest&page=2"
+curl -fsS -o /dev/null -w 'home hot: %{http_code}\n' "$BASE_URL/?sort=hot&page=1"
+
+# 内容、专栏、搜索与静态图片查询。
+curl -fsS -o /dev/null -w 'posts: %{http_code}\n' "$BASE_URL/posts?page=1"
+curl -fsS -o /dev/null -w 'post detail: %{http_code}\n' "$BASE_URL/posts/$POST_SLUG"
+curl -fsSL -o /dev/null -w 'legacy post redirect: %{http_code}\n' "$BASE_URL/posts/$POST_ID"
+curl -fsS -o /dev/null -w 'columns: %{http_code}\n' "$BASE_URL/columns?page=1"
+curl -fsS -o /dev/null -w 'column detail: %{http_code}\n' "$BASE_URL/columns/$SERIES_SLUG"
+curl -fsS -o /dev/null -w 'search: %{http_code}\n' "$BASE_URL/search?q=java&page=1"
+curl -fsS -o /dev/null -w 'projects: %{http_code}\n' "$BASE_URL/projects"
+# 从已验证文章页面提取一个实际图片路径，再验证图片服务。
+POST_HTML=$(curl -fsSL "$BASE_URL/posts/$POST_SLUG")
+IMAGE_PATH=$(printf '%s' "$POST_HTML" | grep -oE '/images/[^" ?]+' | head -n 1)
+test -n "$IMAGE_PATH"
+curl -fsS -o /dev/null -w 'article image: %{http_code}\n' "$BASE_URL$IMAGE_PATH"
+```
+
+任何查询失败、返回 `5xx`、或排序/分页未保持请求参数时，保留对应节点的应用日志并停止切流或报告上线完成。
+
 ## 7. TLS、备份与恢复
 
 两个提供 HTTPS 的节点都必须具备 `bytedepth.cn` 的有效证书与私钥；证书续期后应在到期前同步到每个入口节点并重载其完整 Compose 服务。证书私钥只能在受控主机间以受限权限传递，不得写入仓库、终端回显、部署日志或聊天记录。
@@ -193,9 +228,10 @@ curl --noproxy '*' --resolve bytedepth.cn:443:124.221.143.25 \
 6. 按节点模式执行 sudo ./deploy/bootstrap-ops-deploy.sh；双机发布时先数据节点、再应用节点。
 7. 不执行任何直接 docker compose 发布命令。
 8. 验证 systemd socket=active、compose 服务状态、HTTPS=200、图片 HTTPS=200。
-9. 若 Docker 拉取镜像失败，先测试镜像源的 /v2/ 可达性；不要让长任务的进度输出占用交互 SSH 通道，应重定向到服务器日志再轮询。
-10. Nginx 已在请求时经 Docker DNS 解析 app；app 重建后无需依赖旧容器 IP。
-11. 仅在所有验收通过后报告部署完成；否则保留日志并报告失败点。
+9. 对每个承载流量的节点执行第 6 节“部署后查询功能回归”：首页最新/热门及翻页、文章列表与详情、旧 ID 跳转、专栏、搜索、项目和文章图片均返回预期状态；不得以首页 `200` 代替回归。
+10. 若 Docker 拉取镜像失败，先测试镜像源的 /v2/ 可达性；不要让长任务的进度输出占用交互 SSH 通道，应重定向到服务器日志再轮询。
+11. Nginx 已在请求时经 Docker DNS 解析 app；app 重建后无需依赖旧容器 IP。
+12. 仅在所有验收通过后报告部署完成；否则保留日志并报告失败点。
 ```
 
 ## 10. 本次双机部署复盘
