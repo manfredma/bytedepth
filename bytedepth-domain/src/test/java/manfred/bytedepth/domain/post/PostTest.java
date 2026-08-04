@@ -2,6 +2,8 @@ package manfred.bytedepth.domain.post;
 
 import manfred.bytedepth.domain.common.DomainException;
 import org.junit.jupiter.api.Test;
+
+import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PostTest {
@@ -69,5 +71,42 @@ class PostTest {
         post.feature();
         post.unfeature();
         assertFalse(post.getFeatured());
+    }
+
+    @Test
+    void createAndReconstructOverloads_preserveEveryPersistedField() {
+        LocalDateTime time = LocalDateTime.of(2026, 8, 4, 12, 0);
+        Post legacy = Post.create("Title", "Content");
+        Post withSlug = Post.create("Title", "Content", 7L, "a-post");
+        Post base = Post.reconstruct(1L, "Title", "Content", PostStatus.PUBLISHED, time, time, time);
+        Post category = Post.reconstruct(2L, "Title", "Content", PostStatus.PUBLISHED, time, time, time, 3L);
+        Post complete = Post.reconstruct(3L, "Title", "Content", PostStatus.PUBLISHED, time, time, time, 4L, 5L, null);
+        Post persisted = Post.reconstruct(4L, "slug", "Title", "Content", PostStatus.PUBLISHED,
+                time, time, time, 6L, 7L, true);
+
+        assertNull(legacy.getAuthorId());
+        assertEquals("a-post", withSlug.getSlug());
+        assertEquals(1L, base.getId());
+        assertEquals(3L, category.getCategoryId());
+        assertFalse(complete.getFeatured());
+        assertEquals("slug", persisted.getSlug());
+        assertEquals(7L, persisted.getAuthorId());
+        assertTrue(persisted.getFeatured());
+    }
+
+    @Test
+    void contentAndRelations_canBeUpdatedAndNullOwnerIsNeverOwned() {
+        Post post = Post.create("before", "before");
+        post.updateContent("after", "body");
+        post.assignCategory(2L);
+        post.assignSeries(3L, 4);
+
+        assertEquals("after", post.getTitle());
+        assertEquals("body", post.getContent());
+        assertNotNull(post.getUpdatedAt());
+        assertEquals(2L, post.getCategoryId());
+        assertEquals(3L, post.getSeriesId());
+        assertEquals(4, post.getSeriesOrder());
+        assertFalse(post.isOwnedBy(1L));
     }
 }

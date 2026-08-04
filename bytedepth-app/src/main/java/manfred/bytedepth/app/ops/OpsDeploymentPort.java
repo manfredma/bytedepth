@@ -5,5 +5,5 @@ public interface OpsDeploymentPort {
 
     OpsDeploymentStatusDTO status();
 
-    OpsDeploymentStatusDTO deployMain();
+    OpsDeploymentStatusDTO deployRelease(String version);
 }

@@ -179,35 +179,36 @@ class AdminOpsControllerTest {
     @WithMockUser(authorities = {"admin:dashboard:view", "ops:monitor:view"})
     void deploymentStatus_withMonitorPermission_returnsSafeStatus() throws Exception {
         when(deploymentPort.status()).thenReturn(new OpsDeploymentStatusDTO(
-                true, "SUCCESS", "最近一次部署成功。", "3232ce8", "2026-07-30T12:00:00Z"));
+                true, "SUCCESS", "最近一次部署成功。", "v1.0.0", "3232ce8", "2026-07-30T12:00:00Z"));
 
         mockMvc.perform(get("/admin/ops/api/deployment"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("SUCCESS"))
+                .andExpect(jsonPath("$.version").value("v1.0.0"))
                 .andExpect(jsonPath("$.commit").value("3232ce8"));
     }
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view", "ops:monitor:view"})
     void deploymentRequest_withoutDeployPermission_returnsForbidden() throws Exception {
-        mockMvc.perform(post("/admin/ops/api/deployment").with(csrf()))
+        mockMvc.perform(post("/admin/ops/api/deployment").param("version", "v1.0.0").with(csrf()))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view", "ops:deploy:execute"})
     void deploymentRequest_withoutMonitorPermission_returnsForbidden() throws Exception {
-        mockMvc.perform(post("/admin/ops/api/deployment").with(csrf()))
+        mockMvc.perform(post("/admin/ops/api/deployment").param("version", "v1.0.0").with(csrf()))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view", "ops:monitor:view", "ops:deploy:execute"})
     void deploymentRequest_withDeployPermission_queuesFixedDeployment() throws Exception {
-        when(deploymentPort.deployMain()).thenReturn(new OpsDeploymentStatusDTO(
-                true, "QUEUED", "部署请求已接收。", null, "2026-07-30T12:00:00Z"));
+        when(deploymentPort.deployRelease("v1.0.0")).thenReturn(new OpsDeploymentStatusDTO(
+                true, "QUEUED", "部署请求已接收。", "v1.0.0", null, "2026-07-30T12:00:00Z"));
 
-        mockMvc.perform(post("/admin/ops/api/deployment").with(csrf()))
+        mockMvc.perform(post("/admin/ops/api/deployment").param("version", "v1.0.0").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("QUEUED"));
     }

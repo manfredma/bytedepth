@@ -269,6 +269,14 @@ class AdminAnalyticsControllerTest {
     }
 
     @Test
+    void blankExplicitDatesFallBackToTheSelectedPeriod() {
+        assertThat(AdminAnalyticsController.toStartTime("all", " "))
+                .isEqualTo(LocalDateTime.of(2000, 1, 1, 0, 0));
+        assertThat(AdminAnalyticsController.toEndTime("week", " "))
+                .isBeforeOrEqualTo(LocalDateTime.now());
+    }
+
+    @Test
     void toStartTime_today_returnsStartOfToday() {
         LocalDateTime result = AdminAnalyticsController.toStartTime("today", null);
         assertThat(result).isEqualTo(LocalDate.now().atStartOfDay());

@@ -44,4 +44,19 @@ class UserTest {
         user.ban();
         assertThrows(DomainException.class, user::ban);
     }
+
+    @Test
+    void reconstruct_restoresEveryField() {
+        var createdAt = java.time.LocalDateTime.of(2026, 8, 4, 10, 0);
+        var updatedAt = createdAt.plusHours(1);
+        User user = User.reconstruct(7L, "alice", "hash", "a@example.com", "avatar.png", "bio",
+                UserStatus.ACTIVE, createdAt, updatedAt);
+
+        assertEquals(7L, user.getId());
+        assertEquals("hash", user.getPasswordHash());
+        assertEquals("a@example.com", user.getEmail());
+        assertEquals("avatar.png", user.getAvatar());
+        assertEquals("bio", user.getBio());
+        assertEquals(updatedAt, user.getUpdatedAt());
+    }
 }

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -24,5 +25,19 @@ class JdbcOpsTableDataAdapterTest {
         assertEquals("post", result.tableName());
         assertEquals(6, result.columns().size());
         assertEquals(1, result.rows().size());
+    }
+
+    @Test
+    void list_rejectsNullOrUnsupportedTable() {
+        JdbcOpsTableDataAdapter adapter = new JdbcOpsTableDataAdapter(mock(JdbcTemplate.class));
+        assertThrows(IllegalArgumentException.class, () -> adapter.list(null));
+    }
+
+    @Test
+    void list_rejectsAnUnknownTableValueDefensively() {
+        OpsTable unknown = mock(OpsTable.class);
+        JdbcOpsTableDataAdapter adapter = new JdbcOpsTableDataAdapter(mock(JdbcTemplate.class));
+
+        assertThrows(IllegalArgumentException.class, () -> adapter.list(unknown));
     }
 }

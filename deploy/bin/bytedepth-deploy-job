@@ -5,17 +5,17 @@ readonly DEPLOY_ROOT=/opt/bytedepth
 readonly STATE_DIR=/var/lib/bytedepth-deploy
 readonly STATE_FILE="$STATE_DIR/status"
 readonly LOG_FILE=/var/log/bytedepth-deploy.log
-readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly GIT_REMOTE_URL=git@github.com:manfredma/bytedepth.git
 
 write_state() {
     local state="$1"
-    local commit="$2"
+    local version="$2"
+    local commit="$3"
     local temporary
     mkdir -p "$STATE_DIR"
     temporary="$(mktemp "$STATE_DIR/status.XXXXXX")"
-    printf 'state=%s\nupdated_at=%s\ncommit=%s\n' \
-        "$state" "$(date -u +%FT%TZ)" "$commit" > "$temporary"
+    printf 'state=%s\nupdated_at=%s\nversion=%s\ncommit=%s\n' \
+        "$state" "$(date -u +%FT%TZ)" "$version" "$commit" > "$temporary"
     chmod 0600 "$temporary"
     mv "$temporary" "$STATE_FILE"
 }
@@ -25,62 +25,25 @@ touch "$LOG_FILE"
 exec >> "$LOG_FILE" 2>&1
 
 cd "$DEPLOY_ROOT"
-current_commit="$(git rev-parse --short HEAD)"
-origin_url="$(git remote get-url origin)"
+git_cmd() { git -c safe.directory="$DEPLOY_ROOT" "$@"; }
+current_commit="$(git_cmd rev-parse --short HEAD)"
+origin_url="$(git_cmd remote get-url origin)"
 if [[ "$origin_url" != "$GIT_REMOTE_URL" ]]; then
     printf 'Refusing deployment because origin is %s, expected %s\n' "$origin_url" "$GIT_REMOTE_URL"
-    write_state FAILED "$current_commit"
+    write_state FAILED "" "$current_commit"
     exit 1
 fi
-current_branch="$(git branch --show-current)"
-if [[ "$current_branch" != "main" ]]; then
-    printf 'Refusing deployment because current branch is %s, not main\n' "$current_branch"
-    write_state FAILED "$current_commit"
+release_tag="${BYTEDEPTH_RELEASE_TAG:-}"
+if [[ ! "$release_tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+    printf 'Refusing deployment because BYTEDEPTH_RELEASE_TAG is invalid\n'
+    write_state FAILED "" "$current_commit"
     exit 1
 fi
-write_state RUNNING "$current_commit"
+write_state RUNNING "$release_tag" "$current_commit"
 
-deploy_mode=single-host
-deploy_ssh_key=
-if [[ -f "$CONFIG_FILE" ]]; then
-    configured_mode="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value=$2} END {print value}' "$CONFIG_FILE")"
-    deploy_mode="${configured_mode:-$deploy_mode}"
-    deploy_ssh_key="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_SSH_KEY" {value=$2} END {print value}' "$CONFIG_FILE")"
-fi
-
-if [[ -z "$deploy_ssh_key" || ! -r "$deploy_ssh_key" ]]; then
-    printf 'Refusing deployment because BYTEDEPTH_DEPLOY_SSH_KEY is missing or unreadable\n'
-    write_state FAILED "$current_commit"
-    exit 1
-fi
-
-case "$deploy_mode" in
-    single-host)
-        compose_args=()
-        ;;
-    data-access)
-        compose_args=(-f docker-compose.yml -f deploy/docker-compose.data-access.yml)
-        ;;
-    external-services)
-        compose_args=(--env-file .env -f deploy/docker-compose.app-external.yml)
-        if ! mountpoint -q /mnt/bytedepth-images; then
-            printf 'Refusing external-services deployment: /mnt/bytedepth-images is not mounted\n'
-            write_state FAILED "$current_commit"
-            exit 1
-        fi
-        ;;
-    *)
-        printf 'Refusing deployment because mode %s is not allowed\n' "$deploy_mode"
-        write_state FAILED "$current_commit"
-        exit 1
-        ;;
-esac
-
-if GIT_SSH_COMMAND="ssh -i $deploy_ssh_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new" git fetch --no-tags origin main && git merge --ff-only FETCH_HEAD \
-    && docker compose "${compose_args[@]}" up --build -d \
-    && docker compose "${compose_args[@]}" up -d --force-recreate nginx; then
-    write_state SUCCESS "$(git rev-parse --short HEAD)"
+if ./deploy/deploy-release.sh "$release_tag"; then
+    write_state SUCCESS "$release_tag" "$(git_cmd rev-parse --short HEAD)"
 else
-    write_state FAILED "$(git rev-parse --short HEAD)"
+    write_state FAILED "$release_tag" "$(git_cmd rev-parse --short HEAD)"
     exit 1
 fi

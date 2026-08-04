@@ -80,4 +80,13 @@ class MovePostInSeriesCmdExeTest {
 
         verify(postRepository, never()).setPostSeries(anyLong(), anyLong(), anyInt());
     }
+
+    @Test
+    void move_postNotFound_doesNothing() {
+        when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
+
+        cmdExe.execute(100L, 999L, MovePostInSeriesCmdExe.Direction.UP);
+
+        verify(postRepository, never()).setPostSeries(anyLong(), anyLong(), anyInt());
+    }
 }

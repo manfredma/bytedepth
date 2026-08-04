@@ -113,6 +113,7 @@ public class PostController {
         UserDetails currentUser = currentUser();
         boolean isAdmin = hasAuthority(currentUser, "blog:post:manage");
         boolean isOwner = isOwner(currentUser, post.getAuthorId());
+        boolean isDraft = "DRAFT".equals(post.getStatus());
 
         // 草稿仅作者或管理员可查看
         if (!"PUBLISHED".equals(post.getStatus()) && !isOwner && !isAdmin) {
@@ -127,7 +128,9 @@ public class PostController {
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
         model.addAttribute("rating", getPostRatingQryExe.execute(id, readRatingVisitorToken(request)));
-        model.addAttribute("canPublish", "DRAFT".equals(post.getStatus()) && (isOwner || isAdmin));
+        // The visibility check above has already established that a draft can reach this point
+        // only for its owner or an administrator.
+        model.addAttribute("canPublish", isDraft);
         String userAgent = truncate(request.getHeader("User-Agent"), 512);
         if (visitRequestFilter.shouldRecord(new VisitRequestFilter.Request(userAgent))) {
             String visitToken = UUID.randomUUID().toString();

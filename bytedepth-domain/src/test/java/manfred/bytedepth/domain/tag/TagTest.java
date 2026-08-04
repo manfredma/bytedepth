@@ -7,6 +7,16 @@ import static org.junit.jupiter.api.Assertions.*;
 class TagTest {
 
     @Test
+    void tagWithCount_exposesItsPersistedValues() {
+        TagWithCount tag = new TagWithCount(1L, "Java", "java", 8);
+
+        assertEquals(1L, tag.getId());
+        assertEquals("Java", tag.getName());
+        assertEquals("java", tag.getSlug());
+        assertEquals(8, tag.getCount());
+    }
+
+    @Test
     void create_shouldSetNameAndSlug() {
         Tag tag = Tag.create("Java", "java");
         assertEquals("Java", tag.getName());

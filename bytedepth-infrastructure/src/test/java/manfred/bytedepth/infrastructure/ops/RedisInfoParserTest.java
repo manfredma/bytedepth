@@ -28,6 +28,17 @@ class RedisInfoParserTest {
     }
 
     @Test
+    void parse_returnsEmptyMapForNullOrBlankInput() {
+        assertEquals(Map.of(), RedisInfoParser.parse(null));
+        assertEquals(Map.of(), RedisInfoParser.parse("   "));
+    }
+
+    @Test
+    void parse_ignoresBlankLinesAsWellAsSectionHeadings() {
+        assertEquals(Map.of(), RedisInfoParser.parse("\n# Stats\n"));
+    }
+
+    @Test
     void longValue_usesZeroForMissingOrMalformedMetrics() {
         assertEquals(0, RedisInfoParser.longValue(Map.of(), "keyspace_hits"));
         assertEquals(0, RedisInfoParser.longValue(Map.of("keyspace_hits", "not-a-number"), "keyspace_hits"));

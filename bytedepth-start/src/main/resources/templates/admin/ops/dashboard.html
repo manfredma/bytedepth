@@ -72,14 +72,15 @@
             <section class="ops-deploy-section" aria-labelledby="ops-deploy-title">
                 <div class="ops-deploy-header">
                     <div>
-                        <h2 class="ops-section-title" id="ops-deploy-title">部署 main</h2>
-                        <p class="ops-table-description">固定拉取 main 分支，并重建完整 Compose 服务；不支持自定义分支或命令。</p>
+                        <h2 class="ops-section-title" id="ops-deploy-title">部署发布版本</h2>
+                        <p class="ops-table-description">仅接受尚未在本节点部署过的稳定版本 Tag，例如 v1.2.3。</p>
                     </div>
-                    <button class="ops-deploy-button" id="ops-deploy-main" type="button">拉取并部署</button>
+                    <div><label for="ops-deploy-version">版本 Tag</label><input id="ops-deploy-version" type="text" pattern="v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)" placeholder="v1.2.3"><button class="ops-deploy-button" id="ops-deploy-release" type="button">部署版本</button></div>
                 </div>
                 <p class="ops-message" id="ops-deploy-message" role="status">正在读取部署服务状态…</p>
                 <dl class="ops-deploy-details">
                     <div class="ops-definition-row"><dt>状态</dt><dd id="ops-deploy-state">--</dd></div>
+                    <div class="ops-definition-row"><dt>版本</dt><dd id="ops-deploy-version-status">--</dd></div>
                     <div class="ops-definition-row"><dt>提交</dt><dd id="ops-deploy-commit">--</dd></div>
                     <div class="ops-definition-row"><dt>更新时间</dt><dd id="ops-deploy-updated-at">--</dd></div>
                 </dl>
@@ -115,7 +116,8 @@
     const tableHead = document.getElementById('ops-table-head');
     const tableBody = document.getElementById('ops-table-body');
     const deploymentMessage = document.getElementById('ops-deploy-message');
-    const deploymentButton = document.getElementById('ops-deploy-main');
+    const deploymentButton = document.getElementById('ops-deploy-release');
+    const deploymentVersion = document.getElementById('ops-deploy-version');
     const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
     const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
 
@@ -175,6 +177,7 @@
         const unavailable = !deployment.available;
         const active = deployment.state === 'QUEUED' || deployment.state === 'RUNNING';
         setText('ops-deploy-state', deployment.state);
+        setText('ops-deploy-version-status', deployment.version);
         setText('ops-deploy-commit', deployment.commit);
         setText('ops-deploy-updated-at', deployment.updatedAt);
         deploymentMessage.textContent = deployment.message || '部署服务暂不可用。';
@@ -193,9 +196,13 @@
     };
 
     const requestDeployment = async () => {
+        if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(deploymentVersion.value)) {
+            deploymentMessage.textContent = '请输入稳定版本 Tag，例如 v1.2.3。';
+            return;
+        }
         if (!await window.BytedepthDialog.confirm({
             title: '确认部署',
-            message: '确认拉取 main 并重建完整 Compose 服务？部署期间网站会短暂重启。',
+            message: `确认部署 ${deploymentVersion.value} 并重建完整 Compose 服务？部署期间网站会短暂重启。`,
             tone: 'warning',
             confirmText: '开始部署'
         })) return;
@@ -204,7 +211,7 @@
         try {
             const headers = {};
             if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
-            const response = await fetch('/admin/ops/api/deployment', {method: 'POST', headers});
+            const response = await fetch('/admin/ops/api/deployment?' + new URLSearchParams({version: deploymentVersion.value}), {method: 'POST', headers});
             if (!response.ok) throw new Error('deployment request failed');
             renderDeployment(await response.json());
             window.setTimeout(loadDeployment, 2000);

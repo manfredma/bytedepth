@@ -47,6 +47,13 @@ class RatePostCmdExeTest {
         verify(postRatingRepository, never()).upsert(1L, "visitor-token", 0);
     }
 
+    @Test
+    void execute_scoreAboveFive_rejectsBeforeWriting() {
+        assertThrows(DomainException.class, () -> exe.execute(1L, "visitor-token", 6));
+
+        verify(postRatingRepository, never()).upsert(1L, "visitor-token", 6);
+    }
+
     private Post post(Long id, PostStatus status) {
         return Post.reconstruct(id, "article", "title", "content", status,
                 LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), null, null, false);

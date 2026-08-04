@@ -180,4 +180,16 @@ class HomeControllerTest {
                 .andExpect(model().attribute("paginationBaseUrl", "/?sort=latest&"))
                 .andExpect(content().string(not(containsString("热门文章"))));
     }
+
+    @Test
+    void latestPageIndicatesWhenAnotherPageIsAvailable() throws Exception {
+        when(listPostsQryExe.execute(1, 10)).thenReturn(List.of());
+        when(listPostsQryExe.countPublished()).thenReturn(11L);
+        when(listProjectsQryExe.execute()).thenReturn(List.of());
+        when(listCategoriesQryExe.execute()).thenReturn(List.of());
+
+        mockMvc.perform(get("/").param("sort", "latest"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hasNext", true));
+    }
 }

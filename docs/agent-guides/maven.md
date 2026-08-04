@@ -14,13 +14,15 @@ JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn clean install -DskipTests -Dsort.s
 JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn test -Dsort.skip=true
 ```
 
-对本次改动涉及的生产 Java 类，必须运行覆盖率门禁。脚本会先执行完整测试、合并跨模块执行数据，再对每个改动类逐一校验：
+所有生产 Java 类必须达到行、分支、方法 100% 覆盖率。脚本会先执行完整测试、合并跨模块执行数据，再逐模块执行全量校验：
 
 ```bash
-bash scripts/verify-changed-coverage.sh HEAD
+bash scripts/verify-changed-coverage.sh
 ```
 
-提交已存在时，把 `HEAD` 替换为本次改动前的基准提交，例如 `HEAD~1` 或 `origin/main`。聚合 XML 和 HTML 报告位于 `bytedepth-coverage/target/site/jacoco-aggregate/`；门禁要求每个改动类的行、分支、方法均为零遗漏。
+聚合 XML 和 HTML 报告位于 `bytedepth-start/target/site/jacoco-aggregate/`；门禁要求每个生产类的行、分支、方法均为零遗漏。
+
+不得新增 Maven 模块；如确有必要，必须先获得项目所有者的明确同意。
 
 运行 jar：
 

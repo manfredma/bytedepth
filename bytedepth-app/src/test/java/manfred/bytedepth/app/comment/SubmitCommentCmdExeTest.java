@@ -13,6 +13,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import manfred.bytedepth.domain.common.DomainException;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
@@ -39,5 +43,15 @@ class SubmitCommentCmdExeTest {
             && "alice".equals(c.getAuthorName())
             && "Great post!".equals(c.getContent())
         ));
+    }
+
+    @Test
+    void execute_userNotFound_throwsDomainException() {
+        when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+
+        var ex = assertThrows(DomainException.class, () -> exe.execute(10L, "ghost", "hi"));
+        assertTrue(ex.getMessage().contains("用户不存在"));
+        assertTrue(ex.getMessage().contains("ghost"));
+        verifyNoInteractions(commentRepository);
     }
 }

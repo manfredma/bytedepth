@@ -9,7 +9,7 @@ print_status() {
     if [[ -f "$STATE_FILE" ]]; then
         cat "$STATE_FILE"
     else
-        printf 'state=IDLE\nupdated_at=\ncommit=\n'
+        printf 'state=IDLE\nupdated_at=\nversion=\ncommit=\n'
     fi
 }
 
@@ -18,17 +18,23 @@ case "$request" in
     status)
         print_status
         ;;
-    deploy-main)
+    deploy-tag\ *)
+        release_tag="${request#deploy-tag }"
+        if [[ ! "$release_tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            printf 'state=REJECTED\nupdated_at=\nversion=\ncommit=\n'
+            exit 0
+        fi
         if systemctl is-active --quiet "$JOB_UNIT"; then
-            printf 'state=BUSY\nupdated_at=\ncommit=\n'
+            printf 'state=BUSY\nupdated_at=\nversion=\ncommit=\n'
         elif systemd-run --unit="$JOB_UNIT" --collect --no-block \
+            --setenv="BYTEDEPTH_RELEASE_TAG=$release_tag" \
             /usr/local/lib/bytedepth-deploy/bytedepth-deploy-job >/dev/null; then
-            printf 'state=QUEUED\nupdated_at=%s\ncommit=\n' "$(date -u +%FT%TZ)"
+            printf 'state=QUEUED\nupdated_at=%s\nversion=%s\ncommit=\n' "$(date -u +%FT%TZ)" "$release_tag"
         else
-            printf 'state=REJECTED\nupdated_at=\ncommit=\n'
+            printf 'state=REJECTED\nupdated_at=\nversion=\ncommit=\n'
         fi
         ;;
     *)
-        printf 'state=REJECTED\nupdated_at=\ncommit=\n'
+        printf 'state=REJECTED\nupdated_at=\nversion=\ncommit=\n'
         ;;
 esac

@@ -138,7 +138,7 @@ sudo ./deploy/bootstrap-ops-deploy.sh
 
 此 Compose 文件不启动本地 MySQL/Redis/MeiliSearch，也不含它们的 `depends_on`；Flyway 会在应用启动时连接外部 MySQL 并执行迁移。先完成第 4 节的网络连通性与备份配置，再启动应用节点。
 
-多机应用节点上的网页“部署 main”也可用。上一步已将它固定为外部资源 Compose；可选值只有 `single-host`、`data-access` 和 `external-services`，网页不能传递 Compose 文件或任意命令。
+多机应用节点上的网页“部署发布版本”也可用。上一步已将它固定为外部资源 Compose；可选值只有 `single-host`、`data-access` 和 `external-services`，网页只能请求经验证的稳定 Tag，不能传递 Compose 文件或任意命令。
 
 ## 6. 正式版本发布
 
@@ -219,7 +219,7 @@ curl -fsS -o /dev/null -w 'article image: %{http_code}\n' "$BASE_URL$IMAGE_PATH"
 ## 8. 故障处理与回滚
 
 1. 先保存 `docker compose logs app --tail=200` 与 `journalctl -u bytedepth-deploy.socket`。
-2. 回滚代码时，只能切换到已验证的 Git 提交，再完整 `up --build -d`；不要回滚或修改已执行的 Flyway 迁移文件。
+2. 回滚代码时，只能部署已验证、兼容数据库迁移的历史发布 Tag，再完整重建 Compose；不要回滚或修改已执行的 Flyway 迁移文件。
 3. 数据恢复必须使用数据库/Redis/MeiliSearch 自身的备份方案，并在隔离环境验证后实施。
 4. 网页部署日志位于 `/var/log/bytedepth-deploy.log`；Socket 状态用 `sudo systemctl status bytedepth-deploy.socket --no-pager` 查看。
 
@@ -231,7 +231,7 @@ curl -fsS -o /dev/null -w 'article image: %{http_code}\n' "$BASE_URL$IMAGE_PATH"
 3. 确认 Docker、Compose、Git、证书与内网连通性。
 4. 验证 Git SSH：ssh -T git@github.com；确认 origin 为 git@github.com:manfredma/bytedepth.git。
 5. external-services：确认 mountpoint -q /mnt/bytedepth-images。
-6. 按节点模式执行 sudo ./deploy/bootstrap-ops-deploy.sh；双机发布时先数据节点、再应用节点。
+6. 初始化时按节点模式执行 `sudo ./deploy/bootstrap-ops-deploy.sh`；后续发布只按第 6 节使用 `sudo ./deploy/deploy-release.sh "$TAG"`。双机发布时先数据节点、再应用节点。
 7. 不执行任何直接 docker compose 发布命令。
 8. 验证 systemd socket=active、compose 服务状态、HTTPS=200、图片 HTTPS=200。
 9. 对每个承载流量的节点执行第 6 节“部署后查询功能回归”：首页最新/热门及翻页、文章列表与详情、旧 ID 跳转、专栏、搜索、项目和文章图片均返回预期状态；不得以首页 `200` 代替回归。

@@ -26,6 +26,16 @@ main（下一版本 -SNAPSHOT）
 
 发布脚本必须自动校验工作区、版本号、Tag 格式和 Tag 唯一性；部署脚本必须只接受已验证的 Tag，并在状态中保存 `version` 与完整 SHA。发布工具完成前，禁止执行下一次生产部署。
 
+创建版本使用 Maven Release Plugin：在 `CHANGELOG.md` 整理完版本内容并完成测试后，执行以下命令（示例发布 `1.2.3`，下一开发版本为 `1.2.4-SNAPSHOT`）：
+
+```bash
+JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn -B release:prepare \
+  -DreleaseVersion=1.2.3 -DdevelopmentVersion=1.2.4-SNAPSHOT
+git push origin main --follow-tags
+```
+
+插件会校验工作区、将全部 Maven 模块从 `X.Y.Z-SNAPSHOT` 改为 `X.Y.Z`、创建 `vX.Y.Z` annotated Tag，再将 `main` 推进到下一 `-SNAPSHOT`。禁止手工编辑多个 POM 或手工创建轻量 Tag。
+
 ## 版本选择
 
 | 变更类型 | 版本变化 | 示例 |

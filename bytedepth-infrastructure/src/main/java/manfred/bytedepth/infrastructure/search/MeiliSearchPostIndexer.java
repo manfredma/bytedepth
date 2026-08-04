@@ -24,11 +24,16 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
     public MeiliSearchPostIndexer(
             @Value("${bytedepth.search.url}") String url,
             @Value("${bytedepth.search.api-key}") String apiKey) {
-        this.restClient = RestClient.builder()
+        this(RestClient.builder()
                 .baseUrl(url)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                .build();
+                .build());
+    }
+
+    /** 测试专用构造器：注入已构造的 RestClient，便于单元测试 mock。 */
+    MeiliSearchPostIndexer(RestClient restClient) {
+        this.restClient = restClient;
     }
 
     @Override

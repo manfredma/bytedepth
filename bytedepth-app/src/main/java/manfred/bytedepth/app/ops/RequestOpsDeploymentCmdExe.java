@@ -11,7 +11,7 @@ public class RequestOpsDeploymentCmdExe {
         this.deploymentPort = deploymentPort;
     }
 
-    public OpsDeploymentStatusDTO execute() {
-        return deploymentPort.deployMain();
+    public OpsDeploymentStatusDTO execute(String version) {
+        return deploymentPort.deployRelease(version);
     }
 }

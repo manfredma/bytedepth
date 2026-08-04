@@ -1,0 +1,12 @@
+.git
+.idea
+.omc
+.superpowers
+.gstack
+.codegraph
+.understand-anything
+**/target
+**/__pycache__
+*.log
+.env
+settings.xml

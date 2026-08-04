@@ -1,0 +1,41 @@
+package manfred.bytedepth.app.category;
+
+import manfred.bytedepth.domain.category.Category;
+import manfred.bytedepth.domain.category.CategoryRepository;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+class CategoryQueriesAndCommandsTest {
+
+    private final CategoryRepository repository = mock(CategoryRepository.class);
+
+    @Test
+    void create_persistsCategoryAndReturnsItsId() {
+        when(repository.save(any())).thenReturn(Category.reconstruct(8L, "Java", "java", null));
+
+        Long id = new CreateCategoryCmdExe(repository).execute("Java", "java", null);
+
+        assertEquals(8L, id);
+        verify(repository).save(argThat(c -> "Java".equals(c.getName()) && c.getParentId().isEmpty()));
+    }
+
+    @Test
+    void list_ordersTreesAndIncludesOrphansWithFallbackParent() {
+        when(repository.findAll()).thenReturn(List.of(
+                Category.reconstruct(1L, "Java", "java", null),
+                Category.reconstruct(2L, "Spring", "spring", 1L),
+                Category.reconstruct(3L, "Orphan", "orphan", 99L)));
+
+        List<CategoryDTO> categories = new ListCategoriesQryExe(repository).execute();
+
+        assertEquals(List.of("Java", "Spring", "Orphan"), categories.stream().map(CategoryDTO::getName).toList());
+        assertEquals(0, categories.get(0).getDepth());
+        assertEquals("Java", categories.get(1).getParentName());
+        assertEquals("?", categories.get(2).getParentName());
+    }
+}

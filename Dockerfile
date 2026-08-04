@@ -1,5 +1,5 @@
 # ---- Stage 1: Build ----
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 
 # 配置阿里云 Maven 镜像加速（内嵌，不依赖外部文件）
@@ -24,7 +24,6 @@ COPY bytedepth-app/pom.xml bytedepth-app/
 COPY bytedepth-infrastructure/pom.xml bytedepth-infrastructure/
 COPY bytedepth-adapter/pom.xml bytedepth-adapter/
 COPY bytedepth-start/pom.xml bytedepth-start/
-COPY bytedepth-coverage/pom.xml bytedepth-coverage/
 RUN mvn dependency:go-offline -Dsort.skip=true -q
 
 # 复制源码并打包
@@ -34,6 +33,6 @@ RUN mvn clean package -DskipTests -Dsort.skip=true
 # ---- Stage 2: Run ----
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=build /build/bytedepth-start/target/bytedepth-start-1.0.0-SNAPSHOT.jar app.jar
+COPY --from=build /build/bytedepth-start/target/bytedepth-start.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

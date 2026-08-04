@@ -7,6 +7,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - Maven 命令必须使用 Java 21：`JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn ...`
 - 改完代码必须跑测试，不能只编译通过。
 - 每项代码改动必须补齐单元测试；本次改动涉及的业务逻辑分支覆盖率必须达到 100%，并在提交前提供覆盖率验证结果。
+- 不得新增 Maven 模块；如确有必要，必须先获得项目所有者的明确同意。
 - 多模块测试前先刷新本地缓存：`mvn clean install -DskipTests -Dsort.skip=true`，再跑 `mvn test`。
 - 部署时必须重建并启动完整 compose 服务，不能只 `up --build -d app`。
 - 每次生产部署必须是一个新的、不可变的 SemVer 发布版本：先完成版本记录并创建新 annotated Git Tag，再部署该 Tag；不得部署 `main`、裸 commit、分支或已部署过的 Tag。

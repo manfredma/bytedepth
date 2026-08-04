@@ -24,6 +24,7 @@ public class UnixSocketOpsDeploymentAdapter implements OpsDeploymentPort {
     private static final int MAX_RESPONSE_BYTES = 4 * 1024;
     private static final Set<String> STATES = Set.of("IDLE", "QUEUED", "RUNNING", "SUCCESS", "FAILED", "BUSY", "REJECTED");
     private static final Pattern COMMIT = Pattern.compile("[0-9a-f]{7,40}");
+    private static final Pattern VERSION = Pattern.compile("v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)");
 
     private final String socketPath;
 
@@ -37,8 +38,11 @@ public class UnixSocketOpsDeploymentAdapter implements OpsDeploymentPort {
     }
 
     @Override
-    public OpsDeploymentStatusDTO deployMain() {
-        return exchange("deploy-main");
+    public OpsDeploymentStatusDTO deployRelease(String version) {
+        if (version == null || !VERSION.matcher(version).matches()) {
+            return new OpsDeploymentStatusDTO(false, "REJECTED", "版本号格式无效。", null, null, null);
+        }
+        return exchange("deploy-tag " + version);
     }
 
     private OpsDeploymentStatusDTO exchange(String command) {
@@ -75,7 +79,9 @@ public class UnixSocketOpsDeploymentAdapter implements OpsDeploymentPort {
             return OpsDeploymentStatusDTO.unavailable();
         }
         String commit = values.get("commit");
+        String version = values.get("version");
         return new OpsDeploymentStatusDTO(true, state, messageFor(state),
+                version != null && VERSION.matcher(version).matches() ? version : null,
                 commit != null && COMMIT.matcher(commit).matches() ? commit : null,
                 values.get("updated_at"));
     }

@@ -38,6 +38,7 @@ class VisitRequestFilterTest {
                 "curl/")));
 
         assertThat(filter.shouldRecord(new VisitRequestFilter.Request(null))).isTrue();
+        assertThat(filter.shouldRecord(new VisitRequestFilter.Request(" "))).isTrue();
         assertThat(filter.shouldRecord(new VisitRequestFilter.Request("Mozilla/5.0"))).isTrue();
     }
 
@@ -52,6 +53,29 @@ class VisitRequestFilterTest {
         assertThat(new VisitRequestFilter(properties)
                 .shouldRecord(new VisitRequestFilter.Request("curl/8.0")))
                 .isTrue();
+    }
+
+    @Test
+    void shouldApplyCaseSensitiveRegularExpressions() {
+        VisitFilterProperties.Rule rule = newRule(
+                VisitFilterProperties.Field.USER_AGENT,
+                VisitFilterProperties.Match.REGEX,
+                "Bot-[0-9]+");
+        rule.setIgnoreCase(false);
+        VisitRequestFilter filter = new VisitRequestFilter(properties(rule));
+
+        assertThat(filter.shouldRecord(new VisitRequestFilter.Request("Bot-42"))).isFalse();
+        assertThat(filter.shouldRecord(new VisitRequestFilter.Request("bot-42"))).isTrue();
+    }
+
+    @Test
+    void shouldApplyCaseInsensitiveRegularExpressions() {
+        VisitRequestFilter filter = new VisitRequestFilter(properties(newRule(
+                VisitFilterProperties.Field.USER_AGENT,
+                VisitFilterProperties.Match.REGEX,
+                "Bot-[0-9]+")));
+
+        assertThat(filter.shouldRecord(new VisitRequestFilter.Request("bot-42"))).isFalse();
     }
 
     private VisitFilterProperties properties(VisitFilterProperties.Rule rule) {

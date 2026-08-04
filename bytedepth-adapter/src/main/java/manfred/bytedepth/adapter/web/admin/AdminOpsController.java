@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -69,7 +70,7 @@ public class AdminOpsController {
     @PostMapping("/api/deployment")
     @ResponseBody
     @PreAuthorize("hasAuthority('ops:monitor:view') and hasAuthority('ops:deploy:execute')")
-    public OpsDeploymentStatusDTO deployMain() {
-        return requestDeploymentCmdExe.execute();
+    public OpsDeploymentStatusDTO deployRelease(@RequestParam String version) {
+        return requestDeploymentCmdExe.execute(version);
     }
 }

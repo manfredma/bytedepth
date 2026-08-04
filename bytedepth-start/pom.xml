@@ -72,6 +72,15 @@
         </dependency>
     </dependencies>
     <build>
+        <finalName>bytedepth-start</finalName>
+        <resources>
+            <resource><directory>src/main/resources</directory></resource>
+            <resource>
+                <directory>${maven.multiModuleProjectDirectory}/docs/releases</directory>
+                <includes><include>CHANGELOG.md</include></includes>
+                <targetPath>release</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -85,4 +94,28 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>changed-coverage</id>
+            <activation><property><name>coverage.includes</name></property></activation>
+            <build><plugins><plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution><id>merge-reactor-exec-data</id><phase>verify</phase><goals><goal>merge</goal></goals>
+                        <configuration><fileSets><fileSet><directory>${maven.multiModuleProjectDirectory}</directory>
+                            <includes><include>bytedepth-*/target/jacoco.exec</include></includes>
+                        </fileSet></fileSets><destFile>${coverage.data-file}</destFile></configuration>
+                    </execution>
+                    <execution><id>aggregate-report</id><phase>verify</phase><goals><goal>report-aggregate</goal></goals>
+                        <configuration><includeCurrentProject>true</includeCurrentProject>
+                            <dataFileIncludes><dataFileInclude>jacoco-merged.exec</dataFileInclude></dataFileIncludes>
+                            <formats><format>XML</format><format>HTML</format></formats>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin></plugins></build>
+        </profile>
+    </profiles>
 </project>

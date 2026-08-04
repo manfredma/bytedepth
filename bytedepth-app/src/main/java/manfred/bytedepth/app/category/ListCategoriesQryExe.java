@@ -39,10 +39,11 @@ public class ListCategoriesQryExe {
                 result.add(toDTO(child, parentName, 1));
             }
         }
-        // 兜底：防止有孤儿分类（parentId 指向不存在的分类）
+        // 兜底：防止有孤儿分类（parentId 指向不存在的顶级分类）
+        java.util.Set<Long> topLevelIds = topLevel.stream().map(Category::getId).collect(Collectors.toSet());
         all.stream()
                 .filter(c -> c.getParentId().isPresent())
-                .filter(c -> !childrenMap.isEmpty() && !topLevel.stream().map(Category::getId).collect(Collectors.toSet()).contains(c.getParentId().get()))
+                .filter(c -> !topLevelIds.contains(c.getParentId().get()))
                 .forEach(c -> result.add(toDTO(c, "?", 1)));
 
         return result;
