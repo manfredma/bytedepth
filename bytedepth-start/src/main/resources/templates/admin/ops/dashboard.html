@@ -193,7 +193,12 @@
     };
 
     const requestDeployment = async () => {
-        if (!window.confirm('确认拉取 main 并重建完整 Compose 服务？部署期间网站会短暂重启。')) return;
+        if (!await window.BytedepthDialog.confirm({
+            title: '确认部署',
+            message: '确认拉取 main 并重建完整 Compose 服务？部署期间网站会短暂重启。',
+            tone: 'warning',
+            confirmText: '开始部署'
+        })) return;
         deploymentButton.disabled = true;
         deploymentMessage.textContent = '正在提交部署请求…';
         try {

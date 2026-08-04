@@ -55,7 +55,11 @@
                     <td><span class="count-badge" th:text="${tag.count}">0</span></td>
                     <td class="tag-actions">
                         <form class="delete-form" method="post" th:action="@{/admin/tags/{tagId}/delete(tagId=${tag.id})}"
-                              onsubmit="return confirm('删除标签后，已关联文章将不再带有该标签。确定删除吗？');">
+                              data-bd-confirm
+                              data-bd-confirm-title="删除标签"
+                              data-bd-confirm-message="删除标签后，已关联文章将不再带有该标签，文章不会删除。"
+                              data-bd-confirm-tone="danger"
+                              data-bd-confirm-confirm-text="删除">
                             <button class="delete-button" type="submit">删除</button>
                         </form>
                     </td>

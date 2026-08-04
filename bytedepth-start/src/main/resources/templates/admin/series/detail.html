@@ -92,7 +92,10 @@
                         <!-- 移出 -->
                         <form th:action="@{/admin/series/{slug}/posts/{id}/remove(slug=${series.slug},id=${post.id})}"
                               method="post"
-                              onsubmit="return confirm('确认将该文章移出专栏？')">
+                              data-bd-confirm
+                              data-bd-confirm-title="移出专栏"
+                              data-bd-confirm-message="确认将该文章移出专栏？"
+                              data-bd-confirm-confirm-text="移出">
                             <button type="submit" class="btn btn-danger">移出</button>
                         </form>
                     </td>

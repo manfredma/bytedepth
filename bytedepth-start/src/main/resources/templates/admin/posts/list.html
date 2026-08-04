@@ -90,10 +90,13 @@
             <!-- 已绑定专栏：移出按钮 -->
             <form th:if="${p.seriesId != null}"
                   th:action="@{/admin/posts/{id}/series/remove(id=${p.id})}" method="post"
+                  data-bd-confirm
+                  data-bd-confirm-title="移出专栏"
+                  data-bd-confirm-message="确认将该文章移出专栏？"
+                  data-bd-confirm-confirm-text="移出"
                   style="display:inline;margin:0 2px;">
                 <input type="hidden" name="page" th:value="${currentPage}">
-                <button type="submit" class="btn-remove-series"
-                        onclick="return confirm('确认移出专栏？')">✕ 移出专栏</button>
+                <button type="submit" class="btn-remove-series">✕ 移出专栏</button>
             </form>
             <!-- 未绑定专栏：下拉绑定 -->
             <form th:if="${p.seriesId == null}"
@@ -112,7 +115,11 @@
                 <button type="submit" class="btn-publish">发布</button>
             </form>
             <form th:action="@{/admin/posts/{id}/delete(id=${p.id})}" method="post"
-                  onsubmit="return confirm('确认删除此文章？')">
+                  data-bd-confirm
+                  data-bd-confirm-title="删除文章"
+                  data-bd-confirm-message="确认删除此文章？"
+                  data-bd-confirm-tone="danger"
+                  data-bd-confirm-confirm-text="删除">
                 <button type="submit" class="btn-delete">删除</button>
             </form>
         </div>

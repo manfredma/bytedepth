@@ -58,7 +58,11 @@
                 <button type="submit" class="btn-approve">通过</button>
             </form>
             <form th:action="@{/admin/users/{id}/delete(id=${u.id})}" method="post"
-                  onsubmit="return confirm('确认拒绝并删除此注册申请？')">
+                  data-bd-confirm
+                  data-bd-confirm-title="拒绝注册申请"
+                  data-bd-confirm-message="确认拒绝并删除此注册申请？"
+                  data-bd-confirm-tone="danger"
+                  data-bd-confirm-confirm-text="拒绝">
                 <button type="submit" class="btn-reject">拒绝</button>
             </form>
         </div>
