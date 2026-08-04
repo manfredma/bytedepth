@@ -7,7 +7,8 @@
 - 代码目录固定为 `/opt/bytedepth`。
 - `.env` 是机器私有密钥文件，绝不提交、复制到日志或聊天记录。
 - 不使用 `docker restart`，也不只执行 `up --build -d app`；必须重建完整 Compose 定义。
-- 网页部署只会获取 `origin/main` 并执行完整重建，不能传入分支或命令。
+- 生产部署只能使用新的、受保护的 annotated Git Tag；不得部署 `main`、分支、裸 commit 或已部署过的 Tag。版本与记录规则见 [`docs/releases/README.md`](../docs/releases/README.md)。
+- 网页部署只能请求经过验证的发布版本，不能传入任意 ref、分支或命令。
 - Git remote 固定为 `git@github.com:manfredma/bytedepth.git`；部署脚本拒绝 HTTPS remote，避免服务器出网策略变化导致发布卡住。
 - 数据库、Redis、MeiliSearch 只应在内网/VPN 可达，不能暴露到公网。
 - 本手册是仓库内唯一的部署、发布、切流、回滚和灾备操作说明；`docs/superpowers/` 下的计划与设计稿仅作历史记录，不能作为执行依据。
@@ -29,7 +30,7 @@
 | 数据节点 | `175.24.197.202` / `10.0.4.15` | `data-access` | MySQL、Redis、MeiliSearch、图片 NFS，以及一套应用和 Nginx |
 | 应用节点 | `124.221.143.25` / `10.0.0.5` | `external-services` | 通过私网使用数据服务和 NFS 图片目录，并运行一套应用和 Nginx |
 
-DNS 或负载均衡完全切走数据节点前，两台机器必须保持相同的已发布提交。网页“部署 main”只能更新当前节点，不能替代双机发布。
+DNS 或负载均衡完全切走数据节点前，两台机器必须保持相同的已发布版本和完整提交 SHA。网页单节点操作不能替代双机发布。
 
 ## 2. 所有机器的前置条件
 
@@ -139,16 +140,21 @@ sudo ./deploy/bootstrap-ops-deploy.sh
 
 多机应用节点上的网页“部署 main”也可用。上一步已将它固定为外部资源 Compose；可选值只有 `single-host`、`data-access` 和 `external-services`，网页不能传递 Compose 文件或任意命令。
 
-## 6. 日常代码发布
+## 6. 正式版本发布
 
-对当前双机生产，每次都按以下顺序发布；任一步失败都停止，不能只更新另一台机器。单机环境仅执行其对应的一条。
+每次生产发布前，必须先按 [`docs/releases/README.md`](../docs/releases/README.md) 创建新的 SemVer annotated Tag 并更新 `docs/releases/CHANGELOG.md`。不得直接拉取 `main`。对当前双机生产，每次都按以下顺序部署同一个新 Tag；任一步失败都停止，不能只更新另一台机器。单机环境仅执行其对应的一条。
 
 ```bash
+# TAG 必须是刚创建、尚未部署过的正式版本，例如 v1.2.3。
+TAG='v1.2.3'
+
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@175.24.197.202 \
-  'cd /opt/bytedepth && git pull --ff-only && sudo ./deploy/bootstrap-ops-deploy.sh'
+  "cd /opt/bytedepth && sudo ./deploy/deploy-release.sh $TAG"
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
-  'cd /opt/bytedepth && git pull --ff-only && sudo ./deploy/bootstrap-ops-deploy.sh'
+  "cd /opt/bytedepth && sudo ./deploy/deploy-release.sh $TAG"
 ```
+
+`deploy-release.sh` 必须验证 Tag、记录版本与完整 SHA，并调用完整 Compose 部署。尚未具备该工具的环境禁止按旧的 `git pull main` 方式发布；应先完成发布工具升级。
 
 每次发布后，在两台机器分别确认 Socket、对应 Compose 服务与 NFS（应用节点）状态，并确认应用日志中没有 Flyway、MySQL、Redis 或 MeiliSearch 连接错误。再从本机或可信监控节点执行域名 SNI 验收，不能只请求裸 IP：
 

@@ -13,6 +13,7 @@
 - 构建、测试、覆盖率：读 [Maven 指南](agent-guides/maven.md)。
 - 同步 Obsidian 笔记：读 [同步指南](agent-guides/obsidian-sync.md)。
 - 部署、回滚和双机验收：只读 [部署手册](../deploy/README.md)。
+- 创建版本、记录变更、发布与回滚：读 [发布管理](releases/README.md)。
 - 了解后台运维页面的权限边界：读 [运维页面说明](ops.md)。
 
 ## 目录边界
@@ -22,6 +23,7 @@
 | `architecture/` | 模块边界、组件契约、设计约束 | 逐次实现过程 |
 | `engineering/` | 可复用开发模式、长期有效的故障经验 | 临时排查日志 |
 | `security/` | 安全决策与事故复盘 | 密钥、Cookie、真实账号信息 |
+| `releases/` | 版本策略、发布记录与变更日志 | 机器私有部署日志或密钥 |
 | `agent-guides/` | 人与自动化代理共同遵守的任务操作指南 | 通用架构说明 |
 | `superpowers/` | 已完成需求的设计与计划历史 | 当前操作手册 |
 
