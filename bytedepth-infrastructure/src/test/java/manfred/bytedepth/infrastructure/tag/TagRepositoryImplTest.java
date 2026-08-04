@@ -54,8 +54,8 @@ class TagRepositoryImplTest {
         when(tagMapper.selectList(isNull())).thenReturn(List.of(row));
         when(tagMapper.findByPostId(9L)).thenReturn(List.of(row));
 
-        assertEquals("Java", repository.findAll().getFirst().getName());
-        assertEquals(1L, repository.findByPostId(9L).getFirst().getId());
+        assertEquals("Java", repository.findAll().get(0).getName());
+        assertEquals(1L, repository.findByPostId(9L).get(0).getId());
     }
 
     @Test
@@ -79,7 +79,7 @@ class TagRepositoryImplTest {
         row.setPostCount(3L);
         when(tagMapper.findAllWithCount()).thenReturn(List.of(row));
 
-        var tag = repository.findAllWithCount().getFirst();
+        var tag = repository.findAllWithCount().get(0);
 
         assertEquals("Java", tag.getName());
         assertEquals(3L, tag.getCount());
