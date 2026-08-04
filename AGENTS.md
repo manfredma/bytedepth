@@ -1,6 +1,6 @@
 # bytedepth
 
-Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `~/w/w/`；生产为数据节点与应用节点双机拓扑，唯一部署说明见 `deploy/README.md`；知识库见 `.omc/wiki/`。
+Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `~/w/w/`；生产为数据节点与应用节点双机拓扑，唯一部署说明见 `deploy/README.md`；项目知识库入口见 `docs/README.md`。
 
 ## 必须遵守
 
@@ -13,6 +13,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 
 ## 按需读取
 
+- 项目概览、知识库导航与文档维护约定：见 [docs/README.md](docs/README.md)
 - Maven、测试、打包、运行 jar：见 [docs/agent-guides/maven.md](docs/agent-guides/maven.md)
 - 笔记同步、Obsidian 导入：见 [docs/agent-guides/obsidian-sync.md](docs/agent-guides/obsidian-sync.md)
 - 远程部署、双机拓扑、初始化与验证：见 [deploy/README.md](deploy/README.md)（唯一部署说明）
