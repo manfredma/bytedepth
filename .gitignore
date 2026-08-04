@@ -30,6 +30,11 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# Maven Release Plugin transaction state. These files are regenerated locally;
+# clean them with `mvn release:clean` and never commit them.
+*.releaseBackup
+release.properties
+
 # Maven local settings (may contain credentials)
 settings.xml
 

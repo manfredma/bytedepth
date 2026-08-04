@@ -9,7 +9,7 @@
 3. Tag 必须是 annotated tag，并受仓库 `v*` 保护；Tag 一经推送不得移动、删除或复用。
 4. Tag 所指提交中的 Maven 版本必须与 Tag 一致：`v1.2.3` 对应 `1.2.3`；发布后 `main` 必须推进到下一个 `-SNAPSHOT` 版本。
 5. 每个版本必须在 [CHANGELOG.md](CHANGELOG.md) 中记录用户可见变更、风险或迁移说明；无变更记录不允许打 Tag。
-6. 部署结果必须记录版本、完整 commit SHA、目标节点、时间、验收结论和回滚基线。机器上的运行状态用于实时查询，变更内容以 Git Tag 和 Changelog 为准。
+6. 部署结果必须记录版本、完整 commit SHA、目标节点、时间、验收结论和回滚基线。机器上的运行状态用于实时查询；变更内容以 Git Tag 和 Changelog 为准。
 
 ## 标准开发到发布流程
 
@@ -24,17 +24,23 @@ main（下一版本 -SNAPSHOT）
   → main 推进到下一个 -SNAPSHOT
 ```
 
-发布脚本必须自动校验工作区、版本号、Tag 格式和 Tag 唯一性；部署脚本必须只接受已验证的 Tag，并在状态中保存 `version` 与完整 SHA。发布工具完成前，禁止执行下一次生产部署。
+发布工具必须自动校验工作区、版本号、Tag 格式和 Tag 唯一性；部署脚本必须只接受已验证的 Tag，并在状态中保存 `version` 与完整 SHA。发布工具完成前，禁止执行下一次生产部署。
 
-创建版本使用 Maven Release Plugin：在 `CHANGELOG.md` 整理完版本内容并完成测试后，执行以下命令（示例发布 `1.2.3`，下一开发版本为 `1.2.4-SNAPSHOT`）：
+创建版本只使用受控脚本；它会校验 `main`、干净工作区、Tag 唯一性和 Changelog 条目，并按项目规则刷新缓存、执行全量测试、创建 annotated Tag、推送以及清理本机事务状态。示例发布 `1.2.3`，下一开发版本为 `1.2.4-SNAPSHOT`：
 
 ```bash
-JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn -B release:prepare \
-  -DreleaseVersion=1.2.3 -DdevelopmentVersion=1.2.4-SNAPSHOT
-git push origin main --follow-tags
+bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
 ```
 
-插件会校验工作区、将全部 Maven 模块从 `X.Y.Z-SNAPSHOT` 改为 `X.Y.Z`、创建 `vX.Y.Z` annotated Tag，再将 `main` 推进到下一 `-SNAPSHOT`。禁止手工编辑多个 POM 或手工创建轻量 Tag。
+脚本内的 Maven Release Plugin 会将全部 Maven 模块从 `X.Y.Z-SNAPSHOT` 改为 `X.Y.Z`、创建 `vX.Y.Z` annotated Tag，再将 `main` 推进到下一 `-SNAPSHOT`。`release:prepare` 会在本机生成 `release.properties` 和各模块的 `pom.xml.releaseBackup`，它们只用于插件的恢复流程，绝不提交；脚本退出时会执行 `release:clean`。若生产 Java 有改动，必须设置 `COVERAGE_INCLUDES`，以执行变更覆盖率门禁。禁止绕过脚本手工编辑多个 POM 或创建轻量 Tag。
+
+发布前的全量测试、缓存刷新和变更覆盖率仍须严格按 [Maven 指南](../agent-guides/maven.md) 执行。下一开发版本必须依据版本选择表显式指定；例如修复发布 `1.0.1` 后通常为 `1.0.2-SNAPSHOT`，新增向后兼容功能后通常为 `1.1.0-SNAPSHOT`，不得无意跳号。
+
+### 中断与恢复
+
+1. 未产生发布提交或 Tag：保留现场以判断失败原因；不需要回滚插件事务时执行 `release:clean`，修复后从干净工作区重新开始。
+2. 已产生 Tag、尚未部署或验收失败：Tag 保持不可变，不得移动、删除或重用；修复后创建新的 PATCH 版本。
+3. 部署中失败：记录已执行节点、完整 SHA、失败阶段和日志位置；停止后续节点。仅在数据库迁移兼容时，才可部署已验收的回滚基线。
 
 ## 版本选择
 
@@ -48,7 +54,7 @@ git push origin main --follow-tags
 
 ## 双节点发布与回滚
 
-1. 记录当前已发布 Tag，作为回滚基线。
+1. 记录当前已验收发布的 Tag，作为回滚基线。
 2. 部署并验收数据节点的目标 Tag。
 3. 部署并验收应用节点的同一 Tag。
 4. 两节点的版本和完整 SHA 必须完全一致，再执行 SNI 查询回归。
@@ -56,6 +62,8 @@ git push origin main --follow-tags
 
 网页运维页只可展示或请求经过验证的发布版本；它不能把任意 ref、分支或命令交给宿主机。
 
+一次发布可以将同一个**新的** Tag 分别部署到数据节点和应用节点各一次；禁止的是在同一节点重复部署已成功记录的 Tag，或把旧 Tag 当作新的生产发布。两节点均验收前，该 Tag 的状态是“待验收”，不能作为回滚基线。
+
 ## 记录格式
 
-每个正式版本在 `CHANGELOG.md` 中至少包含：版本号、发布日期、变更摘要、兼容性/迁移说明、发布 Tag 和完整 commit SHA。实际部署验收应在对应版本条目中补充目标节点和结果，或由受控发布工具写入同一格式的记录。
+`CHANGELOG.md` 是在创建 Tag 前冻结的变更说明，至少包含：版本号、发布日期、变更摘要、兼容性/迁移说明、发布 Tag 和完整 commit SHA。Tag 已创建但尚未验收的条目必须明确标注“待验收”。实际部署验收不得回写已发布 Tag；应在 `main` 上的对应条目或受控发布工具的发布台账中追加目标节点、时间、验收结论和回滚基线。
