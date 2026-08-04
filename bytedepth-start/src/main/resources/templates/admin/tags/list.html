@@ -21,6 +21,10 @@
         h2 { color: #1a1a2e; font-size: 1.1em; margin-top: 0; margin-bottom: 16px; }
         .slug-badge { display: inline-block; background: #f0f2f5; color: #666; padding: 2px 8px; border-radius: 4px; font-size: 0.82em; font-family: monospace; }
         .count-badge { display: inline-block; background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 12px; font-size: 0.82em; font-weight: 600; }
+        .tag-actions { white-space: nowrap; }
+        .delete-form { display: inline; }
+        .delete-button { border: 0; border-radius: 4px; background: #fff1f0; color: #cf1322; cursor: pointer; font: inherit; padding: 6px 10px; }
+        .delete-button:hover { background: #ffccc7; }
         .back-link { color: #e94560; text-decoration: none; font-size: 0.9em; }
     </style>
 </head>
@@ -41,6 +45,7 @@
                     <th>名称</th>
                     <th>Slug</th>
                     <th>文章数</th>
+                    <th>操作</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,6 +53,12 @@
                     <td th:text="${tag.name}">标签名</td>
                     <td><span class="slug-badge" th:text="${tag.slug}">slug</span></td>
                     <td><span class="count-badge" th:text="${tag.count}">0</span></td>
+                    <td class="tag-actions">
+                        <form class="delete-form" method="post" th:action="@{/admin/tags/{tagId}/delete(tagId=${tag.id})}"
+                              onsubmit="return confirm('删除标签后，已关联文章将不再带有该标签。确定删除吗？');">
+                            <button class="delete-button" type="submit">删除</button>
+                        </form>
+                    </td>
                 </tr>
             </tbody>
         </table>

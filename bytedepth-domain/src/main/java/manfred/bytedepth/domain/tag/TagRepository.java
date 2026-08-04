@@ -10,5 +10,6 @@ public interface TagRepository {
     List<Tag> findAll();
     List<Tag> findByPostId(Long postId);
     void savePostTags(Long postId, List<Long> tagIds);
+    void deleteWithPostAssociations(Long tagId);
     List<TagWithCount> findAllWithCount();
 }

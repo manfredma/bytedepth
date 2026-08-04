@@ -6,6 +6,7 @@ import manfred.bytedepth.domain.tag.Tag;
 import manfred.bytedepth.domain.tag.TagRepository;
 import manfred.bytedepth.domain.tag.TagWithCount;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -56,6 +57,13 @@ public class TagRepositoryImpl implements TagRepository {
         if (tagIds != null && !tagIds.isEmpty()) {
             tagMapper.insertPostTags(postId, tagIds);
         }
+    }
+
+    @Override
+    @Transactional
+    public void deleteWithPostAssociations(Long tagId) {
+        tagMapper.deletePostTagAssociations(tagId);
+        tagMapper.deleteById(tagId);
     }
 
     @Override

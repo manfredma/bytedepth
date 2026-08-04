@@ -17,6 +17,9 @@ public interface TagMapper extends BaseMapper<TagDO> {
     @Delete("DELETE FROM post_tag WHERE post_id = #{postId}")
     void deletePostTags(Long postId);
 
+    @Delete("DELETE FROM post_tag WHERE tag_id = #{tagId}")
+    void deletePostTagAssociations(Long tagId);
+
     @Insert("<script>INSERT IGNORE INTO post_tag (post_id, tag_id) VALUES " +
             "<foreach collection='tagIds' item='tagId' separator=','>(#{postId}, #{tagId})</foreach></script>")
     void insertPostTags(Long postId, List<Long> tagIds);
