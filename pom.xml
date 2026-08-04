@@ -146,6 +146,13 @@
         </pluginManagement>
     </build>
 
+    <scm>
+        <connection>scm:git:git@github.com:manfredma/bytedepth.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/manfredma/bytedepth.git</developerConnection>
+        <url>https://github.com/manfredma/bytedepth</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <profiles>
         <!--
             仅在显式指定 coverage.includes 时启用。JaCoCo 会对匹配的生产类要求
