@@ -5,6 +5,7 @@ import manfred.bytedepth.domain.search.PostSearchPort;
 import manfred.bytedepth.domain.search.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,7 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
 
     private final RestClient restClient;
 
+    @Autowired
     public MeiliSearchPostIndexer(
             @Value("${bytedepth.search.url}") String url,
             @Value("${bytedepth.search.api-key}") String apiKey) {
