@@ -4,7 +4,7 @@
     <parent>
         <groupId>manfred.bytedepth</groupId>
         <artifactId>bytedepth</artifactId>
-        <version>1.0.2</version>
+        <version>1.0.3-SNAPSHOT</version>
     </parent>
     <artifactId>bytedepth-start</artifactId>
     <name>bytedepth-start</name>

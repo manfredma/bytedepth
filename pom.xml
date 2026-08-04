@@ -4,7 +4,7 @@
 
     <groupId>manfred.bytedepth</groupId>
     <artifactId>bytedepth</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>bytedepth</name>
 
@@ -148,7 +148,7 @@
         <connection>scm:git:git@github.com:manfredma/bytedepth.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/manfredma/bytedepth.git</developerConnection>
         <url>https://github.com/manfredma/bytedepth</url>
-        <tag>v1.0.2</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <profiles>
