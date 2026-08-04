@@ -25,7 +25,17 @@ public class MarkdownRenderer {
     private static final List<org.commonmark.Extension> EXTENSIONS =
             List.of(TablesExtension.create());
 
-    private static final PolicyFactory CONTENT_POLICY = Sanitizers.BLOCKS
+    /**
+     * {@link PolicyFactory#and(PolicyFactory)} intersects attribute policies for elements
+     * allowed by both factories.  Keeping the heading-id grant here, alongside the block
+     * element grant, prevents {@code Sanitizers.BLOCKS} from stripping in-page anchors.
+     */
+    private static final PolicyFactory BLOCKS_WITH_HEADING_IDS = new HtmlPolicyBuilder()
+            .allowCommonBlockElements()
+            .allowAttributes("id").onElements("h1", "h2", "h3", "h4", "h5", "h6")
+            .toFactory();
+
+    private static final PolicyFactory CONTENT_POLICY = BLOCKS_WITH_HEADING_IDS
             .and(Sanitizers.FORMATTING)
             .and(Sanitizers.LINKS)
             .and(Sanitizers.TABLES)
@@ -38,7 +48,6 @@ public class MarkdownRenderer {
                     .allowAttributes("width")
                     .matching(Pattern.compile("(?:[1-9]\\d{2}|1\\d{3}|2[0-4]\\d{2})"))
                     .onElements("img")
-                    .allowAttributes("id").onElements("h1", "h2", "h3", "h4", "h5", "h6")
                     .toFactory());
 
     private final Parser parser = Parser.builder().extensions(EXTENSIONS).build();

@@ -35,10 +35,19 @@ class MarkdownRendererTest {
         String rendered = renderer.render("# 标题\n\n```java\nint value = 1;\n```\n\n| 名称 | 值 |\n| --- | --- |\n| A | 1 |");
 
         assertThat(rendered)
-                .contains("<h1>标题</h1>")
+                .contains("<h1 id=\"标题\">标题</h1>")
                 .contains("<pre><code")
                 .contains("int value &#61; 1;")
                 .contains("<table>");
+    }
+
+    @Test
+    void preservesObsidianInPageAnchorLinks() {
+        String rendered = renderer.render("## TDD 三定律与工作流\n\n[跳转](#TDD%20三定律与工作流)");
+
+        assertThat(rendered)
+                .contains("<h2 id=\"TDD 三定律与工作流\">TDD 三定律与工作流</h2>")
+                .contains("href=\"#TDD%20三定律与工作流\"");
     }
 
     @Test
