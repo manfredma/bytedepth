@@ -47,6 +47,7 @@ settings.xml
 
 # Tools
 .omc/
+.omx/
 .claude/
 .gstack/
 __pycache__/
