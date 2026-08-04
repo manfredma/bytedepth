@@ -12,7 +12,11 @@ usage() {
 }
 
 cleanup_release_state() {
-    "$MAVEN_CMD" -B release:clean -Dsort.skip=true >/dev/null || true
+    mvn_cmd -B release:clean -Dsort.skip=true >/dev/null || true
+}
+
+mvn_cmd() {
+    env JAVA_HOME="$JAVA_HOME" "$MAVEN_CMD" "$@"
 }
 
 [[ -n "$RELEASE_VERSION" && -n "$DEVELOPMENT_VERSION" ]] || usage
@@ -21,7 +25,7 @@ cleanup_release_state() {
 
 JAVA_HOME="$(/usr/libexec/java_home -v 21)"
 readonly JAVA_HOME
-readonly MAVEN_CMD="${BYTEDEPTH_RELEASE_MAVEN:-${JAVA_HOME}/bin/mvn}"
+readonly MAVEN_CMD="${BYTEDEPTH_RELEASE_MAVEN:-mvn}"
 
 cd "$SOURCE_ROOT"
 
@@ -52,8 +56,8 @@ fi
 
 trap cleanup_release_state EXIT
 
-"$MAVEN_CMD" clean install -DskipTests -Dsort.skip=true
-"$MAVEN_CMD" test -Dsort.skip=true
+mvn_cmd clean install -DskipTests -Dsort.skip=true
+mvn_cmd test -Dsort.skip=true
 
 if [[ -n "${COVERAGE_INCLUDES:-}" ]]; then
     COVERAGE_INCLUDES="$COVERAGE_INCLUDES" bash scripts/verify-changed-coverage.sh
@@ -61,5 +65,5 @@ else
     printf 'Coverage check is not run because COVERAGE_INCLUDES is empty; set it for production Java changes.\n' >&2
 fi
 
-"$MAVEN_CMD" -B release:prepare -DreleaseVersion="$RELEASE_VERSION" -DdevelopmentVersion="$DEVELOPMENT_VERSION"
+mvn_cmd -B release:prepare -DreleaseVersion="$RELEASE_VERSION" -DdevelopmentVersion="$DEVELOPMENT_VERSION"
 git push origin main --follow-tags
