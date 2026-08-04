@@ -27,7 +27,7 @@ printf 'mvn %s\n' "$*" >> "$RELEASE_TEST_LOG"
 EOF
 chmod +x "$TEMP_ROOT/java/bin/mvn"
 
-RELEASE_TEST_LOG="$TEMP_ROOT/release.log" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME="$TEMP_ROOT/java" \
+RELEASE_TEST_LOG="$TEMP_ROOT/release.log" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
     "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT
 
 grep -Fqx 'mvn clean install -DskipTests -Dsort.skip=true' "$TEMP_ROOT/release.log"
@@ -36,13 +36,13 @@ grep -Fqx 'mvn -B release:prepare -DreleaseVersion=1.2.3 -DdevelopmentVersion=1.
 grep -Fqx 'git push origin main --follow-tags' "$TEMP_ROOT/release.log"
 grep -Fqx 'mvn -B release:clean -Dsort.skip=true' "$TEMP_ROOT/release.log"
 
-if RELEASE_TEST_LOG="$TEMP_ROOT/invalid.log" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME="$TEMP_ROOT/java" \
+if RELEASE_TEST_LOG="$TEMP_ROOT/invalid.log" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
     "$TEMP_ROOT/scripts/prepare-release.sh" >/dev/null 2>&1; then
     printf 'Expected missing-version validation to fail.\n' >&2
     exit 1
 fi
 
-if RELEASE_TEST_DIRTY=1 RELEASE_TEST_LOG="$TEMP_ROOT/dirty.log" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME="$TEMP_ROOT/java" \
+if RELEASE_TEST_DIRTY=1 RELEASE_TEST_LOG="$TEMP_ROOT/dirty.log" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
     "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT >/dev/null 2>&1; then
     printf 'Expected dirty-worktree validation to fail.\n' >&2
     exit 1
