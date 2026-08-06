@@ -7,6 +7,7 @@ import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpMethod;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -27,8 +28,9 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 public class SecurityConfig {
 
     @Bean
-    public RateLimitFilter rateLimitFilter(RateLimitPort rateLimitPort, RateLimitProperties properties) {
-        return new RateLimitFilter(rateLimitPort, properties);
+    public RateLimitFilter rateLimitFilter(RateLimitPort rateLimitPort, RateLimitProperties properties,
+                                        ResourceLoader resourceLoader) {
+        return new RateLimitFilter(rateLimitPort, properties, resourceLoader);
     }
 
     /** The filter is invoked by Spring Security only; registering it with the servlet too would charge twice. */

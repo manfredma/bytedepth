@@ -3,6 +3,7 @@ package manfred.bytedepth.adapter.web.security;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
@@ -28,7 +29,7 @@ class SecurityConfigBeansTest {
 
     @Test
     void rateLimitFilterRegistration_isDisabledToAvoidDoubleCharging() {
-        var filter = config.rateLimitFilter(mock(RateLimitPort.class), new RateLimitProperties());
+        var filter = config.rateLimitFilter(mock(RateLimitPort.class), new RateLimitProperties(), mock(ResourceLoader.class));
         var registration = config.rateLimitFilterRegistration(filter);
 
         assertNotNull(filter);

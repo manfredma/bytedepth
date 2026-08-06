@@ -63,6 +63,10 @@ __pycache__/
 .understand-anything/
 .codegraph/
 
+# Node.js / frontend tooling
+node_modules/
+package-lock.json
+
 # MaxMind GeoLite2 数据库（约 60MB，手动部署，勿提交）
 # 下载：https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
 # 部署路径：/opt/bytedepth/GeoLite2-City.mmdb
