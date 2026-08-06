@@ -65,7 +65,6 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public SearchResult search(String query, int page, int size) {
         int offset = (page - 1) * size;
         try {
@@ -77,8 +76,11 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
 
             if (response == null) return new SearchResult(List.of(), 0, page, size);
 
-            var hits = (List<Map<String, Object>>) response.get("hits");
-            if (hits == null) return new SearchResult(List.of(), 0, page, size);
+            Object rawHits = response.get("hits");
+            if (!(rawHits instanceof List<?> hitsList)) {
+                return new SearchResult(List.of(), 0, page, size);
+            }
+            List<Map<String, Object>> hits = castHitsList(hitsList);
 
             long total = response.get("estimatedTotalHits") instanceof Number n
                     ? n.longValue() : hits.size();
@@ -88,6 +90,12 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
             log.warn("MeiliSearch 搜索失败 q={}: {}", query, e.getMessage());
             return new SearchResult(List.of(), 0, page, size);
         }
+    }
+
+    /** 安全转换 hits 列表——MeiliSearch 返回的 JSON 结构保证每个元素是 Map。 */
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> castHitsList(List<?> hitsList) {
+        return (List<Map<String, Object>>) hitsList;
     }
 
     private Map<String, Object> toMap(PostSearchDoc doc) {
@@ -104,12 +112,9 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
         return m;
     }
 
-    @SuppressWarnings("unchecked")
     private PostSearchDoc fromMap(Map<String, Object> hit) {
         // MeiliSearch 把 highlight 放在 _formatted 子对象里
-        Map<String, Object> formatted = hit.containsKey("_formatted")
-                ? (Map<String, Object>) hit.get("_formatted")
-                : hit;
+        Map<String, Object> formatted = castFormatted(hit);
 
         long id = ((Number) hit.get("id")).longValue();
         // 旧索引文档可能缺少 slug 字段（在 slug 特性上线前已索引）；
@@ -126,9 +131,22 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
                 .content(str(formatted.get("content")))
                 .categoryName(str(hit.get("categoryName")))
                 .categorySlug(str(hit.get("categorySlug")))
-                .tags(hit.get("tags") instanceof List ? (List<String>) hit.get("tags") : List.of())
+                .tags(castTagsList(hit.get("tags")))
                 .seriesName(str(hit.get("seriesName")))
                 .build();
+    }
+
+    /** 安全转换 _formatted 子对象——MeiliSearch 返回的 JSON 结构保证是 Map。 */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> castFormatted(Map<String, Object> hit) {
+        Object raw = hit.get("_formatted");
+        return raw instanceof Map ? (Map<String, Object>) raw : hit;
+    }
+
+    /** 安全转换 tags 列表——MeiliSearch 返回的 JSON 结构保证是字符串列表。 */
+    @SuppressWarnings("unchecked")
+    private static List<String> castTagsList(Object raw) {
+        return raw instanceof List ? (List<String>) raw : List.of();
     }
 
     private String str(Object o) {
