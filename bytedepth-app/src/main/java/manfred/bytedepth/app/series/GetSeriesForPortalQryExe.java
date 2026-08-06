@@ -28,7 +28,7 @@ public class GetSeriesForPortalQryExe {
         long totalPages = Math.max(1, (total + PAGE_SIZE - 1) / PAGE_SIZE);
         int from = (page - 1) * PAGE_SIZE;
         int to = (int) Math.min(from + PAGE_SIZE, total);
-        List<SeriesPostItem> pagePosts = (from < total) ? allPosts.subList(from, to) : List.of();
+        List<SeriesPostItem> pagePosts = from < total ? allPosts.subList(from, to) : List.of();
 
         List<SeriesPortalPostDTO> postDTOs = pagePosts.stream().map(item -> {
             SeriesPortalPostDTO dto = new SeriesPortalPostDTO();

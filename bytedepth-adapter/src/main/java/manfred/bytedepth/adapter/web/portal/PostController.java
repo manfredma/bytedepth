@@ -66,12 +66,12 @@ public class PostController {
                        @RequestParam(defaultValue = "10") int size,
                        @RequestParam(required = false) String tag,
                        @RequestParam(required = false) String category) {
-        var posts = (tag != null && !tag.isBlank())
+        var posts = tag != null && !tag.isBlank()
                 ? listPostsQryExe.executeByTag(tag, page, size)
                 : (category != null && !category.isBlank())
                         ? listPostsQryExe.executeByCategory(category, page, size)
                         : listPostsQryExe.execute(page, size);
-        long total = (tag != null && !tag.isBlank())
+        long total = tag != null && !tag.isBlank()
                 ? listPostsQryExe.countByTag(tag)
                 : (category != null && !category.isBlank())
                         ? listPostsQryExe.countByCategory(category)
@@ -207,7 +207,7 @@ public class PostController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) return null;
         Object principal = auth.getPrincipal();
-        return (principal instanceof UserDetails ud) ? ud : null;
+        return principal instanceof UserDetails ud ? ud : null;
     }
 
     private boolean hasAuthority(UserDetails user, String authority) {
@@ -249,6 +249,7 @@ public class PostController {
     }
 
     /** 判断是否为私有/回环 IP（简单字符串匹配）。 */
+    @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
     private boolean isPrivateIp(String ip) {
         return ip.startsWith("10.") || ip.startsWith("172.") || ip.startsWith("192.168.")
                 || ip.equals("127.0.0.1") || ip.equals("::1") || ip.equals("0:0:0:0:0:0:0:1");

@@ -2,7 +2,6 @@ package manfred.bytedepth.app.tag;
 
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.domain.tag.TagRepository;
-import manfred.bytedepth.domain.tag.TagWithCount;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
