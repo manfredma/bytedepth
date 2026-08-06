@@ -12,12 +12,16 @@ import static org.mockito.Mockito.when;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import manfred.bytedepth.app.ratelimit.RateLimitDecision;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -27,11 +31,20 @@ class RateLimitFilterTest {
     private FilterChain filterChain;
     private RateLimitFilter filter;
 
+    private static final String TEMPLATE_CONTENT = """
+            <!doctype html><html lang="zh-CN"><head><title>请稍后再试 · ByteDepth</title></head>
+            <body><h1>慢一点，休息一下</h1><strong id="countdown">{{retryAfterSeconds}}</strong></body></html>""";
+
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         rateLimitPort = mock(RateLimitPort.class);
         filterChain = mock(FilterChain.class);
-        filter = new RateLimitFilter(rateLimitPort, new RateLimitProperties());
+        ResourceLoader resourceLoader = mock(ResourceLoader.class);
+        Resource resource = mock(Resource.class);
+        when(resource.getInputStream()).thenReturn(
+                new ByteArrayInputStream(TEMPLATE_CONTENT.getBytes(StandardCharsets.UTF_8)));
+        when(resourceLoader.getResource("classpath:rate-limit-page.html")).thenReturn(resource);
+        filter = new RateLimitFilter(rateLimitPort, new RateLimitProperties(), resourceLoader);
         when(rateLimitPort.tryConsume(any(), anyLong(), any(), any())).thenReturn(RateLimitDecision.permit());
     }
 
