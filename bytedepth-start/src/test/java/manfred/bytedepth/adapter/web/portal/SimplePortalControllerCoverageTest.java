@@ -136,15 +136,20 @@ class SimplePortalControllerCoverageTest {
         Post nullSlug = mock(Post.class);
         when(updated.getSlug()).thenReturn("a&b");
         when(updated.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 8, 4, 1, 0));
+        when(updated.getSeriesId()).thenReturn(1L);
         when(published.getSlug()).thenReturn("published");
         when(published.getPublishedAt()).thenReturn(LocalDateTime.of(2026, 8, 3, 1, 0));
+        when(published.getSeriesId()).thenReturn(1L);
         when(fallback.getSlug()).thenReturn("fallback");
+        when(fallback.getSeriesId()).thenReturn(2L);
         when(blank.getSlug()).thenReturn(" ");
+        when(blank.getSeriesId()).thenReturn(null);
         when(nullSlug.getSlug()).thenReturn(null);
         Series valid = mock(Series.class);
         Series empty = mock(Series.class);
         Series blankSeries = mock(Series.class);
         when(valid.getSlug()).thenReturn("series<one>");
+        when(valid.getId()).thenReturn(1L);
         when(empty.getSlug()).thenReturn(null);
         when(blankSeries.getSlug()).thenReturn(" ");
         when(posts.findAllPublished()).thenReturn(List.of(updated, published, fallback, blank, nullSlug));
@@ -155,6 +160,41 @@ class SimplePortalControllerCoverageTest {
         String xml = controller.sitemap();
         assertThat(xml).contains("https://example.test?a=1&amp;b=2/posts/a&amp;b")
                 .contains("2026-08-04").contains("2026-08-03")
-                .contains("series&lt;one&gt;").doesNotContain("posts/ ");
+                .contains("series&lt;one&gt;").doesNotContain("posts/ ")
+                .doesNotContain("<loc>https://example.test?a=1&amp;b=2/about</loc>\n    <lastmod>");
+
+        when(posts.findAllPublished()).thenReturn(List.of(published, updated));
+        assertThat(controller.sitemap()).contains("<loc>https://example.test?a=1&amp;b=2/columns/series&lt;one&gt;</loc>\n    <lastmod>2026-08-04</lastmod>");
+    }
+
+    @Test
+    void feedListsRecentPostsWithSafeSummariesAndOmitsUnavailableDates() {
+        PostRepository posts = mock(PostRepository.class);
+        Post published = mock(Post.class);
+        Post updated = mock(Post.class);
+        Post undated = mock(Post.class);
+        when(published.getSlug()).thenReturn("published");
+        when(published.getTitle()).thenReturn("A & B");
+        when(published.getContent()).thenReturn("short\nsummary");
+        when(published.getPublishedAt()).thenReturn(LocalDateTime.of(2026, 8, 3, 1, 0));
+        when(updated.getSlug()).thenReturn("updated");
+        when(updated.getTitle()).thenReturn(null);
+        when(updated.getContent()).thenReturn("x".repeat(301));
+        when(updated.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 8, 4, 1, 0));
+        when(undated.getSlug()).thenReturn("undated");
+        when(undated.getTitle()).thenReturn("undated");
+        when(posts.findAllPublished()).thenReturn(List.of(published, updated, undated));
+        FeedController controller = new FeedController(posts);
+        ReflectionTestUtils.setField(controller, "siteUrl", "https://example.test?a=1&b=2");
+
+        String xml = controller.feed();
+
+        assertThat(xml).contains("<title>A &amp; B</title>", "short summary", "Tue, 4 Aug 2026 01:00:00 +0800")
+                .contains("https://example.test?a=1&amp;b=2/feed.xml")
+                .doesNotContain("<title>null</title>")
+                .doesNotContain("<link>https://example.test?a=1&amp;b=2/posts/undated</link>\n<guid isPermaLink=\"true\">https://example.test?a=1&amp;b=2/posts/undated</guid>\n<description></description>\n<pubDate>");
+
+        when(posts.findAllPublished()).thenReturn(List.of());
+        assertThat(controller.feed()).doesNotContain("<lastBuildDate>");
     }
 }
