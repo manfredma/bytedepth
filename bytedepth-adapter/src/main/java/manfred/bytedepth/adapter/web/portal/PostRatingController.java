@@ -3,6 +3,7 @@ package manfred.bytedepth.adapter.web.portal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.adapter.web.util.WebUtils;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.rating.RatePostCmdExe;
 import org.springframework.http.HttpStatus;
@@ -42,8 +43,6 @@ public class PostRatingController {
     }
 
     private String visitorToken(HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
-        for (var cookie : request.getCookies()) if (VISITOR_COOKIE.equals(cookie.getName())) return cookie.getValue();
-        return null;
+        return WebUtils.readCookie(request, VISITOR_COOKIE);
     }
 }

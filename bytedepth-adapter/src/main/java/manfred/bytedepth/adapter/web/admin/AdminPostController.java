@@ -1,12 +1,11 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.adapter.web.security.ContentOwnershipGuard;
+import manfred.bytedepth.adapter.web.util.SecurityUtils;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import manfred.bytedepth.app.post.command.DeletePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
@@ -111,9 +110,9 @@ public class AdminPostController {
     @PostMapping
     public String create(@ModelAttribute CreatePostCmd cmd) {
         // 从 SecurityContext 取当前管理员用户名作为文章作者
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof UserDetails ud) {
-            cmd.setAuthorUsername(ud.getUsername());
+        var user = SecurityUtils.currentUser();
+        if (user != null) {
+            cmd.setAuthorUsername(user.getUsername());
         }
         createPostCmdExe.execute(cmd);
         return "redirect:/admin/posts";

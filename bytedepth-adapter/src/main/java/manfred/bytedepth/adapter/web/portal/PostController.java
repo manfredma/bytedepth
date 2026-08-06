@@ -2,35 +2,39 @@ package manfred.bytedepth.adapter.web.portal;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.adapter.web.util.CsrfTokenInitializer;
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
+import manfred.bytedepth.adapter.web.util.SecurityUtils;
 import manfred.bytedepth.adapter.web.util.SeoUtils;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
-import manfred.bytedepth.adapter.web.util.CsrfTokenInitializer;
-import manfred.bytedepth.adapter.web.security.SiteUserDetails;
+import manfred.bytedepth.adapter.web.util.WebUtils;
+import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
-import manfred.bytedepth.app.rating.GetPostRatingQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
+import manfred.bytedepth.app.rating.GetPostRatingQryExe;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
+import manfred.bytedepth.app.tag.ListTagsQryExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import manfred.bytedepth.domain.stats.PostViewCounter;
 import manfred.bytedepth.domain.stats.PostViewedEvent;
-import manfred.bytedepth.app.category.ListCategoriesQryExe;
-import manfred.bytedepth.app.tag.ListTagsQryExe;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
@@ -110,9 +114,9 @@ public class PostController {
 
         var post = getPostQryExe.executeBySlug(identifier);
         Long id = post.getId();
-        UserDetails currentUser = currentUser();
-        boolean isAdmin = hasAuthority(currentUser, "blog:post:manage");
-        boolean isOwner = isOwner(currentUser, post.getAuthorId());
+        UserDetails currentUser = SecurityUtils.currentUser();
+        boolean isAdmin = SecurityUtils.hasAuthority(currentUser, "blog:post:manage");
+        boolean isOwner = SecurityUtils.isOwner(currentUser, post.getAuthorId());
         boolean isDraft = "DRAFT".equals(post.getStatus());
 
         // 草稿仅作者或管理员可查看
@@ -127,20 +131,21 @@ public class PostController {
         model.addAttribute("wordCount", markdownRenderer.countVisibleCharacters(post.getContent()));
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
-        model.addAttribute("rating", getPostRatingQryExe.execute(id, readRatingVisitorToken(request)));
+        model.addAttribute("rating", getPostRatingQryExe.execute(id,
+                WebUtils.readCookie(request, PostRatingController.VISITOR_COOKIE)));
         // The visibility check above has already established that a draft can reach this point
         // only for its owner or an administrator.
         model.addAttribute("canPublish", isDraft);
-        String userAgent = truncate(request.getHeader("User-Agent"), 512);
+        String userAgent = WebUtils.truncate(request.getHeader("User-Agent"), 512);
         if (visitRequestFilter.shouldRecord(new VisitRequestFilter.Request(userAgent))) {
             String visitToken = UUID.randomUUID().toString();
             postViewCounter.increment(id);
             eventPublisher.publishEvent(new PostViewedEvent(
                     id,
-                    extractUserId(currentUser),
-                    getClientIp(request),
+                    SecurityUtils.extractUserId(currentUser),
+                    WebUtils.getClientIp(request),
                     userAgent,
-                    truncate(request.getHeader("Referer"), 512),
+                    WebUtils.truncate(request.getHeader("Referer"), 512),
                     visitToken,
                     LocalDateTime.now()
             ));
@@ -160,14 +165,6 @@ public class PostController {
         return "public/posts/detail";
     }
 
-    private String readRatingVisitorToken(HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
-        for (var cookie : request.getCookies()) {
-            if (PostRatingController.VISITOR_COOKIE.equals(cookie.getName())) return cookie.getValue();
-        }
-        return null;
-    }
-
     @GetMapping("/new")
     @PreAuthorize("hasAuthority('blog:post:create')")
     public String newForm(Model model) {
@@ -179,7 +176,7 @@ public class PostController {
     @PostMapping
     @PreAuthorize("hasAuthority('blog:post:create')")
     public String create(@ModelAttribute CreatePostCmd cmd) {
-        UserDetails user = currentUser();
+        UserDetails user = SecurityUtils.currentUser();
         if (user != null) {
             cmd.setAuthorUsername(user.getUsername());
         }
@@ -193,71 +190,12 @@ public class PostController {
     @PreAuthorize("isAuthenticated()")
     public String publish(@PathVariable("slug") String slug) {
         var post = getPostQryExe.executeBySlug(slug);
-        UserDetails user = currentUser();
-        if (!hasAuthority(user, "blog:post:manage") && !isOwner(user, post.getAuthorId())) {
+        UserDetails user = SecurityUtils.currentUser();
+        if (!SecurityUtils.hasAuthority(user, "blog:post:manage")
+                && !SecurityUtils.isOwner(user, post.getAuthorId())) {
             throw new AccessDeniedException("无权发布他人文章");
         }
         publishPostCmdExe.execute(post.getId());
         return "redirect:/posts/" + slug;
-    }
-
-    // ── 辅助：从 SecurityContextHolder 读取当前用户 ────────────────────────────
-
-    private UserDetails currentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) return null;
-        Object principal = auth.getPrincipal();
-        return principal instanceof UserDetails ud ? ud : null;
-    }
-
-    private boolean hasAuthority(UserDetails user, String authority) {
-        return user != null && user.getAuthorities().stream()
-            .anyMatch(a -> authority.equals(a.getAuthority()));
-    }
-
-    private boolean isOwner(UserDetails user, Long authorId) {
-        if (user == null || authorId == null) return false;
-        if (user instanceof SiteUserDetails sd) {
-            return sd.getId().equals(authorId);
-        }
-        return false;
-    }
-
-    /** 从登录用户中提取数据库 ID，匿名返回 null。 */
-    private Long extractUserId(UserDetails user) {
-        if (user instanceof SiteUserDetails sd) {
-            return sd.getId();
-        }
-        return null;
-    }
-
-    /**
-     * 获取客户端真实 IP：优先取 X-Forwarded-For 首个非私有 IP，
-     * 无法解析时回退到 RemoteAddr。
-     */
-    private String getClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            for (String part : xff.split(",")) {
-                String ip = part.trim();
-                if (!ip.isBlank() && !isPrivateIp(ip)) {
-                    return ip;
-                }
-            }
-        }
-        return request.getRemoteAddr();
-    }
-
-    /** 判断是否为私有/回环 IP（简单字符串匹配）。 */
-    @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
-    private boolean isPrivateIp(String ip) {
-        return ip.startsWith("10.") || ip.startsWith("172.") || ip.startsWith("192.168.")
-                || ip.equals("127.0.0.1") || ip.equals("::1") || ip.equals("0:0:0:0:0:0:0:1");
-    }
-
-    /** 截断字符串至指定长度，null 安全。 */
-    private String truncate(String s, int maxLen) {
-        if (s == null) return null;
-        return s.length() <= maxLen ? s : s.substring(0, maxLen);
     }
 }
