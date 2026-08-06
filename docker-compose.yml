@@ -82,6 +82,3 @@ services:
     depends_on:
       - app
 
-volumes:
-  mysql_data:
-  redis_data:
