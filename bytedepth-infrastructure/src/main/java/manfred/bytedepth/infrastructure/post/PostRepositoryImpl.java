@@ -182,7 +182,7 @@ public class PostRepositoryImpl implements PostRepository {
         d.setTitle(post.getTitle());
         d.setContent(post.getContent());
         d.setStatus(post.getStatus().name());
-        d.setFeatured(post.getFeatured() != null ? post.getFeatured() : false);
+        d.setFeatured(Boolean.TRUE.equals(post.getFeatured()));
         d.setCreatedAt(post.getCreatedAt());
         d.setPublishedAt(post.getPublishedAt());
         d.setUpdatedAt(post.getUpdatedAt());

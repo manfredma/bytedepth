@@ -2,7 +2,6 @@ package manfred.bytedepth.app.series;
 
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.domain.series.Series;
-import manfred.bytedepth.domain.series.SeriesPostItem;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import org.springframework.stereotype.Component;
 

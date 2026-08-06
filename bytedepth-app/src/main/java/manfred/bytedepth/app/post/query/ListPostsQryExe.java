@@ -1,7 +1,6 @@
 package manfred.bytedepth.app.post.query;
 
 import lombok.RequiredArgsConstructor;
-import manfred.bytedepth.domain.category.Category;
 import manfred.bytedepth.domain.category.CategoryRepository;
 import manfred.bytedepth.domain.post.HotPost;
 import manfred.bytedepth.domain.post.Post;

@@ -60,8 +60,8 @@ public class UnixSocketOpsDeploymentAdapter implements OpsDeploymentPort {
 
     private String readResponse(SocketChannel channel) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(MAX_RESPONSE_BYTES);
-        while (buffer.hasRemaining() && channel.read(buffer) != -1) {
-            // The host service closes the socket after one small line-based response.
+        while (buffer.hasRemaining()) {
+            if (channel.read(buffer) == -1) break;
         }
         return StandardCharsets.UTF_8.decode((ByteBuffer) buffer.flip()).toString();
     }

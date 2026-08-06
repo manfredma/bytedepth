@@ -26,7 +26,7 @@ public class ListSeriesQryExe {
         long totalPages = Math.max(1, (total + PAGE_SIZE - 1) / PAGE_SIZE);
         int from = (page - 1) * PAGE_SIZE;
         int to = (int) Math.min(from + PAGE_SIZE, total);
-        List<Series> pageSeries = (from < total) ? all.subList(from, to) : List.of();
+        List<Series> pageSeries = from < total ? all.subList(from, to) : List.of();
 
         List<SeriesCardDTO> cards = pageSeries.stream().map(s -> {
             List<SeriesPostItem> posts = seriesRepository.findPublishedPostsBySeries(s.getId());

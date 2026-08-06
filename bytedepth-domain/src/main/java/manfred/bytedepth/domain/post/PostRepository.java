@@ -16,8 +16,8 @@ public interface PostRepository {
     long countPublishedByCategory(Long categoryId);
     List<Post> findPage(int page, int size);
     long countAll();
-    java.util.Optional<Post> findPrevPublished(Long id);
-    java.util.Optional<Post> findNextPublished(Long id);
+    Optional<Post> findPrevPublished(Long id);
+    Optional<Post> findNextPublished(Long id);
     void setPostSeries(Long postId, Long seriesId, Integer seriesOrder);
     /** 清除文章的专栏绑定（series_id、series_order 置 null） */
     void clearPostSeries(Long postId);
@@ -25,7 +25,7 @@ public interface PostRepository {
     List<Post> findPublishedByAuthorId(Long authorId, int page, int size);
     long countPublishedByAuthorId(Long authorId);
 
-    java.util.Optional<Post> findBySlug(String slug);
+    Optional<Post> findBySlug(String slug);
 
     /** 直接更新 slug 字段（不触及其他字段）。调用方需保证格式合法且无冲突。 */
     void updateSlug(Long id, String slug);

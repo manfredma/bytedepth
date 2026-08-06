@@ -140,6 +140,19 @@
                         </annotationProcessorPaths>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-pmd-plugin</artifactId>
+                    <version>3.21.2</version>
+                    <configuration>
+                        <rulesets>
+                            <ruleset>pmd-ruleset.xml</ruleset>
+                        </rulesets>
+                        <targetJdk>17</targetJdk>
+                        <failOnViolation>true</failOnViolation>
+                        <printFailingErrors>true</printFailingErrors>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
