@@ -4,6 +4,31 @@
 
 ## Unreleased
 
+## [v1.4.0] - 2026-08-07
+
+**Tag**：`v1.4.0`
+**Commit**：`待发布后填写`
+**部署**：待验收
+**回滚基线**：`v1.3.0`
+
+### Changed
+
+- PostController 辅助方法提取到 WebUtils 和 SecurityUtils，Controller 从 263 行降至 171 行。
+- 限流页面 HTML/CSS/JS 从 Java 字符串提取到 classpath 模板文件。
+- 模块级 README 覆盖 5 个模块。
+- 新增 docs/routes.md 路由一览文档。
+
+### Fixed
+
+- PMD 违规：配置自定义 ruleset 排除 UnusedPrivateField 假阳性，修复 domain/app/infrastructure/adapter 层共 18 个真实违规，所有模块 PMD 通过。
+- MeiliSearchPostIndexer 未经检查的泛型转换：缩小 @SuppressWarnings 到私有辅助方法，加入 instanceof 类型检查。
+- 注册密码强度校验：8-64 位 + 必须包含字母和数字，5 个测试覆盖边界。
+- 移除 docker-compose.yml 中未使用的 mysql_data 和 redis_data named volumes。
+
+### Compatibility
+
+- 无数据库迁移；可在验证失败时回滚至 `v1.3.0`。
+
 ## [v1.3.0] - 2026-08-06
 
 **Tag**：`v1.3.0`
