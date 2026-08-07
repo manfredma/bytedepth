@@ -4,6 +4,37 @@
 
 ## Unreleased
 
+## [v1.5.0] - 2026-08-07
+
+**Tag**：`v1.5.0`
+**Commit**：`待发布后填写`
+**部署**：待验收
+**回滚基线**：`v1.4.0`
+
+### Changed
+
+- Java 17 → 25（编译/运行目标）
+- Spring Boot 3.2.5 → 4.1.0（Spring Framework 7.0.8, Spring Security 7.1.0）
+- MyBatis-Plus 3.5.5 → 3.5.17（spring-boot4-starter），移除 PaginationInnerInterceptor
+- Lombok 1.18.30 → 1.18.40
+- Testcontainers 1.20.1 → 1.20.9
+- Bucket4j 8.14.0 → 8.19.0
+- Commonmark 0.21.0 → 0.30.0
+- ArchUnit 1.4.2 → 1.5.0
+- Dockerfile 构建/运行镜像升级至 Java 25
+
+### Fixed
+
+- SecurityConfig: @MockBean → @MockitoBean, AntPathRequestMatcher → PathPatternRequestMatcher
+- DaoAuthenticationProvider: 构造函数注入替代已移除的 setUserDetailsService()
+- RedisURI: setPassword() → setAuthentication()（Lettuce 7.x API 变更）
+- 测试 Mapper 调用: any() → any(XxxDO.class)（MyBatis-Plus 3.5.17 批量方法重载）
+
+### Compatibility
+
+- 无数据库迁移；可在验证失败时回滚至 `v1.4.0`
+- 注意：thymeleaf-extras-springsecurity6 3.1.5.RELEASE 尚不兼容 Spring Security 7，@WebMvcTest 切片测试中 sec:authorize 模板渲染可能失败，生产环境不受影响
+
 ## [v1.4.0] - 2026-08-07
 
 **Tag**：`v1.4.0`
