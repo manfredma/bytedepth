@@ -28,7 +28,7 @@ RUN mvn dependency:go-offline -Dsort.skip=true -q
 
 # 复制源码并打包
 COPY . .
-RUN mvn clean package -DskipTests -Dsort.skip=true
+RUN mvn clean package -Dmaven.test.skip=true -Dsort.skip=true
 
 # ---- Stage 2: Run ----
 FROM eclipse-temurin:25-jre-alpine
