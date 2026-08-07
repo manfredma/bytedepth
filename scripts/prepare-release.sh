@@ -67,5 +67,5 @@ else
     printf 'Coverage check is not run because COVERAGE_INCLUDES is empty; set it for production Java changes.\n' >&2
 fi
 
-mvn_cmd -B release:prepare -DreleaseVersion="$RELEASE_VERSION" -DdevelopmentVersion="$DEVELOPMENT_VERSION" -Darguments="-DskipTests"
+mvn_cmd -B release:prepare -DskipTests -DreleaseVersion="$RELEASE_VERSION" -DdevelopmentVersion="$DEVELOPMENT_VERSION"
 git push origin main --follow-tags
