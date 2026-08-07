@@ -1,0 +1,23 @@
+{
+  "name": "bytedepth-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ByteDepth 前端脚本与测试",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint bytedepth-start/src/main/resources/static/js/"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFiles": ["<rootDir>/jest.setup.js"],
+    "testMatch": [
+      "**/__tests__/**/*.test.js",
+      "**/src/test/js/**/*.test.js"
+    ]
+  }
+}
