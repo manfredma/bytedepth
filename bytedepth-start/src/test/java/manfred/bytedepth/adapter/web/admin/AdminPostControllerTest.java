@@ -18,9 +18,9 @@ import manfred.bytedepth.domain.series.SeriesRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.TestingAuthenticationToken;
@@ -52,41 +52,41 @@ class AdminPostControllerTest {
     private MockMvc mockMvc;
 
     // Spring Security requires UserDetailsService and PasswordEncoder beans
-    @MockBean
+    @MockitoBean
     private UserDetailsService userDetailsService;
 
-    @MockBean
+    @MockitoBean
     private PasswordEncoder passwordEncoder;
 
     // AdminPostController dependencies
-    @MockBean
+    @MockitoBean
     private ListAllPostsQryExe listAllPostsQryExe;
 
-    @MockBean
+    @MockitoBean
     private GetPostQryExe getPostQryExe;
 
-    @MockBean
+    @MockitoBean
     private CreatePostCmdExe createPostCmdExe;
 
-    @MockBean
+    @MockitoBean
     private UpdatePostCmdExe updatePostCmdExe;
 
-    @MockBean
+    @MockitoBean
     private PublishPostCmdExe publishPostCmdExe;
 
-    @MockBean
+    @MockitoBean
     private DeletePostCmdExe deletePostCmdExe;
 
-    @MockBean
+    @MockitoBean
     private ListCategoriesQryExe listCategoriesQryExe;
 
-    @MockBean
+    @MockitoBean
     private SetPostTagsCmdExe setPostTagsCmdExe;
 
-    @MockBean
+    @MockitoBean
     private SeriesRepository seriesRepository;
 
-    @MockBean
+    @MockitoBean
     private ContentOwnershipGuard contentOwnershipGuard;
 
     @BeforeEach
@@ -95,13 +95,13 @@ class AdminPostControllerTest {
         when(contentOwnershipGuard.canManageSeries(any())).thenReturn(true);
     }
 
-    @MockBean
+    @MockitoBean
     private AppendPostToSeriesCmdExe appendPostToSeriesCmdExe;
 
-    @MockBean
+    @MockitoBean
     private RemovePostFromSeriesCmdExe removePostFromSeriesCmdExe;
 
-    @MockBean
+    @MockitoBean
     private PostRepository postRepository;
 
     // --- Authentication tests ---
