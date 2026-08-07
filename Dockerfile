@@ -1,5 +1,5 @@
 # ---- Stage 1: Build ----
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /build
 
 # 配置阿里云 Maven 镜像加速（内嵌，不依赖外部文件）
@@ -31,7 +31,7 @@ COPY . .
 RUN mvn clean package -DskipTests -Dsort.skip=true
 
 # ---- Stage 2: Run ----
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 COPY --from=build /build/bytedepth-start/target/bytedepth-start.jar app.jar
 EXPOSE 8080

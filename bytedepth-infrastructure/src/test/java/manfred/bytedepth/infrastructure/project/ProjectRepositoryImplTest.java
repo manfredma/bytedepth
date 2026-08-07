@@ -23,7 +23,7 @@ class ProjectRepositoryImplTest {
     void save_insertsWhenIdIsNull() {
         Project project = Project.create("MyProject", "desc", "Java,Spring",
             "https://github.com/repo", "https://demo.example.com", 1);
-        when(projectMapper.insert(any())).thenAnswer(invocation -> {
+        when(projectMapper.insert(any(ProjectDO.class))).thenAnswer(invocation -> {
             invocation.<ProjectDO>getArgument(0).setId(10L);
             return 1;
         });
@@ -37,8 +37,8 @@ class ProjectRepositoryImplTest {
         assertEquals("https://github.com/repo", saved.getGithubUrl());
         assertEquals("https://demo.example.com", saved.getDemoUrl());
         assertEquals(1, saved.getSortOrder());
-        verify(projectMapper).insert(any());
-        verify(projectMapper, never()).updateById(any());
+        verify(projectMapper).insert(any(ProjectDO.class));
+        verify(projectMapper, never()).updateById(any(ProjectDO.class));
     }
 
     @Test
@@ -52,8 +52,8 @@ class ProjectRepositoryImplTest {
         assertEquals(5L, saved.getId());
         assertEquals("Existing", saved.getName());
         assertEquals(2, saved.getSortOrder());
-        verify(projectMapper).updateById(any());
-        verify(projectMapper, never()).insert(any());
+        verify(projectMapper).updateById(any(ProjectDO.class));
+        verify(projectMapper, never()).insert(any(ProjectDO.class));
     }
 
     @Test

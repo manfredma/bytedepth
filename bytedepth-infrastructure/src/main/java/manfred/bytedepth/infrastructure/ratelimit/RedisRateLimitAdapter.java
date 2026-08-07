@@ -32,7 +32,7 @@ public class RedisRateLimitAdapter implements RateLimitPort {
         uri.setTimeout(properties.getTimeout());
         requestTimeout = properties.getTimeout();
         if (properties.getPassword() != null && !properties.getPassword().isBlank()) {
-            uri.setPassword(properties.getPassword());
+            uri.setAuthentication(properties.getPassword());
         }
         redisClient = RedisClient.create(uri);
     }

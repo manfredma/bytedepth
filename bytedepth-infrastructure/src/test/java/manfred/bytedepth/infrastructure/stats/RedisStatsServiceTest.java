@@ -100,6 +100,11 @@ class RedisStatsServiceTest {
         }
 
         @Override
+        public org.springframework.data.redis.core.Cursor.CursorId getId() {
+            return org.springframework.data.redis.core.Cursor.CursorId.initial();
+        }
+
+        @Override
         public long getCursorId() {
             return 0;
         }

@@ -24,7 +24,7 @@ class CommentRepositoryImplTest {
 
     @Test
     void save_insertsNewCommentWhenIdIsNull() {
-        when(commentMapper.insert(any())).thenAnswer(invocation -> {
+        when(commentMapper.insert(any(CommentDO.class))).thenAnswer(invocation -> {
             invocation.<CommentDO>getArgument(0).setId(1L);
             return 1;
         });
@@ -39,7 +39,7 @@ class CommentRepositoryImplTest {
         assertEquals("Nice post", saved.getContent());
         assertEquals(manfred.bytedepth.domain.comment.CommentStatus.APPROVED, saved.getStatus());
         assertNotNull(saved.getCreatedAt());
-        verify(commentMapper).insert(any());
+        verify(commentMapper).insert(any(CommentDO.class));
     }
 
     @Test
@@ -53,12 +53,12 @@ class CommentRepositoryImplTest {
 
         assertEquals(5L, saved.getId());
         assertEquals("Updated content", saved.getContent());
-        verify(commentMapper).updateById(any());
+        verify(commentMapper).updateById(any(CommentDO.class));
     }
 
     @Test
     void save_setsCreatedAtToNowWhenNull() {
-        when(commentMapper.insert(any())).thenAnswer(invocation -> {
+        when(commentMapper.insert(any(CommentDO.class))).thenAnswer(invocation -> {
             invocation.<CommentDO>getArgument(0).setId(1L);
             return 1;
         });

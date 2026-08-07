@@ -21,7 +21,7 @@ class TagRepositoryImplTest {
 
     @Test
     void save_insertsNewTagAndUpdatesExistingTag() {
-        when(tagMapper.insert(any())).thenAnswer(invocation -> {
+        when(tagMapper.insert(any(TagDO.class))).thenAnswer(invocation -> {
             invocation.<TagDO>getArgument(0).setId(1L);
             return 1;
         });
@@ -32,7 +32,7 @@ class TagRepositoryImplTest {
         assertEquals(1L, created.getId());
         assertEquals("Java", created.getName());
         assertEquals("spring", updated.getSlug());
-        verify(tagMapper).updateById(any());
+        verify(tagMapper).updateById(any(TagDO.class));
     }
 
     @Test

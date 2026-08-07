@@ -4,9 +4,9 @@ import manfred.bytedepth.app.dashboard.DashboardStatsDTO;
 import manfred.bytedepth.app.dashboard.DashboardStatsQryExe;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -26,9 +26,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminDashboardControllerTest {
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private UserDetailsService userDetailsService;
-    @MockBean private PasswordEncoder passwordEncoder;
-    @MockBean private DashboardStatsQryExe dashboardStatsQryExe;
+    @MockitoBean private UserDetailsService userDetailsService;
+    @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean private DashboardStatsQryExe dashboardStatsQryExe;
 
     @Test
     void anonymousUser_cannotAccessAdminEntry() throws Exception {

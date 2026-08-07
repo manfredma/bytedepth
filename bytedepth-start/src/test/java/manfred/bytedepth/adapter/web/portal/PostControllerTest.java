@@ -24,10 +24,10 @@ import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.MockMvc;
@@ -61,46 +61,46 @@ class PostControllerTest {
     @Autowired
     private ApplicationEvents applicationEvents;
 
-    @MockBean
+    @MockitoBean
     private ListPostsQryExe listPostsQryExe;
 
-    @MockBean
+    @MockitoBean
     private GetPostQryExe getPostQryExe;
 
-    @MockBean
+    @MockitoBean
     private CreatePostCmdExe createPostCmdExe;
 
-    @MockBean
+    @MockitoBean
     private PublishPostCmdExe publishPostCmdExe;
 
-    @MockBean
+    @MockitoBean
     private MarkdownRenderer markdownRenderer;
 
-    @MockBean
+    @MockitoBean
     private ListCommentsQryExe listCommentsQryExe;
 
-    @MockBean
+    @MockitoBean
     private ListTagsQryExe listTagsQryExe;
 
-    @MockBean
+    @MockitoBean
     private PostViewCounter postViewCounter;
 
-    @MockBean
+    @MockitoBean
     private ListCategoriesQryExe listCategoriesQryExe;
 
-    @MockBean
+    @MockitoBean
     private PostRepository postRepository;
 
-    @MockBean
+    @MockitoBean
     private SeriesRepository seriesRepository;
 
-    @MockBean
+    @MockitoBean
     private GetSeriesPostsQryExe getSeriesPostsQryExe;
 
-    @MockBean
+    @MockitoBean
     private GetPostRatingQryExe getPostRatingQryExe;
 
-    @MockBean
+    @MockitoBean
     private VisitRequestFilter visitRequestFilter;
 
     @BeforeEach

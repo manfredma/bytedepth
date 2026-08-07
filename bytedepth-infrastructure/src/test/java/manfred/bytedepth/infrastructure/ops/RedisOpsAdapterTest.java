@@ -102,6 +102,7 @@ class RedisOpsAdapterTest {
             this.iterator = values.iterator();
         }
 
+        @Override public org.springframework.data.redis.core.Cursor.CursorId getId() { return org.springframework.data.redis.core.Cursor.CursorId.initial(); }
         @Override public long getCursorId() { return 0; }
         @Override public boolean isClosed() { return closed; }
         @Override public long getPosition() { return position; }

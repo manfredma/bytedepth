@@ -105,7 +105,7 @@ class UserRepositoryImplTest {
     @Test
     void save_insertsWhenIdIsNull() {
         User user = User.register("newuser", "passwordhash");
-        when(userMapper.insert(any())).thenAnswer(invocation -> {
+        when(userMapper.insert(any(UserDO.class))).thenAnswer(invocation -> {
             invocation.<UserDO>getArgument(0).setId(10L);
             return 1;
         });
@@ -116,8 +116,8 @@ class UserRepositoryImplTest {
         assertEquals("newuser", saved.getUsername());
         assertEquals("passwordhash", saved.getPasswordHash());
         assertEquals(UserStatus.PENDING, saved.getStatus());
-        verify(userMapper).insert(any());
-        verify(userMapper, never()).updateById(any());
+        verify(userMapper).insert(any(UserDO.class));
+        verify(userMapper, never()).updateById(any(UserDO.class));
     }
 
     @Test
@@ -130,8 +130,8 @@ class UserRepositoryImplTest {
 
         assertEquals(5L, saved.getId());
         assertEquals("existing", saved.getUsername());
-        verify(userMapper).updateById(any());
-        verify(userMapper, never()).insert(any());
+        verify(userMapper).updateById(any(UserDO.class));
+        verify(userMapper, never()).insert(any(UserDO.class));
     }
 
     @Test
@@ -141,7 +141,7 @@ class UserRepositoryImplTest {
         // by reconstructing with null timestamps
         User userNullTs = User.reconstruct(null, "newuser", "hash", null, null, null,
             UserStatus.PENDING, null, null);
-        when(userMapper.insert(any())).thenAnswer(invocation -> {
+        when(userMapper.insert(any(UserDO.class))).thenAnswer(invocation -> {
             invocation.<UserDO>getArgument(0).setId(10L);
             return 1;
         });
@@ -150,7 +150,7 @@ class UserRepositoryImplTest {
 
         assertEquals(10L, saved.getId());
         // toDO fills null timestamps with LocalDateTime.now()
-        verify(userMapper).insert(any());
+        verify(userMapper).insert(any(UserDO.class));
     }
 
     @Test
@@ -178,7 +178,7 @@ class UserRepositoryImplTest {
 
         repository.assignRole(5L, "NONEXISTENT");
 
-        verify(userRoleMapper, never()).insert(any());
+        verify(userRoleMapper, never()).insert(any(UserRoleDO.class));
     }
 
     private UserDO userRow() {

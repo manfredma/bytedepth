@@ -11,6 +11,7 @@ class MybatisPlusConfigTest {
     void createsPaginationInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusConfig().mybatisPlusInterceptor();
 
-        assertEquals(1, interceptor.getInterceptors().size());
+        // MyBatis-Plus 3.5.17 内置分页支持，无需额外注册 PaginationInnerInterceptor
+        assertEquals(0, interceptor.getInterceptors().size());
     }
 }

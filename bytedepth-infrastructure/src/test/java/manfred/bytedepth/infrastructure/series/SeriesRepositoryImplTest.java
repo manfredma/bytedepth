@@ -21,7 +21,7 @@ class SeriesRepositoryImplTest {
 
     @Test
     void save_insertsNewSeriesAndUpdatesExistingSeries() {
-        when(mapper.insert(any())).thenAnswer(invocation -> {
+        when(mapper.insert(any(SeriesDO.class))).thenAnswer(invocation -> {
             invocation.<SeriesDO>getArgument(0).setId(1L);
             return 1;
         });
@@ -31,7 +31,7 @@ class SeriesRepositoryImplTest {
 
         Series updated = repository.save(Series.reconstruct(1L, "Java", "java", "更新", 7L));
         assertEquals("更新", updated.getDescription());
-        verify(mapper).updateById(any());
+        verify(mapper).updateById(any(SeriesDO.class));
     }
 
     @Test

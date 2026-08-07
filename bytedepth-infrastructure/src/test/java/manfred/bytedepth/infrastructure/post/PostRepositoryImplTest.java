@@ -28,7 +28,7 @@ class PostRepositoryImplTest {
 
     @Test
     void save_insertsNewPostWhenIdIsNull() {
-        when(postMapper.insert(any())).thenAnswer(invocation -> {
+        when(postMapper.insert(any(PostDO.class))).thenAnswer(invocation -> {
             invocation.<PostDO>getArgument(0).setId(1L);
             return 1;
         });
@@ -42,7 +42,7 @@ class PostRepositoryImplTest {
         assertEquals("Content", saved.getContent());
         assertEquals(7L, saved.getAuthorId());
         assertFalse(saved.getFeatured());
-        verify(postMapper).insert(any());
+        verify(postMapper).insert(any(PostDO.class));
     }
 
     @Test
@@ -58,12 +58,12 @@ class PostRepositoryImplTest {
         assertEquals(5L, saved.getId());
         assertEquals("Updated", saved.getTitle());
         assertTrue(saved.getFeatured());
-        verify(postMapper).updateById(any());
+        verify(postMapper).updateById(any(PostDO.class));
     }
 
     @Test
     void save_featuredNullDefaultsToFalse() throws Exception {
-        when(postMapper.insert(any())).thenAnswer(invocation -> {
+        when(postMapper.insert(any(PostDO.class))).thenAnswer(invocation -> {
             invocation.<PostDO>getArgument(0).setId(1L);
             return 1;
         });

@@ -22,7 +22,7 @@ class CategoryRepositoryImplTest {
 
     @Test
     void save_insertsNewCategoryWhenIdIsNull() {
-        when(categoryMapper.insert(any())).thenAnswer(invocation -> {
+        when(categoryMapper.insert(any(CategoryDO.class))).thenAnswer(invocation -> {
             invocation.<CategoryDO>getArgument(0).setId(1L);
             return 1;
         });
@@ -34,7 +34,7 @@ class CategoryRepositoryImplTest {
         assertEquals("Java", saved.getName());
         assertEquals("java", saved.getSlug());
         assertEquals(Optional.of(2L), saved.getParentId());
-        verify(categoryMapper).insert(any());
+        verify(categoryMapper).insert(any(CategoryDO.class));
     }
 
     @Test
@@ -45,12 +45,12 @@ class CategoryRepositoryImplTest {
 
         assertEquals(5L, saved.getId());
         assertEquals("Spring", saved.getName());
-        verify(categoryMapper).updateById(any());
+        verify(categoryMapper).updateById(any(CategoryDO.class));
     }
 
     @Test
     void save_handlesNullParentId() {
-        when(categoryMapper.insert(any())).thenAnswer(invocation -> {
+        when(categoryMapper.insert(any(CategoryDO.class))).thenAnswer(invocation -> {
             invocation.<CategoryDO>getArgument(0).setId(1L);
             return 1;
         });
