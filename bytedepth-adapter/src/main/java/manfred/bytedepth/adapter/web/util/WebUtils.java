@@ -28,8 +28,21 @@ public final class WebUtils {
     /** 判断是否为私有/回环 IP（简单字符串匹配）。 */
     @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
     static boolean isPrivateIp(String ip) {
-        return ip.startsWith("10.") || ip.startsWith("172.") || ip.startsWith("192.168.")
+        return ip.startsWith("10.") || isPrivate172Range(ip) || ip.startsWith("192.168.")
                 || ip.equals("127.0.0.1") || ip.equals("::1") || ip.equals("0:0:0:0:0:0:0:1");
+    }
+
+    /** 判断是否为 172.16.0.0/12 私有范围。 */
+    private static boolean isPrivate172Range(String ip) {
+        if (!ip.startsWith("172.") || ip.length() < 6) return false;
+        int dot = ip.indexOf('.', 4);
+        if (dot < 0) return false;
+        try {
+            int second = Integer.parseInt(ip.substring(4, dot));
+            return second >= 16 && second <= 31;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /** 截断字符串至指定长度，null 安全。 */
