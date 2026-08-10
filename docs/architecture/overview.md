@@ -4,7 +4,7 @@ bytedepth 是 Spring Boot 多模块博客，使用 Thymeleaf 服务端渲染，�
 
 ## 技术边界
 
-- 构建、测试必须使用 JDK 21；项目产物目标为 Java 17。Maven 与覆盖率要求见 [Maven 指南](../agent-guides/maven.md)。
+- 构建、测试必须使用 JDK 25；项目产物目标为 Java 25。Maven 与覆盖率要求见 [Maven 指南](../agent-guides/maven.md)。
 - Spring Boot、Spring Security、Thymeleaf。
 - MyBatis-Plus + MySQL；Redis 用于会话与业务能力；MeiliSearch 用于搜索。
 - Flyway 管理数据库迁移。
