@@ -4,6 +4,7 @@ import manfred.bytedepth.app.user.GetUserProfileQryExe;
 import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.user.UserProfileDTO;
 import manfred.bytedepth.domain.common.DomainException;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
@@ -26,6 +27,8 @@ class UserProfileControllerTest {
     @Autowired private MockMvc mockMvc;
     @MockitoBean private GetUserProfileQryExe getUserProfileQryExe;
 
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
     @Test
     void profile_existingUser_returnsProfileView() throws Exception {
         UserProfileDTO dto = new UserProfileDTO();

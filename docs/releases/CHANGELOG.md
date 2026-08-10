@@ -4,6 +4,28 @@
 
 ## Unreleased
 
+## [v1.6.0] - 2026-08-10
+
+**Tag**：`v1.6.0`
+**Commit**：（发布后回填）
+**部署**：（待验收）
+**回滚基线**：`v1.5.3`
+
+### Added
+
+- 页面访问统计：新增 `page_view_log` 表，通过 `PageViewInterceptor` 自动记录首页、关于页、文章列表、专栏、搜索、项目、版本发布、个人主页等公开页面的访问情况
+- 新增 `PageViewStatsPort` 与 `MyBatisPageViewStatsAdapter`，提供页面排名、国家分布、趋势与下钻分析
+- 管理后台 `/admin/analytics` 支持「📄 文章统计 / 🗂 页面统计」维度切换，数据由前端 AJAX 按维度拉取
+- 新增 `PageViewEventHandler` 异步消费 `PageViewedEvent`，复用 `GeoIpService` 解析 IP 地理位置
+
+### Changed
+
+- 版本升级至 `1.6.0`（MINOR，向后兼容）
+
+### Compatibility
+
+- 新增 Flyway V19 迁移，不含破坏性变更；可在验收失败时回滚至 `v1.5.3`
+
 ## [v1.5.3] - 2026-08-10
 
 **Tag**：`v1.5.3`

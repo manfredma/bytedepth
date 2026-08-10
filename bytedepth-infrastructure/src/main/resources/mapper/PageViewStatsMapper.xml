@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="manfred.bytedepth.infrastructure.stats.PageViewStatsMapper">
+
+    <!-- 页面访问排名 -->
+    <select id="topPages"
+            resultType="manfred.bytedepth.app.analytics.PageViewRankDTO">
+        SELECT page_path,
+               COUNT(*)     AS view_count,
+               0.0          AS percent
+        FROM page_view_log
+        WHERE visited_at &gt;= #{startTime}
+          AND visited_at &lt;= #{endTime}
+        GROUP BY page_path
+        ORDER BY view_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 页面访问：国家/地区分布 -->
+    <select id="pageCountryStats"
+            resultType="manfred.bytedepth.app.analytics.CountryViewStatDTO">
+        SELECT COALESCE(NULLIF(country, ''), '未知') AS country,
+               COUNT(*)                              AS view_count,
+               0.0                                  AS percent
+        FROM page_view_log
+        WHERE visited_at &gt;= #{startTime}
+          AND visited_at &lt;= #{endTime}
+        GROUP BY country
+        ORDER BY view_count DESC
+        LIMIT 30
+    </select>
+
+    <!-- 指定国家内页面排名 -->
+    <select id="countryTopPages"
+            resultType="manfred.bytedepth.app.analytics.PageViewRankDTO">
+        SELECT page_path,
+               COUNT(*) AS view_count,
+               0.0      AS percent
+        FROM page_view_log
+        WHERE visited_at &gt;= #{startTime}
+          AND visited_at &lt;= #{endTime}
+          AND country = #{country}
+        GROUP BY page_path
+        ORDER BY view_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 单页面时间趋势 -->
+    <select id="pageTrend"
+            resultType="manfred.bytedepth.app.analytics.TrendPointDTO">
+        SELECT DATE_FORMAT(visited_at, #{format}) AS label,
+               COUNT(*)                           AS view_count
+        FROM page_view_log
+        WHERE page_path = #{pagePath}
+          AND visited_at &gt;= #{startTime}
+          AND visited_at &lt;= #{endTime}
+        GROUP BY label
+        ORDER BY label ASC
+    </select>
+
+    <!-- 页面访问总体趋势 -->
+    <select id="pageOverviewTrend"
+            resultType="manfred.bytedepth.app.analytics.TrendPointDTO">
+        SELECT DATE_FORMAT(visited_at, #{format}) AS label,
+               COUNT(*)                           AS view_count
+        FROM page_view_log
+        WHERE visited_at &gt;= #{startTime}
+          AND visited_at &lt;= #{endTime}
+        GROUP BY label
+        ORDER BY label ASC
+    </select>
+
+</mapper>

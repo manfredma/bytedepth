@@ -10,6 +10,7 @@ import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.user.BanUserCmdExe;
 import manfred.bytedepth.app.user.ListPendingUsersQryExe;
 import manfred.bytedepth.domain.user.UserRepository;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
@@ -40,6 +41,8 @@ class AdminUserControllerTest {
     @Autowired private MockMvc mockMvc;
     @MockitoBean private UserDetailsService userDetailsService;
     @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
     @MockitoBean
     private RateLimitPort rateLimitPort;
     @MockitoBean

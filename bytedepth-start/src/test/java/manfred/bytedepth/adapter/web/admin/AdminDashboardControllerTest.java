@@ -8,6 +8,7 @@ import org.springframework.security.web.authentication.rememberme.PersistentToke
 import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
 import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.dashboard.DashboardStatsQryExe;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
@@ -40,6 +41,8 @@ class AdminDashboardControllerTest {
     @Autowired private MockMvc mockMvc;
     @MockitoBean private UserDetailsService userDetailsService;
     @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
     @MockitoBean
     private RateLimitPort rateLimitPort;
     @MockitoBean

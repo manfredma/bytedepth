@@ -2,6 +2,7 @@ package manfred.bytedepth.adapter.web.portal;
 
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
 import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
@@ -28,6 +29,8 @@ class ReleaseControllerTest {
 
     @MockitoBean
     private MarkdownRenderer markdownRenderer;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
     @Test
     void releases_rendersTheVersionNotesBundledWithTheApplication() throws Exception {

@@ -75,6 +75,12 @@
         <h1>📊 访问统计分析</h1>
     </div>
 
+    <!-- 维度切换：文章统计 / 页面统计 -->
+    <div class="period-tabs" style="margin-bottom: 8px;">
+        <button class="period-tab active" data-dim="post">📄 文章统计</button>
+        <button class="period-tab" data-dim="page">🗂 页面统计</button>
+    </div>
+
     <!-- 时间维度 Tab -->
     <div class="period-tabs">
         <button class="period-tab" data-period="today">今天</button>
@@ -90,7 +96,7 @@
     <!-- 主图区：文章排名 + 国家分布 -->
     <div class="charts-row">
         <div class="chart-card">
-            <div class="chart-title">📈 文章访问排名 Top 20</div>
+            <div class="chart-title" id="bar-title">📈 文章访问排名 Top 20</div>
             <div id="bar-chart"></div>
         </div>
         <div class="chart-card">
@@ -117,7 +123,8 @@
         postId:    null,
         postTitle: '',
         from:      null,
-        to:        null
+        to:        null,
+        dimension: 'post'
     };
 
     // ─── ECharts 实例 ────────────────────────────────────────────
@@ -133,12 +140,29 @@
 
         // 时间 Tab 点击
         document.querySelectorAll('.period-tab').forEach(tab => {
+            if (tab.dataset.period) {
+                tab.addEventListener('click', () => {
+                    state.period = tab.dataset.period;
+                    state.from = null; state.to = null; state.postId = null;
+                    document.querySelectorAll('.period-tab')
+                            .forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    loadAll();
+                });
+            }
+        });
+
+        // 维度 Tab 点击
+        document.querySelectorAll('[data-dim]').forEach(tab => {
             tab.addEventListener('click', () => {
-                state.period = tab.dataset.period;
-                state.from = null; state.to = null; state.postId = null;
-                document.querySelectorAll('.period-tab')
+                state.dimension = tab.dataset.dim;
+                state.country = null; state.postId = null; state.from = null; state.to = null;
+                document.querySelectorAll('[data-dim]')
                         .forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
+                document.querySelectorAll('.period-tab').forEach(t => {
+                    t.classList.toggle('active', t.dataset.period === state.period);
+                });
                 loadAll();
             });
         });
@@ -157,9 +181,17 @@
 
     // ─── 数据加载 ────────────────────────────────────────────────
     function loadAll() {
-        loadTopPosts();
-        loadCountries();
-        loadOverviewTrend();
+        document.getElementById('bar-title').textContent =
+            state.dimension === 'page' ? '🗂 页面访问排名 Top 20' : '📈 文章访问排名 Top 20';
+        if (state.dimension === 'page') {
+            loadTopPages();
+            loadPageCountries();
+            loadPageOverviewTrend();
+        } else {
+            loadTopPosts();
+            loadCountries();
+            loadOverviewTrend();
+        }
         updateBreadcrumb();
     }
 
@@ -194,6 +226,43 @@
             postId, period: state.period, from: state.from, to: state.to });
         fetch(url).then(r => r.json()).then(data => {
             renderTrendChart(data, postTitle, true);
+            updateBreadcrumb();
+        });
+    }
+
+    // ─── 页面统计加载（dimension === 'page'）────────────────────────────────
+
+    function loadTopPages() {
+        const url = state.country
+            ? buildUrl('/admin/analytics/api/country-pages', {
+                country: state.country, period: state.period,
+                from: state.from, to: state.to, limit: 20 })
+            : buildUrl('/admin/analytics/api/top-pages', {
+                period: state.period, from: state.from, to: state.to, limit: 20 });
+        fetch(url).then(r => r.json()).then(renderPageBarChart);
+    }
+
+    function loadPageCountries() {
+        const url = buildUrl('/admin/analytics/api/page-countries', {
+            period: state.period, from: state.from, to: state.to });
+        fetch(url).then(r => r.json()).then(renderPieChart);
+    }
+
+    function loadPageOverviewTrend() {
+        const url = buildUrl('/admin/analytics/api/page-overview-trend', {
+            period: state.period, from: state.from, to: state.to });
+        fetch(url).then(r => r.json()).then(data => {
+            renderTrendChart(data, '总体访问趋势', false);
+        });
+    }
+
+    function loadPageTrend(pagePath) {
+        state.postId    = null;
+        state.postTitle = pagePath;
+        const url = buildUrl('/admin/analytics/api/page-trend', {
+            pagePath, period: state.period, from: state.from, to: state.to });
+        fetch(url).then(r => r.json()).then(data => {
+            renderTrendChart(data, pagePath, true);
             updateBreadcrumb();
         });
     }
@@ -240,6 +309,45 @@
         });
     }
 
+    function renderPageBarChart(data) {
+        if (!data.length) {
+            barChart.setOption({
+                graphic: [{ type: 'text', left: 'center', top: 'middle',
+                    style: { text: '暂无数据', fill: '#bbb', fontSize: 14 } }]
+            }, true);
+            return;
+        }
+        const rev = [...data].reverse();
+        barChart.setOption({
+            tooltip: {
+                trigger: 'axis', axisPointer: { type: 'shadow' },
+                formatter: p => {
+                    const item = data[data.length - 1 - p[0].dataIndex];
+                    return `${p[0].name}<br/>访问量: <b>${p[0].value}</b> (${item?.percent ?? 0}%)`;
+                }
+            },
+            grid: { left: '2%', right: '70px', top: '8px', bottom: '4%', containLabel: true },
+            xAxis: { type: 'value', minInterval: 1 },
+            yAxis: {
+                type: 'category',
+                data: rev.map(d => d.pagePath),
+                axisLabel: { width: 160, overflow: 'truncate', fontSize: 11 }
+            },
+            series: [{
+                type: 'bar', data: rev.map(d => d.viewCount),
+                itemStyle: { color: '#e94560', borderRadius: [0, 3, 3, 0] },
+                label: { show: true, position: 'right', fontSize: 11,
+                         formatter: '{c}', color: '#555' }
+            }]
+        }, true);
+
+        barChart.off('click');
+        barChart.on('click', params => {
+            const item = data[data.length - 1 - params.dataIndex];
+            if (item) loadPageTrend(item.pagePath);
+        });
+    }
+
     function renderPieChart(data) {
         if (!data.length) {
             pieChart.setOption({
@@ -267,8 +375,13 @@
         pieChart.on('click', params => {
             state.country = (state.country === params.name) ? null : params.name;
             state.postId  = null;
-            loadTopPosts();
-            loadOverviewTrend();
+            if (state.dimension === 'page') {
+                loadTopPages();
+                loadPageOverviewTrend();
+            } else {
+                loadTopPosts();
+                loadOverviewTrend();
+            }
             updateBreadcrumb();
         });
     }
@@ -342,12 +455,22 @@
         }
 
         document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
-        loadTopPosts();
-        loadCountries();
-        if (state.postId) {
-            loadPostTrend(state.postId, state.postTitle);
+        if (state.dimension === 'page') {
+            loadTopPages();
+            loadPageCountries();
+            if (state.postTitle) {
+                loadPageTrend(state.postTitle);
+            } else {
+                loadPageOverviewTrend();
+            }
         } else {
-            loadOverviewTrend();
+            loadTopPosts();
+            loadCountries();
+            if (state.postId) {
+                loadPostTrend(state.postId, state.postTitle);
+            } else {
+                loadOverviewTrend();
+            }
         }
         updateBreadcrumb();
     }
@@ -363,7 +486,7 @@
             crumbs.push(`<span class="bc-link" onclick="resetToCountry()">`
                        + `🌍 ${state.country}</span>`);
         }
-        if (state.postId) {
+        if (state.postId || state.postTitle) {
             crumbs.push(`<span class="bc-current">${state.postTitle}</span>`);
         }
         document.getElementById('breadcrumb').innerHTML = crumbs.join(' <span class="bc-sep">›</span> ');
@@ -373,8 +496,13 @@
 
     function resetToCountry() {
         state.postId = null;
-        loadTopPosts();
-        loadOverviewTrend();
+        if (state.dimension === 'page') {
+            loadTopPages();
+            loadPageOverviewTrend();
+        } else {
+            loadTopPosts();
+            loadOverviewTrend();
+        }
         updateBreadcrumb();
     }
 
@@ -388,7 +516,11 @@
 
     function closeTrend() {
         state.postId = null;
-        loadOverviewTrend();
+        if (state.dimension === 'page') {
+            loadPageOverviewTrend();
+        } else {
+            loadOverviewTrend();
+        }
         updateBreadcrumb();
     }
 </script>

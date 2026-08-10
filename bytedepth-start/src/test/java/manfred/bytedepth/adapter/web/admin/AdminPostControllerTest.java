@@ -21,6 +21,7 @@ import manfred.bytedepth.app.series.RemovePostFromSeriesCmdExe;
 import manfred.bytedepth.adapter.web.security.ContentOwnershipGuard;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.SeriesRepository;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,6 +67,8 @@ class AdminPostControllerTest {
     // Spring Security requires UserDetailsService and PasswordEncoder beans
     @MockitoBean
     private UserDetailsService userDetailsService;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
     @MockitoBean
     private PasswordEncoder passwordEncoder;

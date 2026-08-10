@@ -2,6 +2,8 @@ package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.analytics.CountryViewStatDTO;
+import manfred.bytedepth.app.analytics.PageViewRankDTO;
+import manfred.bytedepth.app.analytics.PageViewStatsPort;
 import manfred.bytedepth.app.analytics.PostViewRankDTO;
 import manfred.bytedepth.app.analytics.TrendPointDTO;
 import manfred.bytedepth.app.analytics.ViewLogStatsPort;
@@ -34,6 +36,7 @@ import java.util.Map;
 public class AdminAnalyticsController {
 
     private final ViewLogStatsPort viewLogStatsPort;
+    private final PageViewStatsPort pageViewStatsPort;
 
     /** 页面骨架，数据全部由前端 AJAX 拉取。 */
     @GetMapping
@@ -109,6 +112,78 @@ public class AdminAnalyticsController {
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end);
         return completeTrend(viewLogStatsPort.overviewTrend(start, end, format), start, end, format);
+    }
+
+    // ── 页面统计 API ──────────────────────────────────────────────
+
+    @GetMapping("/api/top-pages")
+    @ResponseBody
+    public List<PageViewRankDTO> topPages(
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime end   = toEndTime(period, to);
+        List<PageViewRankDTO> rows = pageViewStatsPort.topPages(start, end, limit);
+        long total = rows.stream().mapToLong(PageViewRankDTO::getViewCount).sum();
+        rows.forEach(r -> r.setPercent(pct(r.getViewCount(), total)));
+        return rows;
+    }
+
+    @GetMapping("/api/page-countries")
+    @ResponseBody
+    public List<CountryViewStatDTO> pageCountries(
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime end   = toEndTime(period, to);
+        List<CountryViewStatDTO> rows = pageViewStatsPort.pageCountryStats(start, end);
+        long total = rows.stream().mapToLong(CountryViewStatDTO::getViewCount).sum();
+        rows.forEach(r -> r.setPercent(pct(r.getViewCount(), total)));
+        return rows;
+    }
+
+    @GetMapping("/api/country-pages")
+    @ResponseBody
+    public List<PageViewRankDTO> countryPages(
+            @RequestParam String country,
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime end   = toEndTime(period, to);
+        List<PageViewRankDTO> rows = pageViewStatsPort.countryTopPages(country, start, end, limit);
+        long total = rows.stream().mapToLong(PageViewRankDTO::getViewCount).sum();
+        rows.forEach(r -> r.setPercent(pct(r.getViewCount(), total)));
+        return rows;
+    }
+
+    @GetMapping("/api/page-trend")
+    @ResponseBody
+    public List<TrendPointDTO> pageTrend(
+            @RequestParam String pagePath,
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime end   = toEndTime(period, to);
+        String format = toDateFormat(start, end);
+        return completeTrend(pageViewStatsPort.pageTrend(pagePath, start, end, format), start, end, format);
+    }
+
+    @GetMapping("/api/page-overview-trend")
+    @ResponseBody
+    public List<TrendPointDTO> pageOverviewTrend(
+            @RequestParam(defaultValue = "week") String period,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime end   = toEndTime(period, to);
+        String format = toDateFormat(start, end);
+        return completeTrend(pageViewStatsPort.pageOverviewTrend(start, end, format), start, end, format);
     }
 
     // ── 工具方法（package-private 供测试直接调用）─────────────────────────

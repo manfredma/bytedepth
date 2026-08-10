@@ -18,6 +18,7 @@ import manfred.bytedepth.adapter.web.security.SecurityConfig;
 import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,6 +63,8 @@ class AdminOpsControllerTest {
 
     @MockitoBean
     private UserDetailsService userDetailsService;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
     @MockitoBean
     private PasswordEncoder passwordEncoder;
     @MockitoBean

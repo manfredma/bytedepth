@@ -8,6 +8,7 @@ import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
 import manfred.bytedepth.app.ratelimit.RateLimitDecision;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import manfred.bytedepth.adapter.web.security.SecurityConfig;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
@@ -40,6 +41,8 @@ class AdminSeriesControllerTest {
     @Autowired private MockMvc mockMvc;
     @MockitoBean private UserDetailsService userDetailsService;
     @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
     @MockitoBean private SetPostSeriesCmdExe setPostSeriesCmdExe;
     @MockitoBean private ContentOwnershipGuard contentOwnershipGuard;
     @MockitoBean private PersistentTokenRepository persistentTokenRepository;

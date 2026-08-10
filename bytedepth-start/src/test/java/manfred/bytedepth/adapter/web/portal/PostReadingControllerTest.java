@@ -5,6 +5,7 @@ import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.analytics.ReadingProgressTokenPort;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
@@ -29,6 +30,8 @@ class PostReadingControllerTest {
 
     @MockitoBean
     private GetPostQryExe getPostQryExe;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
     @MockitoBean
     private PostViewLogPort postViewLogPort;
     @MockitoBean

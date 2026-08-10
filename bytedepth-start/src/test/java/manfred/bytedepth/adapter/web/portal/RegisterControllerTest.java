@@ -3,6 +3,7 @@ package manfred.bytedepth.adapter.web.portal;
 import manfred.bytedepth.app.user.RegisterUserCmdExe;
 import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.domain.common.DomainException;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
@@ -24,6 +25,8 @@ class RegisterControllerTest {
 
     @MockitoBean private RegisterUserCmdExe registerUserCmdExe;
 
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
     @Test
     void get_returnsRegisterView() throws Exception {
         mockMvc.perform(get("/register"))

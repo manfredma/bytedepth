@@ -7,6 +7,7 @@ import manfred.bytedepth.app.ratelimit.RateLimitDecision;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import manfred.bytedepth.app.comment.SubmitCommentCmdExe;
 import manfred.bytedepth.domain.post.PostRepository;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,8 @@ class SecurityRoutingTest {
 
     @MockitoBean private UserDetailsService userDetailsService;
     @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
     @MockitoBean private PersistentTokenRepository persistentTokenRepository;
     @MockitoBean private SubmitCommentCmdExe submitCommentCmdExe;
     @MockitoBean private PostRepository postRepository;

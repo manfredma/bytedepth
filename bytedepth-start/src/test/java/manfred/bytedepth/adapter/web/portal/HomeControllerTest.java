@@ -7,6 +7,7 @@ import manfred.bytedepth.app.post.query.PostDTO;
 import manfred.bytedepth.app.project.ListProjectsQryExe;
 import manfred.bytedepth.app.project.ProjectDTO;
 import manfred.bytedepth.adapter.web.util.MarkdownExcerpt;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
@@ -39,6 +40,8 @@ class HomeControllerTest {
 
     @MockitoBean
     private ListPostsQryExe listPostsQryExe;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
     @MockitoBean
     private ListProjectsQryExe listProjectsQryExe;

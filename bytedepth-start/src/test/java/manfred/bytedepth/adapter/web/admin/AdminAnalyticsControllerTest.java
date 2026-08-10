@@ -7,9 +7,12 @@ import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
 import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
+import manfred.bytedepth.app.analytics.PageViewRankDTO;
+import manfred.bytedepth.app.analytics.PageViewStatsPort;
 import manfred.bytedepth.app.analytics.PostViewRankDTO;
 import manfred.bytedepth.app.analytics.TrendPointDTO;
 import manfred.bytedepth.app.analytics.ViewLogStatsPort;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +51,8 @@ class AdminAnalyticsControllerTest {
     @MockitoBean
     private UserDetailsService userDetailsService;
     @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
+    @MockitoBean
     private PasswordEncoder passwordEncoder;
     @MockitoBean
     private RateLimitPort rateLimitPort;
@@ -57,6 +62,8 @@ class AdminAnalyticsControllerTest {
     private PersistentTokenRepository persistentTokenRepository;
     @MockitoBean
     private ViewLogStatsPort viewLogStatsPort;
+    @MockitoBean
+    private PageViewStatsPort pageViewStatsPort;
 
     // ── 认证守卫 ──────────────────────────────────────────
 
@@ -267,6 +274,136 @@ class AdminAnalyticsControllerTest {
                 .andExpect(jsonPath("$[2].label").value("07-02"))
                 .andExpect(jsonPath("$[2].viewCount").value(3))
                 .andExpect(jsonPath("$[6].label").value("07-06"));
+    }
+
+    // ── top-pages：percent 回填逻辑 ────────────────────────
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void topPages_returnsJsonWithCorrectPercent() throws Exception {
+        PageViewRankDTO p1 = new PageViewRankDTO();
+        p1.setPagePath("/"); p1.setViewCount(70);
+        PageViewRankDTO p2 = new PageViewRankDTO();
+        p2.setPagePath("/about"); p2.setViewCount(30);
+
+        when(pageViewStatsPort.topPages(any(), any(), eq(20)))
+                .thenReturn(List.of(p1, p2));
+
+        mockMvc.perform(get("/admin/analytics/api/top-pages").param("period", "week"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].pagePath").value("/"))
+                .andExpect(jsonPath("$[0].percent").value(70.0))
+                .andExpect(jsonPath("$[1].percent").value(30.0));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void topPages_emptyResult_returnsEmptyArray() throws Exception {
+        when(pageViewStatsPort.topPages(any(), any(), anyInt())).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/analytics/api/top-pages"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void topPages_customFromParam_parsedAsStartOfDay() throws Exception {
+        when(pageViewStatsPort.topPages(any(), any(), anyInt())).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/analytics/api/top-pages")
+                        .param("from", "2026-06-01")
+                        .param("to", "2026-06-30"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<LocalDateTime> startCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(pageViewStatsPort).topPages(startCaptor.capture(), any(), anyInt());
+        assertThat(startCaptor.getValue())
+                .isEqualTo(LocalDate.of(2026, 6, 1).atStartOfDay());
+    }
+
+    // ── page-countries ─────────────────────────────────────
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void pageCountries_returnsJsonWithPercent() throws Exception {
+        CountryViewStatDTO cn = new CountryViewStatDTO();
+        cn.setCountry("中国"); cn.setViewCount(60);
+        when(pageViewStatsPort.pageCountryStats(any(), any())).thenReturn(List.of(cn));
+
+        mockMvc.perform(get("/admin/analytics/api/page-countries").param("period", "month"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].country").value("中国"))
+                .andExpect(jsonPath("$[0].percent").value(100.0));
+    }
+
+    // ── country-pages ──────────────────────────────────────
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void countryPages_returnsJsonWithPercent() throws Exception {
+        PageViewRankDTO rank = new PageViewRankDTO();
+        rank.setPagePath("/about");
+        rank.setViewCount(10L);
+        when(pageViewStatsPort.countryTopPages(eq("中国"), any(), any(), eq(20)))
+                .thenReturn(List.of(rank));
+
+        mockMvc.perform(get("/admin/analytics/api/country-pages").param("country", "中国"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].pagePath").value("/about"))
+                .andExpect(jsonPath("$[0].percent").value(100.0));
+    }
+
+    // ── page-trend：format 由时间跨度决定 ──────────────────
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void pageTrend_usesDayFormatForWeekSpan() throws Exception {
+        when(pageViewStatsPort.pageTrend(any(), any(), any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/analytics/api/page-trend")
+                        .param("pagePath", "/about")
+                        .param("from", "2026-06-30")
+                        .param("to", "2026-07-06"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
+        verify(pageViewStatsPort).pageTrend(eq("/about"), any(), any(), fmtCaptor.capture());
+        assertThat(fmtCaptor.getValue()).isEqualTo("%m-%d");
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void pageTrend_returnsCompletedTrend() throws Exception {
+        when(pageViewStatsPort.pageTrend(any(), any(), any(), eq("%m-%d")))
+                .thenReturn(List.of(trendPoint("07-02", 3)));
+
+        mockMvc.perform(get("/admin/analytics/api/page-trend")
+                        .param("pagePath", "/")
+                        .param("from", "2026-07-01")
+                        .param("to", "2026-07-03"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[1].label").value("07-02"))
+                .andExpect(jsonPath("$[1].viewCount").value(3));
+    }
+
+    // ── page-overview-trend ────────────────────────────────
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void pageOverviewTrend_fillsTimeBuckets() throws Exception {
+        when(pageViewStatsPort.pageOverviewTrend(any(), any(), eq("%m-%d")))
+                .thenReturn(List.of(trendPoint("07-02", 5)));
+
+        mockMvc.perform(get("/admin/analytics/api/page-overview-trend")
+                        .param("from", "2026-06-30")
+                        .param("to", "2026-07-02"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].viewCount").value(0))
+                .andExpect(jsonPath("$[2].viewCount").value(5));
     }
 
     // ── 静态工具方法单元测试 ───────────────────────────────
