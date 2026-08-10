@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.security;
 
 import manfred.bytedepth.adapter.web.portal.CommentController;
+import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
 import manfred.bytedepth.app.ratelimit.RateLimitDecision;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;

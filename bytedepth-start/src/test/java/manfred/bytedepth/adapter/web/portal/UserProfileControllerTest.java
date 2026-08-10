@@ -1,12 +1,14 @@
 package manfred.bytedepth.adapter.web.portal;
 
 import manfred.bytedepth.app.user.GetUserProfileQryExe;
+import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.user.UserProfileDTO;
 import manfred.bytedepth.domain.common.DomainException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -18,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(value = UserProfileController.class,
         excludeAutoConfiguration = SecurityAutoConfiguration.class)
+@Import(ThymeleafSecurityHandlerConfig.class)
 class UserProfileControllerTest {
 
     @Autowired private MockMvc mockMvc;

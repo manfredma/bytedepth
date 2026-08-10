@@ -1,6 +1,8 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.app.series.SetPostSeriesCmdExe;
+import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
+import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.adapter.web.security.ContentOwnershipGuard;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
 import manfred.bytedepth.app.ratelimit.RateLimitDecision;
@@ -9,6 +11,9 @@ import manfred.bytedepth.adapter.web.security.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
@@ -28,7 +33,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(value = AdminSeriesController.class,
         excludeAutoConfiguration = DataSourceAutoConfiguration.class)
-@Import({SecurityConfig.class})
+@ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
+@Import({SecurityConfig.class, SecurityMockMvcConfig.class})
 class AdminSeriesControllerTest {
 
     @Autowired private MockMvc mockMvc;

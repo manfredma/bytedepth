@@ -1,13 +1,23 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.app.user.ActivateUserCmdExe;
+import manfred.bytedepth.adapter.web.security.SecurityConfig;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
+import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.user.BanUserCmdExe;
 import manfred.bytedepth.app.user.ListPendingUsersQryExe;
 import manfred.bytedepth.domain.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,11 +33,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(value = AdminUserController.class,
         excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
+@Import({SecurityConfig.class, ThymeleafSecurityHandlerConfig.class, SecurityMockMvcConfig.class})
 class AdminUserControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @MockitoBean private UserDetailsService userDetailsService;
     @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean
+    private RateLimitPort rateLimitPort;
+    @MockitoBean
+    private RateLimitProperties rateLimitProperties;
+    @MockitoBean
+    private PersistentTokenRepository persistentTokenRepository;
     @MockitoBean private ListPendingUsersQryExe listPendingUsersQryExe;
     @MockitoBean private ActivateUserCmdExe activateUserCmdExe;
     @MockitoBean private BanUserCmdExe banUserCmdExe;

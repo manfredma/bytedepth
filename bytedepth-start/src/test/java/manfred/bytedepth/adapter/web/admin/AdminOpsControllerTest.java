@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.app.ops.OpsDatabaseStatusDTO;
+import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.ops.OpsDatabasePort;
 import manfred.bytedepth.app.ops.OpsDeploymentPort;
 import manfred.bytedepth.app.ops.OpsDeploymentStatusDTO;
@@ -14,12 +15,16 @@ import manfred.bytedepth.app.ops.OpsTableDataDTO;
 import manfred.bytedepth.app.ops.OpsTableQryExe;
 import manfred.bytedepth.app.ops.RequestOpsDeploymentCmdExe;
 import manfred.bytedepth.adapter.web.security.SecurityConfig;
+import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -48,7 +53,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(value = AdminOpsController.class,
         excludeAutoConfiguration = DataSourceAutoConfiguration.class)
-@Import({SecurityConfig.class, AdminOpsControllerTest.OpsQueryConfiguration.class})
+@ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
+@Import({SecurityConfig.class, ThymeleafSecurityHandlerConfig.class, SecurityMockMvcConfig.class, AdminOpsControllerTest.OpsQueryConfiguration.class})
 class AdminOpsControllerTest {
 
     @Autowired

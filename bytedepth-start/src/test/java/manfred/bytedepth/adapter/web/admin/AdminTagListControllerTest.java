@@ -1,11 +1,21 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.app.tag.DeleteTagCmdExe;
+import manfred.bytedepth.adapter.web.security.SecurityConfig;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
+import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,11 +34,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(value = AdminTagListController.class,
         excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
+@Import({SecurityConfig.class, ThymeleafSecurityHandlerConfig.class, SecurityMockMvcConfig.class})
 class AdminTagListControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @MockitoBean private UserDetailsService userDetailsService;
     @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean
+    private RateLimitPort rateLimitPort;
+    @MockitoBean
+    private RateLimitProperties rateLimitProperties;
+    @MockitoBean
+    private PersistentTokenRepository persistentTokenRepository;
     @MockitoBean private ListTagsQryExe listTagsQryExe;
     @MockitoBean private DeleteTagCmdExe deleteTagCmdExe;
 

@@ -1,6 +1,12 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
+import manfred.bytedepth.adapter.web.security.SecurityConfig;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
+import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
@@ -19,7 +25,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,6 +56,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(value = AdminPostController.class,
         excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
+@Import({SecurityConfig.class, ThymeleafSecurityHandlerConfig.class, SecurityMockMvcConfig.class})
 class AdminPostControllerTest {
 
     @Autowired
@@ -57,6 +69,12 @@ class AdminPostControllerTest {
 
     @MockitoBean
     private PasswordEncoder passwordEncoder;
+    @MockitoBean
+    private RateLimitPort rateLimitPort;
+    @MockitoBean
+    private RateLimitProperties rateLimitProperties;
+    @MockitoBean
+    private PersistentTokenRepository persistentTokenRepository;
 
     // AdminPostController dependencies
     @MockitoBean
@@ -109,19 +127,22 @@ class AdminPostControllerTest {
     @Test
     void adminPostList_withoutAuth_deniesAccess() throws Exception {
         mockMvc.perform(get("/admin/posts"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
     }
 
     @Test
     void adminNewForm_withoutAuth_deniesAccess() throws Exception {
         mockMvc.perform(get("/admin/posts/new"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
     }
 
     @Test
     void adminEditForm_withoutAuth_deniesAccess() throws Exception {
         mockMvc.perform(get("/admin/posts/1/edit"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
     }
 
     // --- Authorized access tests ---

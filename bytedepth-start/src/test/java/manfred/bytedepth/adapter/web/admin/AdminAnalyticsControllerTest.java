@@ -1,6 +1,12 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.app.analytics.CountryViewStatDTO;
+import manfred.bytedepth.adapter.web.security.SecurityConfig;
+import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
+import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.analytics.PostViewRankDTO;
 import manfred.bytedepth.app.analytics.TrendPointDTO;
 import manfred.bytedepth.app.analytics.ViewLogStatsPort;
@@ -8,7 +14,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(value = AdminAnalyticsController.class,
         excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
+@Import({SecurityConfig.class, ThymeleafSecurityHandlerConfig.class, SecurityMockMvcConfig.class})
 class AdminAnalyticsControllerTest {
 
     @Autowired
@@ -38,6 +50,12 @@ class AdminAnalyticsControllerTest {
     @MockitoBean
     private PasswordEncoder passwordEncoder;
     @MockitoBean
+    private RateLimitPort rateLimitPort;
+    @MockitoBean
+    private RateLimitProperties rateLimitProperties;
+    @MockitoBean
+    private PersistentTokenRepository persistentTokenRepository;
+    @MockitoBean
     private ViewLogStatsPort viewLogStatsPort;
 
     // ── 认证守卫 ──────────────────────────────────────────
@@ -45,13 +63,15 @@ class AdminAnalyticsControllerTest {
     @Test
     void analyticsPage_withoutAuth_deniesAccess() throws Exception {
         mockMvc.perform(get("/admin/analytics"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
     }
 
     @Test
     void topPostsApi_withoutAuth_deniesAccess() throws Exception {
         mockMvc.perform(get("/admin/analytics/api/top-posts"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
     }
 
     // ── 页面端点 ──────────────────────────────────────────
