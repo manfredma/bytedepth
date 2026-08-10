@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-java_home="$(/usr/libexec/java_home -v 21)"
+java_home="$(/usr/libexec/java_home -v 25)"
 JAVA_HOME="${java_home}" mvn clean install -DskipTests -Dsort.skip=true
 JAVA_HOME="${java_home}" mvn verify -Pchanged-coverage -Dcoverage.includes='**' \
   -Dcoverage.check.skip=true -Dsort.skip=true

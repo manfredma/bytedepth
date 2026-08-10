@@ -4,6 +4,25 @@
 
 ## Unreleased
 
+## [v1.5.2] - 2026-08-10
+
+**Tag**：`v1.5.2`
+**Commit**：（发布后回填）
+**部署**：（待验收）
+**回滚基线**：`v1.5.1`
+
+### Fixed
+
+- 修复 Spring Boot 4.1 下 `@WebMvcTest` 切片测试无法运行：后台相关测试导入 `SecurityConfig` 提供 `springSecurityFilterChain`，补全 `RateLimitPort` / `RateLimitProperties` / `PersistentTokenRepository` mock；补齐 `Import` 与 `ThymeleafSecurityHandlerConfig` import
+- 未认证访问后台的断言对齐真实行为：期望 302 重定向到 `/login`（此前断言 4xx）
+- 新增 `ThymeleafSecurityExpressionHandler` 与 `SecurityMockMvcConfig`：恢复 `thymeleaf-extras-springsecurity6` 在 Spring Security 7 下的 `sec:authorize` 模板渲染，以及 Boot 4 `@WebMvcTest` 下 `@WithMockUser` 认证生效
+- 更新 `verify-changed-coverage.sh` 使用 JDK 25（项目编译目标已升级）
+
+### Compatibility
+
+- 无数据库迁移；可在验收失败时回滚至 `v1.5.1`
+- 解决 v1.5.0 标注的"thymeleaf-extras-springsecurity6 尚不兼容 Spring Security 7"问题
+
 ## [v1.5.1] - 2026-08-07
 
 **Tag**：`v1.5.1`

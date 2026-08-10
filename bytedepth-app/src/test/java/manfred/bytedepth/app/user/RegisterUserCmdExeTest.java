@@ -74,4 +74,16 @@ class RegisterUserCmdExeTest {
         assertThrows(DomainException.class, () -> exe.execute("u", longPwd),
                 "密码长度不能超过 64 位");
     }
+
+    @Test
+    void execute_passwordWithSymbols_savesUser() {
+        // 覆盖密码强度校验循环中"既非字母也非数字"字符（如 !）的分支
+        when(userRepository.existsByUsername("alice")).thenReturn(false);
+        when(passwordEncoder.encode("Pass!word1")).thenReturn("$2a$hash$");
+
+        exe.execute("alice", "Pass!word1");
+
+        verify(userRepository).save(argThat(u ->
+            "alice".equals(u.getUsername()) && u.getStatus() == UserStatus.PENDING));
+    }
 }
