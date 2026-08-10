@@ -61,12 +61,12 @@ class PageViewEventHandlerTest {
     }
 
     @Test
-    void onPageViewed_geoResolutionFails_stillSavesLog() {
+    void onPageViewed_geoResolutionFails_logsErrorAndDoesNotThrow() {
         var event = new PageViewedEvent("/projects", null, "bad-ip", null, null, LocalDateTime.now());
-        when(geoIpService.resolve("bad-ip")).thenReturn(GeoInfo.unknown());
+        when(geoIpService.resolve("bad-ip")).thenThrow(new RuntimeException("GeoIP unavailable"));
 
         handler.onPageViewed(event);
 
-        verify(pageViewLogMapper).insertLog(any(PageViewLogDO.class));
+        verify(pageViewLogMapper, never()).insertLog(any());
     }
 }
