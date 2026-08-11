@@ -31,7 +31,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final RateLimitProperties properties;
     private final ResourceLoader resourceLoader;
 
-    private String cachedTemplate;
+    private volatile String cachedTemplate;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
