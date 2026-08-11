@@ -4,9 +4,9 @@ import manfred.bytedepth.app.tag.DeleteTagCmdExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -27,10 +27,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminTagListControllerTest {
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private UserDetailsService userDetailsService;
-    @MockBean private PasswordEncoder passwordEncoder;
-    @MockBean private ListTagsQryExe listTagsQryExe;
-    @MockBean private DeleteTagCmdExe deleteTagCmdExe;
+    @MockitoBean private UserDetailsService userDetailsService;
+    @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean private ListTagsQryExe listTagsQryExe;
+    @MockitoBean private DeleteTagCmdExe deleteTagCmdExe;
 
     @Test
     @WithMockUser(authorities = "admin:dashboard:view")

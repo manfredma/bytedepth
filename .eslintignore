@@ -1,0 +1,5 @@
+# 构建产物（JaCoCo HTML 报告自带的第三方 JS）
+**/target/**
+
+# 前端依赖
+node_modules/

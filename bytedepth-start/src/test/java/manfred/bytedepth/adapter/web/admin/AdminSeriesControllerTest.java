@@ -8,9 +8,9 @@ import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import manfred.bytedepth.adapter.web.security.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,13 +32,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminSeriesControllerTest {
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private UserDetailsService userDetailsService;
-    @MockBean private PasswordEncoder passwordEncoder;
-    @MockBean private SetPostSeriesCmdExe setPostSeriesCmdExe;
-    @MockBean private ContentOwnershipGuard contentOwnershipGuard;
-    @MockBean private PersistentTokenRepository persistentTokenRepository;
-    @MockBean private RateLimitPort rateLimitPort;
-    @MockBean private RateLimitProperties rateLimitProperties;
+    @MockitoBean private UserDetailsService userDetailsService;
+    @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean private SetPostSeriesCmdExe setPostSeriesCmdExe;
+    @MockitoBean private ContentOwnershipGuard contentOwnershipGuard;
+    @MockitoBean private PersistentTokenRepository persistentTokenRepository;
+    @MockitoBean private RateLimitPort rateLimitPort;
+    @MockitoBean private RateLimitProperties rateLimitProperties;
 
     @org.junit.jupiter.api.BeforeEach
     void allowRateLimitedRequests() {

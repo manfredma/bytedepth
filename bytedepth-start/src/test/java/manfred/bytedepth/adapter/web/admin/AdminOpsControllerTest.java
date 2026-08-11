@@ -19,9 +19,9 @@ import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -54,27 +54,27 @@ class AdminOpsControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private UserDetailsService userDetailsService;
-    @MockBean
+    @MockitoBean
     private PasswordEncoder passwordEncoder;
-    @MockBean
+    @MockitoBean
     private PersistentTokenRepository persistentTokenRepository;
-    @MockBean
+    @MockitoBean
     private DataSource dataSource;
-    @MockBean
+    @MockitoBean
     private RateLimitPort rateLimitPort;
-    @MockBean
+    @MockitoBean
     private RateLimitProperties rateLimitProperties;
-    @MockBean
+    @MockitoBean
     private OpsDatabasePort databasePort;
-    @MockBean
+    @MockitoBean
     private OpsRedisPort redisPort;
-    @MockBean
+    @MockitoBean
     private OpsMeiliSearchPort meiliSearchPort;
-    @MockBean
+    @MockitoBean
     private OpsTableQryExe tableQryExe;
-    @MockBean
+    @MockitoBean
     private OpsDeploymentPort deploymentPort;
 
     @Test

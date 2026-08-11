@@ -146,7 +146,7 @@
                     <version>3.21.2</version>
                     <configuration>
                         <rulesets>
-                            <ruleset>pmd-ruleset.xml</ruleset>
+                            <ruleset>${maven.multiModuleProjectDirectory}/pmd-ruleset.xml</ruleset>
                         </rulesets>
                         <targetJdk>17</targetJdk>
                         <failOnViolation>true</failOnViolation>
@@ -172,6 +172,19 @@
                         <phase>test</phase>
                         <goals>
                             <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>pmd-check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
                         </goals>
                     </execution>
                 </executions>

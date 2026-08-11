@@ -9,6 +9,7 @@
     "lint": "eslint bytedepth-start/src/main/resources/static/js/"
   },
   "devDependencies": {
+    "eslint": "^8.57.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0"
   },

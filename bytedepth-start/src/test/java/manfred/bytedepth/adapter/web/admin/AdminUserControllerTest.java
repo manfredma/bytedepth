@@ -6,9 +6,9 @@ import manfred.bytedepth.app.user.ListPendingUsersQryExe;
 import manfred.bytedepth.domain.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -26,12 +26,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminUserControllerTest {
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private UserDetailsService userDetailsService;
-    @MockBean private PasswordEncoder passwordEncoder;
-    @MockBean private ListPendingUsersQryExe listPendingUsersQryExe;
-    @MockBean private ActivateUserCmdExe activateUserCmdExe;
-    @MockBean private BanUserCmdExe banUserCmdExe;
-    @MockBean private UserRepository userRepository;
+    @MockitoBean private UserDetailsService userDetailsService;
+    @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean private ListPendingUsersQryExe listPendingUsersQryExe;
+    @MockitoBean private ActivateUserCmdExe activateUserCmdExe;
+    @MockitoBean private BanUserCmdExe banUserCmdExe;
+    @MockitoBean private UserRepository userRepository;
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view", "system:user:approve"})
