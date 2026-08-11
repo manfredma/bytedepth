@@ -32,11 +32,14 @@
     function setOpen(open) {
         sidebar.classList.toggle('bd-annotation-sidebar-open', open);
         sidebar.setAttribute('aria-hidden', String(!open)); toggle.setAttribute('aria-expanded', String(open));
+        document.body.classList.toggle('bd-annotation-comments-open', open);
         persistSidebarState(open); if (open) renderFeed();
     }
     toggle.addEventListener('click', function () { setOpen(!isOpen()); });
     sidebar.querySelector('.bd-annotation-sidebar-close').addEventListener('click', function () { setOpen(false); });
     setOpen(readSidebarState());
+    window.addEventListener('scroll', function () { if (isOpen()) renderFeed(); }, {passive: true});
+    window.addEventListener('resize', function () { if (isOpen()) renderFeed(); });
 
     function nodeOffset(node) { var w = document.createTreeWalker(content, NodeFilter.SHOW_TEXT), offset = 0, current; while ((current = w.nextNode())) { if (current === node) return offset; offset += current.textContent.length; } return offset; }
     function selectionData(range) { return {startOffset: nodeOffset(range.startContainer) + range.startOffset, endOffset: nodeOffset(range.endContainer) + range.endOffset, selectedText: range.toString().trim()}; }
@@ -50,13 +53,16 @@
     function renderMarks() { unwrap(); annotations.slice().sort(function (a, b) { return a.startOffset - b.startOffset; }).forEach(markRange); }
     function renderFeed() {
         feed.replaceChildren();
-        if (!annotations.length) { var empty = document.createElement('p'); empty.className = 'bd-annotation-empty'; empty.textContent = '选中文章文字，即可添加划线或评论。'; feed.appendChild(empty); return; }
-        annotations.forEach(function (ann) {
+        var comments = annotations.filter(function (ann) { return ann.annotationText && ann.annotationText.trim(); });
+        if (!comments.length) { var empty = document.createElement('p'); empty.className = 'bd-annotation-empty'; empty.textContent = '暂无划线评论。选中文字后选择“评论”即可添加。'; feed.appendChild(empty); return; }
+        comments.forEach(function (ann) {
             var item = document.createElement('article'); item.className = 'bd-annotation-feed-item'; item.dataset.id = ann.id;
             var quote = document.createElement('blockquote'); quote.textContent = ann.selectedText; item.appendChild(quote);
             var body = document.createElement('p'); body.className = 'bd-annotation-feed-text'; body.textContent = ann.annotationText || '仅划线'; item.appendChild(body);
             var meta = document.createElement('div'); meta.className = 'bd-annotation-feed-meta'; meta.textContent = ann.visibility === 'PRIVATE' ? '仅自己可见' : '公开'; item.appendChild(meta);
             if (ann.ownedByCurrentVisitor) { var actions = document.createElement('div'); actions.className = 'bd-annotation-feed-actions'; var edit = document.createElement('button'); edit.type = 'button'; edit.textContent = '编辑'; edit.onclick = function () { editAnnotation(ann); }; var remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '删除'; remove.onclick = function () { removeAnnotation(ann.id); }; actions.append(edit, remove); item.appendChild(actions); }
+            var mark = content.querySelector('mark[data-id="' + ann.id + '"]');
+            item.style.top = Math.max(0, (mark ? mark.getBoundingClientRect().top : 88)) + 'px';
             feed.appendChild(item);
         });
     }
