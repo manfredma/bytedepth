@@ -22,6 +22,19 @@ describe('annotation sidebar', () => {
     expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('false');
   });
 
+  test('toggle remains usable when browser storage is unavailable', () => {
+    const originalGet = Storage.prototype.getItem;
+    const originalSet = Storage.prototype.setItem;
+    Storage.prototype.getItem = jest.fn(() => { throw new DOMException('blocked', 'SecurityError'); });
+    Storage.prototype.setItem = jest.fn(() => { throw new DOMException('blocked', 'SecurityError'); });
+    document.body.innerHTML = `<article id="post-article"><button id="bd-annotation-sidebar-toggle"></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section><section class="bd-annotation-feed"></section></aside></article>`;
+    expect(() => eval(annotationJs)).not.toThrow();
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    Storage.prototype.getItem = originalGet;
+    Storage.prototype.setItem = originalSet;
+  });
+
   test('typing a comment defaults visibility to public while a blank highlight stays private', () => {
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3);
@@ -34,12 +47,15 @@ describe('annotation sidebar', () => {
     expect(visibility.value).toBe('PUBLIC');
   });
 
-  test('closed sidebar uses compact menu and posts a private pure highlight', async () => {
+  test('closed sidebar opens a two-level menu before posting a private pure highlight', async () => {
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3); range.getBoundingClientRect = () => ({left: 10, bottom: 20});
     const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    document.querySelector('.bd-annotation-popup [data-color]').click();
+    expect(document.querySelector('.bd-annotation-popup [data-highlight]')).not.toBeNull();
+    document.querySelector('.bd-annotation-popup [data-highlight]').click();
+    expect(document.querySelector('.bd-annotation-popup [data-back]')).not.toBeNull();
+    document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
     await Promise.resolve();
     expect(window.fetch).toHaveBeenCalledWith(expect.stringContaining('/annotations'), expect.objectContaining({ method: 'POST' }));
     expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toMatchObject({ annotationText: null, visibility: 'PRIVATE' });
@@ -49,5 +65,6 @@ describe('annotation sidebar', () => {
     expect(annotationCss).not.toMatch(/(^|\n)\.content\s+/);
     expect(annotationCss).toContain('.bd-annotation-sidebar');
     expect(annotationCss).toContain('.bd-annotation-popup');
+    expect(annotationCss).toContain('button[data-color]');
   });
 });

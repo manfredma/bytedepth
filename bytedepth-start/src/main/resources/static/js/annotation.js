@@ -14,6 +14,14 @@
     var selected = null, color = 'yellow', visibilityChanged = false, popup, tooltip;
     var storageKey = 'bd.annotation.sidebar.open';
 
+    // 浏览器可能禁用本地存储（隐私模式、嵌入式 WebView 等）；不能因此让整套交互失效。
+    function readSidebarState() {
+        try { return localStorage.getItem(storageKey) === 'true'; } catch (ignored) { return false; }
+    }
+    function persistSidebarState(open) {
+        try { localStorage.setItem(storageKey, String(open)); } catch (ignored) { /* 仅不记忆状态 */ }
+    }
+
     function api(path, method, payload) {
         return fetch(window.location.pathname + '/annotations' + path, {
             method: method, headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf},
@@ -24,11 +32,11 @@
     function setOpen(open) {
         sidebar.classList.toggle('bd-annotation-sidebar-open', open);
         sidebar.setAttribute('aria-hidden', String(!open)); toggle.setAttribute('aria-expanded', String(open));
-        localStorage.setItem(storageKey, String(open)); if (open) renderFeed();
+        persistSidebarState(open); if (open) renderFeed();
     }
     toggle.addEventListener('click', function () { setOpen(!isOpen()); });
     sidebar.querySelector('.bd-annotation-sidebar-close').addEventListener('click', function () { setOpen(false); });
-    setOpen(localStorage.getItem(storageKey) === 'true');
+    setOpen(readSidebarState());
 
     function nodeOffset(node) { var w = document.createTreeWalker(content, NodeFilter.SHOW_TEXT), offset = 0, current; while ((current = w.nextNode())) { if (current === node) return offset; offset += current.textContent.length; } return offset; }
     function selectionData(range) { return {startOffset: nodeOffset(range.startContainer) + range.startOffset, endOffset: nodeOffset(range.endContainer) + range.endOffset, selectedText: range.toString().trim()}; }
@@ -73,9 +81,22 @@
     sidebar.querySelector('.bd-annotation-composer-save').addEventListener('click', saveComposer);
     function editAnnotation(ann) { openComposer({selectedText: ann.selectedText}, ann); }
     function removeAnnotation(id) { api('/' + id, 'DELETE').then(function () { annotations = annotations.filter(function (ann) { return String(ann.id) !== String(id); }); renderMarks(); renderFeed(); }); }
-    function buildPopup() { var el = document.createElement('div'); el.className = 'bd-annotation-popup'; el.innerHTML = '<button type="button" data-color="yellow">划线</button><button type="button" data-comment>评论</button>'; document.body.appendChild(el); el.querySelector('[data-color]').onclick = function () { createHighlight(); }; el.querySelector('[data-comment]').onclick = function () { openComposer(selected); el.classList.remove('bd-annotation-popup-open'); }; return el; }
+    function hidePopup() { if (popup) popup.classList.remove('bd-annotation-popup-open'); }
+    function showPrimaryMenu() {
+        popup.innerHTML = '<button type="button" data-copy>复制</button><button type="button" data-highlight>划线</button><button type="button" data-comment>评论</button>';
+        popup.querySelector('[data-copy]').onclick = function () { navigator.clipboard && navigator.clipboard.writeText(selected.selectedText); hidePopup(); };
+        popup.querySelector('[data-highlight]').onclick = showHighlightMenu;
+        popup.querySelector('[data-comment]').onclick = function () { openComposer(selected); hidePopup(); };
+    }
+    function showHighlightMenu() {
+        popup.innerHTML = '<button type="button" data-back>‹ 返回</button><button type="button" data-color="yellow" aria-label="黄色划线">黄</button><button type="button" data-color="red" aria-label="红色划线">红</button><button type="button" data-color="green" aria-label="绿色划线">绿</button><button type="button" data-color="blue" aria-label="蓝色划线">蓝</button><button type="button" data-cancel>取消</button>';
+        popup.querySelector('[data-back]').onclick = showPrimaryMenu;
+        popup.querySelector('[data-cancel]').onclick = hidePopup;
+        popup.querySelectorAll('[data-color]').forEach(function (button) { button.onclick = function () { color = button.dataset.color; createHighlight(); }; });
+    }
+    function buildPopup() { var el = document.createElement('div'); el.className = 'bd-annotation-popup'; document.body.appendChild(el); popup = el; showPrimaryMenu(); return el; }
     function showPopup(range) { if (!popup) popup = buildPopup(); selected = selectionData(range); popup.classList.add('bd-annotation-popup-open'); var rect = range.getBoundingClientRect(); popup.style.left = Math.max(8, rect.left) + 'px'; popup.style.top = Math.max(8, rect.bottom + 8) + 'px'; }
-    function createHighlight() { if (!selected) return; api('', 'POST', {selectedText: selected.selectedText.slice(0, 500), annotationText: null, color: color, visibility: 'PRIVATE', startOffset: selected.startOffset, endOffset: selected.endOffset}).then(function (saved) { annotations.push(saved); renderMarks(); if (isOpen()) renderFeed(); popup.classList.remove('bd-annotation-popup-open'); window.getSelection().removeAllRanges(); }); }
+    function createHighlight() { if (!selected) return; api('', 'POST', {selectedText: selected.selectedText.slice(0, 500), annotationText: null, color: color, visibility: 'PRIVATE', startOffset: selected.startOffset, endOffset: selected.endOffset}).then(function (saved) { annotations.push(saved); renderMarks(); if (isOpen()) renderFeed(); hidePopup(); window.getSelection().removeAllRanges(); }); }
     document.addEventListener('mouseup', function (event) { if (sidebar.contains(event.target) || (popup && popup.contains(event.target))) return; var selection = window.getSelection(); if (!selection.rangeCount) return; var range = selection.getRangeAt(0); if (range.collapsed || !range.toString().trim() || !content.contains(range.commonAncestorContainer)) return; var data = selectionData(range); if (isOpen()) openComposer(data); else showPopup(range); });
     content.addEventListener('click', function (event) { var mark = event.target.closest && event.target.closest('mark.bd-annotation-highlight'); if (!mark) return; var ann = annotations.find(function (item) { return String(item.id) === mark.dataset.id; }); if (ann) { setOpen(true); var item = feed.querySelector('[data-id="' + ann.id + '"]'); if (item) item.scrollIntoView({block: 'nearest'}); } });
     renderMarks();
