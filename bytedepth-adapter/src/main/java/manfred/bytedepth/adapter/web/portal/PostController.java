@@ -8,6 +8,8 @@ import manfred.bytedepth.adapter.web.util.SecurityUtils;
 import manfred.bytedepth.adapter.web.util.SeoUtils;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import manfred.bytedepth.adapter.web.util.WebUtils;
+import manfred.bytedepth.app.annotation.ListAnnotationsQryExe;
+import manfred.bytedepth.app.annotation.PostAnnotationDTO;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
@@ -54,6 +56,7 @@ public class PostController {
     private final PublishPostCmdExe publishPostCmdExe;
     private final MarkdownRenderer markdownRenderer;
     private final ListCommentsQryExe listCommentsQryExe;
+    private final ListAnnotationsQryExe listAnnotationsQryExe;
     private final ListTagsQryExe listTagsQryExe;
     private final ListCategoriesQryExe listCategoriesQryExe;
     private final PostViewCounter postViewCounter;
@@ -131,6 +134,9 @@ public class PostController {
         model.addAttribute("wordCount", markdownRenderer.countVisibleCharacters(post.getContent()));
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
+        model.addAttribute("annotations", listAnnotationsQryExe.execute(id).stream()
+                .map(PostAnnotationDTO::from).toList());
+        model.addAttribute("currentUserId", SecurityUtils.extractUserId(currentUser));
         model.addAttribute("rating", getPostRatingQryExe.execute(id,
                 WebUtils.readCookie(request, PostRatingController.VISITOR_COOKIE)));
         // The visibility check above has already established that a draft can reach this point

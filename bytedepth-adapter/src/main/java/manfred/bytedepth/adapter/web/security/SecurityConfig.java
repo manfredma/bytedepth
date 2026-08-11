@@ -83,8 +83,10 @@ public class SecurityConfig {
                     .hasAnyAuthority("admin:dashboard:view", "blog:post:create")
                 // 后台：需要 admin 仪表盘权限（粗粒度守卫，各方法再用 @PreAuthorize 细化）
                 .requestMatchers("/admin/**").hasAuthority("admin:dashboard:view")
-                // 写评论、创建/发布文章：至少需要登录
+                // 写评论、创建/发布文章、批注：至少需要登录
                 .requestMatchers(HttpMethod.POST, "/posts/*/comments").authenticated()
+                .requestMatchers(HttpMethod.POST, "/posts/*/annotations").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/posts/*/annotations/*").authenticated()
                 .requestMatchers("/posts/new").authenticated()
                 .requestMatchers(HttpMethod.POST, "/posts").authenticated()
                 .requestMatchers(HttpMethod.POST, "/posts/*/publish").authenticated()

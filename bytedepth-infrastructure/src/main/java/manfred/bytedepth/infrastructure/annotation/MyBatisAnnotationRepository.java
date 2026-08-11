@@ -1,0 +1,59 @@
+package manfred.bytedepth.infrastructure.annotation;
+
+import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.app.annotation.AnnotationRepositoryPort;
+import manfred.bytedepth.domain.annotation.PostAnnotation;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+@RequiredArgsConstructor
+public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
+
+    private final PostAnnotationMapper mapper;
+
+    @Override
+    public PostAnnotation save(PostAnnotation annotation) {
+        PostAnnotationDO data = toDO(annotation);
+        mapper.insert(data);
+        return toDomain(data);
+    }
+
+    @Override
+    public List<PostAnnotation> findByPostId(Long postId) {
+        return mapper.findByPostId(postId).stream().map(MyBatisAnnotationRepository::toDomain).toList();
+    }
+
+    @Override
+    public Optional<PostAnnotation> findById(Long id) {
+        return Optional.ofNullable(mapper.selectById(id)).map(MyBatisAnnotationRepository::toDomain);
+    }
+
+    @Override
+    public void delete(Long id) {
+        mapper.deleteById(id);
+    }
+
+    private static PostAnnotationDO toDO(PostAnnotation annotation) {
+        PostAnnotationDO data = new PostAnnotationDO();
+        data.setId(annotation.id());
+        data.setPostId(annotation.postId());
+        data.setUserId(annotation.userId());
+        data.setSelectedText(annotation.selectedText());
+        data.setAnnotationText(annotation.annotationText());
+        data.setColor(annotation.color());
+        data.setStartOffset(annotation.startOffset());
+        data.setEndOffset(annotation.endOffset());
+        data.setCreatedAt(annotation.createdAt());
+        return data;
+    }
+
+    private static PostAnnotation toDomain(PostAnnotationDO data) {
+        return new PostAnnotation(
+                data.getId(), data.getPostId(), data.getUserId(),
+                data.getSelectedText(), data.getAnnotationText(), data.getColor(),
+                data.getStartOffset(), data.getEndOffset(), data.getCreatedAt());
+    }
+}

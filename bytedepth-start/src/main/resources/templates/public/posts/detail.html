@@ -7,8 +7,10 @@
     <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
     <link rel="stylesheet" th:href="@{/css/theme.css}">
     <link rel="stylesheet" th:href="@{/css/post-rating.css}">
+    <link rel="stylesheet" th:href="@{/css/annotation.css}">
     <script th:src="@{/js/theme-switcher.js}"></script>
     <title th:text="${post.title} + ' - bytedepth'">文章详情</title>
+    <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
     <!-- SEO -->
     <meta name="description" th:if="${metaDescription != null}" th:content="${metaDescription}">
     <link rel="canonical" th:if="${canonicalUrl != null}" th:href="${canonicalUrl}">
@@ -909,6 +911,12 @@ document.addEventListener('DOMContentLoaded', function () {
     mermaid.run();
 });
 </script>
+<!-- 批注数据注入与脚本 -->
+<script th:inline="javascript">
+    window.__ANNOTATIONS__ = /*[[${annotations}]]*/ [];
+    window.__CURRENT_USER_ID__ = /*[[${currentUserId}]]*/ null;
+</script>
+<script th:src="@{/js/annotation.js}"></script>
 <!-- Schema.org 结构化数据：让 Google 展示发布时间、作者等富文本摘要 -->
 <script type="application/ld+json" th:inline="javascript">
 {

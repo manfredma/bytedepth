@@ -17,6 +17,7 @@ import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
 import manfred.bytedepth.adapter.web.util.SecurityUtils;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import manfred.bytedepth.adapter.web.util.WebUtils;
+import manfred.bytedepth.app.annotation.ListAnnotationsQryExe;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
@@ -53,7 +54,7 @@ class PostControllerCoverageTest {
     private final ListTagsQryExe tags = mock(ListTagsQryExe.class);
     private final VisitRequestFilter visitFilter = mock(VisitRequestFilter.class);
     private final PostController controller = new PostController(listPosts, getPost, createPost, publishPost,
-            mock(MarkdownRenderer.class), mock(ListCommentsQryExe.class), tags, categories,
+            mock(MarkdownRenderer.class), mock(ListCommentsQryExe.class), mock(ListAnnotationsQryExe.class), tags, categories,
             mock(PostViewCounter.class), posts, mock(SeriesRepository.class), mock(GetSeriesPostsQryExe.class),
             mock(GetPostRatingQryExe.class), visitFilter, mock(ApplicationEventPublisher.class));
 

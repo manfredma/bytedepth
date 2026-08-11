@@ -2,7 +2,9 @@ package manfred.bytedepth.adapter.web;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import manfred.bytedepth.domain.common.DomainException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,6 +16,12 @@ import java.util.NoSuchElementException;
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    /** 领域校验失败（如批注偏移越界、超长文本、无权删除）→ 400 BadRequest */
+    @ExceptionHandler(DomainException.class)
+    public ResponseEntity<String> handleDomain(DomainException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
 
     /** 文章不存在 or 已删除 → 404 页面 */
     @ExceptionHandler({NoSuchElementException.class, ResponseStatusException.class})
