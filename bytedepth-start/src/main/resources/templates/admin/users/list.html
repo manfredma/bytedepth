@@ -43,13 +43,15 @@
 <aside th:replace="~{fragments/admin-sidebar :: sidebar('users')}"></aside>
 <div class="admin-main">
 <div class="container">
-    <h1>待审核用户</h1>
-    <div th:if="${#lists.isEmpty(pendingUsers)}" class="empty">
-        暂无待审核用户 🎉
+    <h1>用户管理</h1>
+    <div th:replace="~{fragments/filter-bar :: filterBar('/admin/users', ${filterFields})}"></div>
+    <div th:if="${#lists.isEmpty(users)}" class="empty">
+        暂无用户
     </div>
-    <div th:each="u : ${pendingUsers}" class="user-card">
+    <div th:each="u : ${users}" class="user-card">
         <div class="info">
             <div class="username" th:text="${u.username}">用户名</div>
+            <div class="time" th:text="${u.status}">状态</div>
             <div class="time"
                  th:text="'注册于 ' + ${#temporals.format(u.createdAt, 'yyyy-MM-dd HH:mm')}">时间</div>
         </div>
@@ -67,6 +69,7 @@
             </form>
         </div>
     </div>
+    <div th:if="${totalPages > 1}" th:replace="~{fragments/pagination :: pagination(${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${filterBaseUrl})}"></div>
 </div>
 </div>
 </div>

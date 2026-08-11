@@ -57,12 +57,12 @@ class AdminUserControllerTest {
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view", "system:user:approve"})
     void list_returnsUsersView() throws Exception {
-        when(listPendingUsersQryExe.execute()).thenReturn(List.of());
+        when(listPendingUsersQryExe.findPage(null, null, 1, 20)).thenReturn(new ListPendingUsersQryExe.UserPageResult(List.of(), 0));
 
         mockMvc.perform(get("/admin/users"))
             .andExpect(status().isOk())
             .andExpect(view().name("admin/users/list"))
-            .andExpect(model().attributeExists("pendingUsers"));
+            .andExpect(model().attributeExists("users", "filterFields", "filterBaseUrl"));
     }
 
     @Test

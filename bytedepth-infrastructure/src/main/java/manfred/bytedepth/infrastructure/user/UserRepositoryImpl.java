@@ -1,6 +1,7 @@
 package manfred.bytedepth.infrastructure.user;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.domain.user.User;
 import manfred.bytedepth.domain.user.UserRepository;
@@ -45,6 +46,17 @@ public class UserRepositoryImpl implements UserRepository {
             .eq(UserDO::getStatus, status.name())
             .orderByAsc(UserDO::getCreatedAt))
             .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override public List<User> findPage(String username, String status, int page, int size) {
+        return userMapper.selectPage(new Page<UserDO>(page, size), filtered(username, status)).getRecords().stream().map(this::toDomain).toList();
+    }
+    @Override public long countFiltered(String username, String status) { return userMapper.selectCount(filtered(username, status)); }
+    private LambdaQueryWrapper<UserDO> filtered(String username, String status) {
+        LambdaQueryWrapper<UserDO> wrapper = new LambdaQueryWrapper<UserDO>().orderByAsc(UserDO::getCreatedAt);
+        if (username != null && !username.isBlank()) wrapper.like(UserDO::getUsername, username);
+        if (status != null && !status.isBlank()) wrapper.eq(UserDO::getStatus, status);
+        return wrapper;
     }
 
     @Override
