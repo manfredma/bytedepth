@@ -61,6 +61,15 @@ describe('annotation sidebar', () => {
     expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toMatchObject({ annotationText: null, visibility: 'PRIVATE' });
   });
 
+  test('mobile selection does not open the desktop annotation menu', () => {
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    const text = document.querySelector('.content').firstChild;
+    const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3);
+    const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    expect(document.querySelector('.bd-annotation-popup')).toBeNull();
+  });
+
   test('styles remain inside the bd-annotation namespace', () => {
     expect(annotationCss).not.toMatch(/(^|\n)\.content\s+/);
     expect(annotationCss).toContain('.bd-annotation-sidebar');

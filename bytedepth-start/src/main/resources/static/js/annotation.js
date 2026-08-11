@@ -11,7 +11,7 @@
     var csrf = (document.querySelector('meta[name="_csrf"]') || {}).content || '';
     var composer = sidebar.querySelector('.bd-annotation-composer');
     var feed = sidebar.querySelector('.bd-annotation-feed');
-    var selected = null, color = 'yellow', visibilityChanged = false, popup, tooltip;
+    var selected = null, color = 'yellow', visibilityChanged = false, popup, tooltip, mobileNote;
     var storageKey = 'bd.annotation.sidebar.open';
 
     // 浏览器可能禁用本地存储（隐私模式、嵌入式 WebView 等）；不能因此让整套交互失效。
@@ -29,6 +29,7 @@
         }).then(function (response) { if (!response.ok) throw new Error('annotation request failed'); return response.status === 204 ? null : response.json(); });
     }
     function isOpen() { return sidebar.classList.contains('bd-annotation-sidebar-open'); }
+    function isMobile() { return !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches); }
     function setOpen(open) {
         sidebar.classList.toggle('bd-annotation-sidebar-open', open);
         sidebar.setAttribute('aria-hidden', String(!open)); toggle.setAttribute('aria-expanded', String(open));
@@ -88,6 +89,15 @@
     function editAnnotation(ann) { openComposer({selectedText: ann.selectedText}, ann); }
     function removeAnnotation(id) { api('/' + id, 'DELETE').then(function () { annotations = annotations.filter(function (ann) { return String(ann.id) !== String(id); }); renderMarks(); renderFeed(); }); }
     function hidePopup() { if (popup) popup.classList.remove('bd-annotation-popup-open'); }
+    function showMobileComment(ann, mark) {
+        if (!ann.annotationText || !ann.annotationText.trim()) return;
+        if (!mobileNote) { mobileNote = document.createElement('aside'); mobileNote.className = 'bd-annotation-mobile-note'; document.body.appendChild(mobileNote); }
+        mobileNote.textContent = ann.annotationText;
+        var rect = mark.getBoundingClientRect();
+        mobileNote.style.left = Math.max(12, rect.left) + 'px';
+        mobileNote.style.top = Math.min(window.innerHeight - 80, rect.bottom + 8) + 'px';
+        mobileNote.hidden = false;
+    }
     function showPrimaryMenu() {
         popup.innerHTML = '<button type="button" data-copy>复制</button><button type="button" data-highlight>划线</button><button type="button" data-comment>评论</button>';
         popup.querySelector('[data-copy]').onclick = function () { navigator.clipboard && navigator.clipboard.writeText(selected.selectedText); hidePopup(); };
@@ -103,7 +113,8 @@
     function buildPopup() { var el = document.createElement('div'); el.className = 'bd-annotation-popup'; document.body.appendChild(el); popup = el; showPrimaryMenu(); return el; }
     function showPopup(range) { if (!popup) popup = buildPopup(); selected = selectionData(range); popup.classList.add('bd-annotation-popup-open'); var rect = range.getBoundingClientRect(); popup.style.left = Math.max(8, rect.left) + 'px'; popup.style.top = Math.max(8, rect.bottom + 8) + 'px'; }
     function createHighlight() { if (!selected) return; api('', 'POST', {selectedText: selected.selectedText.slice(0, 500), annotationText: null, color: color, visibility: 'PRIVATE', startOffset: selected.startOffset, endOffset: selected.endOffset}).then(function (saved) { annotations.push(saved); renderMarks(); if (isOpen()) renderFeed(); hidePopup(); window.getSelection().removeAllRanges(); }); }
-    document.addEventListener('mouseup', function (event) { if (sidebar.contains(event.target) || (popup && popup.contains(event.target))) return; var selection = window.getSelection(); if (!selection.rangeCount) return; var range = selection.getRangeAt(0); if (range.collapsed || !range.toString().trim() || !content.contains(range.commonAncestorContainer)) return; var data = selectionData(range); if (isOpen()) openComposer(data); else showPopup(range); });
-    content.addEventListener('click', function (event) { var mark = event.target.closest && event.target.closest('mark.bd-annotation-highlight'); if (!mark) return; var ann = annotations.find(function (item) { return String(item.id) === mark.dataset.id; }); if (ann) { setOpen(true); var item = feed.querySelector('[data-id="' + ann.id + '"]'); if (item) item.scrollIntoView({block: 'nearest'}); } });
+    document.addEventListener('mouseup', function (event) { if (isMobile() || sidebar.contains(event.target) || (popup && popup.contains(event.target))) return; var selection = window.getSelection(); if (!selection.rangeCount) return; var range = selection.getRangeAt(0); if (range.collapsed || !range.toString().trim() || !content.contains(range.commonAncestorContainer)) return; var data = selectionData(range); if (isOpen()) openComposer(data); else showPopup(range); });
+    content.addEventListener('click', function (event) { var mark = event.target.closest && event.target.closest('mark.bd-annotation-highlight'); if (!mark) return; var ann = annotations.find(function (item) { return String(item.id) === mark.dataset.id; }); if (isMobile()) { if (ann) showMobileComment(ann, mark); return; } if (ann) { setOpen(true); var item = feed.querySelector('[data-id="' + ann.id + '"]'); if (item) item.scrollIntoView({block: 'nearest'}); } });
+    document.addEventListener('click', function (event) { if (mobileNote && !mobileNote.hidden && !mobileNote.contains(event.target) && !event.target.closest('mark.bd-annotation-highlight')) mobileNote.hidden = true; });
     renderMarks();
 })();
