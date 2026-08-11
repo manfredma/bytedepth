@@ -1,6 +1,7 @@
 package manfred.bytedepth.infrastructure.series;
 
 import manfred.bytedepth.domain.series.Series;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -88,6 +89,23 @@ class SeriesRepositoryImplTest {
 
         assertEquals("Java", repository.findAll().get(0).getName());
         assertEquals(7L, repository.findByAuthorId(7L).get(0).getAuthorId());
+    }
+
+    @Test
+    void pagedQueries_supportNameAndAuthorFilters() {
+        Page<SeriesDO> page = new Page<>(1, 10);
+        page.setRecords(List.of(seriesRow()));
+        when(mapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(mapper.selectCount(any())).thenReturn(3L, 2L, 3L, 2L);
+
+        assertEquals("Java", repository.findPage("Java", 1, 10).getFirst().getName());
+        assertEquals(3L, repository.count(" "));
+        assertEquals(7L, repository.findPageByAuthorId(7L, "Java", 1, 10).getFirst().getAuthorId());
+        assertEquals(2L, repository.countByAuthorId(7L, ""));
+        assertEquals(3L, repository.count(null));
+        assertEquals(2L, repository.countByAuthorId(7L, null));
+        verify(mapper, org.mockito.Mockito.times(2)).selectPage(any(Page.class), any());
+        verify(mapper, org.mockito.Mockito.times(4)).selectCount(any());
     }
 
     private SeriesDO seriesRow() {

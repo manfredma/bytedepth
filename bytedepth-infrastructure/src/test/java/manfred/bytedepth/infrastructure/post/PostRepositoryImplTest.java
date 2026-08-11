@@ -297,6 +297,20 @@ class PostRepositoryImplTest {
         assertTrue(repository.findPage(1, 20).isEmpty());
     }
 
+    @Test
+    void filteredPageAndCount_supportAllOptionalFiltersAndTheirAbsence() {
+        Page<PostDO> page = new Page<>(1, 20);
+        page.setRecords(List.of(postRow(8L)));
+        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectCount(any())).thenReturn(12L);
+
+        assertEquals(8L, repository.findPage(1, 20, " title ", "PUBLISHED", 3L, 2L).getFirst().getId());
+        assertEquals(12L, repository.countFiltered(" ", "", null, null));
+        assertEquals(12L, repository.countFiltered(null, null, null, null));
+        verify(postMapper).selectPage(any(Page.class), any());
+        verify(postMapper, Mockito.times(2)).selectCount(any());
+    }
+
     // ---- countAll ----
 
     @Test

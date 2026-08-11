@@ -64,6 +64,15 @@ class WebUtilsTest {
         assertThat(WebUtils.isPrivateIp("8.8.8.8")).isFalse();
     }
 
+    @Test
+    void isPrivateIp_handlesMalformed172Addresses() {
+        assertThat(WebUtils.getClientIp(requestWithXff(" , 203.0.113.5"))).isEqualTo("203.0.113.5");
+        assertThat(WebUtils.isPrivateIp("172.1")).isFalse();
+        assertThat(WebUtils.isPrivateIp("172.123")).isFalse();
+        assertThat(WebUtils.isPrivateIp("172.x.1")).isFalse();
+        assertThat(WebUtils.isPrivateIp("172.15.0.1")).isFalse();
+    }
+
     // ── truncate ───────────────────────────────────────────
 
     @Test

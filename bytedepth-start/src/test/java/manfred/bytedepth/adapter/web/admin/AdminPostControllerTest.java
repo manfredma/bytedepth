@@ -218,6 +218,19 @@ class AdminPostControllerTest {
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
+    void adminPostList_omitsBlankTextFiltersFromPaginationUrl() throws Exception {
+        when(listAllPostsQryExe.execute(1, 20, " ", "", null, null))
+                .thenReturn(new ListAllPostsQryExe.PageResult(List.of(), 0));
+        when(seriesRepository.findAll()).thenReturn(List.of());
+        when(listCategoriesQryExe.execute()).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/posts").param("title", " ").param("status", ""))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("filterBaseUrl", "/admin/posts?"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
     void adminNewForm_withAdmin_returnsEditView() throws Exception {
         when(listCategoriesQryExe.execute()).thenReturn(List.of());
 

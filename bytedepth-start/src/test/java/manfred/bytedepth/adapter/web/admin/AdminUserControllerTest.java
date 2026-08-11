@@ -67,6 +67,24 @@ class AdminUserControllerTest {
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view", "system:user:approve"})
+    void list_supportsNonBlankUsernameAndEachSelectedStatus() throws Exception {
+        when(listPendingUsersQryExe.findPage("alice", "ACTIVE", 1, 20)).thenReturn(new ListPendingUsersQryExe.UserPageResult(List.of(), 1));
+        when(listPendingUsersQryExe.findPage(" ", "BANNED", 1, 20)).thenReturn(new ListPendingUsersQryExe.UserPageResult(List.of(), 1));
+
+        mockMvc.perform(get("/admin/users").param("username", "alice").param("status", "ACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("filterBaseUrl", "/admin/users?username=alice&status=ACTIVE&"));
+        mockMvc.perform(get("/admin/users").param("username", " ").param("status", "BANNED"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("filterBaseUrl", "/admin/users?status=BANNED&"));
+        when(listPendingUsersQryExe.findPage(null, "PENDING", 1, 20)).thenReturn(new ListPendingUsersQryExe.UserPageResult(List.of(), 1));
+        mockMvc.perform(get("/admin/users").param("status", "PENDING"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("filterBaseUrl", "/admin/users?status=PENDING&"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view", "system:user:approve"})
     void activate_redirectsToList() throws Exception {
         mockMvc.perform(post("/admin/users/1/activate").with(csrf()))
             .andExpect(redirectedUrl("/admin/users"));

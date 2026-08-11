@@ -51,6 +51,18 @@ class AdminSeriesListControllerTest {
     }
 
     @Test
+    void administratorList_omitsBlankNameFromPaginationUrl() {
+        when(ownershipGuard.canManageSeries(authentication)).thenReturn(true);
+        when(seriesRepository.findPage(" ", 1, 20)).thenReturn(List.of());
+        when(seriesRepository.count(" ")).thenReturn(0L);
+        ConcurrentModel model = new ConcurrentModel();
+
+        controller.list(authentication, model, " ", 1, 20);
+
+        assertEquals("/admin/series?", model.getAttribute("filterBaseUrl"));
+    }
+
+    @Test
     void create_assignsCurrentAuthorAndNormalizesBlankDescription() {
         when(seriesRepository.findBySlug("java")).thenReturn(Optional.empty());
         when(ownershipGuard.currentUserId(authentication)).thenReturn(7L);

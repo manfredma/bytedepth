@@ -116,4 +116,14 @@ class AdminCommentControllerTest {
 
         verify(listCommentsQryExe).findPage(eq(2), eq(50), isNull(), eq(7L));
     }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void adminCommentList_blankAuthorNameDoesNotAddItToPaginationUrl() throws Exception {
+        when(listCommentsQryExe.findPage(1, 50, " ", null)).thenReturn(new ListCommentsQryExe.PageResult(List.of(), 0));
+
+        mockMvc.perform(get("/admin/comments").param("authorName", " "))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("filterBaseUrl", "/admin/comments?"));
+    }
 }

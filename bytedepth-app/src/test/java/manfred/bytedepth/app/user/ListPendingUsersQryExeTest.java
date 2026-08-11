@@ -42,4 +42,24 @@ class ListPendingUsersQryExeTest {
         when(userRepository.findByStatus(UserStatus.PENDING)).thenReturn(List.of());
         assertTrue(exe.execute().isEmpty());
     }
+
+    @Test
+    void findPage_returnsMappedUsersAndFilteredTotal() {
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 11, 10, 0);
+        User active = User.reconstruct(2L, "alice", "hash", null, null, null,
+                UserStatus.ACTIVE, createdAt, createdAt);
+        when(userRepository.findPage("ali", "ACTIVE", 2, 10)).thenReturn(List.of(active));
+        when(userRepository.countFiltered("ali", "ACTIVE")).thenReturn(11L);
+
+        ListPendingUsersQryExe.UserPageResult result = exe.findPage("ali", "ACTIVE", 2, 10);
+
+        assertEquals(11L, result.total());
+        assertEquals(1, result.users().size());
+        assertEquals(2L, result.users().getFirst().getId());
+        assertEquals("alice", result.users().getFirst().getUsername());
+        assertEquals("ACTIVE", result.users().getFirst().getStatus());
+        assertEquals(createdAt, result.users().getFirst().getCreatedAt());
+        verify(userRepository).findPage("ali", "ACTIVE", 2, 10);
+        verify(userRepository).countFiltered("ali", "ACTIVE");
+    }
 }

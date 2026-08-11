@@ -61,6 +61,29 @@ class CategoryQueriesAndCommandsTest {
     }
 
     @Test
+    void filteredList_keepsAlreadyMatchedParentWithoutAddingItAgain() {
+        when(repository.findAll()).thenReturn(List.of(
+                Category.reconstruct(1L, "Java", "java", null),
+                Category.reconstruct(2L, "Java Web", "java-web", 1L)));
+
+        List<CategoryDTO> categories = new ListCategoriesQryExe(repository).executeFiltered("java", null);
+
+        assertEquals(List.of("Java", "Java Web"), categories.stream().map(CategoryDTO::getName).toList());
+        assertEquals("Java", categories.get(1).getParentName());
+    }
+
+    @Test
+    void filteredList_acceptsNameWhenTheOptionalSlugDoesNotMatch() {
+        when(repository.findAll()).thenReturn(List.of(
+                Category.reconstruct(1L, "Java", "java", null),
+                Category.reconstruct(2L, "Kotlin", "kotlin", null)));
+
+        List<CategoryDTO> categories = new ListCategoriesQryExe(repository).executeFiltered("java", "missing");
+
+        assertEquals(List.of("Java"), categories.stream().map(CategoryDTO::getName).toList());
+    }
+
+    @Test
     void filteredList_withoutFiltersUsesNormalTreeQuery() {
         when(repository.findAll()).thenReturn(List.of(Category.reconstruct(1L, "Java", "java", null)));
 

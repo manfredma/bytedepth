@@ -150,6 +150,20 @@ class CommentRepositoryImplTest {
         assertTrue(repository.findAll(1, 20).isEmpty());
     }
 
+    @Test
+    void filteredQueries_mapResultsAndSupportPresentAndBlankFilters() {
+        Page<CommentDO> page = new Page<>(2, 10);
+        page.setRecords(List.of(commentRow(3L)));
+        when(commentMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(commentMapper.selectCount(any())).thenReturn(6L);
+
+        assertEquals(3L, repository.findAll(2, 10, " Alice ", 10L).getFirst().getId());
+        assertEquals(6L, repository.countFiltered(" ", null));
+        assertEquals(6L, repository.countFiltered(null, null));
+        verify(commentMapper).selectPage(any(Page.class), any());
+        verify(commentMapper, Mockito.times(2)).selectCount(any());
+    }
+
     // ---- helpers ----
 
     private CommentDO commentRow(Long id) {

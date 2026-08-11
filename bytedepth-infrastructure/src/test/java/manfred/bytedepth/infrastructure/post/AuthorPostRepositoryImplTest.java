@@ -69,6 +69,20 @@ class AuthorPostRepositoryImplTest {
         assertHasOwnershipAndDeletionFilters(countWrapper.getValue());
     }
 
+    @Test
+    void filteredAuthorQueries_supportAllOptionalFiltersAndTheirAbsence() {
+        Page<PostDO> page = new Page<>(1, 10);
+        page.setRecords(List.of(row(3L)));
+        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectCount(any())).thenReturn(2L);
+
+        assertEquals(9L, repository.findPageByAuthorId(7L, 1, 10, " title ", "DRAFT", 3L, 4L).getFirst().getId());
+        assertEquals(2L, repository.countByAuthorIdFiltered(7L, " ", "", null, null));
+        assertEquals(2L, repository.countByAuthorIdFiltered(7L, null, null, null, null));
+        verify(postMapper).selectPage(any(Page.class), any());
+        verify(postMapper, Mockito.times(2)).selectCount(any());
+    }
+
     private void assertHasOwnershipAndDeletionFilters(LambdaQueryWrapper<PostDO> wrapper) {
         String sql = wrapper.getSqlSegment();
         assertEquals(true, sql.contains("author_id"));

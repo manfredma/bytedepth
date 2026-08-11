@@ -79,6 +79,16 @@ class AdminTagListControllerTest {
 
     @Test
     @WithMockUser(authorities = "admin:dashboard:view")
+    void list_blankNameDoesNotAddItToPaginationUrl() throws Exception {
+        when(listTagsQryExe.findPageWithCount(" ", 1, 20)).thenReturn(new ListTagsQryExe.TagPageResult(java.util.List.of(), 0));
+
+        mockMvc.perform(get("/admin/tags").param("name", " "))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("filterBaseUrl", "/admin/tags?"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "admin:dashboard:view")
     void delete_delegatesAndReturnsToTagList() throws Exception {
         mockMvc.perform(post("/admin/tags/3/delete").with(csrf()))
                 .andExpect(status().is3xxRedirection())
