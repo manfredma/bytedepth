@@ -26,10 +26,10 @@ class SimpleAdminControllerCoverageTest {
     void categoryAndCommentPagesDelegateAndExposeTheirModels() {
         ListCategoriesQryExe categories = mock(ListCategoriesQryExe.class);
         CreateCategoryCmdExe create = mock(CreateCategoryCmdExe.class);
-        when(categories.execute()).thenReturn(List.of());
+        when(categories.executeFiltered(null, null)).thenReturn(List.of());
         AdminCategoryController categoryController = new AdminCategoryController(categories, create);
         ExtendedModelMap categoryModel = new ExtendedModelMap();
-        assertThat(categoryController.list(categoryModel)).isEqualTo("admin/categories/list");
+        assertThat(categoryController.list(categoryModel, null, null)).isEqualTo("admin/categories/list");
         assertThat(categoryModel).containsKey("categories");
         assertThat(categoryController.create("Java", "java", null)).isEqualTo("redirect:/admin/categories");
         verify(create).execute("Java", "java", null);

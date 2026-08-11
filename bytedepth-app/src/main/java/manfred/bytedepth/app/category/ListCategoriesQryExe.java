@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -17,7 +18,37 @@ public class ListCategoriesQryExe {
     private final CategoryRepository categoryRepository;
 
     public List<CategoryDTO> execute() {
+        return toTreeDTO(categoryRepository.findAll());
+    }
+
+    public List<CategoryDTO> executeFiltered(String name, String slug) {
+        boolean hasName = name != null && !name.isBlank();
+        boolean hasSlug = slug != null && !slug.isBlank();
+        if (!hasName && !hasSlug) {
+            return execute();
+        }
         List<Category> all = categoryRepository.findAll();
+        String normalizedName = hasName ? name.trim().toLowerCase() : null;
+        String normalizedSlug = hasSlug ? slug.trim().toLowerCase() : null;
+        Set<Long> keptIds = all.stream()
+                .filter(category -> (normalizedName != null && category.getName().toLowerCase().contains(normalizedName))
+                        || (normalizedSlug != null && category.getSlug().toLowerCase().contains(normalizedSlug)))
+                .map(Category::getId)
+                .collect(Collectors.toSet());
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (Category category : all) {
+                if (keptIds.contains(category.getId()) && category.getParentId().isPresent()
+                        && keptIds.add(category.getParentId().get())) {
+                    changed = true;
+                }
+            }
+        }
+        return toTreeDTO(all.stream().filter(category -> keptIds.contains(category.getId())).toList());
+    }
+
+    private List<CategoryDTO> toTreeDTO(List<Category> all) {
         Map<Long, String> idToName = all.stream()
                 .collect(Collectors.toMap(Category::getId, Category::getName));
 

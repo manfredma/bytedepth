@@ -41,6 +41,7 @@
     <h1>分类管理</h1>
 
     <!-- 分类列表（树形展示） -->
+    <div th:replace="~{fragments/filter-bar :: filterBar('/admin/categories', ${filterFields})}"></div>
     <div class="card">
         <h2>所有分类</h2>
         <div th:if="${#lists.isEmpty(categories)}" class="empty">暂无分类，请在下方添加</div>

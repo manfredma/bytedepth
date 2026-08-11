@@ -45,6 +45,14 @@ public class CategoryRepositoryImpl implements CategoryRepository {
     }
 
     @Override
+    public List<Category> findByNameOrSlugLike(String keyword) {
+        return categoryMapper.selectList(new LambdaQueryWrapper<CategoryDO>()
+                        .and(wrapper -> wrapper.like(CategoryDO::getName, keyword)
+                                .or().like(CategoryDO::getSlug, keyword)))
+                .stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
+    @Override
     public List<Category> findByParentId(Long parentId) {
         LambdaQueryWrapper<CategoryDO> wrapper = parentId == null
                 ? new LambdaQueryWrapper<CategoryDO>().isNull(CategoryDO::getParentId)

@@ -120,6 +120,16 @@ class CategoryRepositoryImplTest {
         assertTrue(repository.findAll().isEmpty());
     }
 
+    @Test
+    void findByNameOrSlugLike_mapsMatchingRows() {
+        when(categoryMapper.selectList(any())).thenReturn(List.of(categoryRow(1L)));
+
+        var categories = repository.findByNameOrSlugLike("java");
+
+        assertEquals(1, categories.size());
+        assertEquals("Java", categories.getFirst().getName());
+    }
+
     // ---- findByParentId ----
 
     @Test

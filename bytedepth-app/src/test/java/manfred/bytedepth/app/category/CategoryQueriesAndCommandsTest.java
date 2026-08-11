@@ -38,4 +38,33 @@ class CategoryQueriesAndCommandsTest {
         assertEquals("Java", categories.get(1).getParentName());
         assertEquals("?", categories.get(2).getParentName());
     }
+
+    @Test
+    void filteredList_includesMatchingChildAndItsParentCaseInsensitively() {
+        when(repository.findAll()).thenReturn(List.of(
+                Category.reconstruct(1L, "Java", "java", null),
+                Category.reconstruct(2L, "Spring", "spring", 1L)));
+
+        List<CategoryDTO> categories = new ListCategoriesQryExe(repository).executeFiltered("SPR", null);
+
+        assertEquals(List.of("Java", "Spring"), categories.stream().map(CategoryDTO::getName).toList());
+        assertEquals("Java", categories.get(1).getParentName());
+    }
+
+    @Test
+    void filteredList_matchesSlug() {
+        when(repository.findAll()).thenReturn(List.of(Category.reconstruct(1L, "Java", "backend-java", null)));
+
+        List<CategoryDTO> categories = new ListCategoriesQryExe(repository).executeFiltered(null, "END-J");
+
+        assertEquals(List.of("Java"), categories.stream().map(CategoryDTO::getName).toList());
+    }
+
+    @Test
+    void filteredList_withoutFiltersUsesNormalTreeQuery() {
+        when(repository.findAll()).thenReturn(List.of(Category.reconstruct(1L, "Java", "java", null)));
+
+        assertEquals(1, new ListCategoriesQryExe(repository).executeFiltered(" ", "").size());
+        verify(repository, times(1)).findAll();
+    }
 }

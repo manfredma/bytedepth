@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.adapter.web.filter.FilterField;
 import manfred.bytedepth.app.category.CreateCategoryCmdExe;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -10,6 +11,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 @PreAuthorize("hasAuthority(\'admin:dashboard:view\')")
 @Controller
@@ -21,8 +24,14 @@ public class AdminCategoryController {
     private final CreateCategoryCmdExe createCategoryCmdExe;
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("categories", listCategoriesQryExe.execute());
+    public String list(Model model,
+                       @RequestParam(required = false) String name,
+                       @RequestParam(required = false) String slug) {
+        model.addAttribute("categories", listCategoriesQryExe.executeFiltered(name, slug));
+        model.addAttribute("filterFields", List.of(
+                FilterField.text("name", "名称", name == null ? "" : name, "输入名称"),
+                FilterField.text("slug", "Slug", slug == null ? "" : slug, "输入 Slug")));
+        model.addAttribute("filterBaseUrl", "/admin/categories?");
         return "admin/categories/list";
     }
 
