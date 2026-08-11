@@ -48,7 +48,7 @@ class PostRepositoryIT {
 
     @Test
     void save_newPost_assignsIdAndPersists() {
-        Post post = Post.create("集成测试标题", "# 集成测试\n\n内容正文");
+        Post post = Post.create("集成测试标题", "# 集成测试\n\n内容正文", 1L, "it-integration");
         Post saved = postRepository.save(post);
 
         assertNotNull(saved.getId());
@@ -58,7 +58,7 @@ class PostRepositoryIT {
 
     @Test
     void findById_existingPost_returnsPost() {
-        Post post = Post.create("可查询文章", "查询测试内容");
+        Post post = Post.create("可查询文章", "查询测试内容", 1L, "it-query");
         Post saved = postRepository.save(post);
 
         Optional<Post> found = postRepository.findById(saved.getId());
@@ -75,7 +75,7 @@ class PostRepositoryIT {
 
     @Test
     void publish_persistsStatusChange() {
-        Post post = Post.create("待发布文章", "正文");
+        Post post = Post.create("待发布文章", "正文", 1L, "it-publish");
         Post saved = postRepository.save(post);
 
         saved.publish();
@@ -88,10 +88,10 @@ class PostRepositoryIT {
 
     @Test
     void findPublished_returnsOnlyPublishedPosts() {
-        Post draft = Post.create("草稿文章IT", "内容");
+        Post draft = Post.create("草稿文章IT", "内容", 1L, "it-draft");
         postRepository.save(draft);
 
-        Post toPublish = Post.create("已发布文章IT", "内容");
+        Post toPublish = Post.create("已发布文章IT", "内容", 1L, "it-published");
         Post saved = postRepository.save(toPublish);
         saved.publish();
         postRepository.save(saved);
@@ -137,7 +137,7 @@ class PostRepositoryIT {
     void countAll_excludesDeletedPosts() {
         long before = postRepository.countAll();
 
-        Post post = Post.create("待删除文章IT", "内容");
+        Post post = Post.create("待删除文章IT", "内容", 1L, "it-delete");
         Post saved = postRepository.save(post);
         saved.delete();
         postRepository.save(saved);
