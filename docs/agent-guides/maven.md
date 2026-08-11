@@ -2,6 +2,10 @@
 
 系统默认 Java 8，所有 `mvn` 命令必须加 `JAVA_HOME` 前缀。
 
+## 告警零容忍
+
+Maven 构建、测试、PMD/JaCoCo 等质量门禁的输出出现任何 `WARNING`，均不得忽略或以 `BUILD SUCCESS` 视为验收通过。必须先定位并修复告警；无法在当前范围内修复时，应停止发布或部署并报告原因。该规则同样适用于 Maven Release Plugin 与生产部署前验证。
+
 ```bash
 JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn clean test -Dsort.skip=true
 JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn clean package -DskipTests -Dsort.skip=true
