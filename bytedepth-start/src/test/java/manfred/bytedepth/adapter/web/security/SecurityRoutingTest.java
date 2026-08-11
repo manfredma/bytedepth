@@ -9,9 +9,9 @@ import manfred.bytedepth.domain.post.PostRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,13 +35,13 @@ class SecurityRoutingTest {
 
     @Autowired private MockMvc mockMvc;
 
-    @MockBean private UserDetailsService userDetailsService;
-    @MockBean private PasswordEncoder passwordEncoder;
-    @MockBean private PersistentTokenRepository persistentTokenRepository;
-    @MockBean private SubmitCommentCmdExe submitCommentCmdExe;
-    @MockBean private PostRepository postRepository;
-    @MockBean private RateLimitPort rateLimitPort;
-    @MockBean private RateLimitProperties rateLimitProperties;
+    @MockitoBean private UserDetailsService userDetailsService;
+    @MockitoBean private PasswordEncoder passwordEncoder;
+    @MockitoBean private PersistentTokenRepository persistentTokenRepository;
+    @MockitoBean private SubmitCommentCmdExe submitCommentCmdExe;
+    @MockitoBean private PostRepository postRepository;
+    @MockitoBean private RateLimitPort rateLimitPort;
+    @MockitoBean private RateLimitProperties rateLimitProperties;
 
     @BeforeEach
     void allowRateLimitedRequests() {
