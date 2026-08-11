@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+branch="$(git branch --show-current)"
+if [[ "$branch" == "main" && "${BYTEDEPTH_RELEASE_MODE:-}" != "1" ]]; then
+  printf 'Direct commits on main are prohibited. Create a feat/*, fix/*, or docs/* worktree and submit a PR.\n' >&2
+  exit 1
+fi
