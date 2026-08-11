@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head></head>
+<body>
+<div th:fragment="filterBar(action, fields)" class="bd-filter-bar">
+    <style>
+        .bd-filter-bar, .bd-filter-bar * { box-sizing: border-box; }
+        .bd-filter-bar {
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+            padding: 14px 18px; margin-bottom: 16px;
+            background: var(--bd-surface, #fff);
+            border-radius: 8px;
+            box-shadow: var(--bd-shadow, 0 2px 8px rgba(0,0,0,.08));
+            font-family: var(--bd-font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+        }
+        .bd-filter-bar-field { display: flex; flex-direction: column; gap: 3px; }
+        .bd-filter-bar-field label {
+            font-size: 11px; font-weight: 600;
+            color: var(--bd-text-muted, #5f6368);
+            text-transform: uppercase; letter-spacing: .04em;
+        }
+        .bd-filter-bar-field input, .bd-filter-bar-field select {
+            padding: 6px 10px; border: 1px solid var(--bd-border-strong, #d1d5db);
+            border-radius: 5px; font-size: 13px; font-family: inherit;
+            color: var(--bd-text, #1a1a2e); background: var(--bd-surface, #fff);
+            outline: none; min-width: 0;
+        }
+        .bd-filter-bar-field input:focus, .bd-filter-bar-field select:focus {
+            border-color: var(--bd-accent, #e94560);
+            box-shadow: 0 0 0 2px rgba(233,69,96,.15);
+        }
+        .bd-filter-bar-field input[type="text"] { width: 130px; }
+        .bd-filter-bar-field input[type="number"] { width: 110px; }
+        .bd-filter-bar-field select { min-width: 100px; }
+        .bd-filter-bar-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+        .bd-filter-bar-submit {
+            padding: 6px 16px; background: var(--bd-accent, #e94560);
+            color: var(--bd-accent-text, #fff); border: none; border-radius: 5px;
+            font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+        }
+        .bd-filter-bar-submit:hover { background: var(--bd-accent-hover, #c73652); }
+        .bd-filter-bar-reset {
+            padding: 6px 12px; background: var(--bd-surface-muted, #f3f4f6);
+            color: var(--bd-text-muted, #5f6368); border: 1px solid var(--bd-border, #e5e7eb);
+            border-radius: 5px; font-size: 13px; cursor: pointer; text-decoration: none;
+            font-family: inherit;
+        }
+        .bd-filter-bar-reset:hover { background: #e5e7eb; color: var(--bd-text, #1a1a2e); }
+        @media (max-width: 560px) {
+            .bd-filter-bar-actions { margin-left: 0; width: 100%; }
+            .bd-filter-bar-actions .bd-filter-bar-submit,
+            .bd-filter-bar-actions .bd-filter-bar-reset { flex: 1; text-align: center; }
+        }
+    </style>
+    <form method="get" th:action="${action}" class="bd-filter-bar-form">
+        <th:block th:each="f : ${fields}">
+            <div class="bd-filter-bar-field">
+                <label th:for="${f.name}" th:text="${f.label}">标签</label>
+                <input th:if="${f.type == 'TEXT'}" type="text" th:id="${f.name}" th:name="${f.name}"
+                       th:value="${f.value}" th:placeholder="${f.placeholder}">
+                <input th:if="${f.type == 'NUMBER'}" type="number" th:id="${f.name}" th:name="${f.name}"
+                       th:value="${f.value}" min="1" th:placeholder="${f.placeholder}">
+                <select th:if="${f.type == 'SELECT'}" th:id="${f.name}" th:name="${f.name}">
+                    <option th:each="opt : ${f.options}" th:value="${opt.value}"
+                            th:selected="${opt.selected}" th:text="${opt.label}">全部</option>
+                </select>
+            </div>
+        </th:block>
+        <div class="bd-filter-bar-actions">
+            <button type="submit" class="bd-filter-bar-submit">筛选</button>
+            <a th:href="${action}" class="bd-filter-bar-reset">重置</a>
+        </div>
+    </form>
+</div>
+</body>
+</html>
