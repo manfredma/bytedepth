@@ -43,4 +43,15 @@ class TagQueriesAndCommandsTest {
         assertEquals(3L, counted.getId());
         assertEquals(7, counted.getCount());
     }
+
+    @Test
+    void pagedList_mapsRecordsAndTotal() {
+        when(repository.findPageWithCount("Java", 2, 10)).thenReturn(List.of(new TagWithCount(3L, "DDD", "ddd", 7)));
+        when(repository.countWithName("Java")).thenReturn(11L);
+
+        var result = new ListTagsQryExe(repository).findPageWithCount("Java", 2, 10);
+
+        assertEquals(11L, result.total());
+        assertEquals("DDD", result.records().getFirst().getName());
+    }
 }

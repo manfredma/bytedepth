@@ -86,6 +86,18 @@ class TagRepositoryImplTest {
     }
 
     @Test
+    void findPageWithCount_mapsRowsAndConvertsPageToOffset() {
+        TagWithCountDO row = new TagWithCountDO();
+        row.setId(1L); row.setName("Java"); row.setSlug("java"); row.setPostCount(3L);
+        when(tagMapper.findPageWithCount("Java", 20, 20)).thenReturn(List.of(row));
+        when(tagMapper.countWithName("Java")).thenReturn(1L);
+
+        assertEquals("Java", repository.findPageWithCount("Java", 2, 20).getFirst().getName());
+        assertEquals(1L, repository.countWithName("Java"));
+        verify(tagMapper).findPageWithCount("Java", 20, 20);
+    }
+
+    @Test
     void deleteWithPostAssociations_clearsAssociationsBeforeDeletingTag() {
         repository.deleteWithPostAssociations(3L);
 

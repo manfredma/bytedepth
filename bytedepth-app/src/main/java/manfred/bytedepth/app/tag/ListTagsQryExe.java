@@ -30,4 +30,13 @@ public class ListTagsQryExe {
                 .map(t -> { TagDTO dto = new TagDTO(); dto.setId(t.getId()); dto.setName(t.getName()); dto.setSlug(t.getSlug()); dto.setCount(t.getCount()); return dto; })
                 .collect(Collectors.toList());
     }
+
+    public TagPageResult findPageWithCount(String name, int page, int size) {
+        List<TagDTO> records = tagRepository.findPageWithCount(name, page, size).stream()
+                .map(t -> { TagDTO dto = new TagDTO(); dto.setId(t.getId()); dto.setName(t.getName()); dto.setSlug(t.getSlug()); dto.setCount(t.getCount()); return dto; })
+                .collect(Collectors.toList());
+        return new TagPageResult(records, tagRepository.countWithName(name));
+    }
+
+    public record TagPageResult(List<TagDTO> records, long total) { }
 }

@@ -36,6 +36,8 @@
 <div class="container">
     <h1>标签管理</h1>
 
+    <div th:replace="~{fragments/filter-bar :: filterBar('/admin/tags', ${filterFields})}"></div>
+
     <div class="card">
         <h2>所有标签</h2>
         <div th:if="${#lists.isEmpty(tags)}" class="empty">暂无标签</div>
@@ -67,6 +69,8 @@
             </tbody>
         </table>
     </div>
+
+    <div th:if="${totalPages > 1}" th:replace="~{fragments/pagination :: pagination(${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${filterBaseUrl})}"></div>
 
     <a th:href="@{/admin}" class="back-link">← 返回后台</a>
 </div>

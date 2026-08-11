@@ -12,4 +12,6 @@ public interface TagRepository {
     void savePostTags(Long postId, List<Long> tagIds);
     void deleteWithPostAssociations(Long tagId);
     List<TagWithCount> findAllWithCount();
+    List<TagWithCount> findPageWithCount(String name, int page, int size);
+    long countWithName(String name);
 }

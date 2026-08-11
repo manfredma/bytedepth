@@ -56,12 +56,25 @@ class AdminTagListControllerTest {
     @Test
     @WithMockUser(authorities = "admin:dashboard:view")
     void list_populatesTagsModel() throws Exception {
-        when(listTagsQryExe.findAllWithCount()).thenReturn(java.util.List.of());
+        when(listTagsQryExe.findPageWithCount(null, 1, 20)).thenReturn(new ListTagsQryExe.TagPageResult(java.util.List.of(), 0));
 
         mockMvc.perform(get("/admin/tags"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/tags/list"))
                 .andExpect(model().attribute("tags", java.util.List.of()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "admin:dashboard:view")
+    void list_forwardsFilterAndPagination() throws Exception {
+        when(listTagsQryExe.findPageWithCount("Java", 2, 10)).thenReturn(new ListTagsQryExe.TagPageResult(java.util.List.of(), 11));
+
+        mockMvc.perform(get("/admin/tags").param("name", "Java").param("page", "2").param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("filterBaseUrl", "/admin/tags?name=Java&"))
+                .andExpect(model().attribute("totalPages", 2));
+
+        verify(listTagsQryExe).findPageWithCount("Java", 2, 10);
     }
 
     @Test

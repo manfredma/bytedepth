@@ -73,6 +73,18 @@ public class TagRepositoryImpl implements TagRepository {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<TagWithCount> findPageWithCount(String name, int page, int size) {
+        return tagMapper.findPageWithCount(name, (page - 1) * size, size).stream()
+                .map(d -> new TagWithCount(d.getId(), d.getName(), d.getSlug(), d.getPostCount()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long countWithName(String name) {
+        return tagMapper.countWithName(name);
+    }
+
     private TagDO toDO(Tag tag) {
         TagDO tagDO = new TagDO();
         tagDO.setId(tag.getId());
