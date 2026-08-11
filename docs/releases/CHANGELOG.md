@@ -4,6 +4,23 @@
 
 ## Unreleased
 
+## [v1.7.1] - 2026-08-11
+
+**Tag**：`v1.7.1`
+**Commit**：（发布后回填）
+**部署**：（待验收）
+**回滚基线**：`v1.7.0`
+
+### Fixed
+
+- **关键修复**：Spring Boot 4 将 Flyway 自动配置移入 `spring-boot-flyway` 模块，此前缺失导致 V19（page_view_log）/V20（post_annotation）迁移从未执行。添加依赖后 Flyway 迁移恢复运行（已验证 20 个迁移全部执行）
+- `PostRepositoryIT` 修复：`Post.create` 补充 `authorId` 与唯一 `slug`，适配 schema 约束
+
+### Compatibility
+
+- 无数据库迁移变更；部署 v1.7.1 后 Flyway 会补跑 V19/V20，创建 `page_view_log` 与 `post_annotation` 表
+- 可在验收失败时回滚至 `v1.7.0`
+
 ## [v1.7.0] - 2026-08-11
 
 **Tag**：`v1.7.0`
