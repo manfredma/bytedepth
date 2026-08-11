@@ -71,7 +71,7 @@ public class ListCategoriesQryExe {
             }
         }
         // 兜底：防止有孤儿分类（parentId 指向不存在的顶级分类）
-        java.util.Set<Long> topLevelIds = topLevel.stream().map(Category::getId).collect(Collectors.toSet());
+        Set<Long> topLevelIds = topLevel.stream().map(Category::getId).collect(Collectors.toSet());
         all.stream()
                 .filter(c -> c.getParentId().isPresent())
                 .filter(c -> !topLevelIds.contains(c.getParentId().get()))
