@@ -27,7 +27,7 @@ changed_files() {
     git diff --name-only "$COVERAGE_BASE_REF"...HEAD --
     git diff --name-only --
     git diff --name-only --cached --
-  } | awk '/^bytedepth-[^/]+\/src\/main\/java\/.*\.java$/ { print }' | sort -u
+  } | awk '/^bytedepth-[^\/]+\/src\/main\/java\/.*\.java$/ { print }' | sort -u
 }
 
 cd "$SOURCE_ROOT"
