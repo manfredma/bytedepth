@@ -53,6 +53,30 @@ public class CommentRepositoryImpl implements CommentRepository {
             .getRecords().stream().map(this::toEntity).collect(Collectors.toList());
     }
 
+    @Override
+    public List<Comment> findAll(int page, int size, String authorName, Long postId) {
+        Page<CommentDO> pageParam = new Page<>(page, size);
+        return commentMapper.selectPage(pageParam, filteredWrapper(authorName, postId))
+            .getRecords().stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
+    @Override
+    public long countFiltered(String authorName, Long postId) {
+        return commentMapper.selectCount(filteredWrapper(authorName, postId));
+    }
+
+    private LambdaQueryWrapper<CommentDO> filteredWrapper(String authorName, Long postId) {
+        LambdaQueryWrapper<CommentDO> w = new LambdaQueryWrapper<CommentDO>()
+                .orderByDesc(CommentDO::getCreatedAt);
+        if (authorName != null && !authorName.isBlank()) {
+            w.like(CommentDO::getAuthorName, authorName.trim());
+        }
+        if (postId != null) {
+            w.eq(CommentDO::getPostId, postId);
+        }
+        return w;
+    }
+
     private CommentDO toDO(Comment c) {
         CommentDO d = new CommentDO();
         d.setId(c.getId());

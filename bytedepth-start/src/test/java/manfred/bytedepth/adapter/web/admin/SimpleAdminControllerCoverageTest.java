@@ -35,10 +35,12 @@ class SimpleAdminControllerCoverageTest {
         verify(create).execute("Java", "java", null);
 
         ListCommentsQryExe comments = mock(ListCommentsQryExe.class);
-        when(comments.findAll(2, 5)).thenReturn(List.of());
+        when(comments.findPage(2, 5, null, null)).thenReturn(new ListCommentsQryExe.PageResult(List.of(), 0));
         ExtendedModelMap commentModel = new ExtendedModelMap();
-        assertThat(new AdminCommentController(comments).list(commentModel, 2, 5)).isEqualTo("admin/comments/list");
+        assertThat(new AdminCommentController(comments).list(commentModel, 2, 5, null, null)).isEqualTo("admin/comments/list");
         assertThat(commentModel).containsKey("comments");
+        assertThat(commentModel).containsKey("filterFields");
+        assertThat(commentModel).containsKey("filterBaseUrl");
     }
 
     @Test

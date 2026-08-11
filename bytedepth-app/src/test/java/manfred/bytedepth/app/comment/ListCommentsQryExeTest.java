@@ -46,6 +46,33 @@ class ListCommentsQryExeTest {
         assertEquals("", result.get(1).getPostSlug());
     }
 
+    @Test
+    void findPage_withFilters_delegatesFilteredQueryAndReturnsTotal() {
+        when(comments.findAll(1, 50, "alice", null)).thenReturn(List.of(comment(1L, 3L)));
+        when(comments.countFiltered("alice", null)).thenReturn(5L);
+        when(posts.findById(3L)).thenReturn(Optional.of(Post.reconstruct(3L, "post-3", "t", "c", PostStatus.PUBLISHED,
+                LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), null, null, false)));
+
+        ListCommentsQryExe.PageResult result = query.findPage(1, 50, "alice", null);
+
+        assertEquals(5L, result.total());
+        assertEquals("post-3", result.comments().get(0).getPostSlug());
+        verify(comments).findAll(1, 50, "alice", null);
+        verify(comments).countFiltered("alice", null);
+    }
+
+    @Test
+    void findPage_withPostIdFilter_passesPostId() {
+        when(comments.findAll(1, 50, null, 7L)).thenReturn(List.of());
+        when(comments.countFiltered(null, 7L)).thenReturn(0L);
+
+        ListCommentsQryExe.PageResult result = query.findPage(1, 50, null, 7L);
+
+        assertEquals(0L, result.total());
+        verify(comments).findAll(1, 50, null, 7L);
+        verify(comments).countFiltered(null, 7L);
+    }
+
     private Comment comment(Long id, Long postId) {
         return Comment.reconstruct(id, postId, 9L, "alice", "hello", CommentStatus.APPROVED,
                 LocalDateTime.of(2026, 1, 1, 0, 0));

@@ -32,6 +32,10 @@
 <div class="admin-main">
 <div class="container">
     <h1>评论列表</h1>
+
+    <!-- 统一查询过滤组件 -->
+    <div th:replace="~{fragments/filter-bar :: filterBar('/admin/comments', ${filterFields})}"></div>
+
     <div th:if="${#lists.isEmpty(comments)}" class="empty">暂无评论</div>
     <div th:each="c : ${comments}" class="comment-card">
         <span class="author" th:text="${c.authorName}">作者</span>
@@ -41,6 +45,12 @@
         </span>
         <div class="time" th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd HH:mm')}">时间</div>
         <div class="body" th:text="${c.content}">内容</div>
+    </div>
+
+    <!-- 分页（filterBaseUrl 携带过滤条件） -->
+    <div th:if="${totalPages > 1}">
+        <div th:replace="~{fragments/pagination :: pagination(
+            ${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${filterBaseUrl})}"></div>
     </div>
 </div>
 </div>

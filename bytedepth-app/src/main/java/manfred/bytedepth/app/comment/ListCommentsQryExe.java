@@ -26,9 +26,20 @@ public class ListCommentsQryExe {
 
     /** 管理员用：返回最近评论列表，附带文章 slug（用于后台跳转链接） */
     public List<CommentDTO> findAll(int page, int size) {
-        List<Comment> comments = commentRepository.findAll(page, size);
+        return toDTOWithSlug(commentRepository.findAll(page, size));
+    }
 
-        // 批量查询 slug，避免 N+1
+    /** 管理员用：按过滤条件分页查询评论（authorName 模糊、postId 精确）。 */
+    public PageResult findPage(int page, int size, String authorName, Long postId) {
+        List<CommentDTO> comments = toDTOWithSlug(commentRepository.findAll(page, size, authorName, postId));
+        long total = commentRepository.countFiltered(authorName, postId);
+        return new PageResult(comments, total);
+    }
+
+    public record PageResult(List<CommentDTO> comments, long total) {}
+
+    /** 批量补齐文章 slug，避免 N+1。 */
+    private List<CommentDTO> toDTOWithSlug(List<Comment> comments) {
         Set<Long> postIds = comments.stream()
             .map(Comment::getPostId).collect(Collectors.toSet());
         Map<Long, String> slugMap = postIds.stream()
