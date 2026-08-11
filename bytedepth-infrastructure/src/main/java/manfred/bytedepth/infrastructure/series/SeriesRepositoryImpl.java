@@ -1,6 +1,7 @@
 package manfred.bytedepth.infrastructure.series;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.domain.series.Series;
 import manfred.bytedepth.domain.series.SeriesPostItem;
@@ -109,6 +110,22 @@ public class SeriesRepositoryImpl implements SeriesRepository {
                         .eq(SeriesDO::getAuthorId, authorId)
                         .orderByAsc(SeriesDO::getName)
         ).stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
+    @Override public List<Series> findPage(String name, int page, int size) {
+        return seriesMapper.selectPage(new Page<SeriesDO>(page, size), filtered(name, null)).getRecords().stream().map(this::toEntity).toList();
+    }
+    @Override public long count(String name) { return seriesMapper.selectCount(filtered(name, null)); }
+    @Override public List<Series> findPageByAuthorId(Long authorId, String name, int page, int size) {
+        return seriesMapper.selectPage(new Page<SeriesDO>(page, size), filtered(name, authorId)).getRecords().stream().map(this::toEntity).toList();
+    }
+    @Override public long countByAuthorId(Long authorId, String name) { return seriesMapper.selectCount(filtered(name, authorId)); }
+
+    private LambdaQueryWrapper<SeriesDO> filtered(String name, Long authorId) {
+        LambdaQueryWrapper<SeriesDO> wrapper = new LambdaQueryWrapper<SeriesDO>().orderByAsc(SeriesDO::getName);
+        if (name != null && !name.isBlank()) wrapper.like(SeriesDO::getName, name);
+        if (authorId != null) wrapper.eq(SeriesDO::getAuthorId, authorId);
+        return wrapper;
     }
 
     private SeriesDO toDO(Series series) {

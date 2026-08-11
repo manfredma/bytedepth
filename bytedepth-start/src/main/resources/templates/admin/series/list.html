@@ -39,6 +39,8 @@
 <div class="container">
     <h1>专栏管理</h1>
 
+    <div th:replace="~{fragments/filter-bar :: filterBar('/admin/series', ${filterFields})}"></div>
+
     <!-- 专栏列表 -->
     <div class="card">
         <h2>所有专栏</h2>
@@ -77,6 +79,7 @@
             </tbody>
         </table>
     </div>
+    <div th:if="${totalPages > 1}" th:replace="~{fragments/pagination :: pagination(${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${filterBaseUrl})}"></div>
 
     <!-- 新建专栏 -->
     <div class="card">

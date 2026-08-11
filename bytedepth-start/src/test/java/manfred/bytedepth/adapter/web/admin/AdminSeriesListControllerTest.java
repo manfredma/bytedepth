@@ -28,10 +28,11 @@ class AdminSeriesListControllerTest {
     void administratorList_includesEverySeries() {
         List<Series> all = List.of(Series.create("Java", "java", null, 1L));
         when(ownershipGuard.canManageSeries(authentication)).thenReturn(true);
-        when(seriesRepository.findAll()).thenReturn(all);
+        when(seriesRepository.findPage(null, 1, 20)).thenReturn(all);
+        when(seriesRepository.count(null)).thenReturn(1L);
         ConcurrentModel model = new ConcurrentModel();
 
-        assertEquals("admin/series/list", controller.list(authentication, model));
+        assertEquals("admin/series/list", controller.list(authentication, model, null, 1, 20));
         assertEquals(all, model.getAttribute("seriesList"));
     }
 
@@ -40,11 +41,13 @@ class AdminSeriesListControllerTest {
         List<Series> own = List.of(Series.create("Java", "java", null, 7L));
         when(ownershipGuard.canManageSeries(authentication)).thenReturn(false);
         when(ownershipGuard.currentUserId(authentication)).thenReturn(7L);
-        when(seriesRepository.findByAuthorId(7L)).thenReturn(own);
+        when(seriesRepository.findPageByAuthorId(7L, "Java", 2, 10)).thenReturn(own);
+        when(seriesRepository.countByAuthorId(7L, "Java")).thenReturn(1L);
         ConcurrentModel model = new ConcurrentModel();
 
-        assertEquals("admin/series/list", controller.list(authentication, model));
+        assertEquals("admin/series/list", controller.list(authentication, model, "Java", 2, 10));
         assertEquals(own, model.getAttribute("seriesList"));
+        assertEquals("/admin/series?name=Java&", model.getAttribute("filterBaseUrl"));
     }
 
     @Test

@@ -11,6 +11,10 @@ public interface SeriesRepository {
     List<Series> findAll();
     /** 查询某位作者的专栏，按 name ASC 排序。 */
     List<Series> findByAuthorId(Long authorId);
+    List<Series> findPage(String name, int page, int size);
+    long count(String name);
+    List<Series> findPageByAuthorId(Long authorId, String name, int page, int size);
+    long countByAuthorId(Long authorId, String name);
     List<SeriesPostItem> findPublishedPostsBySeries(Long seriesId);
     /** 查询专栏下所有文章（含草稿），按 series_order ASC，后台管理用 */
     List<SeriesPostItem> findAllPostsBySeries(Long seriesId);
