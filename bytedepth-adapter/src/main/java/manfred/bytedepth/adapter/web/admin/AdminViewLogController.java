@@ -2,11 +2,13 @@ package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.analytics.PostViewLogPort;
+import manfred.bytedepth.adapter.web.filter.FilterField;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import java.util.List;
 
 /**
  * 文章访问日志管理后台。
@@ -37,8 +39,9 @@ public class AdminViewLogController {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("total", total);
         model.addAttribute("pageSize", PAGE_SIZE);
-        model.addAttribute("filterPostId", postId);
-        model.addAttribute("filterUserId", userId);
+        model.addAttribute("filterFields", List.of(FilterField.number("postId", "文章 ID", postId == null ? "" : postId.toString(), "文章 ID"),
+                FilterField.number("userId", "用户 ID", userId == null ? "" : userId.toString(), "用户 ID")));
+        model.addAttribute("filterBaseUrl", "/admin/view-logs?" + (postId == null ? "" : "postId=" + postId + "&") + (userId == null ? "" : "userId=" + userId + "&"));
         return "admin/view-logs/list";
     }
 }

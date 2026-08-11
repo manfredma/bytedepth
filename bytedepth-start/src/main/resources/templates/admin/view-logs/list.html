@@ -60,15 +60,7 @@
         <span class="total-info">共 <strong th:text="${total}">0</strong> 条记录</span>
     </div>
 
-    <!-- 筛选栏 -->
-    <form method="get" action="/admin/view-logs" class="filter-bar">
-        <input type="number" name="postId" placeholder="文章 ID 筛选"
-               th:value="${filterPostId}" min="1">
-        <input type="number" name="userId" placeholder="用户 ID 筛选"
-               th:value="${filterUserId}" min="1">
-        <button type="submit" class="btn-filter">筛选</button>
-        <a href="/admin/view-logs" class="btn-reset">重置</a>
-    </form>
+    <div th:replace="~{fragments/filter-bar :: filterBar('/admin/view-logs', ${filterFields})}"></div>
 
     <!-- 日志表格 -->
     <table>
@@ -144,12 +136,9 @@
     </table>
 
     <!-- 分页（baseUrl 按需拼接筛选参数）-->
-    <div th:if="${totalPages > 1}"
-         th:with="baseUrl='/admin/view-logs?' +
-                  (${filterPostId} != null ? 'postId=' + ${filterPostId} + '&amp;' : '') +
-                  (${filterUserId} != null ? 'userId=' + ${filterUserId} + '&amp;' : '')">
+    <div th:if="${totalPages > 1}">
         <div th:replace="~{fragments/pagination :: pagination(
-            ${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${baseUrl})}"></div>
+            ${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${filterBaseUrl})}"></div>
     </div>
 </div>
 </div>

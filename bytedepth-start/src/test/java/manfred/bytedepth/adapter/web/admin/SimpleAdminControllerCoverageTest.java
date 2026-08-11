@@ -59,11 +59,11 @@ class SimpleAdminControllerCoverageTest {
         ActivateUserCmdExe activate = mock(ActivateUserCmdExe.class);
         BanUserCmdExe ban = mock(BanUserCmdExe.class);
         UserRepository users = mock(UserRepository.class);
-        when(pending.execute()).thenReturn(List.of());
+        when(pending.findPage(null, null, 1, 20)).thenReturn(new ListPendingUsersQryExe.UserPageResult(List.of(), 0));
         AdminUserController controller = new AdminUserController(pending, activate, ban, users);
         ExtendedModelMap model = new ExtendedModelMap();
-        assertThat(controller.list(model)).isEqualTo("admin/users/list");
-        assertThat(model).containsKey("pendingUsers");
+        assertThat(controller.list(model, null, null, 1, 20)).isEqualTo("admin/users/list");
+        assertThat(model).containsKey("users");
         assertThat(controller.activate(8L)).isEqualTo("redirect:/admin/users");
         assertThat(controller.deletePending(9L)).isEqualTo("redirect:/admin/users");
         assertThat(controller.ban(10L)).isEqualTo("redirect:/admin/users");
@@ -88,6 +88,6 @@ class SimpleAdminControllerCoverageTest {
         when(logs.countPage(null, null)).thenReturn(0L);
         ExtendedModelMap emptyModel = new ExtendedModelMap();
         controller.list(emptyModel, null, null, 1);
-        assertThat(emptyModel).containsEntry("totalPages", 1).containsEntry("filterPostId", null);
+        assertThat(emptyModel).containsEntry("totalPages", 1).containsKey("filterFields").containsEntry("filterBaseUrl", "/admin/view-logs?");
     }
 }
