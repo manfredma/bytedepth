@@ -16,6 +16,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
@@ -73,6 +74,27 @@ class SecurityRoutingTest {
             .andExpect(redirectedUrl("/"));
 
         verify(persistentTokenRepository).removeUserTokens("author");
+    }
+
+    @Test
+    void rememberMeCookie_isExplicitlyRestrictedToLaxSameSite() throws Exception {
+        when(userDetailsService.loadUserByUsername("author"))
+            .thenReturn(User.withUsername("author").password("encoded-password").authorities("blog:post:create").build());
+        when(passwordEncoder.matches("secret", "encoded-password")).thenReturn(true);
+
+        mockMvc.perform(post("/login")
+                .param("username", "author")
+                .param("password", "secret")
+                .param("remember-me", "on")
+                .with(SecurityMockMvcRequestPostProcessors.csrf()))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/"))
+            .andExpect(result -> {
+                var cookie = result.getResponse().getCookie("bytedepth-remember-me");
+                org.junit.jupiter.api.Assertions.assertNotNull(cookie);
+                org.junit.jupiter.api.Assertions.assertEquals("Lax", cookie.getAttribute("SameSite"));
+                org.junit.jupiter.api.Assertions.assertTrue(cookie.isHttpOnly());
+            });
     }
 
 }

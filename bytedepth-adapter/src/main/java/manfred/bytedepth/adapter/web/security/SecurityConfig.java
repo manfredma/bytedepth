@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
@@ -57,9 +58,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            PersistentTokenRepository persistentTokenRepository,
+                                           UserDetailsService userDetailsService,
                                            RateLimitFilter rateLimitFilter,
                                            @Value("${BYTEDEPTH_REMEMBER_ME_KEY:bytedepth-local-remember-me-key}") String rememberMeKey,
                                            @Value("${BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE:false}") boolean rememberMeCookieSecure) throws Exception {
+        PersistentTokenBasedRememberMeServices rememberMeServices = new PersistentTokenBasedRememberMeServices(
+            rememberMeKey, userDetailsService, persistentTokenRepository);
+        rememberMeServices.setParameter("remember-me");
+        rememberMeServices.setCookieName("bytedepth-remember-me");
+        rememberMeServices.setTokenValiditySeconds(30 * 24 * 60 * 60);
+        rememberMeServices.setUseSecureCookie(rememberMeCookieSecure);
+        rememberMeServices.setCookieCustomizer(cookie -> cookie.setAttribute("SameSite", "Lax"));
+        rememberMeServices.afterPropertiesSet();
+
         // CSRF：默认 HttpSessionCsrfTokenRepository + Thymeleaf 自动注入 _csrf hidden input。
         // 之前用 CookieCsrfTokenRepository，登录成功后 CsrfAuthenticationStrategy 清除
         // XSRF-TOKEN cookie 却不重新下发，导致后续 POST 表单（退出等）403。session 仓库
@@ -99,12 +110,7 @@ public class SecurityConfig {
                 .permitAll()
             )
             .rememberMe(rememberMe -> rememberMe
-                .tokenRepository(persistentTokenRepository)
-                .rememberMeParameter("remember-me")
-                .rememberMeCookieName("bytedepth-remember-me")
-                .tokenValiditySeconds(30 * 24 * 60 * 60)
-                .useSecureCookie(rememberMeCookieSecure)
-                .key(rememberMeKey)
+                .rememberMeServices(rememberMeServices)
             )
             .logout(logout -> logout
                 .logoutSuccessUrl("/")
