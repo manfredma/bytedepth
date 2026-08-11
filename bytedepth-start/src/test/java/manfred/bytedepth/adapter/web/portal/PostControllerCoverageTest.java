@@ -194,6 +194,9 @@ class PostControllerCoverageTest {
         assertThat(SecurityUtils.isOwner(
                 new org.springframework.security.core.userdetails.User("plain", "hash", List.of()), 7L)).isEqualTo(false);
         assertThat(SecurityUtils.extractUserId(owner)).isEqualTo(7L);
+        assertThat(SecurityUtils.extractUserId(null)).isNull();
+        assertThat(SecurityUtils.extractUserId(
+                new org.springframework.security.core.userdetails.User("plain", "hash", List.of()))).isNull();
 
         HttpServletRequest forwarded = request();
         when(forwarded.getHeader("X-Forwarded-For")).thenReturn("10.0.0.1, , 8.8.8.8");
