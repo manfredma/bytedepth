@@ -37,6 +37,8 @@ release.properties
 
 # Maven local settings (may contain credentials)
 settings.xml
+!.mvn/
+!.mvn/settings.xml
 
 # Machine-private deployment secrets. Keep the tracked *.example templates only.
 .env
