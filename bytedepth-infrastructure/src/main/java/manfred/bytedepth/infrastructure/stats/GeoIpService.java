@@ -30,19 +30,19 @@ public class GeoIpService {
     @PostConstruct
     void init() {
         if (dbPath == null || dbPath.isBlank()) {
-            log.warn("GeoIP: bytedepth.geoip.db-path 未配置，IP 地理解析已禁用");
+            log.info("GeoIP: bytedepth.geoip.db-path 未配置，IP 地理解析已禁用");
             return;
         }
         File file = new File(dbPath);
         if (!file.exists()) {
-            log.warn("GeoIP: 数据库文件不存在：{}，IP 地理解析已禁用", dbPath);
+            log.info("GeoIP: 数据库文件不存在：{}，IP 地理解析已禁用", dbPath);
             return;
         }
         try {
             reader = new DatabaseReader.Builder(file).build();
             log.info("GeoIP: 数据库加载成功：{}", dbPath);
         } catch (IOException e) {
-            log.warn("GeoIP: 数据库加载失败：{}，IP 地理解析已禁用", dbPath, e);
+            log.info("GeoIP: 数据库加载失败：{}，IP 地理解析已禁用：{}", dbPath, e.getMessage());
         }
     }
 

@@ -132,20 +132,20 @@ class CommentRepositoryImplTest {
     void findAll_mapsResults() {
         Page<CommentDO> page = new Page<>(1, 20);
         page.setRecords(List.of(commentRow(1L)));
-        when(commentMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(commentMapper.selectPage(anyCommentPage(), any())).thenReturn(page);
 
         var comments = repository.findAll(1, 20);
 
         assertEquals(1, comments.size());
         assertEquals(1L, comments.get(0).getId());
-        verify(commentMapper).selectPage(any(Page.class), any());
+        verify(commentMapper).selectPage(anyCommentPage(), any());
     }
 
     @Test
     void findAll_emptyResultReturnsEmpty() {
         Page<CommentDO> page = new Page<>(1, 20);
         page.setRecords(List.of());
-        when(commentMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(commentMapper.selectPage(anyCommentPage(), any())).thenReturn(page);
 
         assertTrue(repository.findAll(1, 20).isEmpty());
     }
@@ -154,17 +154,21 @@ class CommentRepositoryImplTest {
     void filteredQueries_mapResultsAndSupportPresentAndBlankFilters() {
         Page<CommentDO> page = new Page<>(2, 10);
         page.setRecords(List.of(commentRow(3L)));
-        when(commentMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(commentMapper.selectPage(anyCommentPage(), any())).thenReturn(page);
         when(commentMapper.selectCount(any())).thenReturn(6L);
 
         assertEquals(3L, repository.findAll(2, 10, " Alice ", 10L).getFirst().getId());
         assertEquals(6L, repository.countFiltered(" ", null));
         assertEquals(6L, repository.countFiltered(null, null));
-        verify(commentMapper).selectPage(any(Page.class), any());
+        verify(commentMapper).selectPage(anyCommentPage(), any());
         verify(commentMapper, Mockito.times(2)).selectCount(any());
     }
 
     // ---- helpers ----
+
+    private static Page<CommentDO> anyCommentPage() {
+        return org.mockito.ArgumentMatchers.any();
+    }
 
     private CommentDO commentRow(Long id) {
         CommentDO row = new CommentDO();

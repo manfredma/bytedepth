@@ -29,7 +29,7 @@ class AuthorPostRepositoryImplTest {
         ungroupedRow.setId(10L);
         Page<PostDO> page = new Page<>(2, 5);
         page.setRecords(List.of(row, ungroupedRow));
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
 
         var posts = repository.findPageByAuthorId(7L, 2, 5);
 
@@ -38,7 +38,7 @@ class AuthorPostRepositoryImplTest {
         assertEquals(3L, posts.get(0).getSeriesId());
         assertEquals(2, posts.get(0).getSeriesOrder());
         assertEquals(null, posts.get(1).getSeriesId());
-        verify(postMapper).selectPage(any(Page.class), any());
+        verify(postMapper).selectPage(any(), any());
     }
 
     @Test
@@ -54,15 +54,15 @@ class AuthorPostRepositoryImplTest {
         TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), PostDO.class);
         Page<PostDO> page = new Page<>(1, 10);
         page.setRecords(List.of());
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
         when(postMapper.selectCount(any())).thenReturn(0L);
 
         repository.findPageByAuthorId(7L, 1, 10);
         repository.countByAuthorId(7L);
 
-        ArgumentCaptor<LambdaQueryWrapper<PostDO>> pageWrapper = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
-        ArgumentCaptor<LambdaQueryWrapper<PostDO>> countWrapper = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
-        verify(postMapper).selectPage(any(Page.class), pageWrapper.capture());
+        ArgumentCaptor<LambdaQueryWrapper<PostDO>> pageWrapper = wrapperCaptor();
+        ArgumentCaptor<LambdaQueryWrapper<PostDO>> countWrapper = wrapperCaptor();
+        verify(postMapper).selectPage(any(), pageWrapper.capture());
         verify(postMapper).selectCount(countWrapper.capture());
 
         assertHasOwnershipAndDeletionFilters(pageWrapper.getValue());
@@ -73,13 +73,13 @@ class AuthorPostRepositoryImplTest {
     void filteredAuthorQueries_supportAllOptionalFiltersAndTheirAbsence() {
         Page<PostDO> page = new Page<>(1, 10);
         page.setRecords(List.of(row(3L)));
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
         when(postMapper.selectCount(any())).thenReturn(2L);
 
         assertEquals(9L, repository.findPageByAuthorId(7L, 1, 10, " title ", "DRAFT", 3L, 4L).getFirst().getId());
         assertEquals(2L, repository.countByAuthorIdFiltered(7L, " ", "", null, null));
         assertEquals(2L, repository.countByAuthorIdFiltered(7L, null, null, null, null));
-        verify(postMapper).selectPage(any(Page.class), any());
+        verify(postMapper).selectPage(any(), any());
         verify(postMapper, Mockito.times(2)).selectCount(any());
     }
 
@@ -89,6 +89,11 @@ class AuthorPostRepositoryImplTest {
         assertEquals(true, sql.contains("status"));
         assertEquals(true, wrapper.getParamNameValuePairs().containsValue(7L));
         assertEquals(true, wrapper.getParamNameValuePairs().containsValue("DELETED"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static ArgumentCaptor<LambdaQueryWrapper<PostDO>> wrapperCaptor() {
+        return ArgumentCaptor.forClass((Class<LambdaQueryWrapper<PostDO>>) (Class<?>) LambdaQueryWrapper.class);
     }
 
     private PostDO row(Long seriesId) {

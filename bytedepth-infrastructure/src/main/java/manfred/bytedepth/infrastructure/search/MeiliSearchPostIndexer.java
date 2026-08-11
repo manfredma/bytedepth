@@ -48,7 +48,7 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {
-            log.warn("MeiliSearch 索引失败 postId={}: {}", doc.getId(), e.getMessage());
+            log.info("MeiliSearch 索引延后 postId={}: {}", doc.getId(), e.getMessage());
         }
     }
 
@@ -60,7 +60,7 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {
-            log.warn("MeiliSearch 删除索引失败 postId={}: {}", postId, e.getMessage());
+            log.info("MeiliSearch 删除索引延后 postId={}: {}", postId, e.getMessage());
         }
     }
 
@@ -87,7 +87,7 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
 
             return new SearchResult(hits.stream().map(this::fromMap).toList(), total, page, size);
         } catch (Exception e) {
-            log.warn("MeiliSearch 搜索失败 q={}: {}", query, e.getMessage());
+            log.info("MeiliSearch 搜索暂不可用 q={}: {}", query, e.getMessage());
             return new SearchResult(List.of(), 0, page, size);
         }
     }

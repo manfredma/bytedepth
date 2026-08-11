@@ -38,6 +38,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         List<Attempt> attempts = matchingAttempts(request);
         for (Attempt attempt : attempts) {
+            if (attempt.rule() == null) {
+                continue;
+            }
             try {
                 RateLimitDecision decision = rateLimitPort.tryConsume(attempt.ruleName(), attempt.rule().getCapacity(),
                         attempt.rule().getPeriod(), attempt.identity());

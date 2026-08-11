@@ -107,13 +107,13 @@ class UserRepositoryImplTest {
     void filteredPageAndCount_supportUsernameAndStatusFilters() {
         Page<UserDO> page = new Page<>(2, 10);
         page.setRecords(List.of(userRow()));
-        when(userMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(userMapper.selectPage(any(), any())).thenReturn(page);
         when(userMapper.selectCount(any())).thenReturn(8L);
 
         assertEquals("alice", repository.findPage("ali", "ACTIVE", 2, 10).getFirst().getUsername());
         assertEquals(8L, repository.countFiltered(" ", ""));
         assertEquals(8L, repository.countFiltered(null, null));
-        verify(userMapper).selectPage(any(Page.class), any());
+        verify(userMapper).selectPage(any(), any());
         verify(userMapper, org.mockito.Mockito.times(2)).selectCount(any());
     }
 

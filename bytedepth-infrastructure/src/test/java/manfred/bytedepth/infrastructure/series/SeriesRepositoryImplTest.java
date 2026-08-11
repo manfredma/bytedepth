@@ -38,7 +38,7 @@ class SeriesRepositoryImplTest {
     @Test
     void findMethods_mapExistingSeriesAndReturnEmptyForMissing() {
         SeriesDO row = seriesRow();
-        when(mapper.selectOne(any())).thenReturn(row, null);
+        when(mapper.selectOne(any())).thenReturn(row).thenReturn((SeriesDO) null);
         when(mapper.selectById(1L)).thenReturn(row);
         when(mapper.selectById(2L)).thenReturn(null);
 
@@ -95,7 +95,7 @@ class SeriesRepositoryImplTest {
     void pagedQueries_supportNameAndAuthorFilters() {
         Page<SeriesDO> page = new Page<>(1, 10);
         page.setRecords(List.of(seriesRow()));
-        when(mapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(mapper.selectPage(any(), any())).thenReturn(page);
         when(mapper.selectCount(any())).thenReturn(3L, 2L, 3L, 2L);
 
         assertEquals("Java", repository.findPage("Java", 1, 10).getFirst().getName());
@@ -104,7 +104,7 @@ class SeriesRepositoryImplTest {
         assertEquals(2L, repository.countByAuthorId(7L, ""));
         assertEquals(3L, repository.count(null));
         assertEquals(2L, repository.countByAuthorId(7L, null));
-        verify(mapper, org.mockito.Mockito.times(2)).selectPage(any(Page.class), any());
+        verify(mapper, org.mockito.Mockito.times(2)).selectPage(any(), any());
         verify(mapper, org.mockito.Mockito.times(4)).selectCount(any());
     }
 
