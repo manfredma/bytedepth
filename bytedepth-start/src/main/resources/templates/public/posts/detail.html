@@ -781,7 +781,35 @@
     }
     </script>
 
-    <article id="post-article">
+    <article id="post-article" class="bd-annotation-scope">
+    <button id="bd-annotation-sidebar-toggle" class="bd-annotation-sidebar-toggle" type="button"
+            aria-controls="bd-annotation-sidebar" aria-expanded="false" title="打开划线评论栏">
+        <span aria-hidden="true">▤</span><span>划线评论</span>
+    </button>
+    <aside id="bd-annotation-sidebar" class="bd-annotation-sidebar" aria-label="划线评论栏" aria-hidden="true">
+        <header class="bd-annotation-sidebar-header">
+            <div><strong>划线评论</strong><small>划线默认仅自己可见；有评论时默认公开</small></div>
+            <button class="bd-annotation-sidebar-close" type="button" aria-label="关闭划线评论栏">×</button>
+        </header>
+        <section class="bd-annotation-composer" hidden>
+            <div class="bd-annotation-composer-quote"></div>
+            <div class="bd-annotation-color-row" aria-label="划线颜色">
+                <button type="button" data-bd-annotation-color="red" aria-label="重点"></button>
+                <button type="button" data-bd-annotation-color="yellow" aria-label="疑问"></button>
+                <button type="button" data-bd-annotation-color="green" aria-label="赞同"></button>
+                <button type="button" data-bd-annotation-color="blue" aria-label="补充"></button>
+            </div>
+            <textarea class="bd-annotation-composer-text" maxlength="2000" placeholder="写下你的评论（可选）"></textarea>
+            <label class="bd-annotation-visibility-label">可见范围
+                <select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">仅自己可见</option></select>
+            </label>
+            <div class="bd-annotation-composer-actions">
+                <button type="button" class="bd-annotation-composer-cancel">取消</button>
+                <button type="button" class="bd-annotation-composer-save">保存</button>
+            </div>
+        </section>
+        <section class="bd-annotation-feed" aria-live="polite"></section>
+    </aside>
     <h1 th:text="${post.title}">文章标题</h1>
     <div class="meta">
         <span th:if="${post.publishedAt != null}"

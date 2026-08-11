@@ -3,6 +3,7 @@ package manfred.bytedepth.infrastructure.annotation;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.annotation.AnnotationRepositoryPort;
 import manfred.bytedepth.domain.annotation.PostAnnotation;
+import manfred.bytedepth.domain.annotation.AnnotationVisibility;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,8 +23,16 @@ public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
     }
 
     @Override
-    public List<PostAnnotation> findByPostId(Long postId) {
-        return mapper.findByPostId(postId).stream().map(MyBatisAnnotationRepository::toDomain).toList();
+    public PostAnnotation update(PostAnnotation annotation) {
+        PostAnnotationDO data = toDO(annotation);
+        mapper.updateById(data);
+        return toDomain(data);
+    }
+
+    @Override
+    public List<PostAnnotation> findVisibleByPostId(Long postId, Long userId, String ownerTokenHash) {
+        return mapper.findVisibleByPostId(postId, userId, ownerTokenHash).stream()
+                .map(MyBatisAnnotationRepository::toDomain).toList();
     }
 
     @Override
@@ -41,9 +50,11 @@ public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
         data.setId(annotation.id());
         data.setPostId(annotation.postId());
         data.setUserId(annotation.userId());
+        data.setOwnerTokenHash(annotation.ownerTokenHash());
         data.setSelectedText(annotation.selectedText());
         data.setAnnotationText(annotation.annotationText());
         data.setColor(annotation.color());
+        data.setVisibility(annotation.visibility().name());
         data.setStartOffset(annotation.startOffset());
         data.setEndOffset(annotation.endOffset());
         data.setCreatedAt(annotation.createdAt());
@@ -52,8 +63,8 @@ public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
 
     private static PostAnnotation toDomain(PostAnnotationDO data) {
         return new PostAnnotation(
-                data.getId(), data.getPostId(), data.getUserId(),
+                data.getId(), data.getPostId(), data.getUserId(), data.getOwnerTokenHash(),
                 data.getSelectedText(), data.getAnnotationText(), data.getColor(),
-                data.getStartOffset(), data.getEndOffset(), data.getCreatedAt());
+                AnnotationVisibility.valueOf(data.getVisibility()), data.getStartOffset(), data.getEndOffset(), data.getCreatedAt());
     }
 }

@@ -69,6 +69,8 @@ class PostControllerTest {
     private ListPostsQryExe listPostsQryExe;
     @MockitoBean
     private ListAnnotationsQryExe listAnnotationsQryExe;
+    @MockitoBean
+    private AnnotationVisitorIdentity annotationVisitorIdentity;
 
     @MockitoBean
     private GetPostQryExe getPostQryExe;

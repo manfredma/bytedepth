@@ -10,9 +10,11 @@ public record PostAnnotation(
         Long id,
         Long postId,
         Long userId,
+        String ownerTokenHash,
         String selectedText,
         String annotationText,
         String color,
+        AnnotationVisibility visibility,
         int startOffset,
         int endOffset,
         LocalDateTime createdAt

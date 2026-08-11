@@ -56,6 +56,8 @@ class PostControllerSeriesDetailRenderingTest {
     @MockitoBean private GetPostQryExe getPostQryExe;
     @MockitoBean
     private ListAnnotationsQryExe listAnnotationsQryExe;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private AnnotationVisitorIdentity annotationVisitorIdentity;
     @MockitoBean private CreatePostCmdExe createPostCmdExe;
     @MockitoBean private PublishPostCmdExe publishPostCmdExe;
     @MockitoBean private ListCommentsQryExe listCommentsQryExe;

@@ -1,6 +1,7 @@
 package manfred.bytedepth.infrastructure.annotation;
 
 import manfred.bytedepth.domain.annotation.PostAnnotation;
+import manfred.bytedepth.domain.annotation.AnnotationVisibility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,8 +33,8 @@ class MyBatisAnnotationRepositoryTest {
 
     @Test
     void save_mapsAndInserts() {
-        PostAnnotation annotation = new PostAnnotation(null, 1L, 2L, "文本", "批注",
-                "yellow", 0, 5, LocalDateTime.of(2026, 8, 10, 12, 0));
+        PostAnnotation annotation = new PostAnnotation(null, 1L, 2L, null, "文本", "批注",
+                "yellow", AnnotationVisibility.PUBLIC, 0, 5, LocalDateTime.of(2026, 8, 10, 12, 0));
         when(mapper.insert(any(PostAnnotationDO.class))).thenAnswer(inv -> {
             PostAnnotationDO data = inv.getArgument(0);
             data.setId(10L);
@@ -52,7 +53,7 @@ class MyBatisAnnotationRepositoryTest {
     }
 
     @Test
-    void findByPostId_mapsDoListToDomain() {
+    void findVisibleByPostId_mapsDoListToDomain() {
         PostAnnotationDO data = new PostAnnotationDO();
         data.setId(5L);
         data.setPostId(1L);
@@ -60,12 +61,13 @@ class MyBatisAnnotationRepositoryTest {
         data.setSelectedText("文本");
         data.setAnnotationText("批注");
         data.setColor("green");
+        data.setVisibility("PUBLIC");
         data.setStartOffset(3);
         data.setEndOffset(6);
         data.setCreatedAt(LocalDateTime.of(2026, 8, 10, 12, 0));
-        when(mapper.findByPostId(1L)).thenReturn(List.of(data));
+        when(mapper.findVisibleByPostId(1L, 2L, null)).thenReturn(List.of(data));
 
-        List<PostAnnotation> result = repository.findByPostId(1L);
+        List<PostAnnotation> result = repository.findVisibleByPostId(1L, 2L, null);
 
         assertThat(result).hasSize(1);
         PostAnnotation ann = result.get(0);
@@ -83,6 +85,7 @@ class MyBatisAnnotationRepositoryTest {
         data.setSelectedText("文本");
         data.setAnnotationText("批注");
         data.setColor("blue");
+        data.setVisibility("PUBLIC");
         data.setStartOffset(0);
         data.setEndOffset(5);
         data.setCreatedAt(LocalDateTime.of(2026, 8, 10, 12, 0));
@@ -107,5 +110,12 @@ class MyBatisAnnotationRepositoryTest {
     void delete_delegates() {
         repository.delete(5L);
         verify(mapper).deleteById(5L);
+    }
+
+    @Test
+    void update_mapsAndDelegates() {
+        PostAnnotation annotation = new PostAnnotation(5L, 1L, null, "hash", "文本", "修改", "yellow", AnnotationVisibility.PRIVATE, 0, 5, LocalDateTime.now());
+        assertThat(repository.update(annotation).visibility()).isEqualTo(AnnotationVisibility.PRIVATE);
+        verify(mapper).updateById(any(PostAnnotationDO.class));
     }
 }

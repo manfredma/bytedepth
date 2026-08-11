@@ -1,6 +1,7 @@
 package manfred.bytedepth.app.annotation;
 
 import manfred.bytedepth.domain.annotation.PostAnnotation;
+import manfred.bytedepth.domain.annotation.AnnotationVisibility;
 
 import java.time.LocalDateTime;
 
@@ -8,18 +9,21 @@ import java.time.LocalDateTime;
 public record PostAnnotationDTO(
         Long id,
         Long postId,
-        Long userId,
         String selectedText,
         String annotationText,
         String color,
+        AnnotationVisibility visibility,
         int startOffset,
         int endOffset,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        boolean ownedByCurrentVisitor
 ) {
-    public static PostAnnotationDTO from(PostAnnotation annotation) {
+    public static PostAnnotationDTO from(PostAnnotation annotation, Long userId, String ownerTokenHash) {
         return new PostAnnotationDTO(
-                annotation.id(), annotation.postId(), annotation.userId(),
+                annotation.id(), annotation.postId(),
                 annotation.selectedText(), annotation.annotationText(), annotation.color(),
-                annotation.startOffset(), annotation.endOffset(), annotation.createdAt());
+                annotation.visibility(), annotation.startOffset(), annotation.endOffset(), annotation.createdAt(),
+                (userId != null && userId.equals(annotation.userId()))
+                        || (ownerTokenHash != null && ownerTokenHash.equals(annotation.ownerTokenHash())));
     }
 }

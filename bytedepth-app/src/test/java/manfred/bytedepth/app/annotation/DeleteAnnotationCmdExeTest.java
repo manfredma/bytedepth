@@ -1,6 +1,7 @@
 package manfred.bytedepth.app.annotation;
 
 import manfred.bytedepth.domain.annotation.PostAnnotation;
+import manfred.bytedepth.domain.annotation.AnnotationVisibility;
 import manfred.bytedepth.domain.common.DomainException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,14 +32,14 @@ class DeleteAnnotationCmdExeTest {
     }
 
     private static PostAnnotation annotation(Long id, Long userId) {
-        return new PostAnnotation(id, 1L, userId, "文本", "批注", "yellow", 0, 5, LocalDateTime.now());
+        return new PostAnnotation(id, 1L, userId, null, "文本", "批注", "yellow", AnnotationVisibility.PUBLIC, 0, 5, LocalDateTime.now());
     }
 
     @Test
     void execute_ownAnnotation_deletes() {
         when(annotationRepository.findById(10L)).thenReturn(Optional.of(annotation(10L, 2L)));
 
-        exe.execute(10L, 2L);
+        exe.execute(10L, 1L, 2L, null);
 
         verify(annotationRepository).delete(10L);
     }
@@ -47,7 +48,7 @@ class DeleteAnnotationCmdExeTest {
     void execute_notFound_throws() {
         when(annotationRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> exe.execute(99L, 2L))
+        assertThatThrownBy(() -> exe.execute(99L, 1L, 2L, null))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("批注不存在");
         verify(annotationRepository, never()).delete(any());
@@ -57,9 +58,24 @@ class DeleteAnnotationCmdExeTest {
     void execute_otherUsersAnnotation_throws() {
         when(annotationRepository.findById(10L)).thenReturn(Optional.of(annotation(10L, 2L)));
 
-        assertThatThrownBy(() -> exe.execute(10L, 99L))
+        assertThatThrownBy(() -> exe.execute(10L, 1L, 99L, null))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("只能删除自己的批注");
         verify(annotationRepository, never()).delete(10L);
+    }
+
+    @Test
+    void execute_anonymousOwner_deletes() {
+        PostAnnotation annotation = new PostAnnotation(10L, 1L, null, "hash", "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 5, LocalDateTime.now());
+        when(annotationRepository.findById(10L)).thenReturn(Optional.of(annotation));
+        exe.execute(10L, 1L, null, "hash");
+        verify(annotationRepository).delete(10L);
+    }
+
+    @Test
+    void execute_otherPostIsRejected() {
+        when(annotationRepository.findById(10L)).thenReturn(Optional.of(annotation(10L, 2L)));
+        assertThatThrownBy(() -> exe.execute(10L, 9L, 2L, null))
+                .isInstanceOf(DomainException.class).hasMessageContaining("不属于当前文章");
     }
 }

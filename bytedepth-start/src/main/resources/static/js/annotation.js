@@ -1,267 +1,82 @@
-/* 文章批注：选中文本 → 弹框 → 高亮 → 悬停显示 → 删除（仅作者） */
+/* 文章划线评论：侧栏可选，匿名归属由 HttpOnly Cookie 在服务端维护。 */
 (function () {
     'use strict';
-
     var article = document.getElementById('post-article');
-    var content = article ? article.querySelector('.content') : null;
-    if (!content) return;
+    var content = article && article.querySelector('.content');
+    var sidebar = document.getElementById('bd-annotation-sidebar');
+    var toggle = document.getElementById('bd-annotation-sidebar-toggle');
+    if (!content || !sidebar || !toggle) return;
 
     var annotations = window.__ANNOTATIONS__ || [];
-    var currentUserId = window.__CURRENT_USER_ID__ !== undefined
-        ? window.__CURRENT_USER_ID__ : null;
-    var csrfMeta = document.querySelector('meta[name="_csrf"]');
-    var csrfToken = csrfMeta ? csrfMeta.content : '';
+    var csrf = (document.querySelector('meta[name="_csrf"]') || {}).content || '';
+    var composer = sidebar.querySelector('.bd-annotation-composer');
+    var feed = sidebar.querySelector('.bd-annotation-feed');
+    var selected = null, color = 'yellow', visibilityChanged = false, popup, tooltip;
+    var storageKey = 'bd.annotation.sidebar.open';
 
-    var popup = null;
-    var tooltip = null;
-    var lastSelection = null;   // { start, end, text }
-    var selectedColor = 'yellow';
-
-    /* ── 偏移计算：文本节点在 content.textContent 中的起始偏移 ── */
-    function getNodeOffset(node) {
-        var walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
-        var offset = 0;
-        var current;
-        while ((current = walker.nextNode())) {
-            if (current === node) return offset;
-            offset += current.textContent.length;
-        }
-        return offset;
+    function api(path, method, payload) {
+        return fetch(window.location.pathname + '/annotations' + path, {
+            method: method, headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf},
+            body: payload ? JSON.stringify(payload) : undefined
+        }).then(function (response) { if (!response.ok) throw new Error('annotation request failed'); return response.status === 204 ? null : response.json(); });
     }
-
-    function selectionOffsets(range) {
-        return {
-            start: getNodeOffset(range.startContainer) + range.startOffset,
-            end: getNodeOffset(range.endContainer) + range.endOffset,
-            text: range.toString()
-        };
+    function isOpen() { return sidebar.classList.contains('bd-annotation-sidebar-open'); }
+    function setOpen(open) {
+        sidebar.classList.toggle('bd-annotation-sidebar-open', open);
+        sidebar.setAttribute('aria-hidden', String(!open)); toggle.setAttribute('aria-expanded', String(open));
+        localStorage.setItem(storageKey, String(open)); if (open) renderFeed();
     }
+    toggle.addEventListener('click', function () { setOpen(!isOpen()); });
+    sidebar.querySelector('.bd-annotation-sidebar-close').addEventListener('click', function () { setOpen(false); });
+    setOpen(localStorage.getItem(storageKey) === 'true');
 
-    /* ── 高亮渲染（幂等） ─────────────────────────── */
-    function unwrapAll() {
-        content.querySelectorAll('mark.annotation-highlight').forEach(function (m) {
-            var parent = m.parentNode;
-            while (m.firstChild) parent.insertBefore(m.firstChild, m);
-            parent.removeChild(m);
-            parent.normalize();
-        });
-    }
-
-    function highlightRange(start, end, cls, id, userId, annText) {
-        var walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
-        var offset = 0;
-        var current;
-        var startNode = null, startOff = 0, endNode = null, endOff = 0;
-        while ((current = walker.nextNode())) {
-            var len = current.textContent.length;
-            if (startNode === null && start < offset + len) {
-                startNode = current;
-                startOff = start - offset;
-            }
-            if (end <= offset + len) {
-                endNode = current;
-                endOff = end - offset;
-                break;
-            }
-            offset += len;
-        }
+    function nodeOffset(node) { var w = document.createTreeWalker(content, NodeFilter.SHOW_TEXT), offset = 0, current; while ((current = w.nextNode())) { if (current === node) return offset; offset += current.textContent.length; } return offset; }
+    function selectionData(range) { return {startOffset: nodeOffset(range.startContainer) + range.startOffset, endOffset: nodeOffset(range.endContainer) + range.endOffset, selectedText: range.toString().trim()}; }
+    function unwrap() { content.querySelectorAll('mark.bd-annotation-highlight').forEach(function (mark) { var parent = mark.parentNode; while (mark.firstChild) parent.insertBefore(mark.firstChild, mark); parent.removeChild(mark); parent.normalize(); }); }
+    function markRange(ann) {
+        var w = document.createTreeWalker(content, NodeFilter.SHOW_TEXT), offset = 0, node, startNode, endNode, start, end;
+        while ((node = w.nextNode())) { var len = node.textContent.length; if (!startNode && ann.startOffset < offset + len) { startNode = node; start = ann.startOffset - offset; } if (ann.endOffset <= offset + len) { endNode = node; end = ann.endOffset - offset; break; } offset += len; }
         if (!startNode || !endNode) return;
-        try {
-            var range = document.createRange();
-            range.setStart(startNode, Math.max(0, startOff));
-            range.setEnd(endNode, Math.max(startOff, Math.min(endOff, endNode.textContent.length)));
-            var mark = document.createElement('mark');
-            mark.className = 'annotation-highlight a-' + cls;
-            mark.dataset.id = String(id);
-            mark.dataset.userId = String(userId);
-            mark.dataset.ann = annText;
-            range.surroundContents(mark);
-        } catch (e) {
-            /* 跨元素选区兜底跳过，避免破坏 DOM */
-        }
+        try { var range = document.createRange(); range.setStart(startNode, Math.max(0, start)); range.setEnd(endNode, Math.max(start, Math.min(end, endNode.textContent.length))); var mark = document.createElement('mark'); mark.className = 'bd-annotation-highlight bd-annotation-color-' + ann.color; mark.dataset.id = ann.id; range.surroundContents(mark); } catch (ignored) { /* 跨结构选区不改写正文 DOM */ }
     }
-
-    function applyAnnotations() {
-        unwrapAll();
-        annotations.slice().sort(function (a, b) { return a.startOffset - b.startOffset; })
-            .forEach(function (ann) {
-                highlightRange(ann.startOffset, ann.endOffset, ann.color,
-                    ann.id, ann.userId, ann.annotationText);
-            });
-    }
-
-    /* ── 弹框 ─────────────────────────────────────── */
-    function buildPopup() {
-        var div = document.createElement('div');
-        div.className = 'annotation-popup';
-        div.innerHTML =
-            '<div class="ap-quote"></div>' +
-            '<div class="ap-colors">' +
-            '<span class="ap-color c-red" data-color="red" title="重点"></span>' +
-            '<span class="ap-color c-yellow active" data-color="yellow" title="疑问"></span>' +
-            '<span class="ap-color c-green" data-color="green" title="赞同"></span>' +
-            '<span class="ap-color c-blue" data-color="blue" title="补充"></span>' +
-            '</div>' +
-            '<textarea placeholder="写下你的批注..." maxlength="2000"></textarea>' +
-            '<div class="ap-actions">' +
-            '<button class="ap-cancel" type="button">取消</button>' +
-            '<button class="ap-save" type="button">保存</button>' +
-            '</div>';
-        document.body.appendChild(div);
-
-        div.querySelectorAll('.ap-color').forEach(function (c) {
-            c.addEventListener('click', function () {
-                div.querySelectorAll('.ap-color').forEach(function (x) { x.classList.remove('active'); });
-                c.classList.add('active');
-                selectedColor = c.dataset.color;
-            });
-        });
-        div.querySelector('.ap-cancel').addEventListener('click', closePopup);
-        div.querySelector('.ap-save').addEventListener('click', saveAnnotation);
-        return div;
-    }
-
-    function showPopup(range) {
-        if (!popup) popup = buildPopup();
-        lastSelection = selectionOffsets(range);
-        popup.querySelector('.ap-quote').textContent = lastSelection.text;
-        popup.querySelector('textarea').value = '';
-        popup.classList.add('open');
-        positionElement(popup, range);
-    }
-
-    function closePopup() {
-        if (!popup) return;
-        popup.classList.remove('open');
-        lastSelection = null;
-    }
-
-    function saveAnnotation() {
-        if (!lastSelection) return;
-        var annText = popup.querySelector('textarea').value.trim();
-        if (!annText) {
-            popup.querySelector('textarea').focus();
-            return;
-        }
-        var payload = {
-            selectedText: lastSelection.text.slice(0, 500),
-            annotationText: annText.slice(0, 2000),
-            color: selectedColor,
-            startOffset: lastSelection.start,
-            endOffset: lastSelection.end
-        };
-        var saveBtn = popup.querySelector('.ap-save');
-        saveBtn.disabled = true;
-        fetch(window.location.pathname + '/annotations', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-            body: JSON.stringify(payload)
-        }).then(function (r) {
-            if (!r.ok) throw new Error('create failed');
-            return r.json();
-        }).then(function (created) {
-            annotations.push(created);
-            applyAnnotations();
-            closePopup();
-            window.getSelection().removeAllRanges();
-        }).catch(function () {
-            saveBtn.disabled = false;
-            saveBtn.textContent = '失败，重试';
+    function renderMarks() { unwrap(); annotations.slice().sort(function (a, b) { return a.startOffset - b.startOffset; }).forEach(markRange); }
+    function renderFeed() {
+        feed.replaceChildren();
+        if (!annotations.length) { var empty = document.createElement('p'); empty.className = 'bd-annotation-empty'; empty.textContent = '选中文章文字，即可添加划线或评论。'; feed.appendChild(empty); return; }
+        annotations.forEach(function (ann) {
+            var item = document.createElement('article'); item.className = 'bd-annotation-feed-item'; item.dataset.id = ann.id;
+            var quote = document.createElement('blockquote'); quote.textContent = ann.selectedText; item.appendChild(quote);
+            var body = document.createElement('p'); body.className = 'bd-annotation-feed-text'; body.textContent = ann.annotationText || '仅划线'; item.appendChild(body);
+            var meta = document.createElement('div'); meta.className = 'bd-annotation-feed-meta'; meta.textContent = ann.visibility === 'PRIVATE' ? '仅自己可见' : '公开'; item.appendChild(meta);
+            if (ann.ownedByCurrentVisitor) { var actions = document.createElement('div'); actions.className = 'bd-annotation-feed-actions'; var edit = document.createElement('button'); edit.type = 'button'; edit.textContent = '编辑'; edit.onclick = function () { editAnnotation(ann); }; var remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '删除'; remove.onclick = function () { removeAnnotation(ann.id); }; actions.append(edit, remove); item.appendChild(actions); }
+            feed.appendChild(item);
         });
     }
-
-    /* ── tooltip ───────────────────────────────────── */
-    function buildTooltip() {
-        var div = document.createElement('div');
-        div.className = 'annotation-tooltip';
-        div.innerHTML =
-            '<div class="at-quote"></div>' +
-            '<div class="at-body"></div>' +
-            '<div class="at-meta">' +
-            '<span class="at-author"></span>' +
-            '<button class="at-delete" type="button">删除</button>' +
-            '</div>';
-        document.body.appendChild(div);
-        return div;
+    function selectColor(next) { color = next; sidebar.querySelectorAll('[data-bd-annotation-color]').forEach(function (button) { button.classList.toggle('bd-annotation-color-selected', button.dataset.bdAnnotationColor === color); }); }
+    sidebar.querySelectorAll('[data-bd-annotation-color]').forEach(function (button) { button.addEventListener('click', function () { selectColor(button.dataset.bdAnnotationColor); }); });
+    function openComposer(data, existing) {
+        selected = data; composer.hidden = false; composer.dataset.editId = existing ? existing.id : '';
+        composer.querySelector('.bd-annotation-composer-quote').textContent = data.selectedText;
+        composer.querySelector('.bd-annotation-composer-text').value = existing ? (existing.annotationText || '') : '';
+        composer.querySelector('.bd-annotation-visibility').value = existing ? existing.visibility : 'PRIVATE';
+        visibilityChanged = !!existing; selectColor(existing ? existing.color : 'yellow'); setOpen(true);
     }
-
-    function showTooltip(mark) {
-        if (!tooltip) tooltip = buildTooltip();
-        tooltip.querySelector('.at-quote').textContent = mark.textContent;
-        tooltip.querySelector('.at-body').textContent = mark.dataset.ann || '';
-        var delBtn = tooltip.querySelector('.at-delete');
-        if (String(mark.dataset.userId) === String(currentUserId)) {
-            delBtn.style.display = '';
-            delBtn.onclick = function () { deleteAnnotation(mark); };
-        } else {
-            delBtn.style.display = 'none';
-        }
-        tooltip.classList.add('open');
-        positionElement(tooltip, mark);
+    function closeComposer() { composer.hidden = true; selected = null; delete composer.dataset.editId; }
+    sidebar.querySelector('.bd-annotation-composer-cancel').addEventListener('click', closeComposer);
+    composer.querySelector('.bd-annotation-visibility').addEventListener('change', function () { visibilityChanged = true; });
+    composer.querySelector('.bd-annotation-composer-text').addEventListener('input', function (event) { if (!visibilityChanged) composer.querySelector('.bd-annotation-visibility').value = event.target.value.trim() ? 'PUBLIC' : 'PRIVATE'; });
+    function saveComposer() {
+        if (!selected) return; var text = composer.querySelector('.bd-annotation-composer-text').value.trim(); var visibility = composer.querySelector('.bd-annotation-visibility').value; var editId = composer.dataset.editId;
+        var promise = editId ? api('/' + editId, 'PATCH', {annotationText: text || null, visibility: visibility}) : api('', 'POST', {selectedText: selected.selectedText.slice(0, 500), annotationText: text || null, color: color, visibility: visibility, startOffset: selected.startOffset, endOffset: selected.endOffset});
+        promise.then(function (saved) { var index = annotations.findIndex(function (annotation) { return String(annotation.id) === String(saved.id); }); if (index < 0) annotations.push(saved); else annotations[index] = saved; renderMarks(); renderFeed(); closeComposer(); window.getSelection().removeAllRanges(); }).catch(function () { composer.querySelector('.bd-annotation-composer-save').textContent = '失败，重试'; });
     }
-
-    function closeTooltip() {
-        if (!tooltip) return;
-        tooltip.classList.remove('open');
-    }
-
-    function deleteAnnotation(mark) {
-        var id = mark.dataset.id;
-        fetch(window.location.pathname + '/annotations/' + id, {
-            method: 'DELETE',
-            headers: { 'X-CSRF-TOKEN': csrfToken }
-        }).then(function (r) {
-            if (!r.ok) throw new Error('delete failed');
-            var idx = annotations.findIndex(function (a) { return String(a.id) === String(id); });
-            if (idx >= 0) annotations.splice(idx, 1);
-            applyAnnotations();
-            closeTooltip();
-        });
-    }
-
-    /* ── 定位 ─────────────────────────────────────── */
-    function positionElement(el, anchor) {
-        var rect = anchor.getBoundingClientRect();
-        var w = el.offsetWidth || 280;
-        var left = Math.max(8, Math.min(window.innerWidth - w - 8, rect.left + rect.width / 2 - w / 2));
-        var top = rect.top - el.offsetHeight - 8;
-        if (top < 8) top = rect.bottom + 8;
-        top = Math.max(8, Math.min(window.innerHeight - el.offsetHeight - 8, top));
-        el.style.left = left + 'px';
-        el.style.top = top + 'px';
-    }
-
-    /* ── 事件绑定 ─────────────────────────────────── */
-    document.addEventListener('mouseup', function (e) {
-        if (popup && popup.contains(e.target)) return;
-        if (tooltip && tooltip.contains(e.target)) return;
-        closeTooltip();
-        var sel = window.getSelection();
-        if (!sel.rangeCount) { closePopup(); return; }
-        var range = sel.getRangeAt(0);
-        if (range.collapsed || range.toString().trim().length === 0) { closePopup(); return; }
-        if (!content.contains(range.commonAncestorContainer)) { closePopup(); return; }
-        if (currentUserId === null) return;   // 未登录不弹创建框
-        showPopup(range);
-    });
-
-    // mark 悬停显示 tooltip（事件委托）
-    content.addEventListener('mouseover', function (e) {
-        var mark = e.target.closest ? e.target.closest('mark.annotation-highlight') : null;
-        if (mark) showTooltip(mark);
-    });
-    content.addEventListener('mouseout', function (e) {
-        var mark = e.target.closest ? e.target.closest('mark.annotation-highlight') : null;
-        if (mark) closeTooltip();
-    });
-
-    document.addEventListener('click', function (e) {
-        if (tooltip && !tooltip.contains(e.target) && !(e.target.closest && e.target.closest('mark.annotation-highlight'))) {
-            closeTooltip();
-        }
-    });
-    document.addEventListener('scroll', function () { closePopup(); closeTooltip(); }, true);
-
-    /* ── 初始化 ───────────────────────────────────── */
-    applyAnnotations();
+    sidebar.querySelector('.bd-annotation-composer-save').addEventListener('click', saveComposer);
+    function editAnnotation(ann) { openComposer({selectedText: ann.selectedText}, ann); }
+    function removeAnnotation(id) { api('/' + id, 'DELETE').then(function () { annotations = annotations.filter(function (ann) { return String(ann.id) !== String(id); }); renderMarks(); renderFeed(); }); }
+    function buildPopup() { var el = document.createElement('div'); el.className = 'bd-annotation-popup'; el.innerHTML = '<button type="button" data-color="yellow">划线</button><button type="button" data-comment>评论</button>'; document.body.appendChild(el); el.querySelector('[data-color]').onclick = function () { createHighlight(); }; el.querySelector('[data-comment]').onclick = function () { openComposer(selected); el.classList.remove('bd-annotation-popup-open'); }; return el; }
+    function showPopup(range) { if (!popup) popup = buildPopup(); selected = selectionData(range); popup.classList.add('bd-annotation-popup-open'); var rect = range.getBoundingClientRect(); popup.style.left = Math.max(8, rect.left) + 'px'; popup.style.top = Math.max(8, rect.bottom + 8) + 'px'; }
+    function createHighlight() { if (!selected) return; api('', 'POST', {selectedText: selected.selectedText.slice(0, 500), annotationText: null, color: color, visibility: 'PRIVATE', startOffset: selected.startOffset, endOffset: selected.endOffset}).then(function (saved) { annotations.push(saved); renderMarks(); if (isOpen()) renderFeed(); popup.classList.remove('bd-annotation-popup-open'); window.getSelection().removeAllRanges(); }); }
+    document.addEventListener('mouseup', function (event) { if (sidebar.contains(event.target) || (popup && popup.contains(event.target))) return; var selection = window.getSelection(); if (!selection.rangeCount) return; var range = selection.getRangeAt(0); if (range.collapsed || !range.toString().trim() || !content.contains(range.commonAncestorContainer)) return; var data = selectionData(range); if (isOpen()) openComposer(data); else showPopup(range); });
+    content.addEventListener('click', function (event) { var mark = event.target.closest && event.target.closest('mark.bd-annotation-highlight'); if (!mark) return; var ann = annotations.find(function (item) { return String(item.id) === mark.dataset.id; }); if (ann) { setOpen(true); var item = feed.querySelector('[data-id="' + ann.id + '"]'); if (item) item.scrollIntoView({block: 'nearest'}); } });
+    renderMarks();
 })();

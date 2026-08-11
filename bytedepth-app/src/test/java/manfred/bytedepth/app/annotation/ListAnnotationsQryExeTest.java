@@ -1,6 +1,7 @@
 package manfred.bytedepth.app.annotation;
 
 import manfred.bytedepth.domain.annotation.PostAnnotation;
+import manfred.bytedepth.domain.annotation.AnnotationVisibility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,25 +29,25 @@ class ListAnnotationsQryExeTest {
     }
 
     private static PostAnnotation annotation(long id, int start) {
-        return new PostAnnotation(id, 1L, 2L, "文本", "批注", "yellow",
+        return new PostAnnotation(id, 1L, 2L, null, "文本", "批注", "yellow", AnnotationVisibility.PUBLIC,
                 start, start + 5, LocalDateTime.now());
     }
 
     @Test
     void execute_sortsByStartOffsetAscending() {
-        when(annotationRepository.findByPostId(1L))
+        when(annotationRepository.findVisibleByPostId(1L, 2L, null))
                 .thenReturn(List.of(annotation(3L, 30), annotation(1L, 10), annotation(2L, 20)));
 
-        List<PostAnnotation> result = qry.execute(1L);
+        List<PostAnnotation> result = qry.execute(1L, 2L, null);
 
         assertThat(result).extracting(PostAnnotation::id).containsExactly(1L, 2L, 3L);
-        verify(annotationRepository).findByPostId(1L);
+        verify(annotationRepository).findVisibleByPostId(1L, 2L, null);
     }
 
     @Test
     void execute_empty_returnsEmpty() {
-        when(annotationRepository.findByPostId(1L)).thenReturn(List.of());
+        when(annotationRepository.findVisibleByPostId(1L, null, null)).thenReturn(List.of());
 
-        assertThat(qry.execute(1L)).isEmpty();
+        assertThat(qry.execute(1L, null, null)).isEmpty();
     }
 }

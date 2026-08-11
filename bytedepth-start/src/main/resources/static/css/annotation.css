@@ -1,104 +1,12 @@
-/* ── 批注高亮 ─────────────────────────────── */
-.content mark.annotation-highlight {
-    padding: 0 1px;
-    border-radius: 2px;
-    cursor: pointer;
-    text-decoration: none;
-    box-shadow: none;
-    background: transparent;
-}
-.content mark.annotation-highlight:hover {
-    outline: 1px solid rgba(0, 0, 0, .15);
-}
-.content mark.a-red    { background: rgba(255, 140, 140, .45); }
-.content mark.a-yellow { background: rgba(255, 213, 79, .55); }
-.content mark.a-green  { background: rgba(134, 216, 150, .5); }
-.content mark.a-blue   { background: rgba(130, 190, 255, .5); }
-
-/* ── 批注弹框（选中后） ────────────────────── */
-.annotation-popup {
-    /* fixed 相对视口定位：getBoundingClientRect() 即视口坐标，页面滚动后仍贴近划线处 */
-    position: fixed;
-    z-index: 9999;
-    background: #fff;
-    border: 1px solid #e7e4df;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, .18);
-    padding: 14px 16px;
-    width: 340px;
-    max-width: calc(100vw - 16px);
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: .9rem;
-    color: #1c1917;
-    display: none;
-}
-.annotation-popup.open { display: block; }
-.annotation-popup .ap-quote {
-    color: #57534e;
-    font-size: .84rem;
-    max-height: 52px;
-    overflow: hidden;
-    margin-bottom: 10px;
-    padding-left: 8px;
-    border-left: 2px solid #e94560;
-}
-.annotation-popup .ap-colors { display: flex; gap: 10px; margin-bottom: 10px; }
-.annotation-popup .ap-color {
-    width: 22px; height: 22px; border-radius: 50%;
-    cursor: pointer; border: 2px solid transparent;
-}
-.annotation-popup .ap-color.active { border-color: #1c1917; }
-.annotation-popup .ap-color.c-red    { background: rgba(255, 140, 140, .7); }
-.annotation-popup .ap-color.c-yellow { background: rgba(255, 213, 79, .85); }
-.annotation-popup .ap-color.c-green  { background: rgba(134, 216, 150, .8); }
-.annotation-popup .ap-color.c-blue   { background: rgba(130, 190, 255, .8); }
-.annotation-popup textarea {
-    width: 100%; height: 88px; resize: none;
-    border: 1px solid #e7e4df; border-radius: 8px;
-    padding: 8px 10px; font-size: .9rem; font-family: inherit;
-    box-sizing: border-box; margin-bottom: 10px;
-}
-.annotation-popup textarea:focus { outline: 2px solid #e94560; border-color: transparent; }
-.annotation-popup .ap-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.annotation-popup button {
-    padding: 7px 18px; border-radius: 8px; cursor: pointer;
-    font-size: .85rem; font-weight: 600; border: none;
-}
-.annotation-popup .ap-save { background: #e94560; color: #fff; }
-.annotation-popup .ap-save:hover { background: #c73652; }
-.annotation-popup .ap-cancel { background: #f0f0f0; color: #555; }
-.annotation-popup .ap-cancel:hover { background: #e0e0e0; }
-
-/* ── 批注 tooltip（悬停/点击高亮） ─────────── */
-.annotation-tooltip {
-    position: fixed;
-    z-index: 9998;
-    background: #1a1a2e;
-    color: #fff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    width: 300px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: .82rem;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
-    display: none;
-}
-.annotation-tooltip.open { display: block; }
-.annotation-tooltip .at-quote {
-    font-size: .75rem; color: rgba(255, 255, 255, .7);
-    margin-bottom: 6px; padding-left: 8px;
-    border-left: 2px solid rgba(255, 255, 255, .4);
-    max-height: 40px; overflow: hidden;
-}
-.annotation-tooltip .at-body { line-height: 1.5; margin-bottom: 6px; }
-.annotation-tooltip .at-meta {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: .72rem; color: rgba(255, 255, 255, .55);
-}
-.annotation-tooltip .at-delete {
-    background: none; border: none; color: #ff8a8a;
-    cursor: pointer; font-size: .72rem; text-decoration: underline;
-    padding: 0;
-}
-.annotation-tooltip .at-delete:hover { color: #ff6b6b; }
+.bd-annotation-scope .bd-annotation-highlight { padding:0 1px; border-radius:2px; cursor:pointer; text-decoration:none; }
+.bd-annotation-scope .bd-annotation-highlight:hover { outline:1px solid rgba(0,0,0,.2); }
+.bd-annotation-scope .bd-annotation-color-red { background:rgba(255,140,140,.45); }.bd-annotation-scope .bd-annotation-color-yellow { background:rgba(255,213,79,.55); }.bd-annotation-scope .bd-annotation-color-green { background:rgba(134,216,150,.5); }.bd-annotation-scope .bd-annotation-color-blue { background:rgba(130,190,255,.5); }
+.bd-annotation-sidebar-toggle { position:fixed; right:18px; bottom:24px; z-index:60; display:flex; gap:6px; align-items:center; border:1px solid var(--border,#e7e4df); border-radius:999px; background:var(--card,#fff); color:var(--ink,#1c1917); box-shadow:0 5px 18px rgba(0,0,0,.12); padding:10px 14px; cursor:pointer; font:600 .86rem var(--sans,sans-serif); }
+.bd-annotation-sidebar { position:fixed; z-index:70; top:0; right:0; width:min(390px,100vw); height:100dvh; overflow:auto; box-sizing:border-box; transform:translateX(101%); transition:transform .2s ease; background:var(--card,#fff); border-left:1px solid var(--border,#e7e4df); box-shadow:-8px 0 28px rgba(0,0,0,.12); padding:16px; font-family:var(--sans,sans-serif); }
+.bd-annotation-sidebar.bd-annotation-sidebar-open { transform:translateX(0); }.bd-annotation-sidebar-open ~ .bd-annotation-sidebar-toggle { display:none; }
+.bd-annotation-sidebar-header { display:flex; justify-content:space-between; gap:12px; padding:2px 0 14px; border-bottom:1px solid var(--border,#e7e4df); }.bd-annotation-sidebar-header strong,.bd-annotation-sidebar-header small { display:block; }.bd-annotation-sidebar-header small { color:var(--ink-3,#78716c); font-size:.76rem; margin-top:4px; }.bd-annotation-sidebar-close { border:0; background:transparent; cursor:pointer; font-size:1.6rem; line-height:1; }
+.bd-annotation-composer { padding:14px 0; border-bottom:1px solid var(--border,#e7e4df); }.bd-annotation-composer-quote,.bd-annotation-feed-item blockquote { margin:0 0 10px; padding-left:9px; border-left:3px solid #f4c430; color:var(--ink-2,#57534e); font-size:.86rem; }.bd-annotation-color-row { display:flex; gap:8px; margin-bottom:10px; }.bd-annotation-color-row button { width:20px; height:20px; border-radius:50%; border:2px solid transparent; cursor:pointer; background:#ffd54f; }.bd-annotation-color-row button[data-bd-annotation-color="red"]{background:#ff8c8c}.bd-annotation-color-row button[data-bd-annotation-color="green"]{background:#86d896}.bd-annotation-color-row button[data-bd-annotation-color="blue"]{background:#82beff}.bd-annotation-color-row .bd-annotation-color-selected{border-color:#1c1917}
+.bd-annotation-composer-text { width:100%; min-height:86px; box-sizing:border-box; resize:vertical; padding:9px; border:1px solid var(--border,#e7e4df); border-radius:8px; font:inherit; }.bd-annotation-visibility-label { display:flex; justify-content:space-between; align-items:center; margin-top:9px; font-size:.82rem; }.bd-annotation-visibility { padding:4px; border:1px solid var(--border,#e7e4df); border-radius:6px; background:#fff; }.bd-annotation-composer-actions,.bd-annotation-feed-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }.bd-annotation-composer-actions button,.bd-annotation-feed-actions button,.bd-annotation-popup button { border:0; border-radius:6px; padding:6px 10px; cursor:pointer; background:#f1f0ee; font:inherit; font-size:.8rem; }.bd-annotation-composer-save { background:#e94560!important; color:#fff; }
+.bd-annotation-feed-item { padding:14px 0; border-bottom:1px solid var(--border,#e7e4df); }.bd-annotation-feed-text { margin:0; white-space:pre-wrap; line-height:1.55; }.bd-annotation-feed-meta { margin-top:8px; color:var(--ink-3,#78716c); font-size:.75rem; }.bd-annotation-empty { color:var(--ink-3,#78716c); font-size:.9rem; }
+.bd-annotation-popup { position:fixed; z-index:80; display:none; gap:6px; padding:7px; border:1px solid var(--border,#e7e4df); border-radius:9px; background:#fff; box-shadow:0 6px 20px rgba(0,0,0,.16); }.bd-annotation-popup.bd-annotation-popup-open { display:flex; }
+@media (max-width:640px) { .bd-annotation-sidebar-toggle { right:12px; bottom:14px; }.bd-annotation-sidebar { width:100vw; } }

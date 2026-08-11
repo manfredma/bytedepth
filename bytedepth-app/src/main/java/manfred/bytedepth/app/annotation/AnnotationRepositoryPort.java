@@ -10,7 +10,9 @@ public interface AnnotationRepositoryPort {
 
     PostAnnotation save(PostAnnotation annotation);
 
-    List<PostAnnotation> findByPostId(Long postId);
+    PostAnnotation update(PostAnnotation annotation);
+
+    List<PostAnnotation> findVisibleByPostId(Long postId, Long userId, String ownerTokenHash);
 
     Optional<PostAnnotation> findById(Long id);
 
