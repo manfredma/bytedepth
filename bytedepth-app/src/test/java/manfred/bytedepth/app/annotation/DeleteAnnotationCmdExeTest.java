@@ -78,4 +78,11 @@ class DeleteAnnotationCmdExeTest {
         assertThatThrownBy(() -> exe.execute(10L, 9L, 2L, null))
                 .isInstanceOf(DomainException.class).hasMessageContaining("不属于当前文章");
     }
+
+    @Test
+    void execute_userOwnerWithVisitorTokenStillDeletes() {
+        when(annotationRepository.findById(10L)).thenReturn(Optional.of(annotation(10L, 2L)));
+        exe.execute(10L, 1L, 2L, "other-hash");
+        verify(annotationRepository).delete(10L);
+    }
 }

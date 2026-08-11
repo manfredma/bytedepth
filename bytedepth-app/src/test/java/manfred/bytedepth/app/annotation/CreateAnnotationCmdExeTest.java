@@ -67,6 +67,12 @@ class CreateAnnotationCmdExeTest {
     }
 
     @Test
+    void execute_blankAnonymousToken_throws() {
+        assertThatThrownBy(() -> exe.execute(1L, null, " ", "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 1))
+                .isInstanceOf(DomainException.class).hasMessageContaining("批注身份不能为空");
+    }
+
+    @Test
     void execute_blankAnnotation_createsPrivateHighlightWithoutComment() {
         when(annotationRepository.save(any(PostAnnotation.class))).thenAnswer(inv -> inv.getArgument(0));
         PostAnnotation result = exe.execute(1L, 2L, null, "文本", "  ", "yellow", AnnotationVisibility.PRIVATE, 0, 1);
