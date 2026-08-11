@@ -13,6 +13,7 @@ import manfred.bytedepth.app.series.GetSeriesForPortalQryExe;
 import manfred.bytedepth.app.series.ListSeriesQryExe;
 import manfred.bytedepth.app.series.SeriesCardDTO;
 import manfred.bytedepth.app.series.SeriesPortalDTO;
+import manfred.bytedepth.adapter.web.util.SearchHighlight;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.search.SearchResult;
@@ -121,8 +122,11 @@ class SimplePortalControllerCoverageTest {
         SearchPostsQryExe search = mock(SearchPostsQryExe.class);
         when(search.execute("query", 2)).thenReturn(new SearchResult(List.of(), 11, 2, 10));
         ExtendedModelMap searchModel = new ExtendedModelMap();
-        assertThat(new SearchController(search).search("query", 2, searchModel)).isEqualTo("public/search");
-        assertThat(searchModel).containsEntry("q", "query").containsEntry("hasPrev", true).containsEntry("hasNext", false);
+        SearchHighlight searchHighlight = new SearchHighlight();
+        assertThat(new SearchController(search, searchHighlight).search("query", 2, searchModel))
+                .isEqualTo("public/search");
+        assertThat(searchModel).containsEntry("q", "query").containsEntry("hasPrev", true)
+                .containsEntry("hasNext", false).containsEntry("searchHighlight", searchHighlight);
     }
 
     @Test
