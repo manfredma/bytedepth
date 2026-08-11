@@ -34,6 +34,23 @@ public class ListAllPostsQryExe {
         return new PageResult(posts, total);
     }
 
+    /** 后台管理用：按过滤条件分页（title 模糊、status 精确、seriesId/categoryId 精确）。 */
+    public PageResult execute(int page, int size, String title, String status, Long seriesId, Long categoryId) {
+        List<PostDTO> posts = postRepository.findPage(page, size, title, status, seriesId, categoryId)
+                .stream().map(this::toDTO).collect(Collectors.toList());
+        long total = postRepository.countFiltered(title, status, seriesId, categoryId);
+        return new PageResult(posts, total);
+    }
+
+    /** 个人工作台用：按过滤条件分页查询某位作者的文章。 */
+    public PageResult executeByAuthor(Long authorId, int page, int size,
+                                      String title, String status, Long seriesId, Long categoryId) {
+        List<PostDTO> posts = authorPostRepository.findPageByAuthorId(authorId, page, size, title, status, seriesId, categoryId)
+                .stream().map(this::toDTO).collect(Collectors.toList());
+        long total = authorPostRepository.countByAuthorIdFiltered(authorId, title, status, seriesId, categoryId);
+        return new PageResult(posts, total);
+    }
+
     private PostDTO toDTO(Post post) {
         PostDTO dto = new PostDTO();
         dto.setId(post.getId());

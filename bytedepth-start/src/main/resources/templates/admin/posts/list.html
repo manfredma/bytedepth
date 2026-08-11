@@ -66,6 +66,9 @@
         <a th:href="@{/admin/posts/new}" class="btn-new">+ 写文章</a>
     </div>
 
+    <!-- 统一查询过滤组件 -->
+    <div th:replace="~{fragments/filter-bar :: filterBar('/admin/posts', ${filterFields})}"></div>
+
     <div th:if="${#lists.isEmpty(posts)}" class="empty">暂无文章</div>
 
     <div th:each="p : ${posts}" class="post-card">
@@ -125,11 +128,11 @@
         </div>
     </div>
 
-    <!-- 分页 -->
+    <!-- 分页（filterBaseUrl 携带过滤条件，翻页不丢） -->
     <div th:if="${totalPages > 1}">
         <div th:replace="~{fragments/pagination :: pagination(
             ${currentPage}, ${totalPages}, ${total}, ${pageSize},
-            '/admin/posts?')}"></div>
+            ${filterBaseUrl})}"></div>
     </div>
 </div>
 </div>

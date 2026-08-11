@@ -2,6 +2,9 @@ package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.adapter.web.security.ContentOwnershipGuard;
 import manfred.bytedepth.adapter.web.util.SecurityUtils;
+import manfred.bytedepth.adapter.web.filter.FilterField;
+import manfred.bytedepth.adapter.web.filter.FilterOption;
+import manfred.bytedepth.app.category.CategoryDTO;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
@@ -16,6 +19,7 @@ import manfred.bytedepth.app.series.AppendPostToSeriesCmdExe;
 import manfred.bytedepth.app.series.RemovePostFromSeriesCmdExe;
 import manfred.bytedepth.domain.common.SlugUtils;
 import manfred.bytedepth.domain.post.PostRepository;
+import manfred.bytedepth.domain.series.Series;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +34,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import org.springframework.web.util.UriUtils;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 @PreAuthorize("hasAnyAuthority('admin:dashboard:view', 'blog:post:create')")
@@ -76,20 +84,71 @@ public class AdminPostController {
     @GetMapping
     public String list(Authentication authentication, Model model,
                        @RequestParam(defaultValue = "1") int page,
-                       @RequestParam(defaultValue = "20") int size) {
+                       @RequestParam(defaultValue = "20") int size,
+                       @RequestParam(required = false) String title,
+                       @RequestParam(required = false) String status,
+                       @RequestParam(required = false) Long seriesId,
+                       @RequestParam(required = false) Long categoryId) {
         boolean canManage = contentOwnershipGuard.canManagePosts(authentication);
         Long authorId = canManage ? null : contentOwnershipGuard.currentUserId(authentication);
         var result = canManage
-                ? listAllPostsQryExe.execute(page, size)
-                : listAllPostsQryExe.executeByAuthor(authorId, page, size);
+                ? listAllPostsQryExe.execute(page, size, title, status, seriesId, categoryId)
+                : listAllPostsQryExe.executeByAuthor(authorId, page, size, title, status, seriesId, categoryId);
         int totalPages = (int) Math.ceil((double) result.total() / size);
         model.addAttribute("posts", result.posts());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("total", result.total());
         model.addAttribute("pageSize", size);
-        model.addAttribute("allSeries", canManage ? seriesRepository.findAll() : seriesRepository.findByAuthorId(authorId));
+
+        List<Series> allSeries = canManage ? seriesRepository.findAll() : seriesRepository.findByAuthorId(authorId);
+        List<CategoryDTO> allCategories = listCategoriesQryExe.execute();
+        model.addAttribute("allSeries", allSeries);
+        model.addAttribute("allCategories", allCategories);
+        model.addAttribute("filterFields", buildPostFilterFields(title, status, seriesId, categoryId, allSeries, allCategories));
+        model.addAttribute("filterBaseUrl", buildPostFilterBaseUrl(title, status, seriesId, categoryId));
         return "admin/posts/list";
+    }
+
+    private List<FilterField> buildPostFilterFields(String title, String status, Long seriesId, Long categoryId,
+                                                    List<Series> allSeries, List<CategoryDTO> allCategories) {
+        List<FilterField> fields = new ArrayList<>();
+        fields.add(FilterField.text("title", "标题", title == null ? "" : title, "输入关键字"));
+        fields.add(FilterField.select("status", "状态", status == null ? "" : status, List.of(
+                FilterOption.of("", "全部"),
+                FilterOption.of("PUBLISHED", "已发布", "PUBLISHED".equals(status)),
+                FilterOption.of("DRAFT", "草稿", "DRAFT".equals(status)),
+                FilterOption.of("DELETED", "已删除", "DELETED".equals(status)))));
+        List<FilterOption> seriesOpts = new ArrayList<>();
+        seriesOpts.add(FilterOption.of("", "全部"));
+        for (Series s : allSeries) {
+            seriesOpts.add(FilterOption.of(String.valueOf(s.getId()), s.getName(), s.getId().equals(seriesId)));
+        }
+        fields.add(FilterField.select("seriesId", "专栏", seriesId == null ? "" : String.valueOf(seriesId), seriesOpts));
+        List<FilterOption> catOpts = new ArrayList<>();
+        catOpts.add(FilterOption.of("", "全部"));
+        for (CategoryDTO c : allCategories) {
+            catOpts.add(FilterOption.of(String.valueOf(c.getId()), c.getName(), c.getId().equals(categoryId)));
+        }
+        fields.add(FilterField.select("categoryId", "分类", categoryId == null ? "" : String.valueOf(categoryId), catOpts));
+        return fields;
+    }
+
+    private String buildPostFilterBaseUrl(String title, String status, Long seriesId, Long categoryId) {
+        StringBuilder b = new StringBuilder("/admin/posts?");
+        if (title != null && !title.isBlank()) {
+            b.append("title=").append(UriUtils.encodeQueryParam(title.trim(), StandardCharsets.UTF_8)).append('&');
+        }
+        if (status != null && !status.isBlank()) {
+            b.append("status=").append(status).append('&');
+        }
+        if (seriesId != null) {
+            b.append("seriesId=").append(seriesId).append('&');
+        }
+        if (categoryId != null) {
+            b.append("categoryId=").append(categoryId).append('&');
+        }
+        return b.toString();
     }
 
     @GetMapping("/new")

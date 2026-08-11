@@ -44,6 +44,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -153,7 +154,7 @@ class AdminPostControllerTest {
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
     void adminPostList_withAdmin_returnsOk() throws Exception {
-        when(listAllPostsQryExe.execute(anyInt(), anyInt()))
+        when(listAllPostsQryExe.execute(anyInt(), anyInt(), any(), any(), any(), any()))
                 .thenReturn(new ListAllPostsQryExe.PageResult(List.of(), 0));
         when(seriesRepository.findAll()).thenReturn(List.of());
 
@@ -172,13 +173,47 @@ class AdminPostControllerTest {
         post.setTitle("管理后台文章");
         post.setStatus("DRAFT");
 
-        when(listAllPostsQryExe.execute(1, 20))
+        when(listAllPostsQryExe.execute(1, 20, null, null, null, null))
                 .thenReturn(new ListAllPostsQryExe.PageResult(List.of(post), 1));
         when(seriesRepository.findAll()).thenReturn(List.of());
 
         mockMvc.perform(get("/admin/posts"))
                 .andExpect(status().isOk())
                 .andExpect(model().attributeExists("posts"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
+    void adminPostList_withTitleAndStatusFilters_passesFiltersAndBuildsBaseUrl() throws Exception {
+        when(listAllPostsQryExe.execute(1, 20, "Spring", "PUBLISHED", null, null))
+                .thenReturn(new ListAllPostsQryExe.PageResult(List.of(), 0));
+        when(seriesRepository.findAll()).thenReturn(List.of());
+        when(listCategoriesQryExe.execute()).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/posts")
+                        .param("title", "Spring")
+                        .param("status", "PUBLISHED"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("filterFields"))
+                .andExpect(model().attributeExists("allCategories"))
+                .andExpect(model().attribute("filterBaseUrl", "/admin/posts?title=Spring&status=PUBLISHED&"));
+        verify(listAllPostsQryExe).execute(eq(1), eq(20), eq("Spring"), eq("PUBLISHED"), isNull(), isNull());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
+    void adminPostList_withSeriesAndCategoryFilters_passesFiltersAndBuildsBaseUrl() throws Exception {
+        when(listAllPostsQryExe.execute(1, 20, null, null, 5L, 3L))
+                .thenReturn(new ListAllPostsQryExe.PageResult(List.of(), 0));
+        when(seriesRepository.findAll()).thenReturn(List.of());
+        when(listCategoriesQryExe.execute()).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/posts")
+                        .param("seriesId", "5")
+                        .param("categoryId", "3"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("filterBaseUrl", "/admin/posts?seriesId=5&categoryId=3&"));
+        verify(listAllPostsQryExe).execute(eq(1), eq(20), isNull(), isNull(), eq(5L), eq(3L));
     }
 
     @Test
@@ -261,7 +296,7 @@ class AdminPostControllerTest {
     void regularAuthor_listContainsOnlyOwnPostsAndSeries() throws Exception {
         when(contentOwnershipGuard.canManagePosts(any())).thenReturn(false);
         when(contentOwnershipGuard.currentUserId(any())).thenReturn(7L);
-        when(listAllPostsQryExe.executeByAuthor(7L, 2, 5))
+        when(listAllPostsQryExe.executeByAuthor(7L, 2, 5, null, null, null, null))
                 .thenReturn(new ListAllPostsQryExe.PageResult(List.of(), 0));
         when(seriesRepository.findByAuthorId(7L)).thenReturn(List.of());
 
@@ -270,7 +305,7 @@ class AdminPostControllerTest {
                 .andExpect(view().name("admin/posts/list"))
                 .andExpect(model().attribute("total", 0L));
 
-        verify(listAllPostsQryExe).executeByAuthor(7L, 2, 5);
+        verify(listAllPostsQryExe).executeByAuthor(7L, 2, 5, null, null, null, null);
         verify(seriesRepository).findByAuthorId(7L);
     }
 

@@ -32,4 +32,10 @@ public interface PostRepository {
 
     /** 查询所有已发布文章（不分页），用于生成 sitemap。 */
     List<Post> findAllPublished();
+
+    /** 后台管理用：按过滤条件分页查询文章（排除已删除）。title 为模糊匹配；status 用枚举名匹配。 */
+    List<Post> findPage(int page, int size, String title, String status, Long seriesId, Long categoryId);
+
+    /** 后台管理用：按过滤条件统计文章总数（排除已删除）。 */
+    long countFiltered(String title, String status, Long seriesId, Long categoryId);
 }

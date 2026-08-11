@@ -53,6 +53,33 @@ class ListAllPostsQryExeTest {
         verify(authorPostRepository).countByAuthorId(7L);
     }
 
+    @Test
+    void executeWithFilters_delegatesFilteredQueryAndReturnsFilteredTotal() {
+        Post post = post(1L, null);
+        when(postRepository.findPage(1, 20, "Spring", "PUBLISHED", null, null)).thenReturn(List.of(post));
+        when(postRepository.countFiltered("Spring", "PUBLISHED", null, null)).thenReturn(3L);
+
+        ListAllPostsQryExe.PageResult result = query.execute(1, 20, "Spring", "PUBLISHED", null, null);
+
+        assertEquals(3L, result.total());
+        assertEquals(1L, result.posts().get(0).getId());
+        verify(postRepository).findPage(1, 20, "Spring", "PUBLISHED", null, null);
+        verify(postRepository).countFiltered("Spring", "PUBLISHED", null, null);
+    }
+
+    @Test
+    void executeByAuthorWithFilters_delegatesFilteredAuthorQuery() {
+        Post post = post(2L, 3L);
+        when(authorPostRepository.findPageByAuthorId(7L, 1, 20, null, "DRAFT", 5L, null)).thenReturn(List.of(post));
+        when(authorPostRepository.countByAuthorIdFiltered(7L, null, "DRAFT", 5L, null)).thenReturn(1L);
+
+        ListAllPostsQryExe.PageResult result = query.executeByAuthor(7L, 1, 20, null, "DRAFT", 5L, null);
+
+        assertEquals(1L, result.total());
+        verify(authorPostRepository).findPageByAuthorId(7L, 1, 20, null, "DRAFT", 5L, null);
+        verify(authorPostRepository).countByAuthorIdFiltered(7L, null, "DRAFT", 5L, null);
+    }
+
     private Post post(Long id, Long seriesId) {
         Post post = Post.reconstruct(id, "post-" + id, "标题", "内容", PostStatus.DRAFT,
                 LocalDateTime.now(), null, LocalDateTime.now(), null, 7L, false);

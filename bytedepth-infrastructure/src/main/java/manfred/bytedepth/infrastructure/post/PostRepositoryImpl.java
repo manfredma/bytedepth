@@ -113,6 +113,37 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
+    public List<Post> findPage(int page, int size, String title, String status, Long seriesId, Long categoryId) {
+        Page<PostDO> pageParam = new Page<>(page, size);
+        return postMapper.selectPage(pageParam, filteredWrapper(title, status, seriesId, categoryId))
+                .getRecords().stream().map(this::toEntity).collect(Collectors.toList());
+    }
+
+    @Override
+    public long countFiltered(String title, String status, Long seriesId, Long categoryId) {
+        return postMapper.selectCount(filteredWrapper(title, status, seriesId, categoryId));
+    }
+
+    private LambdaQueryWrapper<PostDO> filteredWrapper(String title, String status, Long seriesId, Long categoryId) {
+        LambdaQueryWrapper<PostDO> w = new LambdaQueryWrapper<PostDO>()
+                .ne(PostDO::getStatus, PostStatus.DELETED.name())
+                .orderByDesc(PostDO::getCreatedAt);
+        if (title != null && !title.isBlank()) {
+            w.like(PostDO::getTitle, title.trim());
+        }
+        if (status != null && !status.isBlank()) {
+            w.eq(PostDO::getStatus, status);
+        }
+        if (seriesId != null) {
+            w.eq(PostDO::getSeriesId, seriesId);
+        }
+        if (categoryId != null) {
+            w.eq(PostDO::getCategoryId, categoryId);
+        }
+        return w;
+    }
+
+    @Override
     public Optional<Post> findPrevPublished(Long id) {
         return Optional.ofNullable(postMapper.findPrevPublished(id)).map(this::toEntity);
     }
