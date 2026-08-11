@@ -30,6 +30,7 @@
         <commonmark.version>0.30.0</commonmark.version>
         <bucket4j.version>8.19.0</bucket4j.version>
         <jacoco.version>0.8.15</jacoco.version>
+        <mockito.version>5.23.0</mockito.version>
         <archunit.version>1.5.0</archunit.version>
         <coverage.data-file>${maven.multiModuleProjectDirectory}/bytedepth-start/target/jacoco-merged.exec</coverage.data-file>
         <coverage.check.skip>true</coverage.check.skip>
@@ -149,6 +150,15 @@
                         <targetJdk>25</targetJdk>
                         <failOnViolation>true</failOnViolation>
                         <printFailingErrors>true</printFailingErrors>
+                        <linkXRef>false</linkXRef>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.5</version>
+                    <configuration>
+                        <argLine>${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
                     </configuration>
                 </plugin>
             </plugins>

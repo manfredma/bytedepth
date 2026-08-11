@@ -9,28 +9,29 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Iterator;
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RedisOpsAdapterTest {
 
     @Test
-    void inspectReadsByteInfoAndCountsOnlyConfiguredKeyPrefixes() {
+    void inspectReadsInfoAndCountsOnlyConfiguredKeyPrefixes() {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
-        RedisConnection connection = mock(RedisConnection.class);
-        when(connection.execute("INFO")).thenReturn(("used_memory_human:1.5M\nconnected_clients:2\n"
-                + "keyspace_hits:3\nkeyspace_misses:4\n").getBytes(StandardCharsets.UTF_8));
-        when(connection.scan(any(ScanOptions.class))).thenAnswer(invocation -> {
+        RedisConnection connection = mock(RedisConnection.class, RETURNS_DEEP_STUBS);
+        Properties properties = properties("1.5M", "2", "3", "4");
+        when(connection.serverCommands().info()).thenReturn(properties);
+        when(connection.keyCommands().scan(any(ScanOptions.class))).thenAnswer(invocation -> {
             ScanOptions options = invocation.getArgument(0);
-            return new ListCursor(options.getPattern().startsWith(RedisOpsAdapter.POST_VIEW_PREFIX)
+            return cursor(options.getPattern().startsWith(RedisOpsAdapter.POST_VIEW_PREFIX)
                     ? List.of("pv:post:1".getBytes(), "pv:post:2".getBytes())
                     : List.of("bytedepth:session:a".getBytes()));
         });
@@ -47,11 +48,12 @@ class RedisOpsAdapterTest {
     }
 
     @Test
-    void inspectConvertsNonByteInfoToStringAndUsesDefaultsForMissingFields() {
+    void inspectUsesDefaultsForMissingInfoFields() {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
-        RedisConnection connection = mock(RedisConnection.class);
-        when(connection.execute("INFO")).thenReturn("used_memory_human:2M\nconnected_clients:7\n");
-        when(connection.scan(any(ScanOptions.class))).thenReturn(new ListCursor(List.of()));
+        RedisConnection connection = mock(RedisConnection.class, RETURNS_DEEP_STUBS);
+        Cursor<byte[]> emptyCursor = cursor(List.of());
+        when(connection.serverCommands().info()).thenReturn(properties("2M", "7", null, null));
+        when(connection.keyCommands().scan(any(ScanOptions.class))).thenReturn(emptyCursor);
         executeCallbacksAgainst(template, connection);
 
         OpsRedisStatusDTO status = new RedisOpsAdapter(template).inspect();
@@ -63,11 +65,12 @@ class RedisOpsAdapterTest {
     }
 
     @Test
-    void inspectTreatsNullInfoAsEmpty() {
+    void inspectTreatsEmptyInfoAsEmpty() {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
-        RedisConnection connection = mock(RedisConnection.class);
-        when(connection.execute("INFO")).thenReturn(null);
-        when(connection.scan(any(ScanOptions.class))).thenReturn(new ListCursor(List.of()));
+        RedisConnection connection = mock(RedisConnection.class, RETURNS_DEEP_STUBS);
+        Cursor<byte[]> emptyCursor = cursor(List.of());
+        when(connection.serverCommands().info()).thenReturn(new Properties());
+        when(connection.keyCommands().scan(any(ScanOptions.class))).thenReturn(emptyCursor);
         executeCallbacksAgainst(template, connection);
 
         OpsRedisStatusDTO status = new RedisOpsAdapter(template).inspect();
@@ -78,36 +81,42 @@ class RedisOpsAdapterTest {
 
     @Test
     void scanCountBuildsTheExpectedScanPattern() {
-        RedisConnection connection = mock(RedisConnection.class);
-        when(connection.scan(any(ScanOptions.class))).thenReturn(new ListCursor(List.of(
-                "pv:post:1".getBytes(), "pv:post:2".getBytes(), "pv:post:3".getBytes())));
+        RedisConnection connection = mock(RedisConnection.class, RETURNS_DEEP_STUBS);
+        Cursor<byte[]> scanCursor = cursor(List.of(
+                "pv:post:1".getBytes(), "pv:post:2".getBytes(), "pv:post:3".getBytes()));
+        when(connection.keyCommands().scan(any(ScanOptions.class))).thenReturn(scanCursor);
 
         assertEquals(3, RedisOpsAdapter.scanCount(connection, RedisOpsAdapter.POST_VIEW_PREFIX));
         ArgumentCaptor<ScanOptions> options = ArgumentCaptor.forClass(ScanOptions.class);
-        verify(connection).scan(options.capture());
+        verify(connection.keyCommands()).scan(options.capture());
         assertEquals("pv:post:*", options.getValue().getPattern());
     }
 
+    @SuppressWarnings("unchecked")
     private static void executeCallbacksAgainst(StringRedisTemplate template, RedisConnection connection) {
         doAnswer(invocation -> ((RedisCallback<?>) invocation.getArgument(0)).doInRedis(connection))
                 .when(template).execute(any(RedisCallback.class));
     }
 
-    private static final class ListCursor implements Cursor<byte[]> {
-        private final Iterator<byte[]> iterator;
-        private long position;
-        private boolean closed;
-
-        private ListCursor(List<byte[]> values) {
-            this.iterator = values.iterator();
+    private static Properties properties(String memory, String clients, String hits, String misses) {
+        Properties properties = new Properties();
+        properties.setProperty("used_memory_human", memory);
+        properties.setProperty("connected_clients", clients);
+        if (hits != null) {
+            properties.setProperty("keyspace_hits", hits);
         }
+        if (misses != null) {
+            properties.setProperty("keyspace_misses", misses);
+        }
+        return properties;
+    }
 
-        @Override public org.springframework.data.redis.core.Cursor.CursorId getId() { return org.springframework.data.redis.core.Cursor.CursorId.initial(); }
-        @Override public long getCursorId() { return 0; }
-        @Override public boolean isClosed() { return closed; }
-        @Override public long getPosition() { return position; }
-        @Override public boolean hasNext() { return iterator.hasNext(); }
-        @Override public byte[] next() { position++; return iterator.next(); }
-        @Override public void close() { closed = true; }
+    @SuppressWarnings("unchecked")
+    private static Cursor<byte[]> cursor(List<byte[]> values) {
+        Cursor<byte[]> cursor = mock(Cursor.class);
+        Iterator<byte[]> iterator = values.iterator();
+        doAnswer(invocation -> iterator.hasNext()).when(cursor).hasNext();
+        doAnswer(invocation -> iterator.next()).when(cursor).next();
+        return cursor;
     }
 }

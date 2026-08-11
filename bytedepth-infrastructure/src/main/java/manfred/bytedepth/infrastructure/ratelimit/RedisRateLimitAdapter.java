@@ -39,7 +39,9 @@ public class RedisRateLimitAdapter implements RateLimitPort {
 
     @Override
     public RateLimitDecision tryConsume(String ruleName, long capacity, Duration period, String identity) {
-        BucketConfiguration configuration = BucketConfiguration.builder().addLimit(Bandwidth.simple(capacity, period)).build();
+        BucketConfiguration configuration = BucketConfiguration.builder()
+                .addLimit(Bandwidth.builder().capacity(capacity).refillGreedy(capacity, period).build())
+                .build();
         ConsumptionProbe probe = manager().builder().build(redisKey(ruleName, identity), () -> configuration)
                 .tryConsumeAndReturnRemaining(1);
         return probe.isConsumed() ? RateLimitDecision.permit() : RateLimitDecision.rejected(probe.getNanosToWaitForRefill());

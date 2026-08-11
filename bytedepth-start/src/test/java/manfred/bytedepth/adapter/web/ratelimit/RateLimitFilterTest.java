@@ -20,6 +20,7 @@ import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -140,10 +141,36 @@ class RateLimitFilterTest {
         MockHttpServletRequest request = post("/posts/example/comments", "203.0.113.13");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        filter.doFilter(request, response, filterChain);
+        ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(RateLimitFilter.class);
+        boolean originalAdditivity = logger.isAdditive();
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> events = new ch.qos.logback.core.read.ListAppender<>();
+        logger.setAdditive(false);
+        logger.addAppender(events);
+        events.start();
+        try {
+            filter.doFilter(request, response, filterChain);
+        } finally {
+            logger.detachAppender(events);
+            logger.setAdditive(originalAdditivity);
+        }
 
         verify(filterChain).doFilter(request, response);
         assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(events.list).singleElement().satisfies(event ->
+                assertThat(event.getFormattedMessage()).contains("Redis 限流不可用"));
+    }
+
+    @Test
+    void skipsAProtectedRouteWhenItsRuleIsNotConfigured() throws Exception {
+        RateLimitProperties properties = new RateLimitProperties();
+        properties.setLoginIp(null);
+        filter = new RateLimitFilter(rateLimitPort, properties, mock(ResourceLoader.class));
+
+        MockHttpServletRequest request = post("/login", "203.0.113.13");
+        filter.doFilter(request, new MockHttpServletResponse(), filterChain);
+
+        verify(filterChain).doFilter(any(), any());
+        verify(rateLimitPort, never()).tryConsume(any(), anyLong(), any(), any());
     }
 
     @Test

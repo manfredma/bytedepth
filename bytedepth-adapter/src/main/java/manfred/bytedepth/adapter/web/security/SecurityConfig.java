@@ -47,7 +47,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
     public DaoAuthenticationProvider authenticationProvider(
             UserDetailsService userDetailsService, PasswordEncoder encoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
@@ -59,6 +58,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            PersistentTokenRepository persistentTokenRepository,
                                            UserDetailsService userDetailsService,
+                                           PasswordEncoder passwordEncoder,
                                            RateLimitFilter rateLimitFilter,
                                            @Value("${BYTEDEPTH_REMEMBER_ME_KEY:bytedepth-local-remember-me-key}") String rememberMeKey,
                                            @Value("${BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE:false}") boolean rememberMeCookieSecure) throws Exception {
@@ -76,6 +76,7 @@ public class SecurityConfig {
         // XSRF-TOKEN cookie 却不重新下发，导致后续 POST 表单（退出等）403。session 仓库
         // 把 token 存 session、提交时从 session 校验，不依赖 cookie 下发，更可靠。
         http
+            .authenticationProvider(authenticationProvider(userDetailsService, passwordEncoder))
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers("/admin/search/**")

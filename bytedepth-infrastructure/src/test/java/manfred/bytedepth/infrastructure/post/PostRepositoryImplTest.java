@@ -106,21 +106,21 @@ class PostRepositoryImplTest {
     void findPublished_mapsRecordsToEntities() {
         Page<PostDO> page = new Page<>(1, 10);
         page.setRecords(List.of(postRow(1L), postRow(2L)));
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
 
         var posts = repository.findPublished(1, 10);
 
         assertEquals(2, posts.size());
         assertEquals(1L, posts.get(0).getId());
         assertEquals(2L, posts.get(1).getId());
-        verify(postMapper).selectPage(any(Page.class), any());
+        verify(postMapper).selectPage(any(), any());
     }
 
     @Test
     void findPublished_emptyPageReturnsEmptyList() {
         Page<PostDO> page = new Page<>(1, 10);
         page.setRecords(List.of());
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
 
         assertTrue(repository.findPublished(1, 10).isEmpty());
     }
@@ -245,20 +245,20 @@ class PostRepositoryImplTest {
     void findPublishedByCategory_mapsResults() {
         Page<PostDO> page = new Page<>(1, 10);
         page.setRecords(List.of(postRow(1L)));
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
 
         var posts = repository.findPublishedByCategory(2L, 1, 10);
 
         assertEquals(1, posts.size());
         assertEquals(1L, posts.get(0).getId());
-        verify(postMapper).selectPage(any(Page.class), any());
+        verify(postMapper).selectPage(any(), any());
     }
 
     @Test
     void findPublishedByCategory_emptyResultReturnsEmpty() {
         Page<PostDO> page = new Page<>(1, 10);
         page.setRecords(List.of());
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
 
         assertTrue(repository.findPublishedByCategory(2L, 1, 10).isEmpty());
     }
@@ -279,7 +279,7 @@ class PostRepositoryImplTest {
     void findPage_mapsRecordsToEntities() {
         Page<PostDO> page = new Page<>(1, 20);
         page.setRecords(List.of(postRow(1L), postRow(2L)));
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
 
         var posts = repository.findPage(1, 20);
 
@@ -292,7 +292,7 @@ class PostRepositoryImplTest {
     void findPage_emptyResultReturnsEmpty() {
         Page<PostDO> page = new Page<>(1, 20);
         page.setRecords(List.of());
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
 
         assertTrue(repository.findPage(1, 20).isEmpty());
     }
@@ -301,13 +301,13 @@ class PostRepositoryImplTest {
     void filteredPageAndCount_supportAllOptionalFiltersAndTheirAbsence() {
         Page<PostDO> page = new Page<>(1, 20);
         page.setRecords(List.of(postRow(8L)));
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
         when(postMapper.selectCount(any())).thenReturn(12L);
 
         assertEquals(8L, repository.findPage(1, 20, " title ", "PUBLISHED", 3L, 2L).getFirst().getId());
         assertEquals(12L, repository.countFiltered(" ", "", null, null));
         assertEquals(12L, repository.countFiltered(null, null, null, null));
-        verify(postMapper).selectPage(any(Page.class), any());
+        verify(postMapper).selectPage(any(), any());
         verify(postMapper, Mockito.times(2)).selectCount(any());
     }
 
@@ -387,20 +387,20 @@ class PostRepositoryImplTest {
     void findPublishedByAuthorId_mapsResults() {
         Page<PostDO> page = new Page<>(1, 10);
         page.setRecords(List.of(postRow(1L)));
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
 
         var posts = repository.findPublishedByAuthorId(7L, 1, 10);
 
         assertEquals(1, posts.size());
         assertEquals(1L, posts.get(0).getId());
-        verify(postMapper).selectPage(any(Page.class), any());
+        verify(postMapper).selectPage(any(), any());
     }
 
     @Test
     void findPublishedByAuthorId_emptyResultReturnsEmpty() {
         Page<PostDO> page = new Page<>(1, 10);
         page.setRecords(List.of());
-        when(postMapper.selectPage(any(Page.class), any())).thenReturn(page);
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
 
         assertTrue(repository.findPublishedByAuthorId(7L, 1, 10).isEmpty());
     }

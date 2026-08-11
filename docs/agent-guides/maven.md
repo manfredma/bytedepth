@@ -24,6 +24,8 @@ JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn test -Dsort.skip=true
 bash scripts/verify-changed-coverage.sh
 ```
 
+必须在每次生产 Java 改动完成后、更新发布记录和运行 Release Plugin 前独立执行该脚本；不得把首次执行留到发布流程。脚本默认依据最近正式 Tag 自动识别变更类，并将工作区中尚未提交的生产 Java 改动一并纳入校验。需要清理历史覆盖债务时可显式执行 `COVERAGE_INCLUDES='**' bash scripts/verify-changed-coverage.sh`。
+
 聚合 XML 和 HTML 报告位于 `bytedepth-start/target/site/jacoco-aggregate/`；门禁要求每个生产类的行、分支、方法均为零遗漏。
 
 不得新增 Maven 模块；如确有必要，必须先获得项目所有者的明确同意。

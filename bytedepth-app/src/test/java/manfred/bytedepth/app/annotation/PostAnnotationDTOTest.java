@@ -27,6 +27,11 @@ class PostAnnotationDTOTest {
         assertThat(dto.selectedText()).isEqualTo("文本");
     }
 
+    @Test
+    void from_withoutAuthenticatedOrAnonymousOwnerDoesNotExposeOwnership() {
+        assertThat(PostAnnotationDTO.from(annotation(null, null), null, null).ownedByCurrentVisitor()).isFalse();
+    }
+
     private static PostAnnotation annotation(Long userId, String tokenHash) {
         return new PostAnnotation(1L, 9L, userId, tokenHash, "文本", "评论", "yellow", AnnotationVisibility.PUBLIC,
                 0, 2, LocalDateTime.of(2026, 8, 11, 18, 0));

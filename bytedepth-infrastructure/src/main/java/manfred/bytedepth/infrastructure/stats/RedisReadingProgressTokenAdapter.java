@@ -26,7 +26,7 @@ public class RedisReadingProgressTokenAdapter implements ReadingProgressTokenPor
         try {
             redisTemplate.opsForValue().set(key(event.visitToken()), event.postId().toString(), TOKEN_TTL);
         } catch (RuntimeException e) {
-            log.warn("阅读进度令牌签发失败 postId={}", event.postId(), e);
+            log.info("阅读进度令牌签发暂不可用 postId={}: {}", event.postId(), e.getMessage());
         }
     }
 
@@ -35,7 +35,7 @@ public class RedisReadingProgressTokenAdapter implements ReadingProgressTokenPor
         try {
             return postId.toString().equals(redisTemplate.opsForValue().get(key(token)));
         } catch (RuntimeException e) {
-            log.warn("阅读进度令牌校验失败 postId={}", postId, e);
+            log.info("阅读进度令牌校验暂不可用 postId={}: {}", postId, e.getMessage());
             return false;
         }
     }

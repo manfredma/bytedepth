@@ -9,8 +9,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Properties;
 
 @Component
 public class RedisOpsAdapter implements OpsRedisPort {
@@ -26,7 +26,7 @@ public class RedisOpsAdapter implements OpsRedisPort {
 
     @Override
     public OpsRedisStatusDTO inspect() {
-        Map<String, String> info = RedisInfoParser.parse(redisTemplate.execute(this::redisInfo));
+        Map<String, String> info = redisTemplate.execute(this::redisInfo);
         return new OpsRedisStatusDTO(
                 true,
                 info.getOrDefault("used_memory_human", "0B"),
@@ -37,12 +37,11 @@ public class RedisOpsAdapter implements OpsRedisPort {
                 scanCount(SESSION_PREFIX));
     }
 
-    private String redisInfo(RedisConnection connection) {
-        Object result = connection.execute("INFO");
-        if (result instanceof byte[] bytes) {
-            return new String(bytes, StandardCharsets.UTF_8);
-        }
-        return result == null ? "" : result.toString();
+    private Map<String, String> redisInfo(RedisConnection connection) {
+        Properties properties = connection.serverCommands().info();
+        return properties.entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        entry -> entry.getKey().toString(), entry -> entry.getValue().toString()));
     }
 
     long scanCount(String prefix) {
@@ -51,7 +50,8 @@ public class RedisOpsAdapter implements OpsRedisPort {
 
     static long scanCount(RedisConnection connection, String prefix) {
         long count = 0;
-        try (Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match(prefix + "*").count(500).build())) {
+        try (Cursor<byte[]> cursor = connection.keyCommands()
+                .scan(ScanOptions.scanOptions().match(prefix + "*").count(500).build())) {
             while (cursor.hasNext()) {
                 cursor.next();
                 count++;

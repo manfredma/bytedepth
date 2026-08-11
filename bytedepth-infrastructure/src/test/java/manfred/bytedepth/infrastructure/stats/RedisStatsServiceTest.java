@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,7 +29,8 @@ class RedisStatsServiceTest {
         @SuppressWarnings("unchecked")
         ValueOperations<String, String> values = mock(ValueOperations.class);
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
-        when(redisTemplate.scan(any(ScanOptions.class))).thenReturn(new ListCursor(List.of("pv:post:12", "pv:post:13")));
+        Cursor<String> scanCursor = cursor(List.of("pv:post:12", "pv:post:13"));
+        when(redisTemplate.scan(any(ScanOptions.class))).thenReturn(scanCursor);
         when(redisTemplate.opsForValue()).thenReturn(values);
         when(values.get("pv:post:12")).thenReturn("42");
         when(values.get("pv:post:13")).thenReturn(null);
@@ -90,49 +92,12 @@ class RedisStatsServiceTest {
         assertEquals(12345L, count);
     }
 
-    private static final class ListCursor implements Cursor<String> {
-        private final Iterator<String> iterator;
-        private long position;
-        private boolean closed;
-
-        private ListCursor(List<String> values) {
-            this.iterator = values.iterator();
-        }
-
-        @Override
-        public org.springframework.data.redis.core.Cursor.CursorId getId() {
-            return org.springframework.data.redis.core.Cursor.CursorId.initial();
-        }
-
-        @Override
-        public long getCursorId() {
-            return 0;
-        }
-
-        @Override
-        public boolean isClosed() {
-            return closed;
-        }
-
-        @Override
-        public long getPosition() {
-            return position;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return iterator.hasNext();
-        }
-
-        @Override
-        public String next() {
-            position++;
-            return iterator.next();
-        }
-
-        @Override
-        public void close() {
-            closed = true;
-        }
+    @SuppressWarnings("unchecked")
+    private static Cursor<String> cursor(List<String> values) {
+        Cursor<String> cursor = mock(Cursor.class);
+        Iterator<String> iterator = values.iterator();
+        doAnswer(invocation -> iterator.hasNext()).when(cursor).hasNext();
+        doAnswer(invocation -> iterator.next()).when(cursor).next();
+        return cursor;
     }
 }

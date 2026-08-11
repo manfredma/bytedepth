@@ -9,6 +9,12 @@ mkdir -p "$TEMP_ROOT/scripts" "$TEMP_ROOT/docs/releases" "$TEMP_ROOT/java/bin" "
 cp "$SOURCE_ROOT/scripts/prepare-release.sh" "$TEMP_ROOT/scripts/prepare-release.sh"
 printf '## [v1.2.3]\n' > "$TEMP_ROOT/docs/releases/CHANGELOG.md"
 
+cat > "$TEMP_ROOT/scripts/verify-changed-coverage.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'coverage\n' >> "$RELEASE_TEST_LOG"
+EOF
+chmod +x "$TEMP_ROOT/scripts/verify-changed-coverage.sh"
+
 cat > "$TEMP_ROOT/bin/git" <<'EOF'
 #!/usr/bin/env bash
 printf 'git %s\n' "$*" >> "$RELEASE_TEST_LOG"
@@ -23,18 +29,17 @@ chmod +x "$TEMP_ROOT/bin/git"
 
 cat > "$TEMP_ROOT/java/bin/mvn" <<'EOF'
 #!/usr/bin/env bash
-printf 'mvn %s\n' "$*" >> "$RELEASE_TEST_LOG"
+printf 'mvn release_mode=%s %s\n' "${BYTEDEPTH_RELEASE_MODE:-0}" "$*" >> "$RELEASE_TEST_LOG"
 EOF
 chmod +x "$TEMP_ROOT/java/bin/mvn"
 
 RELEASE_TEST_LOG="$TEMP_ROOT/release.log" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
     "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT
 
-grep -Fqx 'mvn clean install -DskipTests -Dsort.skip=true' "$TEMP_ROOT/release.log"
-grep -Fqx 'mvn test -Dsort.skip=true' "$TEMP_ROOT/release.log"
-grep -Fqx 'mvn -B release:prepare -DreleaseVersion=1.2.3 -DdevelopmentVersion=1.2.4-SNAPSHOT' "$TEMP_ROOT/release.log"
+grep -Fqx 'coverage' "$TEMP_ROOT/release.log"
+grep -Fqx 'mvn release_mode=1 -B release:prepare -DskipTests -Darguments=-DskipTests -DreleaseVersion=1.2.3 -DdevelopmentVersion=1.2.4-SNAPSHOT' "$TEMP_ROOT/release.log"
 grep -Fqx 'git push origin main --follow-tags' "$TEMP_ROOT/release.log"
-grep -Fqx 'mvn -B release:clean -Dsort.skip=true' "$TEMP_ROOT/release.log"
+grep -Fqx 'mvn release_mode=0 -B release:clean -Dsort.skip=true' "$TEMP_ROOT/release.log"
 
 if RELEASE_TEST_LOG="$TEMP_ROOT/invalid.log" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
     "$TEMP_ROOT/scripts/prepare-release.sh" >/dev/null 2>&1; then

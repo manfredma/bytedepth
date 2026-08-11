@@ -53,7 +53,7 @@ class RedisRateLimitAdapterTest {
     @Test
     void managerReturnsTheInstancePublishedByAConcurrentInitializer() throws Exception {
         RedisRateLimitAdapter adapter = new RedisRateLimitAdapter(new RateLimitRedisProperties());
-        ProxyManager<byte[]> concurrentlyInitialized = mock(ProxyManager.class);
+        ProxyManager<byte[]> concurrentlyInitialized = proxyManagerMock();
         AtomicReference<Thread> caller = new AtomicReference<>();
         ExecutorService executor = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "rate-limit-manager-caller");
@@ -97,6 +97,11 @@ class RedisRateLimitAdapterTest {
         Method manager = RedisRateLimitAdapter.class.getDeclaredMethod("manager");
         manager.setAccessible(true);
         return (ProxyManager<byte[]>) manager.invoke(adapter);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static ProxyManager<byte[]> proxyManagerMock() {
+        return mock(ProxyManager.class);
     }
 
     private static String sha256(RedisRateLimitAdapter adapter, String value) throws Exception {

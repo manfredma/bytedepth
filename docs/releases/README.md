@@ -16,6 +16,7 @@
 ```text
 main（下一版本 -SNAPSHOT）
   → 实现与测试
+  → `bash scripts/verify-changed-coverage.sh`（相对最近正式 Tag 的生产 Java 变更必须行、分支、方法 100%，且 Maven 输出零 WARNING）
   → 更新 CHANGELOG 的 Unreleased
   → 发布前验证（全量测试、覆盖率、文档）
   → 发布提交（去掉 -SNAPSHOT）
@@ -32,9 +33,9 @@ main（下一版本 -SNAPSHOT）
 bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
 ```
 
-脚本内的 Maven Release Plugin 会将全部 Maven 模块从 `X.Y.Z-SNAPSHOT` 改为 `X.Y.Z`、创建 `vX.Y.Z` annotated Tag，再将 `main` 推进到下一 `-SNAPSHOT`。`release:prepare` 会在本机生成 `release.properties` 和各模块的 `pom.xml.releaseBackup`，它们只用于插件的恢复流程，绝不提交；脚本退出时会执行 `release:clean`。若生产 Java 有改动，必须设置 `COVERAGE_INCLUDES`，以执行变更覆盖率门禁。禁止绕过脚本手工编辑多个 POM 或创建轻量 Tag。
+脚本内的 Maven Release Plugin 会将全部 Maven 模块从 `X.Y.Z-SNAPSHOT` 改为 `X.Y.Z`、创建 `vX.Y.Z` annotated Tag，再将 `main` 推进到下一 `-SNAPSHOT`。`release:prepare` 会在本机生成 `release.properties` 和各模块的 `pom.xml.releaseBackup`，它们只用于插件的恢复流程，绝不提交；脚本退出时会执行 `release:clean`。覆盖率门禁会自动识别相对最近正式 Tag 的生产 Java 变更；`COVERAGE_INCLUDES='**'` 仅用于清理历史覆盖债务。禁止绕过脚本手工编辑多个 POM 或创建轻量 Tag。
 
-发布前的全量测试、缓存刷新和变更覆盖率仍须严格按 [Maven 指南](../agent-guides/maven.md) 执行。下一开发版本必须依据版本选择表显式指定；例如修复发布 `1.0.1` 后通常为 `1.0.2-SNAPSHOT`，新增向后兼容功能后通常为 `1.1.0-SNAPSHOT`，不得无意跳号。
+发布前的全量测试、缓存刷新和变更覆盖率仍须严格按 [Maven 指南](../agent-guides/maven.md) 执行。`verify-changed-coverage.sh` 默认以最近正式 Tag 为基线，同时包含未暂存与暂存的生产 Java 改动；若 Maven 输出任何 WARNING 或覆盖率不是 100%，会直接失败。该脚本必须在开发完成时独立执行，发布脚本只作防御性复核。下一开发版本必须依据版本选择表显式指定；例如修复发布 `1.0.1` 后通常为 `1.0.2-SNAPSHOT`，新增向后兼容功能后通常为 `1.1.0-SNAPSHOT`，不得无意跳号。
 
 ### 中断与恢复
 

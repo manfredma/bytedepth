@@ -18,6 +18,8 @@ import manfred.bytedepth.adapter.web.util.SecurityUtils;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import manfred.bytedepth.adapter.web.util.WebUtils;
 import manfred.bytedepth.app.annotation.ListAnnotationsQryExe;
+import manfred.bytedepth.domain.annotation.AnnotationVisibility;
+import manfred.bytedepth.domain.annotation.PostAnnotation;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
@@ -52,9 +54,11 @@ class PostControllerCoverageTest {
     private final ListCategoriesQryExe categories = mock(ListCategoriesQryExe.class);
     private final PostRepository posts = mock(PostRepository.class);
     private final ListTagsQryExe tags = mock(ListTagsQryExe.class);
+    private final ListAnnotationsQryExe annotations = mock(ListAnnotationsQryExe.class);
+    private final AnnotationVisitorIdentity annotationVisitorIdentity = mock(AnnotationVisitorIdentity.class);
     private final VisitRequestFilter visitFilter = mock(VisitRequestFilter.class);
     private final PostController controller = new PostController(listPosts, getPost, createPost, publishPost,
-            mock(MarkdownRenderer.class), mock(ListCommentsQryExe.class), mock(ListAnnotationsQryExe.class), mock(AnnotationVisitorIdentity.class), tags, categories,
+            mock(MarkdownRenderer.class), mock(ListCommentsQryExe.class), annotations, annotationVisitorIdentity, tags, categories,
             mock(PostViewCounter.class), posts, mock(SeriesRepository.class), mock(GetSeriesPostsQryExe.class),
             mock(GetPostRatingQryExe.class), visitFilter, mock(ApplicationEventPublisher.class));
 
@@ -163,6 +167,23 @@ class PostControllerCoverageTest {
         assertThatThrownBy(() -> controller.detail("404", new ExtendedModelMap(), request()))
                 .isInstanceOf(java.util.NoSuchElementException.class)
                 .hasMessageContaining("404");
+    }
+
+    @Test
+    void detailMapsAnnotationsForTheCurrentReader() {
+        PostDTO published = dto(11L, "annotated", "PUBLISHED", 7L);
+        when(getPost.executeBySlug("annotated")).thenReturn(published);
+        when(posts.findById(11L)).thenReturn(Optional.of(post(11L, "annotated", PostStatus.PUBLISHED, 7L)));
+        when(posts.findPrevPublished(11L)).thenReturn(Optional.empty());
+        when(posts.findNextPublished(11L)).thenReturn(Optional.empty());
+        when(visitFilter.shouldRecord(any())).thenReturn(false);
+        when(annotations.execute(11L, null, null)).thenReturn(List.of(new PostAnnotation(5L, 11L, null,
+                "visitor", "选中文本", "公开评论", "yellow", AnnotationVisibility.PUBLIC, 0, 4, LocalDateTime.now())));
+
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        assertThat(controller.detail("annotated", model, request())).isEqualTo("public/posts/detail");
+        assertThat((List<?>) model.get("annotations")).hasSize(1);
     }
 
     @Test
