@@ -2,6 +2,7 @@ package manfred.bytedepth.adapter.web.portal;
 
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.search.SearchPostsQryExe;
+import manfred.bytedepth.adapter.web.util.SearchHighlight;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class SearchController {
 
     private final SearchPostsQryExe searchPostsQryExe;
+    private final SearchHighlight searchHighlight;
 
     @GetMapping
     public String search(@RequestParam(defaultValue = "") String q,
@@ -28,6 +30,7 @@ public class SearchController {
         model.addAttribute("hasPrev", result.hasPrev());
         model.addAttribute("hasNext", result.hasNext());
         model.addAttribute("pageSize", 10);
+        model.addAttribute("searchHighlight", searchHighlight);
         return "public/search";
     }
 }
