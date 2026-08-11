@@ -226,6 +226,7 @@
         var left = Math.max(8, Math.min(window.innerWidth - w - 8, rect.left + rect.width / 2 - w / 2));
         var top = rect.top - el.offsetHeight - 8;
         if (top < 8) top = rect.bottom + 8;
+        top = Math.max(8, Math.min(window.innerHeight - el.offsetHeight - 8, top));
         el.style.left = left + 'px';
         el.style.top = top + 'px';
     }
