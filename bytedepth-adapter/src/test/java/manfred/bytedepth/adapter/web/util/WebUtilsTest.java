@@ -50,6 +50,7 @@ class WebUtilsTest {
     void isPrivateIp_privateAddresses_returnsTrue() {
         assertThat(WebUtils.isPrivateIp("10.1.2.3")).isTrue();
         assertThat(WebUtils.isPrivateIp("172.16.0.1")).isTrue();
+        assertThat(WebUtils.isPrivateIp("172.31.255.255")).isTrue();
         assertThat(WebUtils.isPrivateIp("192.168.1.1")).isTrue();
         assertThat(WebUtils.isPrivateIp("127.0.0.1")).isTrue();
         assertThat(WebUtils.isPrivateIp("::1")).isTrue();
@@ -59,6 +60,7 @@ class WebUtilsTest {
     @Test
     void isPrivateIp_publicAddress_returnsFalse() {
         assertThat(WebUtils.isPrivateIp("203.0.113.5")).isFalse();
+        assertThat(WebUtils.isPrivateIp("172.32.0.1")).isFalse();
         assertThat(WebUtils.isPrivateIp("8.8.8.8")).isFalse();
     }
 
