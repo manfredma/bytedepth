@@ -8,6 +8,8 @@ describe('annotation sidebar', () => {
   beforeEach(() => {
     localStorage.clear();
     window.matchMedia = jest.fn(() => ({ matches: false }));
+    Range.prototype.getClientRects = () => [{left: 10, right: 90, top: 20, bottom: 40, width: 80, height: 20}];
+    Range.prototype.getBoundingClientRect = () => ({left: 10, right: 90, top: 20, bottom: 40, width: 80, height: 20});
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
     window.__ANNOTATIONS__ = [];
     window.fetch = jest.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 1, selectedText: '可批注', color: 'yellow', visibility: 'PRIVATE', startOffset: 0, endOffset: 3, ownedByCurrentVisitor: true }) }));
@@ -143,11 +145,11 @@ describe('annotation sidebar', () => {
     expect(document.querySelectorAll('.bd-annotation-feed-item')).toHaveLength(2);
     expect(document.querySelector('mark[data-id="1"]').classList.contains('bd-annotation-has-comment')).toBe(true);
     expect(document.querySelector('mark[data-id="2"]').classList.contains('bd-annotation-has-comment')).toBe(false);
-    expect(document.querySelector('mark[data-id="1"] .bd-annotation-comment-trigger').textContent).toBe('评注');
+    expect(document.querySelector('.bd-annotation-comment-outline .bd-annotation-comment-trigger').textContent).toBe('评注');
     expect(document.querySelectorAll('.bd-annotation-comment-trigger')).toHaveLength(1);
 
     document.querySelector('.bd-annotation-sidebar-close').click();
-    const commentTrigger = document.querySelector('mark[data-id="1"] .bd-annotation-comment-trigger');
+    const commentTrigger = document.querySelector('.bd-annotation-comment-outline .bd-annotation-comment-trigger');
     commentTrigger.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     commentTrigger.click();
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);

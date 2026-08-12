@@ -9,6 +9,10 @@
     if (!content || !sidebar || !toggle) {
         return;
     }
+    const commentOutlineLayer = document.createElement('div');
+    commentOutlineLayer.className = 'bd-annotation-comment-outline-layer';
+    commentOutlineLayer.setAttribute('aria-hidden', 'true');
+    article.appendChild(commentOutlineLayer);
 
     let annotations = window.__ANNOTATIONS__ || [];
     let selected = null;
@@ -126,9 +130,9 @@
     }
 
     function unwrapMarks() {
+        commentOutlineLayer.replaceChildren();
         content.querySelectorAll('mark.bd-annotation-highlight').forEach(mark => {
             const parent = mark.parentNode;
-            mark.querySelector('.bd-annotation-comment-trigger')?.remove();
             while (mark.firstChild) {
                 parent.insertBefore(mark.firstChild, mark);
             }
@@ -169,6 +173,20 @@
     }
 
     function restoreSelection(data) {
+        const range = rangeForOffsets(data);
+        if (!range) {
+            return;
+        }
+        try {
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        } catch {
+            // 正文结构变化后无法精确恢复选择时，不影响已保存的批注。
+        }
+    }
+
+    function rangeForOffsets(data) {
         const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
         let offset = 0;
         let node;
@@ -190,18 +208,66 @@
             offset += length;
         }
         if (!startNode || !endNode) {
-            return;
+            return null;
         }
         try {
             const range = document.createRange();
             range.setStart(startNode, Math.max(0, start));
             range.setEnd(endNode, Math.max(start, Math.min(end, endNode.textContent.length)));
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(range);
+            return range;
         } catch {
-            // 正文结构变化后无法精确恢复选择时，不影响已保存的批注。
+            return null;
         }
+    }
+
+    function commentRows(range) {
+        const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 0 && rect.height > 0);
+        if (!rects.length) {
+            const fallback = range.getBoundingClientRect();
+            if (fallback.width > 0 && fallback.height > 0) {
+                rects.push(fallback);
+            }
+        }
+        return rects.sort((left, right) => left.top - right.top || left.left - right.left)
+            .reduce((rows, rect) => {
+                const row = rows.at(-1);
+                if (row && Math.abs(row.top - rect.top) < 2 && Math.abs(row.bottom - rect.bottom) < 2) {
+                    row.left = Math.min(row.left, rect.left);
+                    row.right = Math.max(row.right, rect.right);
+                    return rows;
+                }
+                rows.push({left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom});
+                return rows;
+            }, []);
+    }
+
+    function renderCommentOutlines() {
+        commentOutlineLayer.replaceChildren();
+        const renderedRanges = new Set();
+        annotations.filter(hasComment).forEach(annotation => {
+            const rangeKey = `${annotation.startOffset}:${annotation.endOffset}`;
+            if (renderedRanges.has(rangeKey)) {
+                return;
+            }
+            renderedRanges.add(rangeKey);
+            const range = rangeForOffsets(annotation);
+            if (!range) {
+                return;
+            }
+            commentRows(range).forEach((row, index) => {
+                const outline = document.createElement('div');
+                outline.className = `bd-annotation-comment-outline bd-annotation-color-${annotation.color}`;
+                outline.dataset.annotationId = annotation.id;
+                outline.style.left = `${row.left}px`;
+                outline.style.top = `${row.top}px`;
+                outline.style.width = `${row.right - row.left}px`;
+                outline.style.height = `${row.bottom - row.top}px`;
+                if (index === 0) {
+                    outline.appendChild(createCommentTrigger(annotation));
+                }
+                commentOutlineLayer.appendChild(outline);
+            });
+        });
     }
 
     function renderMarks() {
@@ -233,24 +299,17 @@
                 const applicable = annotations.filter(annotation => annotation.startOffset <= segmentStart
                     && annotation.endOffset >= segmentEnd);
                 let decorated = document.createTextNode(text.slice(segmentStart - offset, segmentEnd - offset));
-                const markers = new Map();
                 applicable.slice().reverse().forEach(annotation => {
                     const marker = createMarker(annotation);
                     marker.appendChild(decorated);
                     decorated = marker;
-                    markers.set(String(annotation.id), marker);
                 });
-                // 同一位置可有多条评注；阅读区只保留一个入口，避免“评注评注”叠在一起。
-                const commentAnchor = applicable.find(annotation => hasComment(annotation)
-                    && annotation.startOffset === segmentStart);
-                if (commentAnchor) {
-                    markers.get(String(commentAnchor.id)).appendChild(createCommentTrigger(commentAnchor));
-                }
                 fragment.appendChild(decorated);
             }
             textNode.replaceWith(fragment);
             offset = endOffset;
         });
+        renderCommentOutlines();
     }
 
     function layoutFeed() {
@@ -616,11 +675,13 @@
         }
     });
     window.addEventListener('scroll', () => {
+        renderCommentOutlines();
         if (isOpen()) {
             requestAnimationFrame(layoutFeed);
         }
     }, {passive: true});
     window.addEventListener('resize', () => {
+        renderCommentOutlines();
         if (isOpen()) {
             renderFeed();
         }

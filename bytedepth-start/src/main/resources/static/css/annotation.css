@@ -27,23 +27,32 @@
 
 /* 有评注的选区使用圆角框，与只有线型的划线明确区分。 */
 .bd-annotation-scope .bd-annotation-highlight.bd-annotation-has-comment {
-    position: relative;
-    padding: 0 3px 1px;
-    border: 1px solid var(--bd-annotation-mark-color);
-    border-style: dashed;
-    border-radius: 5px;
+    padding: 0;
     background: transparent;
     text-decoration: none;
 }
 
-.bd-annotation-scope .bd-annotation-highlight.bd-annotation-has-comment:hover {
-    box-shadow: 0 0 0 3px rgba(49, 94, 251, .10);
+.bd-annotation-comment-outline-layer {
+    inset: 0;
+    pointer-events: none;
+    position: fixed;
+    z-index: 2;
+}
+
+.bd-annotation-comment-outline {
+    border: 1px solid var(--bd-annotation-mark-color);
+    border-style: dashed;
+    border-radius: 5px;
+    box-sizing: border-box;
+    pointer-events: none;
+    position: fixed;
 }
 
 .bd-annotation-scope .bd-annotation-comment-trigger {
     position: absolute;
     bottom: calc(100% + 3px);
     left: -1px;
+    pointer-events: auto;
     z-index: 1;
     padding: 0 4px;
     border: 1px solid var(--bd-annotation-mark-color);

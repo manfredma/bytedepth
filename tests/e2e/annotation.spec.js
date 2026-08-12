@@ -117,7 +117,7 @@ test.describe('划线评论', () => {
         try {
             await expect(savedItem.locator('.bd-annotation-feed-text')).toHaveText('Playwright 端到端评论');
             await page.locator('.bd-annotation-sidebar-close').click();
-            await page.locator(`mark[data-id="${saved.id}"] .bd-annotation-comment-trigger`).click();
+            await page.locator('.bd-annotation-comment-outline .bd-annotation-comment-trigger').first().click();
             await expect(page.locator('#bd-annotation-sidebar')).toHaveClass(/bd-annotation-sidebar-open/);
             await savedItem.getByRole('button', {name: '删除'}).click();
             await expect(savedItem).toHaveCount(0);
@@ -177,7 +177,7 @@ test.describe('划线评论', () => {
             await popup.getByRole('button', {name: '琥珀色波浪线'}).click();
             const first = await (await firstResponse).json();
             createdIds.push(first.id);
-            await expect(page.locator(`mark[data-id="${first.id}"]`)).toBeVisible();
+            await expect(page.locator(`mark[data-id="${first.id}"]`).first()).toBeVisible();
 
             await selectArticleText(page, 2, 2);
             await popup.getByRole('button', {name: '划线'}).click();
@@ -186,7 +186,7 @@ test.describe('划线评论', () => {
             await popup.getByRole('button', {name: '珊瑚色直线'}).click();
             const second = await (await secondResponse).json();
             createdIds.push(second.id);
-            await expect(page.locator(`mark[data-id="${first.id}"] mark[data-id="${second.id}"]`)).toBeVisible();
+            await expect(page.locator(`mark[data-id="${first.id}"] mark[data-id="${second.id}"]`).first()).toBeVisible();
 
             await page.evaluate(() => window.getSelection().removeAllRanges());
             await page.locator(`mark[data-id="${second.id}"]`).last().click();
