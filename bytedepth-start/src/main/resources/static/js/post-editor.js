@@ -2,18 +2,18 @@
     'use strict';
 
     function csrfHeaders() {
-        var token = document.querySelector('meta[name="_csrf"]');
-        var header = document.querySelector('meta[name="_csrf_header"]');
-        if (!token || !header || !token.content || !header.content) return {};
-        var headers = {};
+        const token = document.querySelector('meta[name="_csrf"]');
+        const header = document.querySelector('meta[name="_csrf_header"]');
+        if (!token || !header || !token.content || !header.content) {return {};}
+        const headers = {};
         headers[header.content] = token.content;
         return headers;
     }
 
     function toVditorUploadResponse(files, responseText) {
-        var response = JSON.parse(responseText);
-        var filename = files[0] && files[0].name ? files[0].name : response.filename;
-        if (!response.url) throw new Error('上传服务未返回图片地址');
+        const response = JSON.parse(responseText);
+        const filename = files[0] && files[0].name ? files[0].name : response.filename;
+        if (!response.url) {throw new Error('上传服务未返回图片地址');}
         return JSON.stringify({
             code: 0,
             msg: '',
@@ -22,17 +22,17 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        var source = document.getElementById('content-editor');
-        var host = document.getElementById('vditor-editor');
-        var form = document.querySelector('.post-editor-form');
-        if (!source || !host || !form) return;
+        const source = document.getElementById('content-editor');
+        const host = document.getElementById('vditor-editor');
+        const form = document.querySelector('.post-editor-form');
+        if (!source || !host || !form) {return;}
         if (typeof Vditor === 'undefined') {
             source.hidden = false;
             source.classList.add('post-editor-fallback');
             return;
         }
 
-        var editor = new Vditor(host, {
+        const editor = new Vditor(host, {
             value: source.value,
             mode: 'ir',
             height: 560,

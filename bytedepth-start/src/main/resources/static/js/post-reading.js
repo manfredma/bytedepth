@@ -1,7 +1,7 @@
 (function () {
     const tracker = document.getElementById('post-reading-tracker');
     const article = document.querySelector('.content');
-    if (!tracker || !article) return;
+    if (!tracker || !article) {return;}
 
     const activityWindowMs = 60_000;
     const reportIntervalMs = 15_000;
@@ -21,7 +21,7 @@
         const visible = Math.max(0, Math.min(articleHeight, viewportBottom - rect.top));
         const depth = articleHeight <= window.innerHeight ? 100 : Math.round(visible * 100 / articleHeight);
         maxScrollDepth = Math.max(maxScrollDepth, Math.min(100, depth));
-        if (maxScrollDepth >= 80 || (articleHeight <= window.innerHeight && activeSeconds >= 15)) completed = true;
+        if (maxScrollDepth >= 80 || (articleHeight <= window.innerHeight && activeSeconds >= 15)) {completed = true;}
     }
 
     function payload() {
@@ -34,9 +34,9 @@
     }
 
     function report() {
-        if (activeSeconds === 0) return;
+        if (activeSeconds === 0) {return;}
         const body = new Blob([payload()], {type: 'application/json'});
-        if (navigator.sendBeacon && navigator.sendBeacon(tracker.dataset.progressUrl, body)) return;
+        if (navigator.sendBeacon && navigator.sendBeacon(tracker.dataset.progressUrl, body)) {return;}
         fetch(tracker.dataset.progressUrl, {method: 'POST', body: payload(), headers: {'Content-Type': 'application/json'}, keepalive: true}).catch(() => {});
     }
 
@@ -48,7 +48,7 @@
     }, 1000);
     setInterval(report, reportIntervalMs);
     window.addEventListener('scroll', updateDepth, {passive: true});
-    document.addEventListener('visibilitychange', () => { if (document.hidden) report(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) {report();} });
     window.addEventListener('pagehide', report);
     updateDepth();
 })();
