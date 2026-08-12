@@ -31,7 +31,7 @@ class BdDialogAssetsTest {
                 .contains("form[data-bd-confirm]")
                 .contains("requestSubmit")
                 .contains("form.requestSubmit && submitter")
-                .contains("var acceptedForms = new WeakSet()")
+                .contains("const acceptedForms = new WeakSet()")
                 .doesNotContain("bdConfirmAccepted");
     }
 
