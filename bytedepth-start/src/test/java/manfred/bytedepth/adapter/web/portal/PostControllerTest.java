@@ -15,6 +15,8 @@ import manfred.bytedepth.app.rating.PostRatingDTO;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import manfred.bytedepth.app.annotation.ListAnnotationsQryExe;
+import manfred.bytedepth.domain.annotation.AnnotationVisibility;
+import manfred.bytedepth.domain.annotation.PostAnnotation;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.PostStatus;
@@ -186,6 +188,33 @@ class PostControllerTest {
                 .andExpect(content().string(containsString("id=\"post-rating\"")))
                 .andExpect(content().string(not(containsString("post-rating-top"))))
                 .andExpect(content().string(not(containsString("post-rating-end"))));
+    }
+
+    @Test
+    void getPostDetail_withAnnotationRendersBootstrapDataWithoutLocalDateTime() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(3L);
+        dto.setSlug("annotated-post");
+        dto.setTitle("带批注的文章");
+        dto.setContent("正文内容");
+        dto.setStatus("PUBLISHED");
+        Post domainPost = Post.reconstruct(3L, "annotated-post", "带批注的文章", "正文内容",
+                PostStatus.PUBLISHED, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), null, null, false);
+        when(postRepository.findById(3L)).thenReturn(Optional.of(domainPost));
+        when(postRepository.findPrevPublished(3L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(3L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("annotated-post")).thenReturn(dto);
+        when(markdownRenderer.render(dto.getContent())).thenReturn("<p>正文内容</p>");
+        when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
+        when(postViewCounter.getCount(3L)).thenReturn(0L);
+        when(listAnnotationsQryExe.execute(3L, null, null)).thenReturn(List.of(new PostAnnotation(9L, 3L, null,
+                "visitor", "正文", "这是一条评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now())));
+
+        mockMvc.perform(get("/posts/annotated-post"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("window.__ANNOTATIONS__ = [{\"id\":9")))
+                .andExpect(content().string(containsString("\"visibility\":\"PUBLIC\"")))
+                .andExpect(content().string(not(containsString("\"createdAt\""))));
     }
 
     @Test
