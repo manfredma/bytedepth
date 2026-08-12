@@ -8,29 +8,29 @@
     }
 
     function replaceArticle(responseText, targetUrl) {
-        var nextDocument = new DOMParser().parseFromString(responseText, 'text/html');
-        var nextArticle = nextDocument.getElementById('post-article');
-        var article = document.getElementById('post-article');
-        if (!nextArticle || !article) throw new Error('未找到文章内容');
+        const nextDocument = new DOMParser().parseFromString(responseText, 'text/html');
+        const nextArticle = nextDocument.getElementById('post-article');
+        const article = document.getElementById('post-article');
+        if (!nextArticle || !article) {throw new Error('未找到文章内容');}
 
         article.replaceWith(nextArticle);
         document.title = nextDocument.title;
         window.history.pushState({}, '', targetUrl.pathname + targetUrl.search + targetUrl.hash);
 
-        var panel = document.getElementById('seriesPanel');
-        if (panel) updateActiveItem(panel, targetUrl);
+        const panel = document.getElementById('seriesPanel');
+        if (panel) {updateActiveItem(panel, targetUrl);}
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function navigate(link) {
-        var targetUrl = new URL(link.href, window.location.origin);
-        var panel = document.getElementById('seriesPanel');
-        if (!panel || targetUrl.origin !== window.location.origin) return;
+        const targetUrl = new URL(link.href, window.location.origin);
+        const panel = document.getElementById('seriesPanel');
+        if (!panel || targetUrl.origin !== window.location.origin) {return;}
 
         panel.setAttribute('aria-busy', 'true');
         fetch(targetUrl.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (response) {
-                if (!response.ok) throw new Error('加载文章失败');
+                if (!response.ok) {throw new Error('加载文章失败');}
                 return response.text();
             })
             .then(function (html) { replaceArticle(html, targetUrl); })
@@ -39,8 +39,8 @@
     }
 
     document.addEventListener('click', function (event) {
-        var link = event.target.closest('.series-panel .series-item');
-        if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const link = event.target.closest('.series-panel .series-item');
+        if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {return;}
         event.preventDefault();
         navigate(link);
     });

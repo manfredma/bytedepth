@@ -52,7 +52,9 @@ class PostReadingAssetsTest {
                 .doesNotContain(".series-overlay { display: none; position: fixed; inset: 0; z-index: 199; background: rgba(0,0,0,.3); backdrop-filter")
                 .contains("trigger.classList.toggle('open')")
                 .contains("@{/js/series-navigation.js}")
-                .contains("id=\"post-article\"");
+                .contains("id=\"post-article\"")
+                .contains("bd-annotation-reading-content")
+                .doesNotContain("评论会贴近对应段落显示；仅你自己的私有划线对其他读者不可见。");
         assertThat(navigationScript)
                 .contains("fetch(targetUrl.href")
                 .contains("article.replaceWith(nextArticle)")

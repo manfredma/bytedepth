@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.portal;
 
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
+import manfred.bytedepth.adapter.web.security.SiteUserDetails;
 import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
@@ -15,6 +16,8 @@ import manfred.bytedepth.app.rating.PostRatingDTO;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import manfred.bytedepth.app.annotation.ListAnnotationsQryExe;
+import manfred.bytedepth.domain.annotation.AnnotationVisibility;
+import manfred.bytedepth.domain.annotation.PostAnnotation;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.PostStatus;
@@ -34,6 +37,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -186,6 +191,76 @@ class PostControllerTest {
                 .andExpect(content().string(containsString("id=\"post-rating\"")))
                 .andExpect(content().string(not(containsString("post-rating-top"))))
                 .andExpect(content().string(not(containsString("post-rating-end"))));
+    }
+
+    @Test
+    void getPostDetail_withAnnotationRendersBootstrapDataWithoutLocalDateTime() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(3L);
+        dto.setSlug("annotated-post");
+        dto.setTitle("带批注的文章");
+        dto.setContent("正文内容");
+        dto.setStatus("PUBLISHED");
+        Post domainPost = Post.reconstruct(3L, "annotated-post", "带批注的文章", "正文内容",
+                PostStatus.PUBLISHED, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), null, null, false);
+        when(postRepository.findById(3L)).thenReturn(Optional.of(domainPost));
+        when(postRepository.findPrevPublished(3L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(3L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("annotated-post")).thenReturn(dto);
+        when(markdownRenderer.render(dto.getContent())).thenReturn("<p>正文内容</p>");
+        when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
+        when(postViewCounter.getCount(3L)).thenReturn(0L);
+        when(listAnnotationsQryExe.execute(3L, null, null)).thenReturn(List.of(new PostAnnotation(9L, 3L, null,
+                "visitor", "正文", "这是一条评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now())));
+
+        mockMvc.perform(get("/posts/annotated-post"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("window.__ANNOTATIONS__ = [{\"id\":9")))
+                .andExpect(content().string(containsString("\"visibility\":\"PUBLIC\"")))
+                .andExpect(content().string(not(containsString("\"createdAt\""))));
+    }
+
+    @Test
+    void getPostDetail_marksAnnotationsOwnedByMatchingUserOrVisitorToken() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(4L);
+        dto.setSlug("annotation-owner");
+        dto.setTitle("批注归属");
+        dto.setContent("正文内容");
+        dto.setStatus("PUBLISHED");
+        Post post = Post.reconstruct(4L, "annotation-owner", "批注归属", "正文内容",
+                PostStatus.PUBLISHED, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), null, 7L, false);
+        when(postRepository.findById(4L)).thenReturn(Optional.of(post));
+        when(postRepository.findPrevPublished(4L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(4L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("annotation-owner")).thenReturn(dto);
+        when(markdownRenderer.render(dto.getContent())).thenReturn("<p>正文内容</p>");
+        when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
+        when(postViewCounter.getCount(4L)).thenReturn(0L);
+        when(annotationVisitorIdentity.existingHash(any())).thenReturn("visitor-hash");
+        when(listAnnotationsQryExe.execute(4L, 7L, "visitor-hash")).thenReturn(List.of(
+                annotation(11L, 7L, "other-hash"),
+                annotation(12L, 8L, "visitor-hash"),
+                annotation(13L, 8L, "other-hash")));
+        SiteUserDetails reader = new SiteUserDetails(7L, "reader", "", List.of());
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(reader, null, reader.getAuthorities()));
+
+        try {
+            mockMvc.perform(get("/posts/annotation-owner"))
+                    .andExpect(status().isOk())
+                    .andExpect(result -> assertThat(result.getModelAndView().getModel().get("annotations").toString())
+                            .contains("id=11, selectedText=正文, annotationText=评论11, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, ownedByCurrentVisitor=true")
+                            .contains("id=12, selectedText=正文, annotationText=评论12, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, ownedByCurrentVisitor=true")
+                            .contains("id=13, selectedText=正文, annotationText=评论13, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, ownedByCurrentVisitor=false"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    private static PostAnnotation annotation(long id, long userId, String ownerTokenHash) {
+        return new PostAnnotation(id, 4L, userId, ownerTokenHash, "正文", "评论" + id, "yellow",
+                AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now());
     }
 
     @Test

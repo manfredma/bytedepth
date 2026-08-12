@@ -20,8 +20,7 @@
     <meta property="og:title" th:content="${post.title}">
     <meta property="og:description" th:if="${metaDescription != null}" th:content="${metaDescription}">
     <meta property="og:url" th:if="${canonicalUrl != null}" th:content="${canonicalUrl}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/fonts.css}">
     <style>
         :root {
             --bg:        var(--bd-bg, #f7f5f0);
@@ -622,6 +621,15 @@
             </div>
         </div>
 
+        <div class="rt-item bd-annotation-toolbar-item">
+            <button id="bd-annotation-sidebar-toggle" class="rt-btn" type="button"
+                    aria-controls="bd-annotation-sidebar" aria-expanded="false" aria-label="划线评论">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5h10M7 10h6M7 15h10"/><path d="M5 3.5h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/></svg>
+                <span class="rt-btn-label">评论</span>
+                <span class="bd-annotation-toolbar-count" hidden aria-label="划线评论数量"></span>
+            </button>
+        </div>
+
         <div class="rt-item theme-switcher" id="rtThemeItem">
             <button type="button" class="theme-trigger" aria-label="切换主题" aria-expanded="false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -782,34 +790,36 @@
     </script>
 
     <article id="post-article" class="bd-annotation-scope">
-    <button id="bd-annotation-sidebar-toggle" class="bd-annotation-sidebar-toggle" type="button"
-            aria-controls="bd-annotation-sidebar" aria-expanded="false" title="打开划线评论栏">
-        <span aria-hidden="true">▤</span><span>划线评论</span>
-    </button>
     <aside id="bd-annotation-sidebar" class="bd-annotation-sidebar" aria-label="划线评论栏" aria-hidden="true">
         <header class="bd-annotation-sidebar-header">
-            <div><strong>划线评论</strong><small>划线默认仅自己可见；有评论时默认公开</small></div>
-            <button class="bd-annotation-sidebar-close" type="button" aria-label="关闭划线评论栏">×</button>
+            <div class="bd-annotation-sidebar-title">
+                <span class="bd-annotation-sidebar-eyebrow">阅读批注</span>
+                <strong>划线评论 <span class="bd-annotation-comment-count">0</span></strong>
+            </div>
+            <button class="bd-annotation-sidebar-close" type="button" aria-label="关闭划线评论栏">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>
+            </button>
         </header>
+        <section class="bd-annotation-feed" aria-live="polite"></section>
         <section class="bd-annotation-composer" hidden>
+            <div class="bd-annotation-composer-topline"><span>针对划线写评论</span><button type="button" class="bd-annotation-composer-cancel" aria-label="取消编辑">取消</button></div>
             <div class="bd-annotation-composer-quote"></div>
             <div class="bd-annotation-color-row" aria-label="划线颜色">
-                <button type="button" data-bd-annotation-color="red" aria-label="重点"></button>
-                <button type="button" data-bd-annotation-color="yellow" aria-label="疑问"></button>
-                <button type="button" data-bd-annotation-color="green" aria-label="赞同"></button>
-                <button type="button" data-bd-annotation-color="blue" aria-label="补充"></button>
+                <button type="button" data-bd-annotation-color="yellow" aria-label="琥珀色划线"><span></span></button>
+                <button type="button" data-bd-annotation-color="red" aria-label="珊瑚色划线"><span></span></button>
+                <button type="button" data-bd-annotation-color="green" aria-label="绿色划线"><span></span></button>
+                <button type="button" data-bd-annotation-color="blue" aria-label="蓝色划线"><span></span></button>
             </div>
-            <textarea class="bd-annotation-composer-text" maxlength="2000" placeholder="写下你的评论（可选）"></textarea>
-            <label class="bd-annotation-visibility-label">可见范围
-                <select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">仅自己可见</option></select>
+            <textarea class="bd-annotation-composer-text" maxlength="2000" placeholder="留下你的想法…"></textarea>
+            <label class="bd-annotation-visibility-label"><span>可见范围</span>
+                <select class="bd-annotation-visibility" aria-label="评论可见范围"><option value="PUBLIC">公开</option><option value="PRIVATE">仅自己可见</option></select>
             </label>
             <div class="bd-annotation-composer-actions">
-                <button type="button" class="bd-annotation-composer-cancel">取消</button>
                 <button type="button" class="bd-annotation-composer-save">保存</button>
             </div>
         </section>
-        <section class="bd-annotation-feed" aria-live="polite"></section>
     </aside>
+    <div class="bd-annotation-reading-content">
     <h1 th:text="${post.title}">文章标题</h1>
     <div class="meta">
         <span th:if="${post.publishedAt != null}"
@@ -894,7 +904,15 @@
             后才能发表评论
         </div>
     </div>
+    </div>
     </article>
+
+<!-- 批注必须先于任何外部脚本初始化，避免 CDN 阻塞阅读互动。 -->
+<script th:inline="javascript">
+    window.__ANNOTATIONS__ = /*[[${annotations}]]*/ [];
+    window.__CURRENT_USER_ID__ = /*[[${currentUserId}]]*/ null;
+</script>
+<script th:src="@{/js/annotation.js}"></script>
 
 </div>
 <!-- Mermaid 图表渲染 -->
@@ -939,12 +957,6 @@ document.addEventListener('DOMContentLoaded', function () {
     mermaid.run();
 });
 </script>
-<!-- 批注数据注入与脚本 -->
-<script th:inline="javascript">
-    window.__ANNOTATIONS__ = /*[[${annotations}]]*/ [];
-    window.__CURRENT_USER_ID__ = /*[[${currentUserId}]]*/ null;
-</script>
-<script th:src="@{/js/annotation.js}"></script>
 <!-- Schema.org 结构化数据：让 Google 展示发布时间、作者等富文本摘要 -->
 <script type="application/ld+json" th:inline="javascript">
 {

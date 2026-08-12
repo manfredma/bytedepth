@@ -150,10 +150,11 @@ class ThemeAssetsTest {
         String sw = classpathText("/static/sw.js");
 
         assertThat(sw)
-                .contains("bytedepth-v4")
+                .contains("bytedepth-v6")
                 .contains("/favicon.ico")
                 .contains("/icons/favicon-48.png")
-                .contains("静态资源：cache-first")
+                .contains("内容指纹 URL cache-first")
+                .contains("if (request.method !== 'GET') return;")
                 .contains("if (cached) return cached")
                 .doesNotContain("admin-layout.css")
                 .doesNotContain("isFreshStaticAsset");
@@ -187,7 +188,7 @@ class ThemeAssetsTest {
 
         assertThat(config)
                 .contains("chain:\n        enabled: true")
-                .contains("content:\n            enabled: true\n            paths: /css/**");
+                .contains("content:\n            enabled: true\n            paths:\n              - /css/**\n              - /js/**");
     }
 
     @Test

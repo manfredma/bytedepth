@@ -33,5 +33,5 @@ bash scripts/verify-changed-coverage.sh
 运行 jar：
 
 ```bash
-$(/usr/libexec/java_home -v 25)/bin/java -jar target/xxx.jar
+$(/usr/libexec/java_home -v 25)/bin/java --enable-native-access=ALL-UNNAMED -jar target/xxx.jar
 ```

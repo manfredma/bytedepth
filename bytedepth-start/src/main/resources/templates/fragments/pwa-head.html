@@ -22,7 +22,8 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/sw.js')
+                // Service Worker 本身必须每次检查更新，不能沿用 HTTP 缓存中的旧脚本。
+                navigator.serviceWorker.register('/sw.js', {updateViaCache: 'none'})
                     .catch(function (err) { console.warn('SW 注册失败:', err); });
             });
         }

@@ -2,7 +2,7 @@
     'use strict';
 
     function createButton(className, label, type) {
-        var button = document.createElement('button');
+        const button = document.createElement('button');
         button.className = className;
         button.type = type;
         button.textContent = label;
@@ -10,27 +10,27 @@
     }
 
     function createDialog() {
-        var dialog = document.createElement('dialog');
+        const dialog = document.createElement('dialog');
         dialog.className = 'bd-dialog';
         dialog.setAttribute('aria-labelledby', 'bd-dialog-title');
         dialog.setAttribute('aria-describedby', 'bd-dialog-message');
 
-        var form = document.createElement('form');
+        const form = document.createElement('form');
         form.className = 'bd-dialog__surface';
         form.method = 'dialog';
 
-        var title = document.createElement('h2');
+        const title = document.createElement('h2');
         title.className = 'bd-dialog__title';
         title.id = 'bd-dialog-title';
 
-        var message = document.createElement('p');
+        const message = document.createElement('p');
         message.className = 'bd-dialog__message';
         message.id = 'bd-dialog-message';
 
-        var actions = document.createElement('div');
+        const actions = document.createElement('div');
         actions.className = 'bd-dialog__actions';
-        var cancel = createButton('bd-dialog__button bd-dialog__button--cancel', '取消', 'submit');
-        var confirm = createButton('bd-dialog__button bd-dialog__button--confirm', '确认', 'button');
+        const cancel = createButton('bd-dialog__button bd-dialog__button--cancel', '取消', 'submit');
+        const confirm = createButton('bd-dialog__button bd-dialog__button--confirm', '确认', 'button');
         actions.append(cancel, confirm);
         form.append(title, message, actions);
         dialog.append(form);
@@ -39,13 +39,13 @@
         return { dialog: dialog, title: title, message: message, confirm: confirm };
     }
 
-    var elements;
-    var acceptedForms = new WeakSet();
+    let elements;
+    const acceptedForms = new WeakSet();
 
     function confirm(options) {
         elements = elements || createDialog();
-        var dialog = elements.dialog;
-        var activeElement = document.activeElement;
+        const dialog = elements.dialog;
+        const activeElement = document.activeElement;
         elements.title.textContent = options.title || '请确认操作';
         elements.message.textContent = options.message || '';
         elements.confirm.textContent = options.confirmText || '确认';
@@ -54,7 +54,7 @@
         return new Promise(function (resolve) {
             function closeHandler() {
                 dialog.removeEventListener('close', closeHandler);
-                if (activeElement && activeElement.isConnected) activeElement.focus();
+                if (activeElement && activeElement.isConnected) {activeElement.focus();}
                 resolve(dialog.returnValue === 'confirm');
             }
 
@@ -75,21 +75,21 @@
     }
 
     document.addEventListener('submit', function (event) {
-        var form = event.target.closest('form[data-bd-confirm]');
-        if (!form) return;
+        const form = event.target.closest('form[data-bd-confirm]');
+        if (!form) {return;}
         if (acceptedForms.has(form)) {
             acceptedForms.delete(form);
             return;
         }
 
         event.preventDefault();
-        var submitter = event.submitter;
+        const submitter = event.submitter;
         confirm(formOptions(form)).then(function (accepted) {
-            if (!accepted) return;
+            if (!accepted) {return;}
             acceptedForms.add(form);
-            if (form.requestSubmit && submitter) form.requestSubmit(submitter);
-            else if (form.requestSubmit) form.requestSubmit();
-            else form.submit();
+            if (form.requestSubmit && submitter) {form.requestSubmit(submitter);}
+            else if (form.requestSubmit) {form.requestSubmit();}
+            else {form.submit();}
             acceptedForms.delete(form);
         });
     });

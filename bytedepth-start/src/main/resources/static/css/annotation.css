@@ -1,12 +1,524 @@
-.bd-annotation-scope .bd-annotation-highlight { padding:0 1px; border-radius:2px; cursor:pointer; text-decoration:none; }
-.bd-annotation-scope .bd-annotation-highlight:hover { outline:1px solid rgba(0,0,0,.2); }
-.bd-annotation-scope .bd-annotation-color-red { background:rgba(255,140,140,.45); }.bd-annotation-scope .bd-annotation-color-yellow { background:rgba(255,213,79,.55); }.bd-annotation-scope .bd-annotation-color-green { background:rgba(134,216,150,.5); }.bd-annotation-scope .bd-annotation-color-blue { background:rgba(130,190,255,.5); }
-.bd-annotation-sidebar-toggle { position:fixed; right:18px; bottom:24px; z-index:60; display:flex; gap:6px; align-items:center; border:1px solid var(--border,#e7e4df); border-radius:999px; background:var(--card,#fff); color:var(--ink,#1c1917); box-shadow:0 5px 18px rgba(0,0,0,.12); padding:10px 14px; cursor:pointer; font:600 .86rem var(--sans,sans-serif); }
-.bd-annotation-sidebar { position:fixed; z-index:70; top:0; right:0; width:min(390px,100vw); height:100dvh; overflow:auto; box-sizing:border-box; transform:translateX(101%); transition:transform .2s ease; background:var(--card,#fff); border-left:1px solid var(--border,#e7e4df); box-shadow:-8px 0 28px rgba(0,0,0,.12); padding:16px; font-family:var(--sans,sans-serif); }
-.bd-annotation-sidebar.bd-annotation-sidebar-open { transform:translateX(0); }.bd-annotation-sidebar-open ~ .bd-annotation-sidebar-toggle { display:none; }
-.bd-annotation-sidebar-header { display:flex; justify-content:space-between; gap:12px; padding:2px 0 14px; border-bottom:1px solid var(--border,#e7e4df); }.bd-annotation-sidebar-header strong,.bd-annotation-sidebar-header small { display:block; }.bd-annotation-sidebar-header small { color:var(--ink-3,#78716c); font-size:.76rem; margin-top:4px; }.bd-annotation-sidebar-close { border:0; background:transparent; cursor:pointer; font-size:1.6rem; line-height:1; }
-.bd-annotation-composer { padding:14px 0; border-bottom:1px solid var(--border,#e7e4df); }.bd-annotation-composer-quote,.bd-annotation-feed-item blockquote { margin:0 0 10px; padding-left:9px; border-left:3px solid #f4c430; color:var(--ink-2,#57534e); font-size:.86rem; }.bd-annotation-color-row { display:flex; gap:8px; margin-bottom:10px; }.bd-annotation-color-row button { width:20px; height:20px; border-radius:50%; border:2px solid transparent; cursor:pointer; background:#ffd54f; }.bd-annotation-color-row button[data-bd-annotation-color="red"]{background:#ff8c8c}.bd-annotation-color-row button[data-bd-annotation-color="green"]{background:#86d896}.bd-annotation-color-row button[data-bd-annotation-color="blue"]{background:#82beff}.bd-annotation-color-row .bd-annotation-color-selected{border-color:#1c1917}
-.bd-annotation-composer-text { width:100%; min-height:86px; box-sizing:border-box; resize:vertical; padding:9px; border:1px solid var(--border,#e7e4df); border-radius:8px; font:inherit; }.bd-annotation-visibility-label { display:flex; justify-content:space-between; align-items:center; margin-top:9px; font-size:.82rem; }.bd-annotation-visibility { padding:4px; border:1px solid var(--border,#e7e4df); border-radius:6px; background:#fff; }.bd-annotation-composer-actions,.bd-annotation-feed-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }.bd-annotation-composer-actions button,.bd-annotation-feed-actions button,.bd-annotation-popup button { border:0; border-radius:6px; padding:6px 10px; cursor:pointer; background:#f1f0ee; font:inherit; font-size:.8rem; }.bd-annotation-composer-save { background:#e94560!important; color:#fff; }
-.bd-annotation-feed-item { padding:14px 0; border-bottom:1px solid var(--border,#e7e4df); }.bd-annotation-feed-text { margin:0; white-space:pre-wrap; line-height:1.55; }.bd-annotation-feed-meta { margin-top:8px; color:var(--ink-3,#78716c); font-size:.75rem; }.bd-annotation-empty { color:var(--ink-3,#78716c); font-size:.9rem; }
-.bd-annotation-popup { position:fixed; z-index:80; display:none; gap:6px; padding:7px; border:1px solid var(--border,#e7e4df); border-radius:9px; background:#fff; box-shadow:0 6px 20px rgba(0,0,0,.16); }.bd-annotation-popup.bd-annotation-popup-open { display:flex; }
-@media (max-width:640px) { .bd-annotation-sidebar-toggle { right:12px; bottom:14px; }.bd-annotation-sidebar { width:100vw; } }
+/* 阅读批注：所有视觉与状态均限制在 bd-annotation 命名空间。 */
+.bd-annotation-scope {
+    --bd-annotation-ink: #202938;
+    --bd-annotation-muted: #738094;
+    --bd-annotation-line: #e7ebf1;
+    --bd-annotation-panel: #ffffff;
+    --bd-annotation-accent: #315efb;
+    --bd-annotation-accent-soft: #edf2ff;
+}
+
+.bd-annotation-scope .bd-annotation-highlight {
+    padding: 0 1px 2px;
+    border-radius: 2px;
+    background: transparent;
+    box-decoration-break: clone;
+    cursor: pointer;
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: .23em;
+    transition: color 160ms ease, text-decoration-thickness 160ms ease;
+}
+
+.bd-annotation-scope .bd-annotation-highlight:hover {
+    text-decoration-thickness: 3px;
+}
+
+/* 有评注的选区使用圆角框，与只有线型的划线明确区分。 */
+.bd-annotation-scope .bd-annotation-highlight.bd-annotation-has-comment {
+    padding: 0;
+    background: transparent;
+    text-decoration: none;
+}
+
+.bd-annotation-comment-outline-layer {
+    inset: 0;
+    pointer-events: none;
+    position: fixed;
+    z-index: 2;
+}
+
+.bd-annotation-comment-outline {
+    border: 1px solid var(--bd-annotation-mark-color);
+    border-style: dashed;
+    border-radius: 5px;
+    box-sizing: border-box;
+    pointer-events: none;
+    position: fixed;
+}
+
+.bd-annotation-scope .bd-annotation-comment-trigger {
+    position: absolute;
+    top: 0;
+    left: 4px;
+    pointer-events: auto;
+    z-index: 1;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 4px;
+    border: 0;
+    border-radius: 3px;
+    background: var(--card, #fff);
+    color: var(--bd-annotation-mark-color);
+    cursor: pointer;
+    font: 700 10px/16px var(--sans, sans-serif);
+    letter-spacing: .04em;
+    transform: translateY(-50%);
+    white-space: nowrap;
+}
+
+.bd-annotation-scope .bd-annotation-comment-trigger:hover,
+.bd-annotation-scope .bd-annotation-comment-trigger:focus-visible {
+    background: var(--bd-annotation-mark-color);
+    color: #fff;
+    outline: none;
+}
+
+.bd-annotation-scope .bd-annotation-color-yellow {
+    --bd-annotation-mark-color: #d69e2e;
+    text-decoration-color: var(--bd-annotation-mark-color);
+    text-decoration-style: wavy;
+}
+
+.bd-annotation-scope .bd-annotation-color-red {
+    --bd-annotation-mark-color: #dc6c67;
+    text-decoration-color: var(--bd-annotation-mark-color);
+    text-decoration-style: solid;
+}
+
+.bd-annotation-scope .bd-annotation-color-green {
+    --bd-annotation-mark-color: #45a979;
+    text-decoration-color: var(--bd-annotation-mark-color);
+    text-decoration-style: dashed;
+}
+
+.bd-annotation-scope .bd-annotation-color-blue {
+    --bd-annotation-mark-color: #5d8fd9;
+    text-decoration-color: var(--bd-annotation-mark-color);
+    text-decoration-style: double;
+}
+
+.bd-annotation-toolbar-item .rt-btn {
+    position: relative;
+}
+
+.bd-annotation-toolbar-count {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    z-index: 2;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    box-sizing: border-box;
+    border: 2px solid #fff;
+    border-radius: 99px;
+    /* 工具栏位于 .bd-annotation-scope 外，不能依赖其 CSS 变量。 */
+    background: #d83c55;
+    color: #fff;
+    font: 700 11px/1 var(--sans, sans-serif);
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(35, 42, 56, .25);
+}
+
+.bd-annotation-sidebar {
+    position: fixed;
+    z-index: 310;
+    top: 74px;
+    right: 16px;
+    width: min(380px, calc(100vw - 32px));
+    height: calc(100dvh - 90px);
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 1px solid rgba(223, 228, 238, .92);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 18px 52px rgba(27, 39, 62, .18), 0 2px 9px rgba(27, 39, 62, .08);
+    color: var(--bd-annotation-ink);
+    font-family: var(--sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(calc(100% + 32px));
+    transition: transform 220ms cubic-bezier(.2, .8, .2, 1), opacity 160ms ease;
+}
+
+.bd-annotation-sidebar.bd-annotation-sidebar-open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+.bd-annotation-comments-open .reading-toolbar {
+    display: none;
+}
+
+/*
+ * 批注不覆盖正文：超宽屏保留原有正文行宽，在文章右侧建立阅读轨道；
+ * 其它桌面宽度将批注置于文章之后，避免为了并排而挤压正文。
+ */
+@media (min-width: 769px) and (max-width: 1359px) {
+    .bd-annotation-scope.bd-annotation-reading-layout-open {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .bd-annotation-reading-layout-open .bd-annotation-reading-content { order: 1; }
+
+    .bd-annotation-reading-layout-open .bd-annotation-sidebar {
+        position: relative;
+        order: 2;
+        top: auto;
+        right: auto;
+        width: 100%;
+        height: min(640px, 75dvh);
+        margin-top: 32px;
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+    }
+
+    /* 侧栏位于正文下方时，卡片不再随划线绝对定位，改为常规流堆叠，避免被离场逻辑整体隐藏。 */
+    .bd-annotation-reading-layout-open .bd-annotation-feed-item {
+        position: relative;
+        right: auto;
+        left: auto;
+    }
+}
+
+@media (min-width: 1360px) {
+    body.bd-annotation-comments-open .container {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0 0 64px;
+        border-radius: 0;
+    }
+
+    .bd-annotation-scope.bd-annotation-reading-layout-open {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 380px;
+        align-items: start;
+        gap: 16px;
+    }
+
+    .bd-annotation-reading-layout-open .bd-annotation-reading-content {
+        min-width: 0;
+        /* 专栏收起按钮 fixed 在左侧约 36px 宽，批注打开后正文左移会让按钮压住正文；
+           左侧预留 48px（按钮宽 + 余量）避免遮挡，右侧保持 8px。 */
+        padding: 0 8px 0 48px;
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .bd-annotation-reading-layout-open .bd-annotation-sidebar {
+        position: sticky;
+        z-index: 1;
+        top: 60px;
+        right: auto;
+        grid-column: 2;
+        grid-row: 1;
+        width: 380px;
+        height: calc(100dvh - 60px);
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        transition: none;
+    }
+}
+
+.bd-annotation-sidebar-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 21px 21px 14px;
+    border-bottom: 1px solid var(--bd-annotation-line);
+}
+
+.bd-annotation-sidebar-eyebrow {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--bd-annotation-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+}
+
+.bd-annotation-sidebar-title strong {
+    font-size: 17px;
+    letter-spacing: -.01em;
+}
+
+.bd-annotation-comment-count {
+    display: inline-grid;
+    min-width: 20px;
+    height: 20px;
+    margin-left: 5px;
+    border-radius: 99px;
+    background: var(--bd-annotation-accent-soft);
+    color: var(--bd-annotation-accent);
+    font-size: 11px;
+    line-height: 20px;
+    text-align: center;
+    vertical-align: 2px;
+}
+
+.bd-annotation-sidebar-close {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--bd-annotation-muted);
+    cursor: pointer;
+    place-items: center;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+.bd-annotation-sidebar-close:hover { background: #f1f4f8; color: var(--bd-annotation-ink); }
+.bd-annotation-sidebar-close svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+
+.bd-annotation-feed {
+    position: absolute;
+    top: 78px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow-y: auto;
+    padding: 12px 18px 36px;
+    scrollbar-color: #d8dee9 transparent;
+    scrollbar-width: thin;
+}
+
+.bd-annotation-feed-item {
+    position: absolute;
+    right: 18px;
+    left: 18px;
+    box-sizing: border-box;
+    padding: 11px 13px 10px;
+    border: 1px solid #e7ebf1;
+    border-radius: 12px;
+    background: var(--bd-annotation-panel);
+    box-shadow: 0 3px 11px rgba(26, 39, 62, .055);
+    transition: opacity 100ms linear;
+}
+
+.bd-annotation-feed-item[data-color="yellow"] { --bd-annotation-item-color: #d69e2e; }
+.bd-annotation-feed-item[data-color="red"] { --bd-annotation-item-color: #dc6c67; }
+.bd-annotation-feed-item[data-color="green"] { --bd-annotation-item-color: #45a979; }
+.bd-annotation-feed-item[data-color="blue"] { --bd-annotation-item-color: #5d8fd9; }
+
+/* 当前聚焦批注：彩色左条 + 轻染背景，沿用批注自身颜色变量。 */
+.bd-annotation-feed-item-active {
+    background: #eef3ff;
+    box-shadow: 0 6px 18px rgba(26, 39, 62, .12);
+}
+
+.bd-annotation-feed-item-active::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 0;
+    width: 4px;
+    border-radius: 0 3px 3px 0;
+    background: var(--bd-annotation-item-color, #315efb);
+}
+
+.bd-annotation-feed-item blockquote,
+.bd-annotation-composer-quote {
+    overflow: hidden;
+    margin: 0 0 6px;
+    padding-left: 9px;
+    border-left: 2px solid var(--bd-annotation-item-color, #9ab2ff);
+    color: #66758b;
+    font-size: 12px;
+    font-style: normal;
+    line-height: 1.55;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bd-annotation-feed-text {
+    margin: 0;
+    color: #243b5a;
+    font-size: 15px;
+    font-weight: 560;
+    line-height: 1.55;
+    white-space: pre-wrap;
+}
+
+.bd-annotation-feed-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 7px;
+    min-height: 20px;
+}
+
+.bd-annotation-feed-meta {
+    color: var(--bd-annotation-muted);
+    font-size: 11px;
+    line-height: 20px;
+}
+
+.bd-annotation-feed-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.bd-annotation-feed-actions button,
+.bd-annotation-composer-cancel {
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--bd-annotation-muted);
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    padding: 4px 6px;
+}
+
+.bd-annotation-feed-actions button:hover,
+.bd-annotation-composer-cancel:hover { background: #f0f3f8; color: var(--bd-annotation-ink); }
+
+.bd-annotation-feed-item-editing { border-color: #c9d7ff; box-shadow: 0 5px 16px rgba(49, 94, 251, .10); }
+
+.bd-annotation-inline-editor-text {
+    display: block;
+    width: 100%;
+    min-height: 74px;
+    box-sizing: border-box;
+    padding: 8px 9px;
+    border: 1px solid #dce2ec;
+    border-radius: 8px;
+    background: #fbfcff;
+    color: var(--bd-annotation-ink);
+    font: 14px/1.55 var(--sans, sans-serif);
+    outline: none;
+    resize: vertical;
+}
+
+.bd-annotation-inline-editor-text:focus { border-color: #84a2ff; background: #fff; box-shadow: 0 0 0 3px rgba(49, 94, 251, .10); }
+.bd-annotation-inline-editor-visibility { border: 0; background: transparent; color: var(--bd-annotation-muted); cursor: pointer; font: 11px/20px var(--sans, sans-serif); }
+.bd-annotation-inline-editor-save { background: #edf2ff !important; color: #315efb !important; font-weight: 700 !important; }
+.bd-annotation-inline-editor-save:hover { background: #dfe8ff !important; }
+
+.bd-annotation-empty {
+    margin: 44px 18px;
+    color: var(--bd-annotation-muted);
+    font-size: 13px;
+    line-height: 1.7;
+    text-align: center;
+}
+
+.bd-annotation-composer {
+    position: absolute;
+    z-index: 2;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    padding: 14px;
+    border: 1px solid #dce5ff;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 12px 30px rgba(42, 67, 128, .18);
+}
+
+.bd-annotation-composer-topline,
+.bd-annotation-composer-actions,
+.bd-annotation-visibility-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.bd-annotation-composer-topline { margin-bottom: 10px; color: var(--bd-annotation-ink); font-size: 12px; font-weight: 700; }
+.bd-annotation-composer-quote { margin-bottom: 10px; }
+
+.bd-annotation-color-row { display: flex; gap: 7px; margin: 0 0 11px; }
+.bd-annotation-color-row button { display: grid; width: 22px; height: 22px; padding: 0; border: 2px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; place-items: center; }
+.bd-annotation-color-row button span { display: block; width: 14px; height: 14px; border-radius: 50%; }
+.bd-annotation-color-row button[data-bd-annotation-color="yellow"] span { background: #f7c948; }
+.bd-annotation-color-row button[data-bd-annotation-color="red"] span { background: #eb807b; }
+.bd-annotation-color-row button[data-bd-annotation-color="green"] span { background: #61bf8d; }
+.bd-annotation-color-row button[data-bd-annotation-color="blue"] span { background: #6fa3ef; }
+.bd-annotation-color-row .bd-annotation-color-selected { border-color: #315efb; }
+
+.bd-annotation-composer-text {
+    display: block;
+    width: 100%;
+    min-height: 74px;
+    box-sizing: border-box;
+    padding: 9px 10px;
+    border: 1px solid #dce2ec;
+    border-radius: 9px;
+    background: #fbfcfe;
+    color: var(--bd-annotation-ink);
+    font: 13px/1.55 var(--sans, sans-serif);
+    outline: none;
+    resize: vertical;
+}
+
+.bd-annotation-composer-text:focus { border-color: #84a2ff; background: #fff; box-shadow: 0 0 0 3px rgba(49, 94, 251, .10); }
+.bd-annotation-visibility-label { margin-top: 10px; color: var(--bd-annotation-muted); font-size: 12px; }
+.bd-annotation-visibility { border: 0; background: transparent; color: var(--bd-annotation-ink); cursor: pointer; font: inherit; }
+.bd-annotation-composer-actions { justify-content: flex-end; margin-top: 11px; }
+.bd-annotation-composer-save { border: 0; border-radius: 8px; background: var(--bd-annotation-accent); color: #fff; cursor: pointer; font: 600 12px/1 var(--sans, sans-serif); padding: 8px 14px; transition: background-color 160ms ease, transform 160ms ease; }
+.bd-annotation-composer-save:hover { background: #244bdb; transform: translateY(-1px); }
+
+.bd-annotation-popup {
+    position: fixed;
+    z-index: 330;
+    display: none;
+    align-items: center;
+    gap: 2px;
+    padding: 5px;
+    border: 1px solid rgba(214, 221, 233, .96);
+    border-radius: 12px;
+    background: rgba(31, 41, 55, .96);
+    box-shadow: 0 10px 28px rgba(18, 28, 45, .25);
+    color: #f8fafc;
+    transform-origin: top left;
+}
+
+.bd-annotation-popup.bd-annotation-popup-open { display: flex; animation: bd-annotation-pop-in 150ms ease-out forwards; }
+@keyframes bd-annotation-pop-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.bd-annotation-popup button { min-height: 30px; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; font: 500 12px/1 var(--sans, sans-serif); padding: 0 10px; }
+.bd-annotation-popup button:hover { background: rgba(255, 255, 255, .14); }
+.bd-annotation-popup button[data-color] { display: grid; width: 38px; padding: 0; color: transparent; place-items: center; }
+.bd-annotation-popup button[data-color]::before { width: 22px; height: 12px; content: ""; }
+.bd-annotation-popup button[data-color="yellow"]::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='12' viewBox='0 0 22 12'%3E%3Cpath d='M1 7c2.5-5 5.5 5 8 0s5.5 5 8 0' fill='none' stroke='%23f7c948' stroke-linecap='round' stroke-width='2.2'/%3E%3C/svg%3E") center/22px 12px no-repeat; }
+.bd-annotation-popup button[data-color="red"]::before { border-bottom: 2px solid #eb807b; }
+.bd-annotation-popup button[data-color="green"]::before { border-bottom: 2px dashed #61bf8d; }
+.bd-annotation-popup button[data-color="blue"]::before { border-bottom: 4px double #6fa3ef; }
+.bd-annotation-popup .bd-annotation-copy-result { padding: 0 8px; color: #f8fafc; font: 500 12px/30px var(--sans, sans-serif); white-space: nowrap; }
+
+.bd-annotation-mobile-note {
+    position: fixed;
+    z-index: 330;
+    max-width: min(304px, calc(100vw - 24px));
+    padding: 13px 14px;
+    border: 1px solid rgba(218, 225, 236, .96);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, .98);
+    box-shadow: 0 12px 30px rgba(24, 39, 66, .18);
+    color: var(--bd-annotation-ink);
+    font: 13px/1.55 var(--sans, sans-serif);
+}
+
+.bd-annotation-mobile-note::before { display: block; margin-bottom: 5px; color: var(--bd-annotation-muted); content: "划线评论"; font-size: 11px; font-weight: 700; letter-spacing: .05em; }
+
+@media (max-width: 768px) {
+    .bd-annotation-toolbar-item,
+    .bd-annotation-sidebar,
+    .bd-annotation-popup { display: none !important; }
+    .bd-annotation-comments-open .reading-toolbar .rt-item:not(.bd-annotation-toolbar-item) { display: flex; }
+    .bd-annotation-scope .bd-annotation-comment-trigger { display: none; }
+}

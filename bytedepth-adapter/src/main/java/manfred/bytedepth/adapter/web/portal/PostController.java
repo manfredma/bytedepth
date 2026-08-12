@@ -9,7 +9,8 @@ import manfred.bytedepth.adapter.web.util.SeoUtils;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import manfred.bytedepth.adapter.web.util.WebUtils;
 import manfred.bytedepth.app.annotation.ListAnnotationsQryExe;
-import manfred.bytedepth.app.annotation.PostAnnotationDTO;
+import manfred.bytedepth.domain.annotation.AnnotationVisibility;
+import manfred.bytedepth.domain.annotation.PostAnnotation;
 import manfred.bytedepth.adapter.web.portal.AnnotationVisitorIdentity;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
@@ -139,7 +140,9 @@ public class PostController {
         Long currentUserId = SecurityUtils.extractUserId(currentUser);
         String annotationOwnerTokenHash = annotationVisitorIdentity.existingHash(request);
         model.addAttribute("annotations", listAnnotationsQryExe.execute(id, currentUserId, annotationOwnerTokenHash).stream()
-                .map(annotation -> PostAnnotationDTO.from(annotation, currentUserId, annotationOwnerTokenHash)).toList());
+                // Thymeleaf 为内联 JavaScript 使用独立的 ObjectMapper，不能序列化 LocalDateTime。
+                // 阅读页脚本也不使用 createdAt，因此只传递渲染和交互所需字段。
+                .map(annotation -> AnnotationBootstrapDTO.from(annotation, currentUserId, annotationOwnerTokenHash)).toList());
         model.addAttribute("currentUserId", currentUserId);
         model.addAttribute("rating", getPostRatingQryExe.execute(id,
                 WebUtils.readCookie(request, PostRatingController.VISITOR_COOKIE)));
@@ -173,6 +176,19 @@ public class PostController {
                 getSeriesPostsQryExe.execute(currentPost.getSeriesId()));
         }
         return "public/posts/detail";
+    }
+
+    private record AnnotationBootstrapDTO(Long id, String selectedText, String annotationText, String color,
+                                          AnnotationVisibility visibility,
+                                          int startOffset, int endOffset, boolean ownedByCurrentVisitor) {
+        private static AnnotationBootstrapDTO from(PostAnnotation annotation,
+                                                   Long currentUserId, String ownerTokenHash) {
+            boolean ownedByCurrentVisitor = (currentUserId != null && currentUserId.equals(annotation.userId()))
+                    || (ownerTokenHash != null && ownerTokenHash.equals(annotation.ownerTokenHash()));
+            return new AnnotationBootstrapDTO(annotation.id(), annotation.selectedText(), annotation.annotationText(),
+                    annotation.color(), annotation.visibility(), annotation.startOffset(), annotation.endOffset(),
+                    ownedByCurrentVisitor);
+        }
     }
 
     @GetMapping("/new")

@@ -1,7 +1,8 @@
 // bytedepth Service Worker
-// 策略：静态资源 cache-first，页面导航 network-first + 离线回退
+// 策略：内容指纹静态资源 cache-first，页面导航 network-first + 离线回退。
+// CSS / JS 的 URL 由 Spring 依据内容生成 hash；内容变更时自然使用新缓存键。
 
-const CACHE_NAME = 'bytedepth-v4';
+const CACHE_NAME = 'bytedepth-v6';
 
 // 预缓存的核心资源
 const PRECACHE_URLS = [
@@ -46,6 +47,9 @@ self.addEventListener('fetch', event => {
   // 只处理同源请求
   if (url.origin !== location.origin) return;
 
+  // Cache API 只支持 GET；批注创建、编辑和删除等写请求必须直达网络。
+  if (request.method !== 'GET') return;
+
   // 管理后台和搜索不走缓存（实时性要求高）
   if (url.pathname.startsWith('/admin')) return;
   if (request.mode === 'navigate') {
@@ -65,7 +69,7 @@ self.addEventListener('fetch', event => {
         )
     );
   } else {
-    // 静态资源：cache-first，缓存未命中则请求并写入缓存
+    // 静态资源：内容指纹 URL cache-first，缓存未命中则请求并写入缓存
     event.respondWith(
       caches.match(request).then(cached => {
         if (cached) return cached;
