@@ -206,6 +206,23 @@ describe('annotation sidebar', () => {
     expect(document.querySelector('.bd-annotation-popup [data-highlight]')).not.toBeNull();
   });
 
+  test('clicking an owned pure underline exposes a visible delete action', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 7, selectedText: '可批', annotationText: null, color: 'yellow', visibility: 'PRIVATE', startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    document.querySelector('mark[data-id="7"]').click();
+    const deleteAction = document.querySelector('.bd-annotation-popup [data-delete-annotation]');
+    expect(deleteAction).not.toBeNull();
+    expect(document.querySelector('.bd-annotation-popup').classList.contains('bd-annotation-popup-open')).toBe(true);
+
+    deleteAction.click();
+    await Promise.resolve();
+    expect(window.fetch).toHaveBeenCalledWith(expect.stringContaining('/annotations/7'), expect.objectContaining({ method: 'DELETE' }));
+  });
+
   test('renders overlapping highlights without changing the article text', () => {
     window.__ANNOTATIONS__ = [
       { id: 1, selectedText: '可批注文', annotationText: null, color: 'yellow', visibility: 'PRIVATE', startOffset: 0, endOffset: 4 },
@@ -231,5 +248,6 @@ describe('annotation sidebar', () => {
     expect(annotationCss).toContain('.bd-annotation-highlight.bd-annotation-has-comment');
     expect(annotationCss).toContain('border-style: dashed');
     expect(annotationCss).toContain('.bd-annotation-comment-trigger');
+    expect(annotationCss).toContain('bd-annotation-pop-in 150ms ease-out forwards');
   });
 });
