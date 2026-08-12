@@ -1,5 +1,6 @@
 # Add private-network access to the data services of a single-host deployment.
-# It is intentionally not part of docker-compose.yml: public exposure is unsafe.
+# It is intentionally not part of docker-compose.single-host.yml: public exposure is unsafe.
+# Relative paths are resolved against the base file (deploy/docker-compose.single-host.yml), i.e. deploy/.
 services:
   file-server:
     image: nginx:alpine
@@ -8,7 +9,7 @@ services:
       - "${BYTEDEPTH_DATA_BIND_IP:?BYTEDEPTH_DATA_BIND_IP must be set in .env}:8081:8080"
     volumes:
       - /data/images:/srv/images:ro
-      - ./deploy/nginx/files.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/files.conf:/etc/nginx/nginx.conf:ro
 
   mysql:
     ports:

@@ -468,8 +468,10 @@ class AdminAnalyticsControllerTest {
 
     @Test
     void toDateFormat_within2Days_returnsHourFormat() {
-        LocalDateTime start = LocalDateTime.now().minusHours(10);
-        assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.now()))
+        // 固定时间而非 LocalDateTime.now()：跨 10 小时但保证不跨天，
+        // 避免在 0:00-10:00 运行时 now-10h 落到前一天导致断言 flaky。
+        LocalDateTime start = LocalDateTime.of(2026, 7, 28, 2, 0);
+        assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.of(2026, 7, 28, 12, 0)))
                 .isEqualTo("%H:00");
     }
 
