@@ -12,7 +12,6 @@
 
     let annotations = window.__ANNOTATIONS__ || [];
     let selected = null;
-    let suppressNextSelectionPopup = false;
     let color = 'yellow';
     let visibilityChanged = false;
     let popup;
@@ -110,6 +109,20 @@
             endOffset: nodeOffset(range.endContainer) + range.endOffset,
             selectedText: range.toString().trim()
         };
+    }
+
+    function isContentNode(node) {
+        return node === content || content.contains(node);
+    }
+
+    function hasActiveContentSelection() {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) {
+            return false;
+        }
+        const range = selection.getRangeAt(0);
+        return !range.collapsed && Boolean(range.toString().trim())
+            && isContentNode(range.startContainer) && isContentNode(range.endContainer);
     }
 
     function unwrapMarks() {
@@ -548,17 +561,13 @@
         if (isMobile() || sidebar.contains(event.target) || popup && popup.contains(event.target)) {
             return;
         }
-        if (suppressNextSelectionPopup) {
-            suppressNextSelectionPopup = false;
-            window.getSelection().removeAllRanges();
-            return;
-        }
         const selection = window.getSelection();
         if (!selection.rangeCount) {
             return;
         }
         const range = selection.getRangeAt(0);
-        if (range.collapsed || !range.toString().trim() || !content.contains(range.commonAncestorContainer)) {
+        if (range.collapsed || !range.toString().trim()
+            || !isContentNode(range.startContainer) || !isContentNode(range.endContainer)) {
             return;
         }
         const data = selectionData(range);
@@ -589,21 +598,21 @@
     document.addEventListener('click', event => {
         if (!popup || !popup.classList.contains('bd-annotation-popup-open')
             || eventOccurredInside(event, popup) || eventOccurredInside(event, sidebar)
-            || event.target.closest('mark.bd-annotation-highlight')) {
+            || event.target.closest('mark.bd-annotation-highlight') || hasActiveContentSelection()) {
             return;
         }
         hidePopup();
     });
 
-    // 选区菜单只服务于当前这一次选择：在正文空白处按下鼠标时立即撤销，
-    // 避免浏览器清除选区后菜单残留在屏幕上。
+    // 在正文重新按下鼠标时先关闭旧菜单并清空旧选区：单击不会遗留菜单，
+    // 拖拽产生的新选区仍会在 mouseup 时正常打开菜单。
     document.addEventListener('mousedown', event => {
         if (!popup || !popup.classList.contains('bd-annotation-popup-open')
             || eventOccurredInside(event, popup) || eventOccurredInside(event, sidebar)) {
             return;
         }
-        suppressNextSelectionPopup = true;
         hidePopup();
+        window.getSelection().removeAllRanges();
     }, true);
 
     document.addEventListener('click', event => {

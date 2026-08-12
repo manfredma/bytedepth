@@ -177,6 +177,35 @@ describe('annotation sidebar', () => {
     expect(window.getSelection().rangeCount).toBe(0);
   });
 
+  test('keeps the selection menu visible after the trailing click in ordinary article content', () => {
+    const content = document.querySelector('.content');
+    const text = content.firstChild;
+    const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3); range.getBoundingClientRect = () => ({left: 10, bottom: 20});
+    const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    content.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(document.querySelector('.bd-annotation-popup').classList.contains('bd-annotation-popup-open')).toBe(true);
+    expect(document.querySelector('.bd-annotation-popup [data-highlight]')).not.toBeNull();
+  });
+
+  test('does not suppress the next real selection after the dismissed click ends in the sidebar', () => {
+    const text = document.querySelector('.content').firstChild;
+    const firstRange = document.createRange(); firstRange.setStart(text, 0); firstRange.setEnd(text, 3); firstRange.getBoundingClientRect = () => ({left: 10, bottom: 20});
+    const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(firstRange);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+    document.querySelector('.content').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    document.querySelector('#bd-annotation-sidebar').dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+    const secondRange = document.createRange(); secondRange.setStart(text, 3); secondRange.setEnd(text, 5); secondRange.getBoundingClientRect = () => ({left: 10, bottom: 20});
+    selection.removeAllRanges(); selection.addRange(secondRange);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+    expect(document.querySelector('.bd-annotation-popup [data-highlight]')).not.toBeNull();
+  });
+
   test('renders overlapping highlights without changing the article text', () => {
     window.__ANNOTATIONS__ = [
       { id: 1, selectedText: '可批注文', annotationText: null, color: 'yellow', visibility: 'PRIVATE', startOffset: 0, endOffset: 4 },

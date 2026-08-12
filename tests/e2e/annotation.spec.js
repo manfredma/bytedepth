@@ -46,6 +46,8 @@ async function selectArticleText(page, start, length) {
         selection.removeAllRanges();
         selection.addRange(range);
         document.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));
+        // 浏览器在真实拖选结束后还会派发一次 click；普通正文不能因此立刻关闭菜单。
+        content.dispatchEvent(new MouseEvent('click', {bubbles: true}));
     }, {start, length});
 }
 
