@@ -100,18 +100,24 @@
 }
 
 .bd-annotation-toolbar-count {
+    display: grid;
+    place-items: center;
     position: absolute;
-    top: -4px;
-    right: -4px;
-    min-width: 16px;
-    height: 16px;
+    z-index: 2;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
     padding: 0 4px;
-    border: 2px solid var(--card, #fff);
+    box-sizing: border-box;
+    border: 2px solid #fff;
     border-radius: 99px;
-    background: var(--bd-annotation-accent);
+    /* 工具栏位于 .bd-annotation-scope 外，不能依赖其 CSS 变量。 */
+    background: #d83c55;
     color: #fff;
-    font: 700 10px/12px var(--sans, sans-serif);
+    font: 700 11px/1 var(--sans, sans-serif);
     text-align: center;
+    box-shadow: 0 1px 3px rgba(35, 42, 56, .25);
 }
 
 .bd-annotation-sidebar {

@@ -168,6 +168,13 @@ describe('annotation sidebar', () => {
     expect(document.querySelector('.bd-annotation-popup').classList.contains('bd-annotation-popup-open')).toBe(false);
   });
 
+  test('toolbar comment badge uses a self-contained high contrast color', () => {
+    expect(annotationCss).toContain('.bd-annotation-toolbar-count');
+    expect(annotationCss).toContain('background: #d83c55;');
+    expect(annotationCss).toContain('color: #fff;');
+    expect(annotationCss).toContain('border: 2px solid #fff;');
+  });
+
   test('dismisses the selection menu after an outside click even if the browser retains the old selection', () => {
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3); range.getBoundingClientRect = () => ({left: 10, bottom: 20});
