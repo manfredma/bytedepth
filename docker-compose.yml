@@ -57,7 +57,7 @@ services:
       BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE: "true"
       BYTEDEPTH_SESSION_COOKIE_SECURE: "true"
       BYTEDEPTH_DEPLOY_SOCKET_PATH: /run/bytedepth-deploy/deploy.sock
-      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai --enable-native-access=ALL-UNNAMED
     volumes:
       - /data/images:/root/bytedepth/images
       - /data/geoip:/data/geoip:ro
@@ -81,4 +81,3 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - app
-
