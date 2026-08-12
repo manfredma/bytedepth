@@ -4,11 +4,26 @@
 
 ## Unreleased
 
+## [v2.1.3] - 2026-08-13
+
+**Tag**：`v2.1.3`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.0`
+
+### Fixed
+
+- 修复 v2.1.2 引入的部署故障：`deploy/ctl.sh` 为各部署模式显式指定 Compose 项目名（`-p`）。此前 compose 文件移入 `deploy/` 后，Docker Compose 默认以首个 `-f` 文件所在目录名作为项目名，单机/数据节点项目名从历史 `bytedepth` 变为 `deploy`，compose 将其视为全新项目重建容器，与既有 `bytedepth-*` 容器端口冲突（`Bind for 10.0.4.15:8081 failed`）。现显式固定：单机/数据节点 `-p bytedepth`、应用节点 `-p deploy`，保证 compose 识别并升级既有容器。
+
+### Compatibility
+
+- 无服务定义语义变化、无数据库迁移或 API 变更；`deploy/ctl.sh` 现在对三种部署模式统一加载根目录 `.env` 并固定历史项目名。可在验收失败时回滚至 `v2.1.0`。
+
 ## [v2.1.2] - 2026-08-13
 
 **Tag**：`v2.1.2`
-**Commit**：（发布后由受控发布工具回填）
-**部署**：（待验收）
+**Commit**：`ce02a08`（未部署）
+**部署**：❌ 部署失败——compose 项目名从历史 `bytedepth` 变为 `deploy`，新容器与既有 `bytedepth-*` 容器端口冲突（`Bind for 10.0.4.15:8081 failed`）；已清理误建容器，修复见 v2.1.3。
 **回滚基线**：`v2.1.0`
 
 ### Fixed
