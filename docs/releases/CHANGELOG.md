@@ -4,6 +4,26 @@
 
 ## Unreleased
 
+## [v2.1.1] - 2026-08-13
+
+**Tag**：`v2.1.1`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.0`
+
+### Changed
+
+- Docker 部署文件收敛到 `deploy/` 单一目录：`docker-compose.yml` 移入 `deploy/docker-compose.single-host.yml`，`nginx/nginx.conf` 移入 `deploy/nginx/nginx.conf`；删除废弃的根目录 `deploy.sh`（`git pull main` 旧发布方式）。
+- 新增 `deploy/ctl.sh` 统一入口，按 `BYTEDEPTH_DEPLOY_MODE` 自动选择正确的 Compose 文件；`bootstrap-ops-deploy.sh` 统一经 `ctl.sh` 执行。此前应用节点裸跑 `docker compose` 会误读单机版编排并误报 `MEILI_MASTER_KEY` 缺失，收敛后从结构上消除该误读。
+
+### Fixed
+
+- 修复 `AdminAnalyticsControllerTest.toDateFormat_within2Days_returnsHourFormat` 时间敏感的 flaky 测试：原使用 `LocalDateTime.now()`，在 0:00–10:00 运行时 `now-10h` 跨天导致断言失败，改为固定时间戳。
+
+### Compatibility
+
+- 纯部署文件重排，无服务定义语义变化，无数据库迁移或 API 变更；`deploy-release.sh` → `bootstrap-ops-deploy.sh` 部署链路不变，服务器 checkout 新 tag 后自动使用新目录结构。可在验收失败时回滚至 `v2.1.0`。
+
 ## [v2.1.0] - 2026-08-12
 
 **Tag**：`v2.1.0`
