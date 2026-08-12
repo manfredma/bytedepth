@@ -17,9 +17,11 @@
 
 | 拓扑 | 适用场景 | Compose 文件 |
 | --- | --- | --- |
-| 单机 | 小型站点、首次部署 | `docker-compose.yml` |
-| 数据访问节点 | 单机服务外供给第二个应用节点 | 基础 Compose + `docker-compose.data-access.yml` |
+| 单机 | 小型站点、首次部署 | `deploy/docker-compose.single-host.yml` |
+| 数据访问节点 | 单机服务外供给第二个应用节点 | 基础 Compose + `deploy/docker-compose.data-access.yml` |
 | 应用与数据分离 | 多机生产、数据库/缓存已有托管实例 | `deploy/docker-compose.app-external.yml`（应用节点） |
+
+所有 Compose 文件统一放在 `deploy/` 下，根目录仅保留构建必需的 `Dockerfile` 与 `.dockerignore`。对任意节点的 Compose 操作一律通过统一入口 `sudo ./deploy/ctl.sh <compose 子命令...>`（如 `ps`、`logs app --tail=100`、`config`），它会按节点模式自动选择正确的 Compose 文件；禁止裸跑 `docker compose`，否则会误读非当前部署模式的编排定义。
 
 单机 Compose 会在同一机器运行 MySQL、Redis、MeiliSearch、应用和 Nginx，并把数据写入 `/data/mysql`、`/data/redis`、`/data/meilisearch`。多机模式只在应用节点运行应用和 Nginx；数据库、Redis 与 MeiliSearch 由独立机器或托管服务提供。
 
@@ -218,7 +220,7 @@ curl -fsS -o /dev/null -w 'article image: %{http_code}\n' "$BASE_URL$IMAGE_PATH"
 
 ## 8. 故障处理与回滚
 
-1. 先保存 `docker compose logs app --tail=200` 与 `journalctl -u bytedepth-deploy.socket`。
+1. 先保存 `sudo ./deploy/ctl.sh logs app --tail=200` 与 `journalctl -u bytedepth-deploy.socket`。
 2. 回滚代码时，只能部署已验证、兼容数据库迁移的历史发布 Tag，再完整重建 Compose；不要回滚或修改已执行的 Flyway 迁移文件。
 3. 数据恢复必须使用数据库/Redis/MeiliSearch 自身的备份方案，并在隔离环境验证后实施。
 4. 网页部署日志位于 `/var/log/bytedepth-deploy.log`；Socket 状态用 `sudo systemctl status bytedepth-deploy.socket --no-pager` 查看。
@@ -232,7 +234,7 @@ curl -fsS -o /dev/null -w 'article image: %{http_code}\n' "$BASE_URL$IMAGE_PATH"
 4. 验证 Git SSH：ssh -T git@github.com；确认 origin 为 git@github.com:manfredma/bytedepth.git。
 5. external-services：确认 mountpoint -q /mnt/bytedepth-images。
 6. 初始化时按节点模式执行 `sudo ./deploy/bootstrap-ops-deploy.sh`；后续发布只按第 6 节使用 `sudo ./deploy/deploy-release.sh "$TAG"`。双机发布时先数据节点、再应用节点。
-7. 不执行任何直接 docker compose 发布命令。
+7. 一律通过 `sudo ./deploy/ctl.sh` 操作 Compose（`ps`、`logs`、`config` 等）；禁止裸跑 `docker compose`，否则会误读非当前部署模式的 Compose 文件。
 8. 验证 systemd socket=active、compose 服务状态、HTTPS=200、图片 HTTPS=200。
 9. 对每个承载流量的节点执行第 6 节“部署后查询功能回归”：首页最新/热门及翻页、文章列表与详情、旧 ID 跳转、专栏、搜索、项目和文章图片均返回预期状态；不得以首页 `200` 代替回归。
 10. 若 Docker 拉取镜像失败，先测试镜像源的 /v2/ 可达性；不要让长任务的进度输出占用交互 SSH 通道，应重定向到服务器日志再轮询。
