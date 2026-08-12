@@ -136,12 +136,22 @@
         return mark;
     }
 
-    function createCommentTrigger() {
+    function createCommentTrigger(annotation) {
         const trigger = document.createElement('button');
         trigger.type = 'button';
         trigger.className = 'bd-annotation-comment-trigger';
         trigger.textContent = '评注';
         trigger.setAttribute('aria-label', '打开阅读批注');
+        trigger.addEventListener('mouseup', event => event.stopPropagation());
+        trigger.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(!isOpen());
+            const item = feed.querySelector(`[data-id="${annotation.id}"]`);
+            if (isOpen() && item) {
+                item.scrollIntoView?.({block: 'nearest', behavior: 'smooth'});
+            }
+        });
         return trigger;
     }
 
@@ -221,7 +231,7 @@
                 const commentAnchor = applicable.find(annotation => hasComment(annotation)
                     && annotation.startOffset === segmentStart);
                 if (commentAnchor) {
-                    markers.get(String(commentAnchor.id)).appendChild(createCommentTrigger());
+                    markers.get(String(commentAnchor.id)).appendChild(createCommentTrigger(commentAnchor));
                 }
                 fragment.appendChild(decorated);
             }
@@ -568,14 +578,6 @@
         if (isMobile()) {
             if (annotation) {
                 showMobileComment(annotation, mark);
-            }
-            return;
-        }
-        if (annotation && event.target.closest('.bd-annotation-comment-trigger')) {
-            setOpen(true);
-            const item = feed.querySelector(`[data-id="${annotation.id}"]`);
-            if (item) {
-                item.scrollIntoView?.({block: 'nearest', behavior: 'smooth'});
             }
             return;
         }

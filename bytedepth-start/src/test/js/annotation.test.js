@@ -144,8 +144,13 @@ describe('annotation sidebar', () => {
     expect(document.querySelectorAll('.bd-annotation-comment-trigger')).toHaveLength(1);
 
     document.querySelector('.bd-annotation-sidebar-close').click();
-    document.querySelector('mark[data-id="1"] .bd-annotation-comment-trigger').click();
+    const commentTrigger = document.querySelector('mark[data-id="1"] .bd-annotation-comment-trigger');
+    commentTrigger.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    commentTrigger.click();
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    expect(document.querySelector('.bd-annotation-popup')).toBeNull();
+    commentTrigger.click();
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
 
     window.getSelection().removeAllRanges();
     document.querySelector('mark[data-id="2"]').click();
