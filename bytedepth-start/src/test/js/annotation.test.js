@@ -25,8 +25,10 @@ describe('annotation sidebar', () => {
   test('toggle persists sidebar state', () => {
     document.querySelector('#bd-annotation-sidebar-toggle').click();
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(true);
     expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('true');
     document.querySelector('.bd-annotation-sidebar-close').click();
+    expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(false);
     expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('false');
   });
 
@@ -143,9 +145,13 @@ describe('annotation sidebar', () => {
     expect(document.querySelector('.bd-annotation-toolbar-count').hidden).toBe(false);
     document.querySelector('#bd-annotation-sidebar-toggle').click();
     expect(document.querySelectorAll('.bd-annotation-feed-item')).toHaveLength(2);
+    expect(document.querySelectorAll('.bd-annotation-feed-footer')).toHaveLength(2);
+    expect(document.querySelector('.bd-annotation-feed-footer').textContent).toContain('公开评论');
+    expect(document.querySelector('.bd-annotation-feed-item').dataset.color).toBe('yellow');
     expect(document.querySelector('mark[data-id="1"]').classList.contains('bd-annotation-has-comment')).toBe(true);
     expect(document.querySelector('mark[data-id="2"]').classList.contains('bd-annotation-has-comment')).toBe(false);
     expect(document.querySelector('.bd-annotation-comment-outline .bd-annotation-comment-trigger').textContent).toBe('评注');
+    expect(document.querySelector('.bd-annotation-comment-trigger').classList.contains('bd-annotation-comment-trigger-below')).toBe(false);
     expect(document.querySelectorAll('.bd-annotation-comment-trigger')).toHaveLength(1);
 
     document.querySelector('.bd-annotation-sidebar-close').click();
@@ -166,6 +172,101 @@ describe('annotation sidebar', () => {
 
     document.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(document.querySelector('.bd-annotation-popup').classList.contains('bd-annotation-popup-open')).toBe(false);
+  });
+
+  test('clicking the same annotation trigger twice closes the sidebar but a different one keeps it open', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 1, selectedText: '可批', annotationText: '第一条评论', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 },
+      { id: 3, selectedText: '注文', annotationText: '第二条评论', color: 'red', visibility: 'PUBLIC', startOffset: 2, endOffset: 4 }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    const triggers = document.querySelectorAll('.bd-annotation-comment-trigger');
+    expect(triggers).toHaveLength(2);
+    const [triggerA, triggerB] = triggers;
+
+    // 第一次点击：打开侧栏并高亮第一条。
+    triggerA.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    triggerA.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    expect(document.querySelector('.bd-annotation-feed-item[data-id="1"]').classList.contains('bd-annotation-feed-item-active')).toBe(true);
+    expect(document.querySelector('.bd-annotation-feed-item[data-id="3"]').classList.contains('bd-annotation-feed-item-active')).toBe(false);
+
+    // 点击不同的第二条：侧栏保持打开，高亮切换到第二条。
+    triggerB.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    triggerB.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    expect(document.querySelector('.bd-annotation-feed-item[data-id="3"]').classList.contains('bd-annotation-feed-item-active')).toBe(true);
+    expect(document.querySelector('.bd-annotation-feed-item[data-id="1"]').classList.contains('bd-annotation-feed-item-active')).toBe(false);
+
+    // 再次点击同一条：回收侧栏，高亮清零。
+    triggerB.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    triggerB.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
+    expect(document.querySelectorAll('.bd-annotation-feed-item-active')).toHaveLength(0);
+  });
+
+  test('keeps feed items visible in non-sticky mid-width layout', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 1, selectedText: '可批', annotationText: '评论', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    // jsdom 默认 getComputedStyle 返回空串，sidebar.position !== 'sticky'，
+    // layoutFeed 走非 sticky 提前返回分支：卡片应展开为常规列表而非被离场逻辑隐藏。
+    eval(annotationJs);
+
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const item = document.querySelector('.bd-annotation-feed-item');
+    expect(item).not.toBeNull();
+    expect(item.hidden).toBe(false);
+    expect(item.style.opacity).toBe('');
+  });
+
+  test('reports failure on the delete button inside the sidebar card', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 8, selectedText: '可批', annotationText: '评注', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+
+    const deleteButton = document.querySelector('.bd-annotation-feed-actions button:last-child');
+    expect(deleteButton.textContent).toBe('删除');
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 500 }));
+    deleteButton.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(window.fetch).toHaveBeenCalledWith(expect.stringContaining('/annotations/8'), expect.objectContaining({ method: 'DELETE' }));
+    // 失败时卡片保留，按钮文案变为失败提示。
+    expect(document.querySelector('.bd-annotation-feed-item[data-id="8"]')).not.toBeNull();
+    expect(deleteButton.textContent).toBe('删除失败，请重试');
+  });
+
+  test('edits an owned comment inside its sidebar card', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 8, selectedText: '可批', annotationText: '原评注', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+
+    document.querySelector('.bd-annotation-feed-actions button').click();
+    expect(document.querySelector('.bd-annotation-inline-editor-text')).not.toBeNull();
+    expect(document.querySelector('.bd-annotation-composer').hidden).toBe(true);
+    const editor = document.querySelector('.bd-annotation-inline-editor-text');
+    editor.value = '修改后的评注';
+    window.fetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ ...window.__ANNOTATIONS__[0], annotationText: '修改后的评注' }) });
+    document.querySelector('.bd-annotation-inline-editor-save').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(window.fetch).toHaveBeenLastCalledWith(expect.stringContaining('/annotations/8'), expect.objectContaining({ method: 'PATCH' }));
+    expect(document.querySelector('.bd-annotation-feed-text').textContent).toBe('修改后的评注');
   });
 
   test('toolbar comment badge uses a self-contained high contrast color', () => {
@@ -248,6 +349,50 @@ describe('annotation sidebar', () => {
     expect(document.querySelector('mark[data-id="1"] mark[data-id="2"]')).not.toBeNull();
   });
 
+  test('keeps the mark and reports failure when deleting an underline fails', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 7, selectedText: '可批', annotationText: null, color: 'yellow', visibility: 'PRIVATE', startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    document.querySelector('mark[data-id="7"]').click();
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 500 }));
+    document.querySelector('.bd-annotation-popup [data-delete-annotation]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(window.fetch).toHaveBeenCalledWith(expect.stringContaining('/annotations/7'), expect.objectContaining({ method: 'DELETE' }));
+    // 失败时保留 mark，UI 不变；popup 重新弹出并展示失败反馈。
+    expect(document.querySelector('mark[data-id="7"]')).not.toBeNull();
+    expect(document.querySelector('.bd-annotation-popup').classList.contains('bd-annotation-popup-open')).toBe(true);
+    expect(document.querySelector('.bd-annotation-copy-result').textContent).toBe('删除失败，请重试');
+  });
+
+  test('reports failure and leaves the color menu when creating a highlight fails', async () => {
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    const content = document.querySelector('.content');
+    const range = document.createRange();
+    range.setStart(content.firstChild, 0);
+    range.setEnd(content.firstChild, 2);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    content.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    document.querySelector('.bd-annotation-popup [data-highlight]').click();
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 500 }));
+    document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(window.fetch).toHaveBeenCalledWith(expect.stringContaining('/annotations'), expect.objectContaining({ method: 'POST' }));
+    // 失败时不写入 mark；popup 展示失败反馈。
+    expect(document.querySelector('mark[data-id="1"]')).toBeNull();
+    expect(document.querySelector('.bd-annotation-copy-result').textContent).toBe('划线失败，请重试');
+  });
+
   test('styles remain inside the bd-annotation namespace', () => {
     expect(annotationCss).not.toMatch(/(^|\n)\.content\s+/);
     expect(annotationCss).toContain('.bd-annotation-sidebar');
@@ -258,8 +403,34 @@ describe('annotation sidebar', () => {
     expect(annotationCss).toContain('text-decoration-style: wavy');
     expect(annotationCss).toContain('text-decoration-style: double');
     expect(annotationCss).toContain('.bd-annotation-highlight.bd-annotation-has-comment');
+    expect(annotationCss).not.toContain('.bd-annotation-feed-item::before');
+    expect(annotationCss).toContain('border-left: 2px solid var(--bd-annotation-item-color, #9ab2ff);');
     expect(annotationCss).toContain('border-style: dashed');
     expect(annotationCss).toContain('.bd-annotation-comment-trigger');
+    expect(annotationCss).toContain('transform: translateY(-50%);');
+    expect(annotationJs).toContain('const labelGutter = index === 0 ? 9 : 0;');
+    expect(annotationJs).toContain('item.hidden = !visible;');
+    expect(annotationJs).toContain('let nextTop = Number.NEGATIVE_INFINITY;');
+    expect(annotationJs).toContain('const viewportTop = feedRect.top;');
+    expect(annotationJs).toContain('markRect.bottom > viewportTop');
+    expect(annotationJs).toContain('item.style.opacity = String(Math.max(0, Math.min(1, edgeDistance / 48)));');
     expect(annotationCss).toContain('bd-annotation-pop-in 150ms ease-out forwards');
+    expect(annotationCss).toContain('max-width: 1359px');
+    expect(annotationCss).toContain('position: sticky');
+    expect(annotationCss).toContain('@media (min-width: 1360px)');
+    // #9 聚焦批注高亮：彩色左条 + 轻染背景。
+    expect(annotationCss).toContain('.bd-annotation-feed-item-active');
+    expect(annotationCss).toContain('.bd-annotation-feed-item-active::before');
+    expect(annotationCss).toContain('width: 4px');
+    expect(annotationCss).toContain('background: var(--bd-annotation-item-color, #315efb)');
+    // #10 宽屏批注打开时正文左侧避让专栏按钮。
+    expect(annotationCss).toContain('padding: 0 8px 0 48px');
+    // #9 同一批注二次点击回收、不同批注保持打开。
+    expect(annotationJs).toContain('const sameAnnotation = isOpen() && activeAnnotationId === annotation.id');
+    expect(annotationJs).toContain('activeAnnotationId = sameAnnotation ? null : annotation.id');
+    expect(annotationJs).toContain('function updateActiveItem()');
+    // #2 写操作失败反馈（popup 删除/划线 + 侧栏删除按钮）。
+    expect(annotationJs).toContain('删除失败，请重试');
+    expect(annotationJs).toContain('划线失败，请重试');
   });
 });

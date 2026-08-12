@@ -20,8 +20,7 @@
     <meta property="og:title" th:content="${post.title}">
     <meta property="og:description" th:if="${metaDescription != null}" th:content="${metaDescription}">
     <meta property="og:url" th:if="${canonicalUrl != null}" th:content="${canonicalUrl}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/fonts.css}">
     <style>
         :root {
             --bg:        var(--bd-bg, #f7f5f0);
@@ -801,7 +800,6 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>
             </button>
         </header>
-        <p class="bd-annotation-sidebar-hint">评论会贴近对应段落显示；仅你自己的私有划线对其他读者不可见。</p>
         <section class="bd-annotation-feed" aria-live="polite"></section>
         <section class="bd-annotation-composer" hidden>
             <div class="bd-annotation-composer-topline"><span>针对划线写评论</span><button type="button" class="bd-annotation-composer-cancel" aria-label="取消编辑">取消</button></div>
@@ -821,6 +819,7 @@
             </div>
         </section>
     </aside>
+    <div class="bd-annotation-reading-content">
     <h1 th:text="${post.title}">文章标题</h1>
     <div class="meta">
         <span th:if="${post.publishedAt != null}"
@@ -904,6 +903,7 @@
             <a th:href="@{/register}" style="color:var(--accent);font-weight:600;">注册</a>
             后才能发表评论
         </div>
+    </div>
     </div>
     </article>
 

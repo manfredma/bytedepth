@@ -50,18 +50,22 @@
 
 .bd-annotation-scope .bd-annotation-comment-trigger {
     position: absolute;
-    bottom: calc(100% + 3px);
-    left: -1px;
+    top: 0;
+    left: 4px;
     pointer-events: auto;
     z-index: 1;
+    min-width: 0;
+    min-height: 0;
     padding: 0 4px;
-    border: 1px solid var(--bd-annotation-mark-color);
-    border-radius: 4px 4px 4px 0;
+    border: 0;
+    border-radius: 3px;
     background: var(--card, #fff);
     color: var(--bd-annotation-mark-color);
     cursor: pointer;
-    font: 600 10px/16px var(--sans, sans-serif);
+    font: 700 10px/16px var(--sans, sans-serif);
     letter-spacing: .04em;
+    transform: translateY(-50%);
+    white-space: nowrap;
 }
 
 .bd-annotation-scope .bd-annotation-comment-trigger:hover,
@@ -151,6 +155,80 @@
     display: none;
 }
 
+/*
+ * 批注不覆盖正文：超宽屏保留原有正文行宽，在文章右侧建立阅读轨道；
+ * 其它桌面宽度将批注置于文章之后，避免为了并排而挤压正文。
+ */
+@media (min-width: 769px) and (max-width: 1359px) {
+    .bd-annotation-scope.bd-annotation-reading-layout-open {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .bd-annotation-reading-layout-open .bd-annotation-reading-content { order: 1; }
+
+    .bd-annotation-reading-layout-open .bd-annotation-sidebar {
+        position: relative;
+        order: 2;
+        top: auto;
+        right: auto;
+        width: 100%;
+        height: min(640px, 75dvh);
+        margin-top: 32px;
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+    }
+
+    /* 侧栏位于正文下方时，卡片不再随划线绝对定位，改为常规流堆叠，避免被离场逻辑整体隐藏。 */
+    .bd-annotation-reading-layout-open .bd-annotation-feed-item {
+        position: relative;
+        right: auto;
+        left: auto;
+    }
+}
+
+@media (min-width: 1360px) {
+    body.bd-annotation-comments-open .container {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0 0 64px;
+        border-radius: 0;
+    }
+
+    .bd-annotation-scope.bd-annotation-reading-layout-open {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 380px;
+        align-items: start;
+        gap: 16px;
+    }
+
+    .bd-annotation-reading-layout-open .bd-annotation-reading-content {
+        min-width: 0;
+        /* 专栏收起按钮 fixed 在左侧约 36px 宽，批注打开后正文左移会让按钮压住正文；
+           左侧预留 48px（按钮宽 + 余量）避免遮挡，右侧保持 8px。 */
+        padding: 0 8px 0 48px;
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .bd-annotation-reading-layout-open .bd-annotation-sidebar {
+        position: sticky;
+        z-index: 1;
+        top: 60px;
+        right: auto;
+        grid-column: 2;
+        grid-row: 1;
+        width: 380px;
+        height: calc(100dvh - 60px);
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        transition: none;
+    }
+}
+
 .bd-annotation-sidebar-header {
     display: flex;
     align-items: flex-start;
@@ -204,19 +282,9 @@
 .bd-annotation-sidebar-close:hover { background: #f1f4f8; color: var(--bd-annotation-ink); }
 .bd-annotation-sidebar-close svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 
-.bd-annotation-sidebar-hint {
-    margin: 0;
-    padding: 11px 21px;
-    border-bottom: 1px solid var(--bd-annotation-line);
-    background: #fbfcfe;
-    color: var(--bd-annotation-muted);
-    font-size: 12px;
-    line-height: 1.55;
-}
-
 .bd-annotation-feed {
     position: absolute;
-    top: 130px;
+    top: 78px;
     right: 0;
     bottom: 0;
     left: 0;
@@ -231,31 +299,42 @@
     right: 18px;
     left: 18px;
     box-sizing: border-box;
-    padding: 13px 14px 12px;
+    padding: 11px 13px 10px;
     border: 1px solid #e7ebf1;
     border-radius: 12px;
     background: var(--bd-annotation-panel);
     box-shadow: 0 3px 11px rgba(26, 39, 62, .055);
+    transition: opacity 100ms linear;
 }
 
-.bd-annotation-feed-item::before {
-    position: absolute;
-    top: 20px;
-    left: -19px;
-    width: 10px;
-    height: 10px;
-    border: 3px solid #8aa6ff;
-    border-radius: 50%;
-    background: #fff;
+.bd-annotation-feed-item[data-color="yellow"] { --bd-annotation-item-color: #d69e2e; }
+.bd-annotation-feed-item[data-color="red"] { --bd-annotation-item-color: #dc6c67; }
+.bd-annotation-feed-item[data-color="green"] { --bd-annotation-item-color: #45a979; }
+.bd-annotation-feed-item[data-color="blue"] { --bd-annotation-item-color: #5d8fd9; }
+
+/* 当前聚焦批注：彩色左条 + 轻染背景，沿用批注自身颜色变量。 */
+.bd-annotation-feed-item-active {
+    background: #eef3ff;
+    box-shadow: 0 6px 18px rgba(26, 39, 62, .12);
+}
+
+.bd-annotation-feed-item-active::before {
     content: "";
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 0;
+    width: 4px;
+    border-radius: 0 3px 3px 0;
+    background: var(--bd-annotation-item-color, #315efb);
 }
 
 .bd-annotation-feed-item blockquote,
 .bd-annotation-composer-quote {
     overflow: hidden;
-    margin: 0 0 9px;
+    margin: 0 0 6px;
     padding-left: 9px;
-    border-left: 2px solid #9ab2ff;
+    border-left: 2px solid var(--bd-annotation-item-color, #9ab2ff);
     color: #66758b;
     font-size: 12px;
     font-style: normal;
@@ -266,22 +345,32 @@
 
 .bd-annotation-feed-text {
     margin: 0;
-    color: #334d73;
-    font-size: 14px;
-    line-height: 1.6;
+    color: #243b5a;
+    font-size: 15px;
+    font-weight: 560;
+    line-height: 1.55;
     white-space: pre-wrap;
 }
 
+.bd-annotation-feed-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 7px;
+    min-height: 20px;
+}
+
 .bd-annotation-feed-meta {
-    margin-top: 9px;
     color: var(--bd-annotation-muted);
     font-size: 11px;
+    line-height: 20px;
 }
 
 .bd-annotation-feed-actions {
     display: flex;
     gap: 4px;
-    margin-top: 6px;
+    margin-left: auto;
 }
 
 .bd-annotation-feed-actions button,
@@ -298,6 +387,28 @@
 
 .bd-annotation-feed-actions button:hover,
 .bd-annotation-composer-cancel:hover { background: #f0f3f8; color: var(--bd-annotation-ink); }
+
+.bd-annotation-feed-item-editing { border-color: #c9d7ff; box-shadow: 0 5px 16px rgba(49, 94, 251, .10); }
+
+.bd-annotation-inline-editor-text {
+    display: block;
+    width: 100%;
+    min-height: 74px;
+    box-sizing: border-box;
+    padding: 8px 9px;
+    border: 1px solid #dce2ec;
+    border-radius: 8px;
+    background: #fbfcff;
+    color: var(--bd-annotation-ink);
+    font: 14px/1.55 var(--sans, sans-serif);
+    outline: none;
+    resize: vertical;
+}
+
+.bd-annotation-inline-editor-text:focus { border-color: #84a2ff; background: #fff; box-shadow: 0 0 0 3px rgba(49, 94, 251, .10); }
+.bd-annotation-inline-editor-visibility { border: 0; background: transparent; color: var(--bd-annotation-muted); cursor: pointer; font: 11px/20px var(--sans, sans-serif); }
+.bd-annotation-inline-editor-save { background: #edf2ff !important; color: #315efb !important; font-weight: 700 !important; }
+.bd-annotation-inline-editor-save:hover { background: #dfe8ff !important; }
 
 .bd-annotation-empty {
     margin: 44px 18px;

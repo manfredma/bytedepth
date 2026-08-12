@@ -73,3 +73,7 @@ node_modules/
 # 部署路径：/opt/bytedepth/GeoLite2-City.mmdb
 # 配置：export BYTEDEPTH_GEOIP_DB_PATH=/opt/bytedepth/GeoLite2-City.mmdb
 *.mmdb
+
+# Playwright 测试产物
+test-results/
+playwright-report/

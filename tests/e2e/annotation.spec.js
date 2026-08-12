@@ -67,22 +67,22 @@ async function removeAnnotation(page, id) {
     }, id);
 }
 
-async function createCommentAnnotation(page, annotationText) {
-    return page.evaluate(async text => {
+async function createCommentAnnotation(page, annotationText, startOffset = 0) {
+    return page.evaluate(async ({text, start}) => {
         const token = document.querySelector('meta[name="_csrf"]').content;
         const response = await fetch(`${window.location.pathname}/annotations`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': token},
             body: JSON.stringify({
                 selectedText: 'He', annotationText: text, color: 'yellow', visibility: 'PUBLIC',
-                startOffset: 0, endOffset: 2
+                startOffset: start, endOffset: start + 2
             })
         });
         if (!response.ok) {
             throw new Error(`annotation setup failed: ${response.status}`);
         }
         return response.json();
-    }, annotationText);
+    }, {text: annotationText, start: startOffset});
 }
 
 test.describe('划线评论', () => {
@@ -117,7 +117,7 @@ test.describe('划线评论', () => {
         try {
             await expect(savedItem.locator('.bd-annotation-feed-text')).toHaveText('Playwright 端到端评论');
             await page.locator('.bd-annotation-sidebar-close').click();
-            await page.locator('.bd-annotation-comment-outline .bd-annotation-comment-trigger').first().click();
+            await page.locator('#bd-annotation-sidebar-toggle').click();
             await expect(page.locator('#bd-annotation-sidebar')).toHaveClass(/bd-annotation-sidebar-open/);
             await savedItem.getByRole('button', {name: '删除'}).click();
             await expect(savedItem).toHaveCount(0);
@@ -202,6 +202,117 @@ test.describe('划线评论', () => {
             for (const id of createdIds) {
                 await removeAnnotation(page, id);
             }
+        }
+    });
+
+    test('桌面端：批注栏不覆盖正文，并在宽屏与文章同滚动范围', async ({page}, testInfo) => {
+        test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
+        await page.setViewportSize({width: 1280, height: 1000});
+        await page.goto(postPath, {waitUntil: 'commit'});
+        await waitForAnnotationReady(page);
+        await page.locator('#bd-annotation-sidebar-toggle').click();
+
+        const normalDesktopLayout = await page.evaluate(() => {
+            const content = document.querySelector('.bd-annotation-reading-content').getBoundingClientRect();
+            const sidebar = document.querySelector('#bd-annotation-sidebar').getBoundingClientRect();
+            return {contentBottom: content.bottom, sidebarTop: sidebar.top};
+        });
+        expect(normalDesktopLayout.sidebarTop).toBeGreaterThan(normalDesktopLayout.contentBottom);
+
+        await page.setViewportSize({width: 1440, height: 1000});
+        await page.reload({waitUntil: 'commit'});
+        await waitForAnnotationReady(page);
+        await expect(page.locator('#post-article')).toHaveClass(/bd-annotation-reading-layout-open/);
+        const wideDesktopLayout = await page.evaluate(() => {
+            const content = document.querySelector('.bd-annotation-reading-content').getBoundingClientRect();
+            const heading = document.querySelector('.bd-annotation-reading-content h1').getBoundingClientRect();
+            const sidebar = document.querySelector('#bd-annotation-sidebar');
+            const sidebarRect = sidebar.getBoundingClientRect();
+            return {
+                contentWidth: content.width,
+                contentRight: content.right,
+                contentTop: content.top,
+                headingTop: heading.top,
+                headingBottom: heading.bottom,
+                sidebarLeft: sidebarRect.left,
+                sidebarTop: sidebarRect.top,
+                sidebarBottom: sidebarRect.bottom,
+                sidebarPosition: getComputedStyle(sidebar).position
+            };
+        });
+        expect(wideDesktopLayout.contentWidth).toBeGreaterThan(800);
+        expect(wideDesktopLayout.contentRight).toBeLessThan(wideDesktopLayout.sidebarLeft);
+        expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(70);
+        expect(wideDesktopLayout.headingTop).toBeGreaterThanOrEqual(0);
+        expect(wideDesktopLayout.headingBottom).toBeLessThan(120);
+        expect(wideDesktopLayout.sidebarTop).toBeGreaterThanOrEqual(0);
+        expect(wideDesktopLayout.sidebarTop).toBeLessThanOrEqual(70);
+        expect(wideDesktopLayout.sidebarBottom).toBeGreaterThan(0);
+        expect(wideDesktopLayout.sidebarPosition).toBe('sticky');
+    });
+
+    test('桌面端：反复开关批注栏后评注框仍贴合正文', async ({page}, testInfo) => {
+        test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
+        await page.setViewportSize({width: 1440, height: 1000});
+        await page.goto(postPath, {waitUntil: 'commit'});
+        await waitForAnnotationReady(page);
+        const annotation = await createCommentAnnotation(page, '切换布局后仍对齐', 8);
+        try {
+            await page.reload({waitUntil: 'commit'});
+            await waitForAnnotationReady(page);
+            const outline = page.locator('.bd-annotation-comment-outline').first();
+            await expect(outline).toBeVisible();
+            await page.locator('#bd-annotation-sidebar-toggle').click();
+            await page.locator('.bd-annotation-sidebar-close').click();
+            await page.waitForTimeout(50);
+            const geometry = await outline.evaluate(element => {
+                const rect = element.getBoundingClientRect();
+                return {outlineTop: rect.top, textTop: Number(element.dataset.textTop)};
+            });
+            expect(geometry.textTop - geometry.outlineTop).toBeCloseTo(9, 1);
+        } finally {
+            await removeAnnotation(page, annotation.id);
+        }
+    });
+
+    test('桌面端：评注角标随对应划线滚出视口', async ({page}, testInfo) => {
+        test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
+        await page.setViewportSize({width: 1440, height: 1000});
+        await page.goto(postPath, {waitUntil: 'commit'});
+        await waitForAnnotationReady(page);
+        const annotation = await createCommentAnnotation(page, '随划线离开的评注', 8);
+        try {
+            await page.reload({waitUntil: 'commit'});
+            await waitForAnnotationReady(page);
+            const trigger = page.locator('.bd-annotation-comment-outline .bd-annotation-comment-trigger').first();
+            const outline = page.locator('.bd-annotation-comment-outline').first();
+            await expect(trigger).toBeVisible();
+            if (await page.locator('#bd-annotation-sidebar').evaluate(sidebar => sidebar.classList.contains('bd-annotation-sidebar-open'))) {
+                await page.locator('.bd-annotation-sidebar-close').click();
+            }
+            await trigger.click();
+            await expect(page.locator('#bd-annotation-sidebar')).toHaveClass(/bd-annotation-sidebar-open/);
+            const feedItem = page.locator(`.bd-annotation-feed-item[data-id="${annotation.id}"]`);
+            await expect(feedItem).toBeVisible();
+            const attachedPosition = await page.evaluate(([triggerElement, outlineElement]) => {
+                const triggerRect = triggerElement.getBoundingClientRect();
+                const outlineRect = outlineElement.getBoundingClientRect();
+                return {triggerTop: triggerRect.top, triggerBottom: triggerRect.bottom, outlineTop: outlineRect.top, outlineBottom: outlineRect.bottom, textTop: Number(outlineElement.dataset.textTop)};
+            }, await Promise.all([trigger.elementHandle(), outline.elementHandle()]));
+            expect(Math.abs((attachedPosition.triggerTop + attachedPosition.triggerBottom) / 2 - attachedPosition.outlineTop)).toBeLessThanOrEqual(1);
+            expect(attachedPosition.triggerBottom).toBeLessThanOrEqual(attachedPosition.textTop);
+            await page.evaluate(() => {
+                const spacer = document.createElement('div');
+                spacer.setAttribute('aria-hidden', 'true');
+                spacer.style.height = '1600px';
+                document.querySelector('.bd-annotation-reading-content').append(spacer);
+            });
+            await page.evaluate(() => window.scrollTo(0, 500));
+            await page.waitForTimeout(50);
+            expect(await trigger.evaluate(element => element.getBoundingClientRect().bottom)).toBeLessThan(0);
+            await expect(feedItem).toBeHidden();
+        } finally {
+            await removeAnnotation(page, annotation.id);
         }
     });
 });

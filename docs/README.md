@@ -12,6 +12,7 @@
 - 查询所有路由：读 [路由一览](routes.md)。
 - 排查已知问题：读 [工程陷阱](engineering/gotchas.md)。
 - 修改登录、表单或 CSRF：读 [CSRF 决策记录](security/csrf-session-repository.md)。
+- 批注与划线写操作的权限管理：读 [批注写操作权限管理](security/annotation-write-permissions.md)。
 - 构建、测试、覆盖率：读 [Maven 指南](agent-guides/maven.md)。
 - 创建 worktree、分支、PR 与受控发布：读 [Git 工作流](engineering/git-workflow.md)。
 - 同步 Obsidian 笔记：读 [同步指南](agent-guides/obsidian-sync.md)。

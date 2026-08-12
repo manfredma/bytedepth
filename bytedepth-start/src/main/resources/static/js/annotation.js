@@ -20,6 +20,8 @@
     let visibilityChanged = false;
     let popup;
     let mobileNote;
+    // 当前在侧栏中聚焦展示的批注 id；用于判断点击同一批注 trigger 时是否应回收侧栏。
+    let activeAnnotationId = null;
 
     const csrf = (document.querySelector('meta[name="_csrf"]') || {}).content || '';
     const composer = sidebar.querySelector('.bd-annotation-composer');
@@ -82,10 +84,16 @@
 
     function setOpen(open) {
         sidebar.classList.toggle('bd-annotation-sidebar-open', open);
+        article.classList.toggle('bd-annotation-reading-layout-open', open);
         sidebar.setAttribute('aria-hidden', String(!open));
         toggle.setAttribute('aria-expanded', String(open));
         document.body.classList.toggle('bd-annotation-comments-open', open);
         persistSidebarState(open);
+        if (!open) {
+            activeAnnotationId = null;
+        }
+        // 侧栏开关会改变正文的 Grid 布局；下一帧后评注框必须按新坐标重绘。
+        requestAnimationFrame(renderCommentOutlines);
         if (open) {
             renderFeed();
         }
@@ -163,7 +171,11 @@
         trigger.addEventListener('click', event => {
             event.preventDefault();
             event.stopPropagation();
-            setOpen(!isOpen());
+            // 侧栏已打开且点击的是当前同一批注时才回收；切换到不同批注时保持打开并滚动定位。
+            const sameAnnotation = isOpen() && activeAnnotationId === annotation.id;
+            setOpen(!sameAnnotation);
+            activeAnnotationId = sameAnnotation ? null : annotation.id;
+            updateActiveItem();
             const item = feed.querySelector(`[data-id="${annotation.id}"]`);
             if (isOpen() && item) {
                 item.scrollIntoView?.({block: 'nearest', behavior: 'smooth'});
@@ -255,13 +267,16 @@
                 return;
             }
             commentRows(range).forEach((row, index) => {
+                // 为首行的“评注”标签预留垂直槽位，标签不覆盖正文文字。
+                const labelGutter = index === 0 ? 9 : 0;
                 const outline = document.createElement('div');
                 outline.className = `bd-annotation-comment-outline bd-annotation-color-${annotation.color}`;
                 outline.dataset.annotationId = annotation.id;
+                outline.dataset.textTop = String(row.top);
                 outline.style.left = `${row.left}px`;
-                outline.style.top = `${row.top}px`;
+                outline.style.top = `${row.top - labelGutter}px`;
                 outline.style.width = `${row.right - row.left}px`;
-                outline.style.height = `${row.bottom - row.top}px`;
+                outline.style.height = `${row.bottom - row.top + labelGutter}px`;
                 if (index === 0) {
                     outline.appendChild(createCommentTrigger(annotation));
                 }
@@ -317,18 +332,44 @@
         if (!items.length) {
             return;
         }
+        // 仅在宽屏 sticky 布局下让卡片随划线滚动、在 feed 顶部横线处离场；
+        // 中屏桌面（侧栏位于正文下方）的 feed 与正文分属不同区域，划线必然落在 feed 顶部之上，
+        // 若沿用 feedRect.top 作为离场边界会把所有卡片整体隐藏，故展开为常规可读列表。
+        if (getComputedStyle(sidebar).position !== 'sticky') {
+            items.forEach(item => {
+                item.hidden = false;
+                item.style.top = '';
+                item.style.opacity = '';
+            });
+            const flatSpacer = feed.querySelector('.bd-annotation-feed-spacer');
+            if (flatSpacer) {
+                flatSpacer.style.height = '';
+            }
+            return;
+        }
         const feedRect = feed.getBoundingClientRect();
         const composerHeight = composer.hidden ? 0 : composer.offsetHeight + 28;
-        let nextTop = 12;
+        // 评论内容区顶部的分隔线就是卡片的视觉离场边界，不能使用浏览器或导航栏顶部。
+        const viewportTop = feedRect.top;
+        let nextTop = Number.NEGATIVE_INFINITY;
         items.forEach(item => {
             const mark = content.querySelector(`mark[data-id="${item.dataset.id}"]`);
-            const anchorTop = mark ? mark.getBoundingClientRect().top - feedRect.top + feed.scrollTop : nextTop;
-            const top = Math.max(12, anchorTop, nextTop);
+            const markRect = mark && mark.getBoundingClientRect();
+            const visible = markRect && markRect.bottom > viewportTop && markRect.top < window.innerHeight;
+            item.hidden = !visible;
+            if (!visible) {
+                item.style.removeProperty('opacity');
+                return;
+            }
+            const edgeDistance = Math.min(markRect.bottom - viewportTop, window.innerHeight - markRect.top);
+            item.style.opacity = String(Math.max(0, Math.min(1, edgeDistance / 48)));
+            const anchorTop = markRect.top - feedRect.top + feed.scrollTop;
+            const top = Math.max(anchorTop, nextTop);
             item.style.top = `${top}px`;
             nextTop = top + Math.max(item.offsetHeight, 94) + 12;
         });
         const spacer = feed.querySelector('.bd-annotation-feed-spacer');
-        spacer.style.height = `${nextTop + composerHeight}px`;
+        spacer.style.height = `${(Number.isFinite(nextTop) ? nextTop : 0) + composerHeight}px`;
     }
 
     function renderFeed() {
@@ -346,6 +387,7 @@
             const item = document.createElement('article');
             item.className = 'bd-annotation-feed-item';
             item.dataset.id = annotation.id;
+            item.dataset.color = annotation.color;
 
             const quote = document.createElement('blockquote');
             quote.textContent = annotation.selectedText;
@@ -356,10 +398,13 @@
             text.textContent = annotation.annotationText;
             item.appendChild(text);
 
-            const meta = document.createElement('div');
+            const footer = document.createElement('footer');
+            footer.className = 'bd-annotation-feed-footer';
+
+            const meta = document.createElement('span');
             meta.className = 'bd-annotation-feed-meta';
             meta.textContent = annotation.visibility === 'PRIVATE' ? '仅自己可见' : '公开评论';
-            item.appendChild(meta);
+            footer.appendChild(meta);
 
             if (annotation.ownedByCurrentVisitor) {
                 const actions = document.createElement('div');
@@ -367,21 +412,93 @@
                 const edit = document.createElement('button');
                 edit.type = 'button';
                 edit.textContent = '编辑';
-                edit.addEventListener('click', () => openComposer({selectedText: annotation.selectedText}, annotation));
+                edit.addEventListener('click', () => openInlineEditor(annotation, item));
                 const remove = document.createElement('button');
                 remove.type = 'button';
                 remove.textContent = '删除';
-                remove.addEventListener('click', () => removeAnnotation(annotation.id));
+                remove.addEventListener('click', () => removeAnnotation(annotation.id, () => {
+                    remove.textContent = '删除失败，请重试';
+                    window.setTimeout(() => { remove.textContent = '删除'; }, 2000);
+                }));
                 actions.append(edit, remove);
-                item.appendChild(actions);
+                footer.appendChild(actions);
             }
+            item.appendChild(footer);
             feed.appendChild(item);
         });
         const spacer = document.createElement('div');
         spacer.className = 'bd-annotation-feed-spacer';
         spacer.setAttribute('aria-hidden', 'true');
         feed.appendChild(spacer);
+        updateActiveItem();
         requestAnimationFrame(layoutFeed);
+    }
+
+    function updateActiveItem() {
+        feed.querySelectorAll('.bd-annotation-feed-item-active').forEach(item => {
+            item.classList.remove('bd-annotation-feed-item-active');
+        });
+        if (activeAnnotationId !== null) {
+            const active = feed.querySelector(`.bd-annotation-feed-item[data-id="${activeAnnotationId}"]`);
+            if (active) {
+                active.classList.add('bd-annotation-feed-item-active');
+            }
+        }
+    }
+
+    function openInlineEditor(annotation, item) {
+        item.replaceChildren();
+        item.classList.add('bd-annotation-feed-item-editing');
+
+        const quote = document.createElement('blockquote');
+        quote.textContent = annotation.selectedText;
+        item.appendChild(quote);
+
+        const input = document.createElement('textarea');
+        input.className = 'bd-annotation-inline-editor-text';
+        input.maxLength = 2000;
+        input.value = annotation.annotationText || '';
+        input.setAttribute('aria-label', '编辑评注内容');
+        item.appendChild(input);
+
+        const footer = document.createElement('footer');
+        footer.className = 'bd-annotation-feed-footer bd-annotation-inline-editor-footer';
+        const visibility = document.createElement('select');
+        visibility.className = 'bd-annotation-inline-editor-visibility';
+        visibility.setAttribute('aria-label', '评论可见范围');
+        visibility.innerHTML = '<option value="PUBLIC">公开</option><option value="PRIVATE">仅自己可见</option>';
+        visibility.value = annotation.visibility;
+
+        const actions = document.createElement('div');
+        actions.className = 'bd-annotation-feed-actions';
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.textContent = '取消';
+        cancel.addEventListener('click', renderFeed);
+        const save = document.createElement('button');
+        save.type = 'button';
+        save.className = 'bd-annotation-inline-editor-save';
+        save.textContent = '保存';
+        save.addEventListener('click', () => {
+            const annotationText = input.value.trim();
+            api(`/${annotation.id}`, 'PATCH', {annotationText: annotationText || null, visibility: visibility.value})
+                .then(saved => {
+                    const index = annotations.findIndex(itemAnnotation => String(itemAnnotation.id) === String(saved.id));
+                    if (index >= 0) {
+                        annotations[index] = saved;
+                    }
+                    renderMarks();
+                    renderFeed();
+                })
+                .catch(() => {
+                    save.textContent = '保存失败，请重试';
+                });
+        });
+        actions.append(cancel, save);
+        footer.append(visibility, actions);
+        item.appendChild(footer);
+        requestAnimationFrame(layoutFeed);
+        input.focus();
     }
 
     function selectColor(nextColor) {
@@ -447,11 +564,16 @@
         });
     }
 
-    function removeAnnotation(id) {
+    function removeAnnotation(id, onFailure) {
         api(`/${id}`, 'DELETE').then(() => {
             annotations = annotations.filter(annotation => String(annotation.id) !== String(id));
             renderMarks();
             renderFeed();
+        }).catch(() => {
+            // 删除失败时不移除本地标记，避免与服务端不一致；向用户反馈。
+            if (typeof onFailure === 'function') {
+                onFailure();
+            }
         });
     }
 
@@ -567,8 +689,25 @@
         }
         popup.innerHTML = '<button type="button" data-delete-annotation>删除划线</button>';
         popup.querySelector('[data-delete-annotation]').addEventListener('click', () => {
-            removeAnnotation(annotation.id);
             hidePopup();
+            removeAnnotation(annotation.id, () => {
+                if (!popup) {
+                    buildPopup();
+                }
+                popup.classList.add('bd-annotation-popup-open');
+                const rect = mark.getBoundingClientRect();
+                popup.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8))}px`;
+                popup.style.top = `${Math.max(8, rect.bottom + 9)}px`;
+                popup.replaceChildren(Object.assign(document.createElement('span'), {
+                    className: 'bd-annotation-copy-result',
+                    textContent: '删除失败，请重试'
+                }));
+                window.setTimeout(() => {
+                    if (popup.contains(popup.querySelector('.bd-annotation-copy-result'))) {
+                        hidePopup();
+                    }
+                }, 1600);
+            });
         });
         popup.classList.add('bd-annotation-popup-open');
         const rect = mark.getBoundingClientRect();
@@ -597,6 +736,19 @@
                 renderFeed();
             }
             hidePopup();
+        }).catch(() => {
+            if (!popup) {
+                return;
+            }
+            popup.replaceChildren(Object.assign(document.createElement('span'), {
+                className: 'bd-annotation-copy-result',
+                textContent: '划线失败，请重试'
+            }));
+            window.setTimeout(() => {
+                if (popup.contains(popup.querySelector('.bd-annotation-copy-result'))) {
+                    hidePopup();
+                }
+            }, 1600);
         });
     }
 
