@@ -32,7 +32,7 @@ case "$deploy_mode" in
         compose_args=(-f deploy/docker-compose.single-host.yml -f deploy/docker-compose.data-access.yml)
         ;;
     external-services)
-        compose_args=(--env-file .env -f deploy/docker-compose.app-external.yml)
+        compose_args=(-f deploy/docker-compose.app-external.yml)
         if ! mountpoint -q /mnt/bytedepth-images; then
             printf 'Refusing external-services operation: /mnt/bytedepth-images is not mounted\n' >&2
             exit 1
@@ -44,4 +44,6 @@ case "$deploy_mode" in
         ;;
 esac
 
-docker compose "${compose_args[@]}" "$@"
+# .env 固定在仓库根目录。必须显式指定 --env-file：
+# compose 文件在 deploy/ 下时，项目目录会变为 deploy/，默认不再读取根目录 .env。
+docker compose --env-file .env "${compose_args[@]}" "$@"

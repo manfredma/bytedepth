@@ -4,11 +4,26 @@
 
 ## Unreleased
 
+## [v2.1.2] - 2026-08-13
+
+**Tag**：`v2.1.2`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.0`
+
+### Fixed
+
+- 修复 v2.1.1 引入的部署故障：`deploy/ctl.sh` 显式指定 `--env-file .env`。此前 compose 文件移入 `deploy/` 后，Docker Compose 的项目目录随之变为 `deploy/`，不再默认读取仓库根目录的 `.env`，导致 `DB_PASSWORD`/`REDIS_PASSWORD` 等变量缺失、`docker compose up` 失败。
+
+### Compatibility
+
+- 无服务定义语义变化、无数据库迁移或 API 变更；`deploy/ctl.sh` 现在对三种部署模式统一加载根目录 `.env`。可在验收失败时回滚至 `v2.1.0`。
+
 ## [v2.1.1] - 2026-08-13
 
 **Tag**：`v2.1.1`
-**Commit**：（发布后由受控发布工具回填）
-**部署**：（待验收）
+**Commit**：`3dad4f1`（未部署）
+**部署**：❌ 部署失败——`deploy/ctl.sh` 未显式加载根目录 `.env`，数据节点 `docker compose up` 阶段报 `DB_PASSWORD is missing`；按不可变 Tag 规则弃用该版本，修复见 v2.1.2。
 **回滚基线**：`v2.1.0`
 
 ### Changed
