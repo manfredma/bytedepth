@@ -184,7 +184,10 @@ class UserRepositoryImplTest {
 
         repository.assignRole(5L, "ADMIN");
 
-        verify(userRoleMapper).insert(any(UserRoleDO.class));
+        org.mockito.ArgumentCaptor<UserRoleDO> roleAssignment = org.mockito.ArgumentCaptor.forClass(UserRoleDO.class);
+        verify(userRoleMapper).insert(roleAssignment.capture());
+        assertEquals(5L, roleAssignment.getValue().getUserId());
+        assertEquals(2L, roleAssignment.getValue().getRoleId());
     }
 
     @Test
