@@ -12,6 +12,7 @@
 
     let annotations = window.__ANNOTATIONS__ || [];
     let selected = null;
+    let suppressNextSelectionPopup = false;
     let color = 'yellow';
     let visibilityChanged = false;
     let popup;
@@ -537,6 +538,11 @@
         if (isMobile() || sidebar.contains(event.target) || popup && popup.contains(event.target)) {
             return;
         }
+        if (suppressNextSelectionPopup) {
+            suppressNextSelectionPopup = false;
+            window.getSelection().removeAllRanges();
+            return;
+        }
         const selection = window.getSelection();
         if (!selection.rangeCount) {
             return;
@@ -594,6 +600,7 @@
             || eventOccurredInside(event, popup) || eventOccurredInside(event, sidebar)) {
             return;
         }
+        suppressNextSelectionPopup = true;
         hidePopup();
     }, true);
 

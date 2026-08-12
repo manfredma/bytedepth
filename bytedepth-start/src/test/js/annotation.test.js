@@ -158,7 +158,7 @@ describe('annotation sidebar', () => {
     expect(document.querySelector('.bd-annotation-popup').classList.contains('bd-annotation-popup-open')).toBe(false);
   });
 
-  test('dismisses the selection menu as soon as a click starts outside the menu', () => {
+  test('dismisses the selection menu after an outside click even if the browser retains the old selection', () => {
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3); range.getBoundingClientRect = () => ({left: 10, bottom: 20});
     const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
@@ -167,7 +167,9 @@ describe('annotation sidebar', () => {
     const popup = document.querySelector('.bd-annotation-popup');
     expect(popup.classList.contains('bd-annotation-popup-open')).toBe(true);
     document.querySelector('.content').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    document.querySelector('.content').dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     expect(popup.classList.contains('bd-annotation-popup-open')).toBe(false);
+    expect(window.getSelection().rangeCount).toBe(0);
   });
 
   test('renders overlapping highlights without changing the article text', () => {
