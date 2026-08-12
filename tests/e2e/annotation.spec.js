@@ -146,6 +146,22 @@ test.describe('划线评论', () => {
         }
     });
 
+    test('桌面端：侧栏打开时选词仍先显示操作菜单', async ({page}, testInfo) => {
+        test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
+        const errors = captureBrowserErrors(page);
+        await page.goto(postPath, {waitUntil: 'commit'});
+        await waitForAnnotationReady(page);
+
+        await page.locator('#bd-annotation-sidebar-toggle').click();
+        await expect(page.locator('#bd-annotation-sidebar')).toHaveClass(/bd-annotation-sidebar-open/);
+        await selectArticleText(page, 0, 2);
+
+        const popup = page.locator('.bd-annotation-popup');
+        await expect(popup.getByRole('button', {name: '划线'})).toBeVisible();
+        await expect(page.locator('.bd-annotation-composer')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
     test('桌面端：已有划线仍可再次划线，并可删除自己的划线', async ({page}, testInfo) => {
         test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
         const errors = captureBrowserErrors(page);

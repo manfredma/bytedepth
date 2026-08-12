@@ -570,12 +570,7 @@
             || !isContentNode(range.startContainer) || !isContentNode(range.endContainer)) {
             return;
         }
-        const data = selectionData(range);
-        if (isOpen()) {
-            openComposer(data);
-        } else {
-            showPopup(range);
-        }
+        showPopup(range);
     });
 
     content.addEventListener('click', event => {

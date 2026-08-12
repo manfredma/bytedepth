@@ -47,18 +47,21 @@ describe('annotation sidebar', () => {
     const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
     document.querySelector('#bd-annotation-sidebar-toggle').click();
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    document.querySelector('.bd-annotation-popup [data-comment]').click();
     const visibility = document.querySelector('.bd-annotation-visibility');
     expect(visibility.value).toBe('PRIVATE');
     const input = document.querySelector('.bd-annotation-composer-text'); input.value = '我的评论'; input.dispatchEvent(new Event('input', { bubbles: true }));
     expect(visibility.value).toBe('PUBLIC');
   });
 
-  test('closed sidebar opens a two-level menu before posting a private pure highlight', async () => {
+  test('opens a two-level menu before posting a private pure highlight even when the sidebar is open', async () => {
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3); range.getBoundingClientRect = () => ({left: 10, bottom: 20});
     const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     expect(document.querySelector('.bd-annotation-popup [data-highlight]')).not.toBeNull();
+    expect(document.querySelector('.bd-annotation-composer').hidden).toBe(true);
     document.querySelector('.bd-annotation-popup [data-highlight]').click();
     expect(document.querySelector('.bd-annotation-popup [data-back]')).not.toBeNull();
     document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
