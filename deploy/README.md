@@ -50,7 +50,7 @@ DNS 或负载均衡完全切走数据节点前，两台机器必须保持相同�
 sudo install -d -o "$USER" -g "$USER" /opt
 git clone git@github.com:manfredma/bytedepth.git /opt/bytedepth
 cd /opt/bytedepth
-cp .env.example .env
+cp deploy/.env.example .env
 chmod 600 .env
 # 编辑 .env：替换所有示例密码和密钥为随机生产值
 sudo ./deploy/bootstrap-ops-deploy.sh

@@ -4,6 +4,21 @@
 
 ## Unreleased
 
+## [v2.1.4] - 2026-08-13
+
+**Tag**：`v2.1.4`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.3`
+
+### Changed
+
+- 环境变量模板统一到 `deploy/`：根目录 `.env.example` 移入 `deploy/.env.example`，与现有的 `deploy/.env.external.example` 并列。`deploy/README.md` 中 `cp .env.example .env` 同步更新为 `cp deploy/.env.example .env`。
+
+### Compatibility
+
+- 纯部署模板文件移动，无服务定义或功能变化；`cp` 命令路径需改为 `deploy/.env.example`。可在验收失败时回滚至 `v2.1.3`。
+
 ## [v2.1.3] - 2026-08-13
 
 **Tag**：`v2.1.3`
