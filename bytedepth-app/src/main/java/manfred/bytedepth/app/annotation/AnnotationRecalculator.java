@@ -127,16 +127,17 @@ public class AnnotationRecalculator {
         int oldEnd = annotation.endOffset();
 
         // 检查批注范围内是否所有字符都被删除（完全删除才标记为 deleted）
-        boolean allDeleted = true;
-        for (int i = oldStart; i < oldEnd && i < deltaMap.length; i++) {
-            if (deltaMap[i] != Integer.MIN_VALUE) {
-                allDeleted = false;
-                break;
+        boolean allDeleted = oldStart >= oldEnd;  // 空范围不算全删除
+        if (oldStart >= 0 && oldStart < oldEnd) {
+            allDeleted = true;
+            for (int i = oldStart; i < oldEnd && i < deltaMap.length; i++) {
+                if (deltaMap[i] != Integer.MIN_VALUE) {
+                    allDeleted = false;
+                    break;
+                }
             }
         }
-        // 如果所有字符都标记为 MIN_VALUE，且范围非空，则完全删除
-        // 还需要检查：如果范围为空（start==end），不算完全删除
-        boolean fullyDeleted = oldStart < oldEnd && allDeleted;
+        boolean fullyDeleted = oldStart < oldEnd && oldStart >= 0 && allDeleted;
 
         if (fullyDeleted) {
             return new PostAnnotation(

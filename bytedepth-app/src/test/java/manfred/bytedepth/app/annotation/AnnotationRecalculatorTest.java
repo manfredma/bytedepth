@@ -226,6 +226,62 @@ class AnnotationRecalculatorTest {
         assertThat(AnnotationRecalculator.splitToChars("ABC")).containsExactly("A", "B", "C");
     }
 
+    @Test
+    void buildDeltaMap_withInsert_handlesCorrectly() {
+        // "ABC" → "AXBC"：在 "A" 后插入 "X" (INSERT)
+        String oldContent = "ABC";
+        String newContent = "AXBC";
+        List<String> oldChars = AnnotationRecalculator.splitToChars(oldContent);
+        List<String> newChars = AnnotationRecalculator.splitToChars(newContent);
+        var patch = DiffUtils.diff(oldChars, newChars);
+        int[] deltaMap = AnnotationRecalculator.buildDeltaMap(oldContent, newContent, patch);
+        // A(0)→A(0) delta=0, B(1)→B(2) delta=1 (insert X before B), C(2)→C(3) delta=1
+        assertThat(deltaMap[0]).isEqualTo(0);
+        assertThat(deltaMap[1]).isEqualTo(1);
+        assertThat(deltaMap[2]).isEqualTo(1);
+        assertThat(deltaMap[3]).isEqualTo(1);
+    }
+
+    @Test
+    void buildDeltaMap_withInsertAndDelete_handlesCorrectly() {
+        // "AB" → "X"：A→X (CHANGE), B deleted (DELETE)
+        // 实际 diff: CHANGE at 0, size 1, DELETE at 1, size 1
+        String oldContent = "AB";
+        String newContent = "X";
+        List<String> oldChars = AnnotationRecalculator.splitToChars(oldContent);
+        List<String> newChars = AnnotationRecalculator.splitToChars(newContent);
+        var patch = DiffUtils.diff(oldChars, newChars);
+        int[] deltaMap = AnnotationRecalculator.buildDeltaMap(oldContent, newContent, patch);
+        // A(0) → X(CHANGE): deltaMap[0] = MIN_VALUE, delta = 0 (1-1)
+        // B(1) → deleted(DELETE): deltaMap[1] = MIN_VALUE, delta = 0-1 = -1
+        // pos 2 → delta = -1
+        assertThat(deltaMap[0]).isEqualTo(Integer.MIN_VALUE);
+        assertThat(deltaMap[1]).isEqualTo(Integer.MIN_VALUE);
+        assertThat(deltaMap[2]).isEqualTo(-1);
+    }
+
+    @Test
+    void safeDelta_edgeCases() {
+        String oldContent = "ABC";
+        String newContent = "XYZ";
+        var patch = DiffUtils.diff(AnnotationRecalculator.splitToChars(oldContent), AnnotationRecalculator.splitToChars(newContent));
+        int[] deltaMap = AnnotationRecalculator.buildDeltaMap(oldContent, newContent, patch);
+        // pos < 0 → 0
+        // pos >= deltaMap.length → deltaMap[last]
+        // pos with MIN_VALUE → 0
+        // Normal pos → deltaMap[pos]
+        assertThat(AnnotationRecalculator.recalculateAnnotation(
+                new PostAnnotation(null, 1L, null, null, "A", null, "yellow",
+                        AnnotationVisibility.PRIVATE, -1, 0, LocalDateTime.now(), false),
+                deltaMap, oldContent, newContent).startOffset()).isEqualTo(0);
+        // safeDelta for pos >= length returns last element
+        // normal pos
+        assertThat(AnnotationRecalculator.recalculateAnnotation(
+                new PostAnnotation(null, 1L, null, null, "A", null, "yellow",
+                        AnnotationVisibility.PRIVATE, 999, 1000, LocalDateTime.now(), false),
+                deltaMap, oldContent, newContent).startOffset()).isEqualTo(999);
+    }
+
     private static PostAnnotation annotation(String content, int start, int end) {
         return new PostAnnotation(null, 1L, null, null,
                 content.substring(start, end), null, "yellow",
