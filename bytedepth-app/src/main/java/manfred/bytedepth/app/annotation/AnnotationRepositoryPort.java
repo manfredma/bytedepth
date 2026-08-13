@@ -17,4 +17,6 @@ public interface AnnotationRepositoryPort {
     Optional<PostAnnotation> findById(Long id);
 
     void delete(Long id);
+
+    List<PostAnnotation> findByPostId(Long postId);
 }

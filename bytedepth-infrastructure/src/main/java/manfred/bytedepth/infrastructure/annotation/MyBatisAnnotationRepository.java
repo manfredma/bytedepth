@@ -1,5 +1,6 @@
 package manfred.bytedepth.infrastructure.annotation;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.annotation.AnnotationRepositoryPort;
 import manfred.bytedepth.domain.annotation.PostAnnotation;
@@ -45,6 +46,13 @@ public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
         mapper.deleteById(id);
     }
 
+    @Override
+    public List<PostAnnotation> findByPostId(Long postId) {
+        return mapper.selectList(new LambdaQueryWrapper<PostAnnotationDO>()
+                        .eq(PostAnnotationDO::getPostId, postId))
+                .stream().map(MyBatisAnnotationRepository::toDomain).toList();
+    }
+
     private static PostAnnotationDO toDO(PostAnnotation annotation) {
         PostAnnotationDO data = new PostAnnotationDO();
         data.setId(annotation.id());
@@ -58,6 +66,7 @@ public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
         data.setStartOffset(annotation.startOffset());
         data.setEndOffset(annotation.endOffset());
         data.setCreatedAt(annotation.createdAt());
+        data.setDeleted(annotation.deleted());
         return data;
     }
 
@@ -65,6 +74,7 @@ public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
         return new PostAnnotation(
                 data.getId(), data.getPostId(), data.getUserId(), data.getOwnerTokenHash(),
                 data.getSelectedText(), data.getAnnotationText(), data.getColor(),
-                AnnotationVisibility.valueOf(data.getVisibility()), data.getStartOffset(), data.getEndOffset(), data.getCreatedAt());
+                AnnotationVisibility.valueOf(data.getVisibility()), data.getStartOffset(), data.getEndOffset(), data.getCreatedAt(),
+                data.getDeleted() != null && data.getDeleted());
     }
 }

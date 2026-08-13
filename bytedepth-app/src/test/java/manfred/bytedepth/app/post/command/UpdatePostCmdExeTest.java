@@ -1,6 +1,8 @@
 package manfred.bytedepth.app.post.command;
 
 import manfred.bytedepth.app.search.IndexPostCmdExe;
+import manfred.bytedepth.app.annotation.AnnotationRecalculator;
+import manfred.bytedepth.app.annotation.AnnotationRepositoryPort;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.PostStatus;
@@ -24,12 +26,16 @@ class UpdatePostCmdExeTest {
     private PostRepository postRepository;
     @Mock
     private IndexPostCmdExe indexPostCmdExe;
+    @Mock
+    private AnnotationRepositoryPort annotationRepository;
+    @Mock
+    private AnnotationRecalculator annotationRecalculator;
 
     private UpdatePostCmdExe updatePostCmdExe;
 
     @BeforeEach
     void setUp() {
-        updatePostCmdExe = new UpdatePostCmdExe(postRepository, indexPostCmdExe);
+        updatePostCmdExe = new UpdatePostCmdExe(postRepository, indexPostCmdExe, annotationRepository, annotationRecalculator);
     }
 
     @Test

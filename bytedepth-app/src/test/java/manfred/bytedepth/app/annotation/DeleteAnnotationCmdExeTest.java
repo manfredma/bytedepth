@@ -32,7 +32,7 @@ class DeleteAnnotationCmdExeTest {
     }
 
     private static PostAnnotation annotation(Long id, Long userId) {
-        return new PostAnnotation(id, 1L, userId, null, "文本", "批注", "yellow", AnnotationVisibility.PUBLIC, 0, 5, LocalDateTime.now());
+        return new PostAnnotation(id, 1L, userId, null, "文本", "批注", "yellow", AnnotationVisibility.PUBLIC, 0, 5, LocalDateTime.now(), false);
     }
 
     @Test
@@ -66,7 +66,7 @@ class DeleteAnnotationCmdExeTest {
 
     @Test
     void execute_anonymousOwner_deletes() {
-        PostAnnotation annotation = new PostAnnotation(10L, 1L, null, "hash", "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 5, LocalDateTime.now());
+        PostAnnotation annotation = new PostAnnotation(10L, 1L, null, "hash", "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 5, LocalDateTime.now(), false);
         when(annotationRepository.findById(10L)).thenReturn(Optional.of(annotation));
         exe.execute(10L, 1L, null, "hash");
         verify(annotationRepository).delete(10L);

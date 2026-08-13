@@ -178,7 +178,7 @@ class PostControllerCoverageTest {
         when(posts.findNextPublished(11L)).thenReturn(Optional.empty());
         when(visitFilter.shouldRecord(any())).thenReturn(false);
         when(annotations.execute(11L, null, null)).thenReturn(List.of(new PostAnnotation(5L, 11L, null,
-                "visitor", "选中文本", "公开评论", "yellow", AnnotationVisibility.PUBLIC, 0, 4, LocalDateTime.now())));
+                "visitor", "选中文本", "公开评论", "yellow", AnnotationVisibility.PUBLIC, 0, 4, LocalDateTime.now(), false)));
 
         ExtendedModelMap model = new ExtendedModelMap();
 

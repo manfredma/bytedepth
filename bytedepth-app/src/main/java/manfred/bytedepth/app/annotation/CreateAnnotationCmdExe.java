@@ -24,7 +24,7 @@ public class CreateAnnotationCmdExe {
         validate(postId, userId, ownerTokenHash, selectedText, annotationText, color, visibility, startOffset, endOffset);
         return annotationRepository.save(new PostAnnotation(
                 null, postId, userId, ownerTokenHash, selectedText, normalizeAnnotationText(annotationText), color, visibility,
-                startOffset, endOffset, LocalDateTime.now()));
+                startOffset, endOffset, LocalDateTime.now(), false));
     }
 
     static void validate(Long postId, Long userId, String ownerTokenHash, String selectedText, String annotationText,

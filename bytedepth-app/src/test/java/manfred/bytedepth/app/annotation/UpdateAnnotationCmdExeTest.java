@@ -85,6 +85,6 @@ class UpdateAnnotationCmdExeTest {
 
     private static PostAnnotation annotation(Long userId, String hash) {
         return new PostAnnotation(1L, 1L, userId, hash, "文本", "旧评论", "yellow", AnnotationVisibility.PUBLIC,
-                0, 2, LocalDateTime.now());
+                0, 2, LocalDateTime.now(), false);
     }
 }

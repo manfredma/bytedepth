@@ -23,4 +23,5 @@ public class PostAnnotationDO {
     private Integer startOffset;
     private Integer endOffset;
     private LocalDateTime createdAt;
+    private Boolean deleted;
 }
