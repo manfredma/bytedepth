@@ -10,4 +10,4 @@
 
 “部署发布版本”需要同时拥有 `ops:monitor:view` 和 `ops:deploy:execute`；后者默认授予 `ADMIN`。按钮只接受稳定 SemVer Tag，向本机受控 Unix Socket 发送 `deploy-tag vX.Y.Z` 请求。宿主机验证 annotated Tag、POM 版本一致性与本节点未部署记录后，才调用受限的完整部署流程；不能传入分支、路径或 Shell 命令。
 
-应用容器只挂载部署 Socket 所在目录，不挂载 Docker Socket，也不能执行任意宿主机命令。网页按钮只更新**当前节点**；双机发布、初始化、日志、验收与回滚必须严格使用唯一的 [部署手册](../deploy/README.md)。
+应用容器只挂载部署 Socket 所在目录，不挂载 Docker Socket，也不能执行任意宿主机命令。网页按钮只更新**当前节点**；双机发布、初始化、日志、验收与回滚必须严格使用唯一的 [部署手册](../../deploy/README.md)。

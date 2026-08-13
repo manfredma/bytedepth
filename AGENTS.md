@@ -30,5 +30,5 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 分页、确认弹窗等公共组件的接入方式：见 [docs/engineering/frontend-patterns.md](docs/engineering/frontend-patterns.md)
 - 已知工程陷阱与故障处理边界：见 [docs/engineering/gotchas.md](docs/engineering/gotchas.md)
 - 登录、表单或 CSRF 机制：见 [docs/security/csrf-session-repository.md](docs/security/csrf-session-repository.md)
-- 后台系统运维页面的权限与能力边界：见 [docs/ops.md](docs/ops.md)
+- 后台系统运维页面的权限与能力边界：见 [docs/security/ops.md](docs/security/ops.md)
 - 历史需求的设计和计划：按需查阅 [docs/superpowers/](docs/superpowers/)；不得将其作为当前操作手册。

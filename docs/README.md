@@ -9,7 +9,7 @@
 - 讨论全局业务概念、限界上下文和名称边界：读 [统一语言](architecture/ubiquitous-language.md)。
 - 新增后台页面：读 [后台布局](architecture/admin-layout.md)。
 - 修改分页：读 [前端模式](engineering/frontend-patterns.md)。
-- 查询所有路由：读 [路由一览](routes.md)。
+- 查询所有路由：读 [路由一览](architecture/routes.md)。
 - 排查已知问题：读 [工程陷阱](engineering/gotchas.md)。
 - 修改登录、表单或 CSRF：读 [CSRF 决策记录](security/csrf-session-repository.md)。
 - 批注与划线写操作的权限管理：读 [批注写操作权限管理](security/annotation-write-permissions.md)。
@@ -18,7 +18,7 @@
 - 同步 Obsidian 笔记：读 [同步指南](agent-guides/obsidian-sync.md)。
 - 部署、回滚和双机验收：只读 [部署手册](../deploy/README.md)。
 - 创建版本、记录变更、发布与回滚：读 [发布管理](releases/README.md)。
-- 了解后台运维页面的权限边界：读 [运维页面说明](ops.md)。
+- 了解后台运维页面的权限边界：读 [运维页面说明](security/ops.md)。
 
 ## 目录边界
 
