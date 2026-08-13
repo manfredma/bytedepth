@@ -145,7 +145,7 @@
                     <version>3.28.0</version>
                     <configuration>
                         <rulesets>
-                            <ruleset>${maven.multiModuleProjectDirectory}/pmd-ruleset.xml</ruleset>
+                            <ruleset>${maven.multiModuleProjectDirectory}/config/pmd/pmd-ruleset.xml</ruleset>
                         </rulesets>
                         <targetJdk>25</targetJdk>
                         <failOnViolation>true</failOnViolation>
