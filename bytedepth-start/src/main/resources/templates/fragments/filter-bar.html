@@ -5,8 +5,10 @@
 <div th:fragment="filterBar(action, fields)" class="bd-filter-bar">
     <style>
         .bd-filter-bar, .bd-filter-bar * { box-sizing: border-box; }
-        .bd-filter-bar {
+        .bd-filter-bar, .bd-filter-bar-form {
             display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+        }
+        .bd-filter-bar {
             padding: 14px 18px; margin-bottom: 16px;
             background: var(--bd-surface, #fff);
             border-radius: 8px;

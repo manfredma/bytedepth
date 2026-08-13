@@ -23,13 +23,15 @@ describe('annotation sidebar', () => {
   });
 
   test('toggle persists sidebar state', () => {
+    // 默认打开，先关闭再重新打开验证
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    document.querySelector('.bd-annotation-sidebar-close').click();
+    expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(false);
+    expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('false');
     document.querySelector('#bd-annotation-sidebar-toggle').click();
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
     expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(true);
     expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('true');
-    document.querySelector('.bd-annotation-sidebar-close').click();
-    expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(false);
-    expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('false');
   });
 
   test('toggle remains usable when browser storage is unavailable', () => {
@@ -39,6 +41,10 @@ describe('annotation sidebar', () => {
     Storage.prototype.setItem = jest.fn(() => { throw new DOMException('blocked', 'SecurityError'); });
     document.body.innerHTML = `<article id="post-article"><button id="bd-annotation-sidebar-toggle"></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section><section class="bd-annotation-feed"></section></aside></article>`;
     expect(() => eval(annotationJs)).not.toThrow();
+    // 默认打开，单击 toggle 关闭后再单击重新打开
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
     document.querySelector('#bd-annotation-sidebar-toggle').click();
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
     Storage.prototype.getItem = originalGet;

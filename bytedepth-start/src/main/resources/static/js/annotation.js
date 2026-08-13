@@ -36,9 +36,11 @@
 
     function readSidebarState() {
         try {
-            return localStorage.getItem(storageKey) === 'true';
+            var stored = localStorage.getItem(storageKey);
+            if (stored !== null) return stored === 'true';
+            return true; // 首次访问默认打开侧栏
         } catch {
-            return false;
+            return true;
         }
     }
 
