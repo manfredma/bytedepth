@@ -261,6 +261,19 @@ class AnnotationRecalculatorTest {
     }
 
     @Test
+    void buildDeltaMap_withInsertOnly_handlesCorrectly() {
+        // "ABC" → "AXC"：B → X (CHANGE 1→1) 或 INSERT+EQUAL
+        // 不依赖具体 diff 算法，只验证 deltaMap 长度正确
+        String oldContent = "ABC";
+        String newContent = "AXC";
+        var patch = DiffUtils.diff(AnnotationRecalculator.splitToChars(oldContent), AnnotationRecalculator.splitToChars(newContent));
+        int[] deltaMap = AnnotationRecalculator.buildDeltaMap(oldContent, newContent, patch);
+        assertThat(deltaMap.length).isEqualTo(4);
+        // 验证结果自洽：deltaMap[3]（结束位置）的 delta 应为 0（长度不变）
+        assertThat(deltaMap[3]).isEqualTo(0);
+    }
+
+    @Test
     void recalculate_withInsertDelta_adjustsCorrectly() {
         // 整个 recalculate 流程：旧内容开头插入，gap filler 运行
         PostAnnotation a = annotation("旧内容", 0, 3);
@@ -290,24 +303,15 @@ class AnnotationRecalculatorTest {
 
     @Test
     void safeDelta_edgeCases() {
-        String oldContent = "ABC";
-        String newContent = "XYZ";
-        var patch = DiffUtils.diff(AnnotationRecalculator.splitToChars(oldContent), AnnotationRecalculator.splitToChars(newContent));
-        int[] deltaMap = AnnotationRecalculator.buildDeltaMap(oldContent, newContent, patch);
+        int[] deltaMap = new int[]{0, Integer.MIN_VALUE, 5};
         // pos < 0 → 0
+        assertThat(AnnotationRecalculator.safeDelta(deltaMap, -1)).isEqualTo(0);
         // pos >= deltaMap.length → deltaMap[last]
+        assertThat(AnnotationRecalculator.safeDelta(deltaMap, 10)).isEqualTo(5);
         // pos with MIN_VALUE → 0
-        // Normal pos → deltaMap[pos]
-        assertThat(AnnotationRecalculator.recalculateAnnotation(
-                new PostAnnotation(null, 1L, null, null, "A", null, "yellow",
-                        AnnotationVisibility.PRIVATE, -1, 0, LocalDateTime.now(), false),
-                deltaMap, oldContent, newContent).startOffset()).isEqualTo(0);
-        // safeDelta for pos >= length returns last element
-        // normal pos
-        assertThat(AnnotationRecalculator.recalculateAnnotation(
-                new PostAnnotation(null, 1L, null, null, "A", null, "yellow",
-                        AnnotationVisibility.PRIVATE, 999, 1000, LocalDateTime.now(), false),
-                deltaMap, oldContent, newContent).startOffset()).isEqualTo(999);
+        assertThat(AnnotationRecalculator.safeDelta(deltaMap, 1)).isEqualTo(0);
+        // normal pos → deltaMap[pos]
+        assertThat(AnnotationRecalculator.safeDelta(deltaMap, 2)).isEqualTo(5);
     }
 
     private static PostAnnotation annotation(String content, int start, int end) {

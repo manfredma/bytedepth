@@ -180,7 +180,7 @@ public class AnnotationRecalculator {
         return chars;
     }
 
-    private static int safeDelta(int[] deltaMap, int pos) {
+    static int safeDelta(int[] deltaMap, int pos) {
         if (pos < 0) return 0;
         if (pos >= deltaMap.length) return deltaMap[deltaMap.length - 1];
         int d = deltaMap[pos];
