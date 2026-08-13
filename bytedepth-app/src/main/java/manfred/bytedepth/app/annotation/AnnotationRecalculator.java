@@ -34,8 +34,10 @@ public class AnnotationRecalculator {
             return annotations;
         }
 
-        // 1. 计算字符级 diff
-        Patch<String> patch = DiffUtils.diffInline(oldContent, newContent);
+        // 1. 计算字符级 diff（逐字符拆分，diffInline 按连续字符块分组，不适合）
+        List<String> oldChars = splitToChars(oldContent);
+        List<String> newChars = splitToChars(newContent);
+        Patch<String> patch = DiffUtils.diff(oldChars, newChars);
 
         // 2. 构建旧位置 → 新位置偏移映射表
         // 对于每个旧位置，计算其在新内容中的偏移
@@ -60,51 +62,48 @@ public class AnnotationRecalculator {
         int oldLen = oldContent.length();
         int[] deltaMap = new int[oldLen + 1];
 
-        // 按 diff 块遍历，计算每个区间的偏移变化
+        // 按 diff 块遍历，对每个旧位置计算累计偏移变化量
         int delta = 0;  // 累计偏移变化量
-        int oldPos = 0;
-        int newPos = 0;
+        int oldPos = 0; // 当前处理到的旧内容位置
 
         for (AbstractDelta<String> d : patch.getDeltas()) {
             int dOldPos = d.getSource().getPosition();
             int dOldSize = d.getSource().size();
             int dNewSize = d.getTarget().size();
 
-            // 不变区间：delta 不变
+            // 当前 delta 前的区间（不变）：delta 不变
             for (int i = oldPos; i < dOldPos && i <= oldLen; i++) {
                 deltaMap[i] = delta;
             }
 
             if (d.getType() == DeltaType.EQUAL) {
-                // 不变区域：delta 不变
+                // 不变的字符：delta 不变，deltaMap 在该区间内保持 delta 值
+                for (int i = dOldPos; i < dOldPos + dOldSize && i <= oldLen; i++) {
+                    deltaMap[i] = delta;
+                }
                 oldPos = dOldPos + dOldSize;
-                newPos = newPos + dNewSize;
             } else if (d.getType() == DeltaType.INSERT) {
-                // 插入：delta 增加（插入长度）
+                // 插入：不影响旧位置的偏移量，但 delta 累计值增加
                 delta += dNewSize;
                 oldPos = dOldPos;
-                newPos = newPos + dNewSize;
-                // 旧位置没有对应的字符，不需要设置 deltaMap
             } else if (d.getType() == DeltaType.DELETE) {
-                // 删除：delta 减小（删除长度），被删除的字符标记为已删除
+                // 删除：被删除的字符标记为 MIN_VALUE，delta 累计值减少
                 for (int i = dOldPos; i < dOldPos + dOldSize && i <= oldLen; i++) {
                     deltaMap[i] = Integer.MIN_VALUE;
                 }
                 delta -= dOldSize;
                 oldPos = dOldPos + dOldSize;
-                newPos = newPos;
             } else if (d.getType() == DeltaType.CHANGE) {
-                // 修改 = 删除 + 插入：被修改的字符标记为已删除，delta 增加（新长度 - 旧长度）
+                // 修改 = 删除 + 插入：旧字符标记为 MIN_VALUE，delta 反映净变化
                 for (int i = dOldPos; i < dOldPos + dOldSize && i <= oldLen; i++) {
                     deltaMap[i] = Integer.MIN_VALUE;
                 }
                 delta += (dNewSize - dOldSize);
                 oldPos = dOldPos + dOldSize;
-                newPos = newPos + dNewSize;
             }
         }
 
-        // 剩余区间
+        // 剩余区间（delta 之后的所有位置）
         for (int i = oldPos; i <= oldLen; i++) {
             deltaMap[i] = delta;
         }
@@ -127,16 +126,19 @@ public class AnnotationRecalculator {
         int oldStart = annotation.startOffset();
         int oldEnd = annotation.endOffset();
 
-        // 检查批注范围内是否有被删除的字符
-        boolean anyDeleted = false;
+        // 检查批注范围内是否所有字符都被删除（完全删除才标记为 deleted）
+        boolean allDeleted = true;
         for (int i = oldStart; i < oldEnd && i < deltaMap.length; i++) {
-            if (deltaMap[i] == Integer.MIN_VALUE) {
-                anyDeleted = true;
+            if (deltaMap[i] != Integer.MIN_VALUE) {
+                allDeleted = false;
                 break;
             }
         }
+        // 如果所有字符都标记为 MIN_VALUE，且范围非空，则完全删除
+        // 还需要检查：如果范围为空（start==end），不算完全删除
+        boolean fullyDeleted = oldStart < oldEnd && allDeleted;
 
-        if (anyDeleted) {
+        if (fullyDeleted) {
             return new PostAnnotation(
                     annotation.id(), annotation.postId(), annotation.userId(),
                     annotation.ownerTokenHash(), annotation.selectedText(),
@@ -145,7 +147,8 @@ public class AnnotationRecalculator {
                     annotation.createdAt(), true);
         }
 
-        // 计算新偏移
+        // 计算新偏移：基于原始偏移和 delta 变化量
+        // 对于被删除的位置（MIN_VALUE），safeDelta 返回 0（即该位置无偏移变化）
         int newStart = oldStart + safeDelta(deltaMap, oldStart);
         int newEnd = oldEnd + safeDelta(deltaMap, oldEnd);
 
@@ -163,6 +166,17 @@ public class AnnotationRecalculator {
                 annotation.annotationText(), annotation.color(),
                 annotation.visibility(), newStart, newEnd,
                 annotation.createdAt(), false);
+    }
+
+    /**
+     * 将字符串拆分为单个字符的列表，用于字符级 diff 计算。
+     */
+    static List<String> splitToChars(String s) {
+        List<String> chars = new ArrayList<>(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            chars.add(String.valueOf(s.charAt(i)));
+        }
+        return chars;
     }
 
     private static int safeDelta(int[] deltaMap, int pos) {
