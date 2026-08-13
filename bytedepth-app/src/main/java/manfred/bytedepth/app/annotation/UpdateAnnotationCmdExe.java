@@ -34,6 +34,6 @@ public class UpdateAnnotationCmdExe {
         String normalized = annotationText == null || annotationText.isBlank() ? null : annotationText.trim();
         return annotationRepository.update(new PostAnnotation(annotation.id(), annotation.postId(), annotation.userId(),
                 annotation.ownerTokenHash(), annotation.selectedText(), normalized, annotation.color(), visibility,
-                annotation.startOffset(), annotation.endOffset(), annotation.createdAt()));
+                annotation.startOffset(), annotation.endOffset(), annotation.createdAt(), annotation.deleted()));
     }
 }

@@ -102,6 +102,6 @@ class AnnotationControllerTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.visibility").value("PRIVATE"));
     }
 
-    private static PostAnnotation annotation() { return new PostAnnotation(10L, 1L, 42L, null, "文本", "评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now()); }
-    private static PostAnnotation anonymousAnnotation() { return new PostAnnotation(10L, 1L, null, "hash", "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 2, LocalDateTime.now()); }
+    private static PostAnnotation annotation() { return new PostAnnotation(10L, 1L, 42L, null, "文本", "评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now(), false); }
+    private static PostAnnotation anonymousAnnotation() { return new PostAnnotation(10L, 1L, null, "hash", "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 2, LocalDateTime.now(), false); }
 }

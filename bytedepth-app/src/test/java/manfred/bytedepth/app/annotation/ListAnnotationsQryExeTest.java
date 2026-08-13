@@ -30,7 +30,7 @@ class ListAnnotationsQryExeTest {
 
     private static PostAnnotation annotation(long id, int start) {
         return new PostAnnotation(id, 1L, 2L, null, "文本", "批注", "yellow", AnnotationVisibility.PUBLIC,
-                start, start + 5, LocalDateTime.now());
+                start, start + 5, LocalDateTime.now(), false);
     }
 
     @Test

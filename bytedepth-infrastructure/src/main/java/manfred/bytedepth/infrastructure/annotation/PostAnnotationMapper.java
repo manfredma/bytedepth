@@ -14,6 +14,7 @@ public interface PostAnnotationMapper extends BaseMapper<PostAnnotationDO> {
             <script>
             SELECT * FROM post_annotation
             WHERE post_id = #{postId}
+              AND deleted = 0
               AND (visibility = 'PUBLIC'
                    <if test="userId != null">OR user_id = #{userId}</if>
                    <if test="ownerTokenHash != null and ownerTokenHash != ''">OR owner_token_hash = #{ownerTokenHash}</if>)

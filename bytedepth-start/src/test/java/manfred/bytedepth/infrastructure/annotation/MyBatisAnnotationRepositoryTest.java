@@ -34,7 +34,7 @@ class MyBatisAnnotationRepositoryTest {
     @Test
     void save_mapsAndInserts() {
         PostAnnotation annotation = new PostAnnotation(null, 1L, 2L, null, "文本", "批注",
-                "yellow", AnnotationVisibility.PUBLIC, 0, 5, LocalDateTime.of(2026, 8, 10, 12, 0));
+                "yellow", AnnotationVisibility.PUBLIC, 0, 5, LocalDateTime.of(2026, 8, 10, 12, 0), false);
         when(mapper.insert(any(PostAnnotationDO.class))).thenAnswer(inv -> {
             PostAnnotationDO data = inv.getArgument(0);
             data.setId(10L);
@@ -114,7 +114,7 @@ class MyBatisAnnotationRepositoryTest {
 
     @Test
     void update_mapsAndDelegates() {
-        PostAnnotation annotation = new PostAnnotation(5L, 1L, null, "hash", "文本", "修改", "yellow", AnnotationVisibility.PRIVATE, 0, 5, LocalDateTime.now());
+        PostAnnotation annotation = new PostAnnotation(5L, 1L, null, "hash", "文本", "修改", "yellow", AnnotationVisibility.PRIVATE, 0, 5, LocalDateTime.now(), false);
         assertThat(repository.update(annotation).visibility()).isEqualTo(AnnotationVisibility.PRIVATE);
         verify(mapper).updateById(any(PostAnnotationDO.class));
     }

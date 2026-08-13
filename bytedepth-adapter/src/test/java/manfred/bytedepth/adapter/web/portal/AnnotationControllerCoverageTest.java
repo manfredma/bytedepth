@@ -59,6 +59,6 @@ class AnnotationControllerCoverageTest {
 
     private static PostAnnotation annotation() {
         return new PostAnnotation(2L, 1L, 7L, null, "文字", "评论", "yellow", AnnotationVisibility.PUBLIC,
-                0, 2, LocalDateTime.now());
+                0, 2, LocalDateTime.now(), false);
     }
 }

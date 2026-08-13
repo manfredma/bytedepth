@@ -211,7 +211,7 @@ class PostControllerTest {
         when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
         when(postViewCounter.getCount(3L)).thenReturn(0L);
         when(listAnnotationsQryExe.execute(3L, null, null)).thenReturn(List.of(new PostAnnotation(9L, 3L, null,
-                "visitor", "正文", "这是一条评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now())));
+                "visitor", "正文", "这是一条评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now(), false)));
 
         mockMvc.perform(get("/posts/annotated-post"))
                 .andExpect(status().isOk())
@@ -260,7 +260,7 @@ class PostControllerTest {
 
     private static PostAnnotation annotation(long id, long userId, String ownerTokenHash) {
         return new PostAnnotation(id, 4L, userId, ownerTokenHash, "正文", "评论" + id, "yellow",
-                AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now());
+                AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now(), false);
     }
 
     @Test
