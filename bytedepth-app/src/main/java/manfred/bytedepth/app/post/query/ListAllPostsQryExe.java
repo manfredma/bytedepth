@@ -54,6 +54,7 @@ public class ListAllPostsQryExe {
     private PostDTO toDTO(Post post) {
         PostDTO dto = new PostDTO();
         dto.setId(post.getId());
+        dto.setSlug(post.getSlug());
         dto.setTitle(post.getTitle());
         dto.setContent(post.getContent());
         dto.setStatus(post.getStatus().name());

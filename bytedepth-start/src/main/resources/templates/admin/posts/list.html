@@ -16,7 +16,8 @@
         .btn-new:hover { background: #c73652; }
         .post-card { background: white; padding: 18px 24px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); display: flex; gap: 16px; align-items: center; }
         .info { flex: 1; min-width: 0; }
-        .title { font-weight: 600; color: #1a1a2e; font-size: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .title { display: block; font-weight: 600; color: #1a1a2e; font-size: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+        .title:hover { color: #e94560; text-decoration: underline; }
         .meta { font-size: 0.82em; color: #aaa; margin-top: 4px; }
         .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.78em; font-weight: 600; margin-right: 8px; }
         .badge-draft { background: #fff3cd; color: #856404; }
@@ -73,7 +74,8 @@
 
     <div th:each="p : ${posts}" class="post-card">
         <div class="info">
-            <div class="title" th:text="${p.title}">文章标题</div>
+            <a class="title" th:href="${p.slug != null && !p.slug.isEmpty()} ? @{/posts/{slug}(slug=${p.slug})} : @{/posts/{id}(id=${p.id})}"
+               th:text="${p.title}" target="_blank" rel="noopener">文章标题</a>
             <div class="meta">
                 <span th:class="${'badge badge-' + p.status.toLowerCase()}"
                       th:text="${p.status == 'PUBLISHED' ? '已发布' : (p.status == 'DRAFT' ? '草稿' : '已删除')}">状态</span>
