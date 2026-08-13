@@ -4,11 +4,26 @@
 
 ## Unreleased
 
+## [v2.1.8] - 2026-08-13
+
+**Tag**：`v2.1.8`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.6`
+
+### Fixed
+
+- 修复 v2.1.7 部署失败：`AnnotationRecalculator` 未标注 `@Component`，导致 `UpdatePostCmdExe` 注入失败，应用启动报 `Parameter 3 of constructor...required a bean of type 'AnnotationRecalculator' that could not be found`。加上 `@Component` 后 Spring 自动扫描并注册该 Bean。
+
+### Compatibility
+
+- 无数据库迁移或 API 变更；可在验收失败时回滚至 `v2.1.6`。
+
 ## [v2.1.7] - 2026-08-13
 
 **Tag**：`v2.1.7`
-**Commit**：（发布后由受控发布工具回填）
-**部署**：（待验收）
+**Commit**：`e888b9c541eb622a4f0b0d3d1a9d9d1e36794082`（未部署）
+**部署**：❌ 部署失败——`AnnotationRecalculator` 未标注 `@Component`，Spring 无法注入，应用启动后立即退出（502）；修复见 v2.1.8。
 **回滚基线**：`v2.1.6`
 
 ### Fixed
