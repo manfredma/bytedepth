@@ -4,6 +4,21 @@
 
 ## Unreleased
 
+## [v2.1.11] - 2026-08-13
+
+**Tag**：`v2.1.11`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.10`
+
+### Fixed
+
+- 文章阅读页批注侧栏默认打开（v2.1.9 引入）对已访问用户未生效：`annotation.js` 以无内容指纹的裸路径引用，Service Worker（cache-first）持续提供旧版缓存。升级 `CACHE_NAME` 至 `bytedepth-v7`，activate 时清除旧缓存、强制拉取新版 `annotation.js`。
+
+### Compatibility
+
+- 无数据库迁移或 API 变更；Service Worker 缓存版本升级，首次访问新版本后自动清除旧缓存。可在验收失败时回滚至 `v2.1.10`。
+
 ## [v2.1.10] - 2026-08-13
 
 **Tag**：`v2.1.10`
