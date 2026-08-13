@@ -11,8 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
+import manfred.bytedepth.domain.annotation.AnnotationVisibility;
+import manfred.bytedepth.domain.annotation.PostAnnotation;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -115,6 +117,57 @@ class UpdatePostCmdExeTest {
         updatePostCmdExe.execute(1L, "新", "新内容", 7L);
 
         assertEquals(7L, existing.getCategoryId());
+        verify(postRepository).save(existing);
+    }
+
+    @Test
+    void execute_contentChangedWithAnnotations_recalculates() {
+        Post existing = Post.reconstruct(1L, "标题", "旧内容",
+                PostStatus.PUBLISHED, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
+        PostAnnotation annotation = new PostAnnotation(1L, 1L, null, null, "旧", null, "yellow",
+                AnnotationVisibility.PRIVATE, 0, 3, LocalDateTime.now(), false);
+        when(postRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(annotationRepository.findByPostId(1L)).thenReturn(List.of(annotation));
+        when(annotationRecalculator.recalculate("旧内容", "新内容", List.of(annotation)))
+                .thenReturn(List.of(annotation));
+        when(postRepository.save(any(Post.class))).thenReturn(existing);
+
+        updatePostCmdExe.execute(1L, "标题", "新内容");
+
+        verify(annotationRepository).findByPostId(1L);
+        verify(annotationRecalculator).recalculate("旧内容", "新内容", List.of(annotation));
+        verify(annotationRepository).update(annotation);
+        verify(postRepository).save(existing);
+        verify(indexPostCmdExe).execute(1L);
+    }
+
+    @Test
+    void execute_contentChangedNoAnnotations_skipsRecalculation() {
+        Post existing = Post.reconstruct(1L, "标题", "旧内容",
+                PostStatus.DRAFT, LocalDateTime.now(), null, LocalDateTime.now());
+        when(postRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(annotationRepository.findByPostId(1L)).thenReturn(List.of());
+        when(postRepository.save(any(Post.class))).thenReturn(existing);
+
+        updatePostCmdExe.execute(1L, "标题", "新内容");
+
+        verify(annotationRepository).findByPostId(1L);
+        verify(annotationRecalculator, never()).recalculate(any(), any(), any());
+        verify(annotationRepository, never()).update(any());
+        verify(postRepository).save(existing);
+    }
+
+    @Test
+    void execute_contentUnchanged_skipsRecalculation() {
+        Post existing = Post.reconstruct(1L, "标题", "相同内容",
+                PostStatus.DRAFT, LocalDateTime.now(), null, LocalDateTime.now());
+        when(postRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(postRepository.save(any(Post.class))).thenReturn(existing);
+
+        updatePostCmdExe.execute(1L, "标题", "相同内容");
+
+        verify(annotationRepository, never()).findByPostId(any());
+        verify(annotationRecalculator, never()).recalculate(any(), any(), any());
         verify(postRepository).save(existing);
     }
 }
