@@ -9,6 +9,8 @@ import manfred.bytedepth.domain.annotation.PostAnnotation;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.stereotype.Component;
+
 /**
  * 文章内容变更后，基于 Diff 信息重算所有批注的字符偏移。
  * <p>
@@ -16,6 +18,7 @@ import java.util.List;
  * 本服务比较新旧内容，对每个字符位置计算偏移变化量，然后重算每个批注的新位置。
  * 批注范围内的文本在新内容中完全被删除时，该批注被标记为已删除（逻辑删除）。
  */
+@Component
 public class AnnotationRecalculator {
 
     /**
