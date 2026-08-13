@@ -4,6 +4,21 @@
 
 ## Unreleased
 
+## [v2.1.6] - 2026-08-13
+
+**Tag**：`v2.1.6`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.5`
+
+### Changed
+
+- docs/ 目录重新归置：`docs/routes.md` 移入 `docs/architecture/routes.md`，`docs/ops.md` 移入 `docs/security/ops.md`。docs/ 根目录现在只保留入口 `README.md`，全部文档归入分类子目录。同步更新 README、AGENTS、ubiquitous-language、annotation-write-permissions 与 ops 内部链接。
+
+### Compatibility
+
+- 纯文档移动，无功能变化；文档相对链接已同步更新。可在验收失败时回滚至 `v2.1.5`。
+
 ## [v2.1.5] - 2026-08-13
 
 **Tag**：`v2.1.5`
