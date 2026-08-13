@@ -4,6 +4,21 @@
 
 ## Unreleased
 
+## [v2.1.5] - 2026-08-13
+
+**Tag**：`v2.1.5`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.4`
+
+### Changed
+
+- 新增 `config/` 目录集中存放构建工具配置：`pmd-ruleset.xml` 移入 `config/pmd/pmd-ruleset.xml`，`.githooks/pre-commit` 移入 `config/git-hooks/pre-commit`。`pom.xml` 中 ruleset 路径与 `scripts/configure-git-hooks.sh` 的 hooksPath 同步更新。根目录散落文件减少 2 个。
+
+### Compatibility
+
+- 纯配置文件重排，`pom.xml` 引用路径已同步更新，`configure-git-hooks.sh` 的 hooksPath 已同步更新，不影响功能。可在验收失败时回滚至 `v2.1.4`。
+
 ## [v2.1.4] - 2026-08-13
 
 **Tag**：`v2.1.4`
