@@ -150,7 +150,7 @@ class ThemeAssetsTest {
         String sw = classpathText("/static/sw.js");
 
         assertThat(sw)
-                .contains("bytedepth-v6")
+                .contains("bytedepth-v7")
                 .contains("/favicon.ico")
                 .contains("/icons/favicon-48.png")
                 .contains("内容指纹 URL cache-first")
