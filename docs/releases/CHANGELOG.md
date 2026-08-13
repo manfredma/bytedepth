@@ -4,6 +4,21 @@
 
 ## Unreleased
 
+## [v2.1.7] - 2026-08-13
+
+**Tag**：`v2.1.7`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.6`
+
+### Fixed
+
+- 文章内容变更后批注/划线偏移失效问题：`UpdatePostCmdExe` 在内容编辑时，基于字符级 Diff 信息重算所有批注的 `startOffset`/`endOffset`。批注范围内的文本在新内容中被完全删除时，该批注标记为逻辑删除（`deleted = true`），前台查询不再展示。新增 Flyway V22 迁移 `post_annotation.deleted` 列。引入 `java-diff-utils` 库。
+
+### Compatibility
+
+- 新增 Flyway V22 迁移，仅向前执行；已部署迁移后若需回滚代码，应使用兼容 V22 版本。`annotationRepository.findByPostId` 返回所有批注（含已删除的），`findVisibleByPostId` 加 `AND deleted = 0` 过滤。可在验收失败时回滚至 `v2.1.6`。
+
 ## [v2.1.6] - 2026-08-13
 
 **Tag**：`v2.1.6`
