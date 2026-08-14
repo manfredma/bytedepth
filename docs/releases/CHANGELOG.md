@@ -4,6 +4,21 @@
 
 ## Unreleased
 
+## [v2.1.12] - 2026-08-14
+
+**Tag**：`v2.1.12`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.11`
+
+### Fixed
+
+- 修复通过左侧专栏导航切换文章后页面布局错乱：`series-navigation.js` 替换 `#post-article` 后，旧 `annotation.js` 的 DOM 引用全部失效但未重新初始化。改造 `annotation.js` 暴露 `window.initAnnotations()`，将 `document`/`window` 级监听器改为具名函数并注册 cleanup，重新初始化前先移除旧监听器避免重复绑定。`series-navigation.js` 在替换文章后提取新批注数据并调用 `initAnnotations()` 重新绑定。
+
+### Compatibility
+
+- 无数据库迁移或 API 变更；纯前端 JS 改造。可在验收失败时回滚至 `v2.1.11`。
+
 ## [v2.1.11] - 2026-08-13
 
 **Tag**：`v2.1.11`
