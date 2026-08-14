@@ -6,6 +6,7 @@
 
 - 新成员或新会话：先读本文，再按任务打开对应主题。
 - 修改模块边界或实现方式：读 [架构概览](architecture/overview.md)。
+- 查询数据库表结构、字段与表间关系：读 [数据库表结构](architecture/database-schema.md)。
 - 讨论全局业务概念、限界上下文和名称边界：读 [统一语言](architecture/ubiquitous-language.md)。
 - 新增后台页面：读 [后台布局](architecture/admin-layout.md)。
 - 修改分页：读 [前端模式](engineering/frontend-patterns.md)。
