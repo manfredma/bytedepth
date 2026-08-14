@@ -13,6 +13,8 @@
         const article = document.getElementById('post-article');
         if (!nextArticle || !article) {throw new Error('未找到文章内容');}
 
+        // 从新文档中提取批注数据，替换到当前 window 上下文
+        const nextAnnotationsScript = nextDocument.querySelector('script:not([src])');
         article.replaceWith(nextArticle);
         document.title = nextDocument.title;
         window.history.pushState({}, '', targetUrl.pathname + targetUrl.search + targetUrl.hash);
@@ -20,6 +22,39 @@
         const panel = document.getElementById('seriesPanel');
         if (panel) {updateActiveItem(panel, targetUrl);}
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // 重新初始化批注：替换文章后旧 annotation.js 的 DOM 引用全部失效，
+        // 需要用新文章的批注数据重新执行 annotation.js。
+        // 新文档中的内联 script（window.__ANNOTATIONS__ 赋值）在 DOMParser 中不会执行，
+        // 需要手动提取并重新赋值。
+        reinitAnnotations(nextDocument);
+    }
+
+    function reinitAnnotations(nextDocument) {
+        // 从新文档提取批注数据
+        const inlineScripts = nextDocument.querySelectorAll('script:not([src])');
+        inlineScripts.forEach(function (script) {
+            if (script.textContent.indexOf('__ANNOTATIONS__') !== -1) {
+                try {
+                    // 安全执行内联脚本以更新 window.__ANNOTATIONS__
+                    var newScript = document.createElement('script');
+                    newScript.textContent = script.textContent;
+                    document.head.appendChild(newScript);
+                    document.head.removeChild(newScript);
+                } catch (e) {
+                    // 内联脚本执行失败时不阻断文章切换
+                }
+            }
+        });
+
+        // 重新执行 annotation.js
+        if (typeof window.initAnnotations === 'function') {
+            try {
+                window.initAnnotations();
+            } catch (e) {
+                // 重新初始化失败时不阻断文章切换
+            }
+        }
     }
 
     function navigate(link) {

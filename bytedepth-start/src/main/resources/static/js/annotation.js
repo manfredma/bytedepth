@@ -1,6 +1,9 @@
 /* 阅读批注：匿名归属由 HttpOnly Cookie 在服务端维护。 */
-(function () {
+window.initAnnotations = function () {
     'use strict';
+
+    // 清理上一次初始化遗留的全局监听器，避免专栏切换文章后重复绑定
+    if (window._bdAnnotationCleanup) { window._bdAnnotationCleanup(); }
 
     const article = document.getElementById('post-article');
     const content = article && article.querySelector('.content');
@@ -770,7 +773,7 @@
         }
     });
 
-    document.addEventListener('mouseup', event => {
+    function onDocMouseUp(event) {
         if (isMobile() || sidebar.contains(event.target) || popup && popup.contains(event.target)) {
             return;
         }
@@ -784,7 +787,8 @@
             return;
         }
         showPopup(range);
-    });
+    }
+    document.addEventListener('mouseup', onDocMouseUp);
 
     content.addEventListener('click', event => {
         const mark = event.target.closest && event.target.closest('mark.bd-annotation-highlight');
@@ -803,46 +807,66 @@
         }
     });
 
-    document.addEventListener('click', event => {
+    function onDocClickHidePopup(event) {
         if (!popup || !popup.classList.contains('bd-annotation-popup-open')
             || eventOccurredInside(event, popup) || eventOccurredInside(event, sidebar)
             || event.target.closest('mark.bd-annotation-highlight') || hasActiveContentSelection()) {
             return;
         }
         hidePopup();
-    });
+    }
+    document.addEventListener('click', onDocClickHidePopup);
 
     // 在正文重新按下鼠标时先关闭旧菜单并清空旧选区：单击不会遗留菜单，
     // 拖拽产生的新选区仍会在 mouseup 时正常打开菜单。
-    document.addEventListener('mousedown', event => {
+    function onDocMouseDown(event) {
         if (!popup || !popup.classList.contains('bd-annotation-popup-open')
             || eventOccurredInside(event, popup) || eventOccurredInside(event, sidebar)) {
             return;
         }
         hidePopup();
         window.getSelection().removeAllRanges();
-    }, true);
+    }
+    document.addEventListener('mousedown', onDocMouseDown, true);
 
-    document.addEventListener('click', event => {
+    function onDocClickMobileNote(event) {
         if (mobileNote && !mobileNote.hidden && !mobileNote.contains(event.target) && !event.target.closest('mark.bd-annotation-highlight')) {
             mobileNote.hidden = true;
         }
-    });
-    window.addEventListener('scroll', () => {
+    }
+    document.addEventListener('click', onDocClickMobileNote);
+
+    function onScroll() {
         renderCommentOutlines();
         if (isOpen()) {
             requestAnimationFrame(layoutFeed);
         }
-    }, {passive: true});
-    window.addEventListener('resize', () => {
+    }
+    window.addEventListener('scroll', onScroll, {passive: true});
+
+    function onResize() {
         renderCommentOutlines();
         if (isOpen()) {
             renderFeed();
         }
-    });
+    }
+    window.addEventListener('resize', onResize);
+
+    // 清理函数：专栏切换文章重新初始化前移除全局监听器，避免重复绑定
+    window._bdAnnotationCleanup = function () {
+        document.removeEventListener('mouseup', onDocMouseUp);
+        document.removeEventListener('click', onDocClickHidePopup);
+        document.removeEventListener('mousedown', onDocMouseDown, true);
+        document.removeEventListener('click', onDocClickMobileNote);
+        window.removeEventListener('scroll', onScroll);
+        window.removeEventListener('resize', onResize);
+    };
 
     renderMarks();
     updateCommentCount();
     setOpen(readSidebarState() && !isMobile());
     article.dataset.bdAnnotationReady = 'true';
-})();
+};
+
+// 首次加载自动初始化
+window.initAnnotations();
