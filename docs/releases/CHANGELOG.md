@@ -4,6 +4,25 @@
 
 ## Unreleased
 
+## [v2.1.14] - 2026-08-19
+
+**Tag**：`v2.1.14`
+**Commit**：（发布后由受控发布工具回填）
+**部署**：（待验收）
+**回滚基线**：`v2.1.13`
+
+### Fixed
+
+- 修复「记住30天」仍频繁被踢下线（尤其第二天）：`PersistentTokenBasedRememberMeServices` 每次 remember-me 自动登录轮换 token，session 过期（60m）后浏览器并发请求各自用旧 cookie 触发盗用检测，误删 `persistent_logins` 该用户全部记录导致强制登出。改用 `TokenBasedRememberMeServices`，cookie 自包含 `user + expiry + HMAC` 签名，不查库、不轮换、无并发竞态；30 天有效期与 SameSite=Lax/Secure/HttpOnly 不变，改密码仍使旧 cookie 失效。删除 `PersistentTokenRepositoryConfiguration` 与 `JdbcTokenRepositoryImpl` 依赖（`persistent_logins` 表保留不动）。
+
+### Changed
+
+- `application.yml` 新增 `server.forward-headers-strategy: native`：nginx 终止 SSL 后反代 HTTP，开启后 Tomcat 信任 `X-Forwarded-Proto`，`request.isSecure()`/重定向 https 正确（原缺此配置，应用自认 HTTP）。
+
+### Compatibility
+
+- 无数据库迁移或 API 变更；`persistent_logins` 表保留不动（不再被读写，可后续手动清理）。可在验收失败时回滚至 `v2.1.13`。
+
 ## [v2.1.13] - 2026-08-14
 
 **Tag**：`v2.1.13`
