@@ -35,4 +35,13 @@ class SecurityConfigBeansTest {
         assertNotNull(filter);
         assertTrue(!registration.isEnabled());
     }
+
+    @Test
+    void rememberMeServices_isTokenBasedToAvoidConcurrentTokenRotationDrop() {
+        var uds = mock(org.springframework.security.core.userdetails.UserDetailsService.class);
+        var services = config.rememberMeServices("key", uds, false);
+        org.junit.jupiter.api.Assertions.assertInstanceOf(
+            org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices.class,
+            services);
+    }
 }
