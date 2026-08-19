@@ -235,15 +235,6 @@ erDiagram
 | pv_count | BIGINT | NOT NULL, DEFAULT 0 | 访问次数 |
 | updated_at | DATETIME | NOT NULL | |
 
-### persistent_logins — 记住登录令牌
-
-| 列 | 类型 | 约束 | 说明 |
-| --- | --- | --- | --- |
-| username | VARCHAR(64) | NOT NULL | |
-| series | VARCHAR(64) | PK | |
-| token | VARCHAR(64) | NOT NULL | |
-| last_used | TIMESTAMP | NOT NULL | |
-
 ## 已废弃表
 
 ### admin_user — 旧管理员账号（V10 后废弃）
@@ -282,7 +273,7 @@ V10 引入统一 `user` 表后，`admin_user` 的数据已迁移到 `user`，该
 | V10 | account_rbac | user, role, permission, user_role, role_permission, post.author_id, post.featured, comment.author_id |
 | V11 | post_slug | post.slug |
 | V12 | add_post_view_log | post_view_log |
-| V13 | add_persistent_logins | persistent_logins |
+| V13 | add_persistent_logins | persistent_logins（V23 删除） |
 | V14 | add_post_rating | post_rating |
 | V15 | add_post_reading_metrics | post_view_log 阅读指标列 |
 | V18 | add_series_author | series.author_id（FK 约束） |
@@ -290,5 +281,6 @@ V10 引入统一 `user` 表后，`admin_user` 的数据已迁移到 `user`，该
 | V20 | add_post_annotation | post_annotation |
 | V21 | upgrade_post_annotations_for_visibility | post_annotation 可见性与匿名归属 |
 | V22 | add_annotation_deleted_flag | post_annotation.deleted |
+| V23 | drop_persistent_logins | 删除 persistent_logins |
 
 V5、V7、V8、V9、V16、V17 为种子数据迁移（分类、权限），不涉及表结构变更。
