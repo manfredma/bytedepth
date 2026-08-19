@@ -13,8 +13,6 @@
         const article = document.getElementById('post-article');
         if (!nextArticle || !article) {throw new Error('未找到文章内容');}
 
-        // 从新文档中提取批注数据，替换到当前 window 上下文
-        const nextAnnotationsScript = nextDocument.querySelector('script:not([src])');
         article.replaceWith(nextArticle);
         document.title = nextDocument.title;
         window.history.pushState({}, '', targetUrl.pathname + targetUrl.search + targetUrl.hash);
@@ -37,11 +35,11 @@
             if (script.textContent.indexOf('__ANNOTATIONS__') !== -1) {
                 try {
                     // 安全执行内联脚本以更新 window.__ANNOTATIONS__
-                    var newScript = document.createElement('script');
+                    const newScript = document.createElement('script');
                     newScript.textContent = script.textContent;
                     document.head.appendChild(newScript);
                     document.head.removeChild(newScript);
-                } catch (e) {
+                } catch {
                     // 内联脚本执行失败时不阻断文章切换
                 }
             }
@@ -51,7 +49,7 @@
         if (typeof window.initAnnotations === 'function') {
             try {
                 window.initAnnotations();
-            } catch (e) {
+            } catch {
                 // 重新初始化失败时不阻断文章切换
             }
         }

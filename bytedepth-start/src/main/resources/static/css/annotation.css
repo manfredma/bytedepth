@@ -151,15 +151,11 @@
     transform: translateX(0);
 }
 
-.bd-annotation-comments-open .reading-toolbar {
-    display: none;
-}
-
 /*
  * 批注不覆盖正文：超宽屏保留原有正文行宽，在文章右侧建立阅读轨道；
  * 其它桌面宽度将批注置于文章之后，避免为了并排而挤压正文。
  */
-@media (min-width: 769px) and (max-width: 1359px) {
+@media (min-width: 769px) and (max-width: 1599px) {
     .bd-annotation-scope.bd-annotation-reading-layout-open {
         display: flex;
         flex-direction: column;
@@ -188,27 +184,32 @@
     }
 }
 
-@media (min-width: 1360px) {
+@media (min-width: 1600px) {
+    body.bd-annotation-comments-open .reading-toolbar {
+        /* 置于右侧批注栏之外，避免占用文章与批注的阅读间距。 */
+        right: calc(50% - 760px);
+    }
+
     body.bd-annotation-comments-open .container {
-        width: 100%;
-        max-width: none;
-        margin: 0;
+        width: min(1400px, calc(100% - 64px));
+        max-width: 1400px;
+        margin: 32px auto;
         padding: 0 0 64px;
-        border-radius: 0;
     }
 
     .bd-annotation-scope.bd-annotation-reading-layout-open {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 380px;
+        grid-template-columns: minmax(0, 980px) 360px;
         align-items: start;
-        gap: 16px;
+        justify-content: center;
+        gap: 32px;
     }
 
     .bd-annotation-reading-layout-open .bd-annotation-reading-content {
         min-width: 0;
         /* 专栏收起按钮 fixed 在左侧约 36px 宽，批注打开后正文左移会让按钮压住正文；
            左侧预留 48px（按钮宽 + 余量）避免遮挡，右侧保持 8px。 */
-        padding: 0 8px 0 48px;
+        padding: 48px 56px;
         grid-column: 1;
         grid-row: 1;
     }
@@ -220,8 +221,8 @@
         right: auto;
         grid-column: 2;
         grid-row: 1;
-        width: 380px;
-        height: calc(100dvh - 60px);
+        width: 360px;
+        height: calc(100dvh - 96px);
         opacity: 1;
         pointer-events: auto;
         transform: none;

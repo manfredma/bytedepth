@@ -22,16 +22,15 @@ describe('annotation sidebar', () => {
     delete document.execCommand;
   });
 
-  test('toggle persists sidebar state', () => {
-    // 默认打开，先关闭再重新打开验证
-    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
-    document.querySelector('.bd-annotation-sidebar-close').click();
-    expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(false);
-    expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('false');
+  test('sidebar is closed on first visit and persists an explicit open choice', () => {
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
     document.querySelector('#bd-annotation-sidebar-toggle').click();
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
     expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(true);
     expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('true');
+    document.querySelector('.bd-annotation-sidebar-close').click();
+    expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(false);
+    expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('false');
   });
 
   test('toggle remains usable when browser storage is unavailable', () => {
@@ -41,12 +40,12 @@ describe('annotation sidebar', () => {
     Storage.prototype.setItem = jest.fn(() => { throw new DOMException('blocked', 'SecurityError'); });
     document.body.innerHTML = `<article id="post-article"><button id="bd-annotation-sidebar-toggle"></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section><section class="bd-annotation-feed"></section></aside></article>`;
     expect(() => eval(annotationJs)).not.toThrow();
-    // 默认打开，单击 toggle 关闭后再单击重新打开
-    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
-    document.querySelector('#bd-annotation-sidebar-toggle').click();
+    // 存储不可用时首次访问仍保持关闭，且开关可正常使用。
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
     document.querySelector('#bd-annotation-sidebar-toggle').click();
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
     Storage.prototype.getItem = originalGet;
     Storage.prototype.setItem = originalSet;
   });
@@ -421,16 +420,21 @@ describe('annotation sidebar', () => {
     expect(annotationJs).toContain('markRect.bottom > viewportTop');
     expect(annotationJs).toContain('item.style.opacity = String(Math.max(0, Math.min(1, edgeDistance / 48)));');
     expect(annotationCss).toContain('bd-annotation-pop-in 150ms ease-out forwards');
-    expect(annotationCss).toContain('max-width: 1359px');
+    expect(annotationCss).toContain('max-width: 1599px');
     expect(annotationCss).toContain('position: sticky');
-    expect(annotationCss).toContain('@media (min-width: 1360px)');
+    expect(annotationCss).toContain('@media (min-width: 1600px)');
     // #9 聚焦批注高亮：彩色左条 + 轻染背景。
     expect(annotationCss).toContain('.bd-annotation-feed-item-active');
     expect(annotationCss).toContain('.bd-annotation-feed-item-active::before');
     expect(annotationCss).toContain('width: 4px');
     expect(annotationCss).toContain('background: var(--bd-annotation-item-color, #315efb)');
-    // #10 宽屏批注打开时正文左侧避让专栏按钮。
-    expect(annotationCss).toContain('padding: 0 8px 0 48px');
+    // 宽屏批注打开时保留受限阅读宽度与完整内边距。
+    expect(annotationCss).toContain('grid-template-columns: minmax(0, 980px) 360px');
+    expect(annotationCss).toContain('padding: 48px 56px');
+    // 批注打开时，工具栏位于右侧批注栏的外侧，而非文章与侧栏之间。
+    expect(annotationCss).toContain('right: calc(50% - 760px);');
+    expect(annotationCss).toContain('height: calc(100dvh - 96px);');
+    expect(annotationCss).not.toMatch(/\.bd-annotation-comments-open \.reading-toolbar\s*\{\s*display: none;/);
     // #9 同一批注二次点击回收、不同批注保持打开。
     expect(annotationJs).toContain('const sameAnnotation = isOpen() && activeAnnotationId === annotation.id');
     expect(annotationJs).toContain('activeAnnotationId = sameAnnotation ? null : annotation.id');
