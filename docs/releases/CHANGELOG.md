@@ -4,6 +4,21 @@
 
 ## Unreleased
 
+## [v2.2.0] - 2026-08-19
+
+**Tag**：`v2.2.0`（待受控发布工具创建）
+**Commit**：待受控发布工具创建 Tag 后记录
+**部署**：待验收
+**回滚基线**：`v2.1.14`
+
+### Added
+
+- 新增 `docs/architecture/bytedepth-system-architecture.html`：以自包含 HTML/SVG 展示当前生产双机拓扑、私网数据服务、NFS 图片共享、Obsidian API 同步，以及 Spring Boot DDD 模块依赖方向。
+
+### Compatibility
+
+- 纯文档新增，无数据库迁移、API 或部署配置变更；发布后可回滚至 `v2.1.14`。
+
 ## [v2.1.14] - 2026-08-19
 
 **Tag**：`v2.1.14`
