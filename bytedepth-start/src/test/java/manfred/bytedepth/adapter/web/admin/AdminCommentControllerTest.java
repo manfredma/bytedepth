@@ -20,7 +20,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -57,8 +56,6 @@ class AdminCommentControllerTest {
     private RateLimitPort rateLimitPort;
     @MockitoBean
     private RateLimitProperties rateLimitProperties;
-    @MockitoBean
-    private PersistentTokenRepository persistentTokenRepository;
 
     // AdminCommentController 依赖
     @MockitoBean

@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 
 import javax.sql.DataSource;
 
