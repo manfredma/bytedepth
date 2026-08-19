@@ -4,7 +4,6 @@ import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.adapter.web.security.SecurityConfig;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
 import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
@@ -77,8 +76,6 @@ class AdminPostControllerTest {
     private RateLimitPort rateLimitPort;
     @MockitoBean
     private RateLimitProperties rateLimitProperties;
-    @MockitoBean
-    private PersistentTokenRepository persistentTokenRepository;
 
     // AdminPostController dependencies
     @MockitoBean

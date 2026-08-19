@@ -20,7 +20,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -45,7 +44,6 @@ class AdminSeriesControllerTest {
     private VisitRequestFilter visitRequestFilter;
     @MockitoBean private SetPostSeriesCmdExe setPostSeriesCmdExe;
     @MockitoBean private ContentOwnershipGuard contentOwnershipGuard;
-    @MockitoBean private PersistentTokenRepository persistentTokenRepository;
     @MockitoBean private RateLimitPort rateLimitPort;
     @MockitoBean private RateLimitProperties rateLimitProperties;
 

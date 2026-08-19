@@ -33,7 +33,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -67,8 +66,6 @@ class AdminOpsControllerTest {
     private VisitRequestFilter visitRequestFilter;
     @MockitoBean
     private PasswordEncoder passwordEncoder;
-    @MockitoBean
-    private PersistentTokenRepository persistentTokenRepository;
     @MockitoBean
     private DataSource dataSource;
     @MockitoBean

@@ -20,7 +20,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -43,7 +42,6 @@ class SearchControllerTest {
     @MockitoBean private PasswordEncoder passwordEncoder;
     @MockitoBean private RateLimitPort rateLimitPort;
     @MockitoBean private RateLimitProperties rateLimitProperties;
-    @MockitoBean private PersistentTokenRepository persistentTokenRepository;
     @MockitoBean private VisitRequestFilter visitRequestFilter;
     @MockitoBean private SearchPostsQryExe searchPostsQryExe;
 

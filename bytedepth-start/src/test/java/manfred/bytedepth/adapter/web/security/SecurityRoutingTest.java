@@ -19,14 +19,13 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,7 +41,6 @@ class SecurityRoutingTest {
     @MockitoBean private PasswordEncoder passwordEncoder;
     @MockitoBean
     private VisitRequestFilter visitRequestFilter;
-    @MockitoBean private PersistentTokenRepository persistentTokenRepository;
     @MockitoBean private SubmitCommentCmdExe submitCommentCmdExe;
     @MockitoBean private PostRepository postRepository;
     @MockitoBean private RateLimitPort rateLimitPort;
@@ -66,20 +64,29 @@ class SecurityRoutingTest {
     }
 
     @Test
-    void logout_removesRememberMeTokensForAuthenticatedUser() throws Exception {
+    void logout_clearsRememberMeCookieForAuthenticatedUser() throws Exception {
         mockMvc.perform(post("/logout")
                 .with(SecurityMockMvcRequestPostProcessors.user("author"))
                 .with(SecurityMockMvcRequestPostProcessors.csrf()))
             .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/"));
-
-        verify(persistentTokenRepository).removeUserTokens("author");
+            .andExpect(redirectedUrl("/"))
+            .andExpect(result -> {
+                // TokenBased remember-me 的 logout 调 cancelCookie：回写 maxAge=0 同名 cookie 通知浏览器删除。
+                var cookie = result.getResponse().getCookie("bytedepth-remember-me");
+                org.junit.jupiter.api.Assertions.assertNotNull(cookie);
+                org.junit.jupiter.api.Assertions.assertEquals(0, cookie.getMaxAge());
+            });
     }
 
     @Test
     void rememberMeCookie_isExplicitlyRestrictedToLaxSameSite() throws Exception {
+        // 每次返回新实例：ProviderManager 默认 eraseCredentialsAfterAuthentication=true，
+        // 认证成功会清空 principal(UserDetails) 的 password。TokenBased.onLoginSuccess 取不到
+        // password 时会回退再调 loadUserByUsername——thenReturn 返回同一被 erase 过的实例会
+        // 让 password 仍为 null，误判为无法生成 token。生产 SiteUserDetailsService 每次从
+        // DB 返回新实例，回退能拿到 password hash。
         when(userDetailsService.loadUserByUsername("author"))
-            .thenReturn(User.withUsername("author").password("encoded-password").authorities("blog:post:create").build());
+            .thenAnswer(inv -> User.withUsername("author").password("encoded-password").authorities("blog:post:create").build());
         when(passwordEncoder.matches("secret", "encoded-password")).thenReturn(true);
 
         mockMvc.perform(post("/login")
@@ -95,6 +102,13 @@ class SecurityRoutingTest {
                 org.junit.jupiter.api.Assertions.assertEquals("Lax", cookie.getAttribute("SameSite"));
                 org.junit.jupiter.api.Assertions.assertTrue(cookie.isHttpOnly());
             });
+    }
+
+    @Test
+    void accessDenied_returnsForbiddenForAuthenticatedUserWithoutPermission() throws Exception {
+        mockMvc.perform(get("/admin")
+                .with(SecurityMockMvcRequestPostProcessors.user("author")))
+            .andExpect(status().isForbidden());
     }
 
 }

@@ -18,8 +18,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import org.springframework.security.web.authentication.rememberme.AbstractRememberMeServices;
+import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
@@ -56,20 +56,12 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
-                                           PersistentTokenRepository persistentTokenRepository,
                                            UserDetailsService userDetailsService,
                                            PasswordEncoder passwordEncoder,
                                            RateLimitFilter rateLimitFilter,
                                            @Value("${BYTEDEPTH_REMEMBER_ME_KEY:bytedepth-local-remember-me-key}") String rememberMeKey,
                                            @Value("${BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE:false}") boolean rememberMeCookieSecure) throws Exception {
-        PersistentTokenBasedRememberMeServices rememberMeServices = new PersistentTokenBasedRememberMeServices(
-            rememberMeKey, userDetailsService, persistentTokenRepository);
-        rememberMeServices.setParameter("remember-me");
-        rememberMeServices.setCookieName("bytedepth-remember-me");
-        rememberMeServices.setTokenValiditySeconds(30 * 24 * 60 * 60);
-        rememberMeServices.setUseSecureCookie(rememberMeCookieSecure);
-        rememberMeServices.setCookieCustomizer(cookie -> cookie.setAttribute("SameSite", "Lax"));
-        rememberMeServices.afterPropertiesSet();
+        AbstractRememberMeServices rememberMeServices = rememberMeServices(rememberMeKey, userDetailsService, rememberMeCookieSecure);
 
         // CSRF：默认 HttpSessionCsrfTokenRepository + Thymeleaf 自动注入 _csrf hidden input。
         // 之前用 CookieCsrfTokenRepository，登录成功后 CsrfAuthenticationStrategy 清除
@@ -122,5 +114,24 @@ public class SecurityConfig {
                     res.sendError(HttpServletResponse.SC_FORBIDDEN))
             );
         return http.build();
+    }
+
+    /**
+     * 构造无状态 remember-me 服务：使用自包含签名 cookie（user + expiry + HMAC），
+     * 不轮换 token、不读写 persistent_logins。session 过期后浏览器并发请求各自校验
+     * 同一 cookie 不会互相 invalidate，避免 PersistentTokenBased 的轮换-盗用检测误删。
+     */
+    AbstractRememberMeServices rememberMeServices(String rememberMeKey,
+                                                  UserDetailsService userDetailsService,
+                                                  boolean rememberMeCookieSecure) {
+        TokenBasedRememberMeServices rememberMeServices = new TokenBasedRememberMeServices(
+            rememberMeKey, userDetailsService);
+        rememberMeServices.setParameter("remember-me");
+        rememberMeServices.setCookieName("bytedepth-remember-me");
+        rememberMeServices.setTokenValiditySeconds(30 * 24 * 60 * 60);
+        rememberMeServices.setUseSecureCookie(rememberMeCookieSecure);
+        rememberMeServices.setCookieCustomizer(cookie -> cookie.setAttribute("SameSite", "Lax"));
+        rememberMeServices.afterPropertiesSet();
+        return rememberMeServices;
     }
 }

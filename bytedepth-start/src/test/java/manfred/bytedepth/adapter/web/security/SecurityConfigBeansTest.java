@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 
 import javax.sql.DataSource;
 
@@ -34,5 +33,14 @@ class SecurityConfigBeansTest {
 
         assertNotNull(filter);
         assertTrue(!registration.isEnabled());
+    }
+
+    @Test
+    void rememberMeServices_isTokenBasedToAvoidConcurrentTokenRotationDrop() {
+        var uds = mock(org.springframework.security.core.userdetails.UserDetailsService.class);
+        var services = config.rememberMeServices("key", uds, false);
+        org.junit.jupiter.api.Assertions.assertInstanceOf(
+            org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices.class,
+            services);
     }
 }
