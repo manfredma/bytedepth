@@ -15,9 +15,13 @@
 
 - 新增 `docs/architecture/bytedepth-system-architecture.html`：以自包含 HTML/SVG 展示当前生产双机拓扑、私网数据服务、NFS 图片共享、Obsidian API 同步，以及 Spring Boot DDD 模块依赖方向。
 
+### Changed
+
+- Flyway V23 删除 `persistent_logins` 表：v2.1.14 remember-me 已改用 `TokenBasedRememberMeServices`（自包含签名 cookie），不再读写该表，彻底清除残留技术债。同步清理 `SecurityConfig` 注释与 `database-schema.md` 中的 persistent_logins 引用。
+
 ### Compatibility
 
-- 纯文档新增，无数据库迁移、API 或部署配置变更；发布后可回滚至 `v2.1.14`。
+- 新增 Flyway V23 迁移，仅向前执行（`DROP TABLE`）；表已无代码引用，删除无功能影响。若回滚到 `v2.1.13`（`PersistentTokenBasedRememberMeServices`），需先手动 `CREATE TABLE persistent_logins`（V13 不会重跑）。可在验收失败时回滚至 `v2.1.14`。
 
 ## [v2.1.14] - 2026-08-19
 

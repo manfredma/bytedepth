@@ -118,8 +118,8 @@ public class SecurityConfig {
 
     /**
      * 构造无状态 remember-me 服务：使用自包含签名 cookie（user + expiry + HMAC），
-     * 不轮换 token、不读写 persistent_logins。session 过期后浏览器并发请求各自校验
-     * 同一 cookie 不会互相 invalidate，避免 PersistentTokenBased 的轮换-盗用检测误删。
+     * 不依赖数据库存储；session 过期后浏览器并发请求各自校验同一 cookie，
+     * 不会因 token 轮换触发互相失效。
      */
     AbstractRememberMeServices rememberMeServices(String rememberMeKey,
                                                   UserDetailsService userDetailsService,
