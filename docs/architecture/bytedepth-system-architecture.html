@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bytedepth 系统架构</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --paper:#f5f5f5; --ink:#2d3142; --muted:#4f5d75; --soft:#7a8399; --rule:rgba(45,49,66,.12); --accent:#eb6c36; --accent-tint:rgba(235,108,54,.08); --link:#2e5aa8; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:48px 32px; color:var(--ink); background:var(--paper); font-family:Geist,system-ui,sans-serif; }
+    main { max-width:1600px; margin:0 auto; }
+    .eyebrow { margin:0 0 12px; color:var(--muted); font:500 11px/1 'Geist Mono',monospace; letter-spacing:.18em; text-transform:uppercase; }
+    h1 { margin:0 0 10px; font:400 clamp(32px,4vw,52px)/1 'Instrument Serif',serif; letter-spacing:-.02em; }
+    .subtitle { max-width:72ch; margin:0 0 32px; color:var(--muted); font-size:16px; line-height:1.6; }
+    figure { margin:0; }
+    svg { display:block; width:100%; min-width:960px; height:auto; }
+    figcaption { margin-top:16px; color:var(--soft); font:12px/1.6 'Geist Mono',monospace; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Architecture · Production overview</p>
+    <h1>bytedepth 系统架构</h1>
+    <p class="subtitle">Spring Boot 多模块博客的双机生产拓扑：两台应用入口以私网访问数据节点；Obsidian 笔记通过受控 API 同步为站内内容。</p>
+
+    <figure>
+      <svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="bytedepth-architecture-title bytedepth-architecture-desc">
+        <title id="bytedepth-architecture-title">bytedepth 系统架构</title>
+        <desc id="bytedepth-architecture-desc">架构图展示访客和 Obsidian 同步客户端通过 HTTPS 访问两台 Spring Boot 应用节点；应用节点通过私网使用数据节点的 MySQL、Redis、MeiliSearch 和共享图片存储。</desc>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4f5d75"/></marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#eb6c36"/></marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2e5aa8"/></marker>
+        </defs>
+
+        <rect width="1600" height="900" fill="#f5f5f5"/>
+
+        <!-- zones -->
+        <rect x="40" y="64" width="1520" height="184" rx="8" fill="rgba(45,49,66,.02)" stroke="rgba(45,49,66,.12)" stroke-width="1"/>
+        <rect x="64" y="56" width="132" height="20" rx="2" fill="#f5f5f5"/>
+        <text x="72" y="70" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="10" letter-spacing=".16em">PUBLIC / LOCAL</text>
+
+        <rect x="40" y="292" width="1520" height="276" rx="8" fill="rgba(235,108,54,.035)" stroke="rgba(235,108,54,.42)" stroke-width="1" stroke-dasharray="4 4"/>
+        <rect x="64" y="284" width="156" height="20" rx="2" fill="#f5f5f5"/>
+        <text x="72" y="298" fill="#eb6c36" font-family="'Geist Mono',monospace" font-size="10" letter-spacing=".16em">HTTPS ENTRY · 2 NODES</text>
+
+        <rect x="40" y="628" width="1520" height="184" rx="8" fill="rgba(45,49,66,.02)" stroke="rgba(45,49,66,.12)" stroke-width="1"/>
+        <rect x="64" y="620" width="156" height="20" rx="2" fill="#f5f5f5"/>
+        <text x="72" y="634" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="10" letter-spacing=".16em">PRIVATE DATA NODE</text>
+
+        <!-- arrows are behind nodes -->
+        <path d="M 284,160 H 456 Q 464,160 464,168 V 372" fill="none" stroke="#2e5aa8" stroke-width="1.5" marker-end="url(#arrow-link)"/>
+        <path d="M 284,184 H 1112 Q 1120,184 1120,192 V 372" fill="none" stroke="#2e5aa8" stroke-width="1.5" marker-end="url(#arrow-link)"/>
+        <path d="M 1320,160 H 1240 Q 1232,160 1232,168 V 372" fill="none" stroke="#2e5aa8" stroke-width="1.5" marker-end="url(#arrow-link)"/>
+        <path d="M 620,520 V 660" fill="none" stroke="#eb6c36" stroke-width="1.5" marker-end="url(#arrow-accent)"/>
+        <path d="M 1280,520 V 660" fill="none" stroke="#eb6c36" stroke-width="1.5" marker-end="url(#arrow-accent)"/>
+        <path d="M 1392,660 V 600 Q 1392,592 1384,592 H 1300" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+
+        <!-- arrow labels, all with masks and gaps -->
+        <rect x="340" y="136" width="76" height="16" rx="2" fill="#f5f5f5"/>
+        <text x="378" y="148" fill="#2e5aa8" font-family="'Geist Mono',monospace" font-size="9" text-anchor="middle" letter-spacing=".06em">HTTPS READ</text>
+        <rect x="1216" y="136" width="92" height="16" rx="2" fill="#f5f5f5"/>
+        <text x="1262" y="148" fill="#2e5aa8" font-family="'Geist Mono',monospace" font-size="9" text-anchor="middle" letter-spacing=".06em">API SYNC</text>
+        <rect x="692" y="592" width="232" height="16" rx="2" fill="#f5f5f5"/>
+        <text x="808" y="604" fill="#eb6c36" font-family="'Geist Mono',monospace" font-size="9" text-anchor="middle" letter-spacing=".06em">PRIVATE VLAN · MYSQL / REDIS / SEARCH</text>
+        <rect x="1400" y="620" width="76" height="16" rx="2" fill="#f5f5f5"/>
+        <text x="1438" y="632" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="9" text-anchor="middle" letter-spacing=".06em">NFS IMAGES</text>
+
+        <!-- external inputs -->
+        <rect x="104" y="128" width="180" height="72" rx="6" fill="#f5f5f5"/>
+        <rect x="104" y="128" width="180" height="72" rx="6" fill="rgba(79,93,117,.10)" stroke="#7a8399" stroke-width="1"/>
+        <rect x="116" y="140" width="32" height="16" rx="2" fill="none" stroke="rgba(122,131,153,.5)"/>
+        <text x="132" y="152" fill="#7a8399" font-family="'Geist Mono',monospace" font-size="9" text-anchor="middle" letter-spacing=".1em">USER</text>
+        <text x="194" y="170" fill="#2d3142" font-family="Geist,sans-serif" font-size="16" font-weight="600" text-anchor="middle">访客</text>
+        <text x="194" y="188" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="10" text-anchor="middle">Browser · bytedepth.cn</text>
+
+        <rect x="1320" y="128" width="184" height="72" rx="6" fill="#f5f5f5"/>
+        <rect x="1320" y="128" width="184" height="72" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="1332" y="140" width="40" height="16" rx="2" fill="none" stroke="rgba(45,49,66,.4)"/>
+        <text x="1352" y="152" fill="#2d3142" font-family="'Geist Mono',monospace" font-size="9" text-anchor="middle" letter-spacing=".1em">LOCAL</text>
+        <text x="1412" y="170" fill="#2d3142" font-family="Geist,sans-serif" font-size="16" font-weight="600" text-anchor="middle">Obsidian 笔记库</text>
+        <text x="1412" y="188" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="10" text-anchor="middle">import_via_api.py</text>
+
+        <!-- application node A -->
+        <rect x="304" y="372" width="316" height="148" rx="8" fill="#f5f5f5"/>
+        <rect x="304" y="372" width="316" height="148" rx="8" fill="rgba(235,108,54,.08)" stroke="#eb6c36" stroke-width="1.2"/>
+        <rect x="320" y="388" width="112" height="16" rx="2" fill="none" stroke="rgba(235,108,54,.5)"/>
+        <text x="376" y="400" fill="#eb6c36" font-family="'Geist Mono',monospace" font-size="9" text-anchor="middle" letter-spacing=".1em">DATA NODE APP</text>
+        <text x="462" y="430" fill="#2d3142" font-family="Geist,sans-serif" font-size="18" font-weight="600" text-anchor="middle">Nginx + bytedepth</text>
+        <text x="462" y="452" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="11" text-anchor="middle">Spring Boot · Thymeleaf · Java 25</text>
+        <line x1="328" y1="468" x2="596" y2="468" stroke="rgba(235,108,54,.3)" stroke-width="1"/>
+        <text x="462" y="490" fill="#4f5d75" font-family="Geist,sans-serif" font-size="12" text-anchor="middle">adapter → app → domain</text>
+        <text x="462" y="506" fill="#7a8399" font-family="'Geist Mono',monospace" font-size="10" text-anchor="middle">infrastructure implements app ports · start boots</text>
+
+        <!-- application node B -->
+        <rect x="960" y="372" width="320" height="148" rx="8" fill="#f5f5f5"/>
+        <rect x="960" y="372" width="320" height="148" rx="8" fill="rgba(235,108,54,.08)" stroke="#eb6c36" stroke-width="1.2"/>
+        <rect x="976" y="388" width="104" height="16" rx="2" fill="none" stroke="rgba(235,108,54,.5)"/>
+        <text x="1028" y="400" fill="#eb6c36" font-family="'Geist Mono',monospace" font-size="9" text-anchor="middle" letter-spacing=".1em">APPLICATION NODE</text>
+        <text x="1120" y="430" fill="#2d3142" font-family="Geist,sans-serif" font-size="18" font-weight="600" text-anchor="middle">Nginx + bytedepth</text>
+        <text x="1120" y="452" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="11" text-anchor="middle">Spring Boot · Thymeleaf · Java 25</text>
+        <line x1="984" y1="468" x2="1256" y2="468" stroke="rgba(235,108,54,.3)" stroke-width="1"/>
+        <text x="1120" y="490" fill="#4f5d75" font-family="Geist,sans-serif" font-size="12" text-anchor="middle">adapter → app → domain</text>
+        <text x="1120" y="506" fill="#7a8399" font-family="'Geist Mono',monospace" font-size="10" text-anchor="middle">infrastructure implements app ports · start boots</text>
+
+        <!-- data services -->
+        <rect x="432" y="660" width="616" height="104" rx="6" fill="#f5f5f5"/>
+        <rect x="432" y="660" width="616" height="104" rx="6" fill="rgba(45,49,66,.05)" stroke="#4f5d75" stroke-width="1"/>
+        <rect x="448" y="676" width="44" height="16" rx="2" fill="none" stroke="rgba(79,93,117,.5)"/>
+        <text x="470" y="688" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="9" text-anchor="middle" letter-spacing=".1em">DATA</text>
+        <text x="740" y="710" fill="#2d3142" font-family="Geist,sans-serif" font-size="17" font-weight="600" text-anchor="middle">数据服务</text>
+        <text x="740" y="734" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="11" text-anchor="middle">MySQL 8 · Redis 7 · MeiliSearch 1.7</text>
+        <text x="740" y="752" fill="#7a8399" font-family="Geist,sans-serif" font-size="11" text-anchor="middle">仅应用节点可通过私网访问 3306 / 6379 / 7700</text>
+
+        <rect x="1212" y="660" width="180" height="104" rx="6" fill="#f5f5f5"/>
+        <rect x="1212" y="660" width="180" height="104" rx="6" fill="rgba(45,49,66,.05)" stroke="#4f5d75" stroke-width="1"/>
+        <rect x="1228" y="676" width="40" height="16" rx="2" fill="none" stroke="rgba(79,93,117,.5)"/>
+        <text x="1248" y="688" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="9" text-anchor="middle" letter-spacing=".1em">NFS</text>
+        <text x="1302" y="716" fill="#2d3142" font-family="Geist,sans-serif" font-size="16" font-weight="600" text-anchor="middle">共享图片目录</text>
+        <text x="1302" y="738" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="10" text-anchor="middle">/data/images</text>
+        <text x="1302" y="754" fill="#7a8399" font-family="Geist,sans-serif" font-size="10" text-anchor="middle">两节点读写同一份资源</text>
+
+        <!-- legend -->
+        <line x1="40" y1="836" x2="1560" y2="836" stroke="rgba(45,49,66,.12)" stroke-width="1"/>
+        <text x="40" y="868" fill="#4f5d75" font-family="'Geist Mono',monospace" font-size="10" letter-spacing=".16em">LEGEND</text>
+        <rect x="160" y="854" width="20" height="14" rx="2" fill="rgba(235,108,54,.08)" stroke="#eb6c36" stroke-width="1"/>
+        <text x="192" y="866" fill="#4f5d75" font-family="Geist,sans-serif" font-size="11">应用入口</text>
+        <rect x="300" y="854" width="20" height="14" rx="2" fill="rgba(45,49,66,.05)" stroke="#4f5d75" stroke-width="1"/>
+        <text x="332" y="866" fill="#4f5d75" font-family="Geist,sans-serif" font-size="11">持久化服务</text>
+        <line x1="500" y1="861" x2="536" y2="861" stroke="#2e5aa8" stroke-width="1.5" marker-end="url(#arrow-link)"/>
+        <text x="548" y="866" fill="#4f5d75" font-family="Geist,sans-serif" font-size="11">HTTPS / API</text>
+        <line x1="690" y1="861" x2="726" y2="861" stroke="#eb6c36" stroke-width="1.5" marker-end="url(#arrow-accent)"/>
+        <text x="738" y="866" fill="#4f5d75" font-family="Geist,sans-serif" font-size="11">私网服务访问</text>
+        <line x1="920" y1="861" x2="956" y2="861" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+        <text x="968" y="866" fill="#4f5d75" font-family="Geist,sans-serif" font-size="11">共享文件存储</text>
+      </svg>
+      <figcaption>当前生产拓扑：数据节点 175.24.197.202 / 10.0.4.15，应用节点 124.221.143.25 / 10.0.0.5。两台节点须部署相同的已发布版本。</figcaption>
+    </figure>
+  </main>
+</body>
+</html>
