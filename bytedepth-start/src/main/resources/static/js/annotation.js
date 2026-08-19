@@ -39,11 +39,13 @@ window.initAnnotations = function () {
 
     function readSidebarState() {
         try {
-            var stored = localStorage.getItem(storageKey);
-            if (stored !== null) return stored === 'true';
-            return true; // 首次访问默认打开侧栏
+            const stored = localStorage.getItem(storageKey);
+            if (stored !== null) {
+                return stored === 'true';
+            }
+            return false; // 首次访问保持阅读区完整，用户主动打开后再记住偏好
         } catch {
-            return true;
+            return false;
         }
     }
 
