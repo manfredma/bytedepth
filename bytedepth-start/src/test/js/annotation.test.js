@@ -363,7 +363,7 @@ describe('annotation sidebar', () => {
     expect(deleteButton.textContent).toBe('删除失败，请重试');
   });
 
-  test('edits an owned comment inside its sidebar card', async () => {
+  test('edits an owned comment in place instead of opening the sidebar composer', async () => {
     window.__ANNOTATIONS__ = [
       { id: 8, selectedText: '可批', annotationText: '原评注', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true }
     ];
@@ -372,20 +372,41 @@ describe('annotation sidebar', () => {
     document.querySelector('#bd-annotation-sidebar-toggle').click();
 
     document.querySelector('.bd-annotation-feed-actions button').click();
-    expect(document.querySelector('.bd-annotation-inline-editor-text')).toBeNull();
-    expect(document.querySelector('.bd-annotation-composer').hidden).toBe(false);
-    expect(document.querySelector('.bd-annotation-composer').dataset.editId).toBe('8');
-    expect(document.querySelector('.bd-annotation-composer-quote').textContent).toBe('可批');
-    expect(document.querySelector('.bd-annotation-composer-text').value).toBe('原评注');
-    expect(document.querySelector('.bd-annotation-visibility').value).toBe('PUBLIC');
-    const editor = document.querySelector('.bd-annotation-composer-text');
+    const card = document.querySelector('.bd-annotation-feed-item[data-id="8"]');
+    const inlineComposer = card.querySelector('.bd-annotation-composer');
+    expect(inlineComposer).not.toBeNull();
+    expect(document.querySelector('#bd-annotation-sidebar > .bd-annotation-composer')).toBeNull();
+    expect(inlineComposer.hidden).toBe(false);
+    expect(inlineComposer.dataset.editId).toBe('8');
+    expect(inlineComposer.querySelector('.bd-annotation-composer-quote').textContent).toBe('可批');
+    expect(inlineComposer.querySelector('.bd-annotation-composer-text').value).toBe('原评注');
+    expect(inlineComposer.querySelector('.bd-annotation-visibility').value).toBe('PUBLIC');
+    const editor = inlineComposer.querySelector('.bd-annotation-composer-text');
     editor.value = '修改后的评注';
     window.fetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ ...window.__ANNOTATIONS__[0], annotationText: '修改后的评注' }) });
-    document.querySelector('.bd-annotation-composer-save').click();
+    inlineComposer.querySelector('.bd-annotation-composer-save').click();
     await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(window.fetch).toHaveBeenLastCalledWith(expect.stringContaining('/annotations/8'), expect.objectContaining({ method: 'PATCH' }));
     expect(document.querySelector('.bd-annotation-feed-text').textContent).toBe('修改后的评注');
+  });
+
+  test('cancelling an in-place edit restores the original annotation card', () => {
+    window.__ANNOTATIONS__ = [
+      { id: 8, selectedText: '可批', annotationText: '原评注', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+
+    document.querySelector('.bd-annotation-feed-actions button').click();
+    document.querySelector('.bd-annotation-composer-cancel').click();
+
+    const card = document.querySelector('.bd-annotation-feed-item[data-id="8"]');
+    expect(card.querySelector('.bd-annotation-composer')).toBeNull();
+    expect(card.querySelector('.bd-annotation-feed-text').textContent).toBe('原评注');
+    expect(card.querySelector('.bd-annotation-feed-actions button').textContent).toBe('编辑');
+    expect(document.querySelector('#bd-annotation-sidebar > .bd-annotation-composer').hidden).toBe(true);
   });
 
   test('uses compact bookish typography and one type-colored rule above the annotation text', () => {

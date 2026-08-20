@@ -25,6 +25,7 @@ window.initAnnotations = function () {
     let mobileNote;
     // 当前在侧栏中聚焦展示的批注 id；用于判断点击同一批注 trigger 时是否应回收侧栏。
     let activeAnnotationId = null;
+    let editingAnnotationId = null;
     // 评注展示方式：'follow'（卡片钉在划线高度，随正文滚动联动）/ 'compact'（铺开列表，不联动）。
     let feedLayout = 'follow';
     // layoutFeed 节流帧句柄，避免滚动事件连续触发重复计算。
@@ -391,6 +392,12 @@ window.initAnnotations = function () {
             item.dataset.id = annotation.id;
             item.dataset.color = annotation.color;
 
+            if (String(editingAnnotationId) === String(annotation.id)) {
+                mountInlineComposer(item, annotation);
+                feed.appendChild(item);
+                return;
+            }
+
             const quote = document.createElement('blockquote');
             quote.textContent = annotation.selectedText;
             item.appendChild(quote);
@@ -420,7 +427,7 @@ window.initAnnotations = function () {
                 const edit = document.createElement('button');
                 edit.type = 'button';
                 edit.textContent = '编辑';
-                edit.addEventListener('click', () => openComposer(annotation, annotation));
+                edit.addEventListener('click', () => openInlineComposer(annotation, item));
                 const remove = document.createElement('button');
                 remove.type = 'button';
                 remove.textContent = '删除';
@@ -513,8 +520,23 @@ window.initAnnotations = function () {
     }
 
     function openComposer(data, existing) {
-        selected = data;
+        editingAnnotationId = null;
+        sidebar.appendChild(composer);
+        configureComposer(data, existing);
         composer.hidden = false;
+        setOpen(true);
+        requestAnimationFrame(() => composer.querySelector('.bd-annotation-composer-text').focus());
+    }
+
+    function openInlineComposer(annotation, item) {
+        editingAnnotationId = annotation.id;
+        configureComposer(annotation, annotation);
+        mountInlineComposer(item, annotation);
+        requestAnimationFrame(() => composer.querySelector('.bd-annotation-composer-text').focus());
+    }
+
+    function configureComposer(data, existing) {
+        selected = data;
         composer.dataset.editId = existing ? existing.id : '';
         composer.querySelector('.bd-annotation-composer-quote').textContent = data.selectedText;
         composer.querySelector('.bd-annotation-composer-text').value = existing ? existing.annotationText || '' : '';
@@ -522,14 +544,21 @@ window.initAnnotations = function () {
         visibilityChanged = Boolean(existing);
         selectColor(existing ? existing.color : 'blue');
         setTypeMenuOpen(false);
-        setOpen(true);
-        requestAnimationFrame(() => composer.querySelector('.bd-annotation-composer-text').focus());
+    }
+
+    function mountInlineComposer(item) {
+        item.classList.add('bd-annotation-feed-item-editing');
+        item.replaceChildren(composer);
+        composer.hidden = false;
+        requestAnimationFrame(layoutFeed);
     }
 
     function closeComposer() {
         composer.hidden = true;
+        sidebar.appendChild(composer);
         setTypeMenuOpen(false);
         selected = null;
+        editingAnnotationId = null;
         delete composer.dataset.editId;
         if (isOpen()) {
             renderFeed();
