@@ -410,9 +410,64 @@ describe('annotation sidebar', () => {
   });
 
   test('uses compact bookish typography and one type-colored rule above the annotation text', () => {
-    expect(annotationCss).toMatch(/\.bd-annotation-feed-item blockquote,\s*\.bd-annotation-composer-quote\s*\{[^}]*border-bottom:\s*\.5px solid var\(--bd-annotation-item-color,[^}]*}/s);
+    expect(annotationCss).toMatch(/\.bd-annotation-feed-item > blockquote,\s*\.bd-annotation-composer-quote\s*\{[^}]*border-bottom:\s*\.5px solid var\(--bd-annotation-item-color,[^}]*}/s);
     expect(annotationCss).toMatch(/\.bd-annotation-feed-text\s*\{[^}]*font-size:\s*13px;[^}]*font-weight:\s*400;[^}]*}/s);
     expect(annotationCss).not.toMatch(/\.bd-annotation-feed-text\s*\{[^}]*border-bottom:/s);
+  });
+
+  test('clips a followed comment at the feed boundary instead of fading the whole card', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 1, selectedText: '可批', annotationText: '评论', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    window.getComputedStyle = jest.fn(() => ({ position: 'fixed' }));
+    window.requestAnimationFrame = callback => callback();
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><div class="bd-annotation-layout-switch" role="group"><button type="button" data-bd-layout="follow" aria-pressed="true">跟随</button><button type="button" data-bd-layout="compact" aria-pressed="false">紧凑</button></div><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+
+    eval(annotationJs);
+    const feed = document.querySelector('.bd-annotation-feed');
+    Object.defineProperty(feed, 'clientHeight', { configurable: true, value: 400 });
+    feed.getBoundingClientRect = () => ({ top: 100, bottom: 500 });
+    document.querySelector('mark[data-id="1"]').getBoundingClientRect = () => ({ top: 20, bottom: 40 });
+
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const item = document.querySelector('.bd-annotation-feed-item');
+    expect(item.style.top).toBe('-80px');
+    expect(item.style.opacity).toBe('');
+  });
+
+  test('renders safe Markdown in a comment while preserving the source for in-place editing', () => {
+    window.__ANNOTATIONS__ = [
+      { id: 8, selectedText: '可批', annotationText: '**重点**', annotationHtml: '<p><strong>重点</strong></p>', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+
+    eval(annotationJs);
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+
+    const card = document.querySelector('.bd-annotation-feed-item[data-id="8"]');
+    expect(card.querySelector('.bd-annotation-feed-text strong').textContent).toBe('重点');
+    card.querySelector('.bd-annotation-feed-actions button').click();
+    expect(card.querySelector('.bd-annotation-composer-text').value).toBe('**重点**');
+  });
+
+  test('renders safe Markdown in the mobile annotation note', () => {
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    window.__ANNOTATIONS__ = [
+      { id: 8, selectedText: '可批', annotationText: '**重点**', annotationHtml: '<p><strong>重点</strong></p>', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    eval(annotationJs);
+
+    document.querySelector('mark[data-id="8"]').click();
+    expect(document.querySelector('.bd-annotation-mobile-note strong').textContent).toBe('重点');
+  });
+
+  test('keeps Markdown blocks compact inside the annotation typography', () => {
+    expect(annotationCss).toMatch(/\.bd-annotation-feed-text\s*\{[^}]*white-space:\s*normal;[^}]*}/s);
+    expect(annotationCss).toContain('.bd-annotation-feed-text > :first-child { margin-top: 0; }');
+    expect(annotationCss).toContain('.bd-annotation-feed-text h1,');
+    expect(annotationCss).toContain('.bd-annotation-feed-text img,');
   });
 
   test('toolbar comment badge uses a self-contained high contrast color', () => {
@@ -574,8 +629,7 @@ describe('annotation sidebar', () => {
     expect(annotationJs).toContain("item.style.top = '';");
     expect(annotationJs).toContain("item.style.opacity = '';");
     expect(annotationJs).toContain('item.style.top = `${top}px`;');
-    expect(annotationJs).toContain('let nextTop = Number.NEGATIVE_INFINITY;');
-    expect(annotationJs).toContain('const viewportTop = feedRect.top;');
+    expect(annotationJs).toContain('item.style.opacity = \'\';');
     expect(annotationCss).toContain('bd-annotation-pop-in 150ms ease-out forwards');
     // 只分两档：手机屏(≤768px) 与 PC屏(≥769px)，不再细分中屏/大屏。
     expect(annotationCss).not.toContain('max-width: 1599px');

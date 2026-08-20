@@ -208,6 +208,7 @@ class PostControllerTest {
         when(postRepository.findNextPublished(3L)).thenReturn(Optional.empty());
         when(getPostQryExe.executeBySlug("annotated-post")).thenReturn(dto);
         when(markdownRenderer.render(dto.getContent())).thenReturn("<p>正文内容</p>");
+        when(markdownRenderer.render("这是一条评论")).thenReturn("<p><strong>这是一条评论</strong></p>");
         when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
         when(postViewCounter.getCount(3L)).thenReturn(0L);
         when(listAnnotationsQryExe.execute(3L, null, null)).thenReturn(List.of(new PostAnnotation(9L, 3L, null,
@@ -218,6 +219,8 @@ class PostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("window.__ANNOTATIONS__ = [{\"id\":9")))
                 .andExpect(content().string(containsString("\"visibility\":\"PUBLIC\"")))
+                .andExpect(result -> assertThat(result.getModelAndView().getModel().get("annotations").toString())
+                        .contains("annotationHtml=<p><strong>这是一条评论</strong></p>"))
                 .andExpect(content().string(containsString("\"createdAt\":\"2026-08-20 17:06\"")));
     }
 
@@ -251,9 +254,9 @@ class PostControllerTest {
             mockMvc.perform(get("/posts/annotation-owner"))
                     .andExpect(status().isOk())
                     .andExpect(result -> assertThat(result.getModelAndView().getModel().get("annotations").toString())
-                            .contains("id=11, selectedText=正文, annotationText=评论11, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, createdAt=")
-                            .contains("id=12, selectedText=正文, annotationText=评论12, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, createdAt=")
-                            .contains("id=13, selectedText=正文, annotationText=评论13, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, createdAt=")
+                            .contains("id=11, selectedText=正文, annotationText=评论11, annotationHtml=null, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, createdAt=")
+                            .contains("id=12, selectedText=正文, annotationText=评论12, annotationHtml=null, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, createdAt=")
+                            .contains("id=13, selectedText=正文, annotationText=评论13, annotationHtml=null, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, createdAt=")
                             .contains("ownedByCurrentVisitor=true")
                             .contains("ownedByCurrentVisitor=false"));
         } finally {

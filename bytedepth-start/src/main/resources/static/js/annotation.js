@@ -151,6 +151,14 @@ window.initAnnotations = function () {
         return Boolean(annotation.annotationText && annotation.annotationText.trim());
     }
 
+    function renderAnnotationText(container, annotation) {
+        if (annotation.annotationHtml) {
+            container.innerHTML = annotation.annotationHtml;
+        } else {
+            container.textContent = annotation.annotationText;
+        }
+    }
+
     function createMarker(annotation) {
         const mark = document.createElement('mark');
         mark.className = `bd-annotation-highlight bd-annotation-color-${annotation.color}`
@@ -347,7 +355,6 @@ window.initAnnotations = function () {
 
         // 跟随型：每张卡片钉在侧栏内对应划线的高度，正文滚动时同步上下移动。
         const feedRect = feed.getBoundingClientRect();
-        const viewportTop = feedRect.top;
         let nextTop = Number.NEGATIVE_INFINITY;
         items.forEach(item => {
             const mark = content.querySelector(`mark[data-id="${item.dataset.id}"]`);
@@ -359,16 +366,15 @@ window.initAnnotations = function () {
                 item.style.opacity = '';
                 return;
             }
-            // 划线是否落在侧栏可视纵向范围内（上下各外扩 48px 做渐隐缓冲）。
-            const inViewport = markRect.bottom > viewportTop - 48
-                && markRect.top < viewportTop + feed.clientHeight + 48;
             item.hidden = false;
             const anchorTop = markRect.top - feedRect.top + feed.scrollTop;
             const top = Math.max(anchorTop, nextTop);
             item.style.top = `${top}px`;
             // 卡片不重叠：下一张至少从本张底部 + 间距起算，最小高度 94px 兜底。
             nextTop = top + Math.max(item.offsetHeight, 94) + 12;
-            item.style.opacity = inViewport ? '' : '0.32';
+            // 保留真实跟随坐标（可为负）。由 feed 的滚动裁切区在标题下沿遮住离场卡片，
+            // 不再降低整张卡片透明度，避免内容发白。
+            item.style.opacity = '';
         });
         if (spacer) {
             spacer.style.height = `${Math.max(nextTop, 0)}px`;
@@ -402,9 +408,9 @@ window.initAnnotations = function () {
             quote.textContent = annotation.selectedText;
             item.appendChild(quote);
 
-            const text = document.createElement('p');
+            const text = document.createElement('div');
             text.className = 'bd-annotation-feed-text';
-            text.textContent = annotation.annotationText;
+            renderAnnotationText(text, annotation);
             item.appendChild(text);
 
             const footer = document.createElement('footer');
@@ -668,7 +674,7 @@ window.initAnnotations = function () {
             mobileNote.className = 'bd-annotation-mobile-note';
             document.body.appendChild(mobileNote);
         }
-        mobileNote.textContent = annotation.annotationText;
+        renderAnnotationText(mobileNote, annotation);
         const rect = mark.getBoundingClientRect();
         mobileNote.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - 316))}px`;
         mobileNote.style.top = `${Math.min(window.innerHeight - 88, rect.bottom + 10)}px`;
