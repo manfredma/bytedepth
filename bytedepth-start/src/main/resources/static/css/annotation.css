@@ -352,7 +352,7 @@
     background: var(--bd-annotation-item-color, #315efb);
 }
 
-.bd-annotation-feed-item blockquote,
+.bd-annotation-feed-item > blockquote,
 .bd-annotation-composer-quote {
     overflow: hidden;
     margin: 0 0 5px;
@@ -377,8 +377,44 @@
     font-size: 13px;
     font-weight: 400;
     line-height: 1.7;
-    white-space: pre-wrap;
+    white-space: normal;
 }
+
+/* Markdown 保持书页批注的紧凑节奏，不继承文章正文的大区块样式。 */
+.bd-annotation-feed-text > :first-child { margin-top: 0; }
+.bd-annotation-feed-text > :last-child { margin-bottom: 0; }
+.bd-annotation-feed-text p { margin: .38em 0; }
+.bd-annotation-feed-text ul,
+.bd-annotation-feed-text ol { margin: .38em 0; padding-left: 1.35em; }
+.bd-annotation-feed-text li + li { margin-top: .16em; }
+.bd-annotation-feed-text a { color: inherit; text-decoration-color: var(--bd-annotation-item-color, #9ab2ff); text-underline-offset: 2px; }
+.bd-annotation-feed-text code { padding: 1px 3px; border-radius: 3px; background: #f0f3f8; font: .88em/1.4 var(--mono, monospace); }
+.bd-annotation-feed-text pre { margin: .45em 0; padding: 7px 8px; overflow-x: auto; border-radius: 5px; background: #f0f3f8; font: 11px/1.5 var(--mono, monospace); }
+.bd-annotation-feed-text pre code { padding: 0; background: transparent; font: inherit; }
+.bd-annotation-feed-text h1,
+.bd-annotation-feed-text h2,
+.bd-annotation-feed-text h3,
+.bd-annotation-feed-text h4,
+.bd-annotation-feed-text h5,
+.bd-annotation-feed-text h6,
+.bd-annotation-mobile-note h1,
+.bd-annotation-mobile-note h2,
+.bd-annotation-mobile-note h3,
+.bd-annotation-mobile-note h4,
+.bd-annotation-mobile-note h5,
+.bd-annotation-mobile-note h6 { margin: .42em 0 .2em; font: 600 1em/1.45 var(--sans, sans-serif); }
+.bd-annotation-feed-text blockquote,
+.bd-annotation-mobile-note blockquote { margin: .42em 0; padding-left: 8px; border-left: 2px solid var(--bd-annotation-item-color, #9ab2ff); color: #66758b; }
+.bd-annotation-feed-text table,
+.bd-annotation-mobile-note table { display: block; max-width: 100%; margin: .45em 0; overflow-x: auto; border-collapse: collapse; font: 11px/1.45 var(--sans, sans-serif); }
+.bd-annotation-feed-text th,
+.bd-annotation-feed-text td,
+.bd-annotation-mobile-note th,
+.bd-annotation-mobile-note td { padding: 3px 5px; border: 1px solid #dce2ec; text-align: left; }
+.bd-annotation-feed-text img,
+.bd-annotation-mobile-note img { display: block; max-width: 100%; height: auto; margin: .45em 0; border-radius: 4px; }
+.bd-annotation-mobile-note > :first-child { margin-top: 0; }
+.bd-annotation-mobile-note > :last-child { margin-bottom: 0; }
 
 .bd-annotation-feed-footer {
     display: flex;

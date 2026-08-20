@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.portal;
 
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
 import manfred.bytedepth.adapter.web.util.SecurityUtils;
 import manfred.bytedepth.app.annotation.CreateAnnotationCmdExe;
 import manfred.bytedepth.app.annotation.DeleteAnnotationCmdExe;
@@ -38,28 +39,29 @@ public class AnnotationController {
     private final DeleteAnnotationCmdExe deleteAnnotationCmdExe;
     private final UpdateAnnotationCmdExe updateAnnotationCmdExe;
     private final AnnotationVisitorIdentity visitorIdentity;
+    private final MarkdownRenderer markdownRenderer;
 
     /** 列出公开批注以及当前读者自己的私有划线。 */
     @GetMapping
     @ResponseBody
-    public List<PostAnnotationDTO> list(@PathVariable("postSlug") String postSlug,
-                                        @AuthenticationPrincipal UserDetails currentUser,
-                                        HttpServletRequest request) {
+    public List<AnnotationResponse> list(@PathVariable("postSlug") String postSlug,
+                                         @AuthenticationPrincipal UserDetails currentUser,
+                                         HttpServletRequest request) {
         Long postId = resolvePostId(postSlug);
         Long userId = SecurityUtils.extractUserId(currentUser);
         String ownerTokenHash = visitorIdentity.existingHash(request);
         return listAnnotationsQryExe.execute(postId, userId, ownerTokenHash).stream()
-                .map(annotation -> PostAnnotationDTO.from(annotation, userId, ownerTokenHash)).toList();
+                .map(annotation -> toResponse(PostAnnotationDTO.from(annotation, userId, ownerTokenHash))).toList();
     }
 
     /** 创建划线或批注；匿名读者以浏览器身份 Cookie 作为私有归属。 */
     @PostMapping
     @ResponseBody
-    public PostAnnotationDTO create(@PathVariable("postSlug") String postSlug,
-                                    @RequestBody CreateAnnotationRequest request,
-                                    @AuthenticationPrincipal UserDetails currentUser,
-                                    HttpServletRequest servletRequest,
-                                    HttpServletResponse servletResponse) {
+    public AnnotationResponse create(@PathVariable("postSlug") String postSlug,
+                                     @RequestBody CreateAnnotationRequest request,
+                                     @AuthenticationPrincipal UserDetails currentUser,
+                                     HttpServletRequest servletRequest,
+                                     HttpServletResponse servletResponse) {
         Long postId = resolvePostId(postSlug);
         Long userId = SecurityUtils.extractUserId(currentUser);
         String ownerTokenHash = userId == null ? visitorIdentity.getOrCreateHash(servletRequest, servletResponse) : null;
@@ -72,7 +74,7 @@ public class AnnotationController {
                 request.visibility(),
                 request.startOffset(),
                 request.endOffset());
-        return PostAnnotationDTO.from(created, userId, ownerTokenHash);
+        return toResponse(PostAnnotationDTO.from(created, userId, ownerTokenHash));
     }
 
     /** 删除批注（仅当前登录用户或当前匿名浏览器身份）。 */
@@ -88,17 +90,17 @@ public class AnnotationController {
 
     @PatchMapping("/{id}")
     @ResponseBody
-    public PostAnnotationDTO update(@PathVariable("postSlug") String postSlug,
-                                    @PathVariable Long id,
-                                    @RequestBody UpdateAnnotationRequest request,
-                                    @AuthenticationPrincipal UserDetails currentUser,
-                                    HttpServletRequest servletRequest) {
+    public AnnotationResponse update(@PathVariable("postSlug") String postSlug,
+                                     @PathVariable Long id,
+                                     @RequestBody UpdateAnnotationRequest request,
+                                     @AuthenticationPrincipal UserDetails currentUser,
+                                     HttpServletRequest servletRequest) {
         Long postId = resolvePostId(postSlug);
         Long userId = SecurityUtils.extractUserId(currentUser);
         String ownerTokenHash = visitorIdentity.existingHash(servletRequest);
         var updated = updateAnnotationCmdExe.execute(id, postId, userId, ownerTokenHash,
                 request.annotationText(), request.visibility());
-        return PostAnnotationDTO.from(updated, userId, ownerTokenHash);
+        return toResponse(PostAnnotationDTO.from(updated, userId, ownerTokenHash));
     }
 
     private Long resolvePostId(String postSlug) {
@@ -107,11 +109,27 @@ public class AnnotationController {
                 .getId();
     }
 
+    private AnnotationResponse toResponse(PostAnnotationDTO annotation) {
+        return AnnotationResponse.from(annotation, markdownRenderer.render(annotation.annotationText()));
+    }
+
     public record CreateAnnotationRequest(String selectedText, String annotationText,
                                           String color, AnnotationVisibility visibility,
                                           int startOffset, int endOffset) {
     }
 
     public record UpdateAnnotationRequest(String annotationText, AnnotationVisibility visibility) {
+    }
+
+    record AnnotationResponse(Long id, Long postId, String selectedText, String annotationText,
+                              String annotationHtml, String color, AnnotationVisibility visibility,
+                              int startOffset, int endOffset, java.time.LocalDateTime createdAt,
+                              boolean ownedByCurrentVisitor) {
+        private static AnnotationResponse from(PostAnnotationDTO annotation, String annotationHtml) {
+            return new AnnotationResponse(annotation.id(), annotation.postId(), annotation.selectedText(),
+                    annotation.annotationText(), annotationHtml, annotation.color(), annotation.visibility(),
+                    annotation.startOffset(), annotation.endOffset(), annotation.createdAt(),
+                    annotation.ownedByCurrentVisitor());
+        }
     }
 }

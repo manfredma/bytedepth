@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import manfred.bytedepth.adapter.web.security.SiteUserDetails;
+import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
 import manfred.bytedepth.app.annotation.CreateAnnotationCmdExe;
 import manfred.bytedepth.app.annotation.DeleteAnnotationCmdExe;
 import manfred.bytedepth.app.annotation.ListAnnotationsQryExe;
@@ -34,7 +35,8 @@ class AnnotationControllerCoverageTest {
         CreateAnnotationCmdExe create = mock(CreateAnnotationCmdExe.class);
         AnnotationVisitorIdentity visitorIdentity = mock(AnnotationVisitorIdentity.class);
         AnnotationController controller = new AnnotationController(posts, mock(ListAnnotationsQryExe.class), create,
-                mock(DeleteAnnotationCmdExe.class), mock(UpdateAnnotationCmdExe.class), visitorIdentity);
+                mock(DeleteAnnotationCmdExe.class), mock(UpdateAnnotationCmdExe.class), visitorIdentity,
+                mock(MarkdownRenderer.class));
         when(posts.findBySlug("post")).thenReturn(Optional.of(post()));
         when(create.execute(eq(1L), eq(7L), eq(null), any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(annotation());

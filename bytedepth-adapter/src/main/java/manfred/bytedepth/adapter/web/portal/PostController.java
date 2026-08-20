@@ -143,7 +143,8 @@ public class PostController {
         model.addAttribute("annotations", listAnnotationsQryExe.execute(id, currentUserId, annotationOwnerTokenHash).stream()
                 // Thymeleaf 为内联 JavaScript 使用独立的 ObjectMapper，不能序列化 LocalDateTime。
                 // 阅读页脚本也不使用 createdAt，因此只传递渲染和交互所需字段。
-                .map(annotation -> AnnotationBootstrapDTO.from(annotation, currentUserId, annotationOwnerTokenHash)).toList());
+                .map(annotation -> AnnotationBootstrapDTO.from(annotation, currentUserId, annotationOwnerTokenHash,
+                        markdownRenderer)).toList());
         model.addAttribute("currentUserId", currentUserId);
         model.addAttribute("rating", getPostRatingQryExe.execute(id,
                 WebUtils.readCookie(request, PostRatingController.VISITOR_COOKIE)));
@@ -179,15 +180,17 @@ public class PostController {
         return "public/posts/detail";
     }
 
-    private record AnnotationBootstrapDTO(Long id, String selectedText, String annotationText, String color,
+    private record AnnotationBootstrapDTO(Long id, String selectedText, String annotationText, String annotationHtml,
+                                          String color,
                                           AnnotationVisibility visibility,
                                           int startOffset, int endOffset, String createdAt, boolean ownedByCurrentVisitor) {
         private static AnnotationBootstrapDTO from(PostAnnotation annotation,
-                                                   Long currentUserId, String ownerTokenHash) {
+                                                   Long currentUserId, String ownerTokenHash,
+                                                   MarkdownRenderer markdownRenderer) {
             boolean ownedByCurrentVisitor = (currentUserId != null && currentUserId.equals(annotation.userId()))
                     || (ownerTokenHash != null && ownerTokenHash.equals(annotation.ownerTokenHash()));
             return new AnnotationBootstrapDTO(annotation.id(), annotation.selectedText(), annotation.annotationText(),
-                    annotation.color(), annotation.visibility(), annotation.startOffset(), annotation.endOffset(),
+                    markdownRenderer.render(annotation.annotationText()), annotation.color(), annotation.visibility(), annotation.startOffset(), annotation.endOffset(),
                     annotation.createdAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
                     ownedByCurrentVisitor);
         }
