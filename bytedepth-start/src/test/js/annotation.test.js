@@ -281,6 +281,11 @@ describe('annotation sidebar', () => {
     expect(annotationCss).toContain('border: 2px solid #fff;');
   });
 
+  test('solid highlights do not create gaps where inline text fragments meet', () => {
+    expect(annotationCss).toContain('padding: 0 0 2px;');
+    expect(annotationCss).toContain('text-decoration-skip-ink: none;');
+  });
+
   test('dismisses the selection menu after an outside click even if the browser retains the old selection', () => {
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3); range.getBoundingClientRect = () => ({left: 10, bottom: 20});
