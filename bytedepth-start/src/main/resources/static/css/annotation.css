@@ -135,6 +135,8 @@
 .bd-annotation-sidebar {
     position: fixed;
     z-index: 310;
+    display: flex;
+    flex-direction: column;
     top: 74px;
     right: 16px;
     width: min(380px, calc(100vw - 32px));
@@ -208,11 +210,12 @@
 }
 
 .bd-annotation-sidebar-header {
+    flex: 0 0 auto;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    padding: 21px 21px 14px;
+    padding: 21px 21px 6px;
     border-bottom: 1px solid var(--bd-annotation-line);
 }
 
@@ -291,11 +294,9 @@
 }
 
 .bd-annotation-feed {
-    position: absolute;
-    top: 78px;
-    right: 0;
-    bottom: 0;
-    left: 0;
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
