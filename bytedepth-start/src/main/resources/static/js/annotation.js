@@ -410,7 +410,8 @@ window.initAnnotations = function () {
 
             const meta = document.createElement('span');
             meta.className = 'bd-annotation-feed-meta';
-            meta.textContent = annotation.visibility === 'PRIVATE' ? '仅自己可见' : '公开评论';
+            const visibilityText = annotation.visibility === 'PRIVATE' ? '仅自己可见' : '公开评论';
+            meta.textContent = annotation.createdAt ? `${visibilityText} · ${annotation.createdAt}` : visibilityText;
             footer.appendChild(meta);
 
             if (annotation.ownedByCurrentVisitor) {
@@ -419,14 +420,19 @@ window.initAnnotations = function () {
                 const edit = document.createElement('button');
                 edit.type = 'button';
                 edit.textContent = '编辑';
-                edit.addEventListener('click', () => openInlineEditor(annotation, item));
+                edit.addEventListener('click', () => openComposer(annotation, annotation));
                 const remove = document.createElement('button');
                 remove.type = 'button';
                 remove.textContent = '删除';
-                remove.addEventListener('click', () => removeAnnotation(annotation.id, () => {
-                    remove.textContent = '删除失败，请重试';
-                    window.setTimeout(() => { remove.textContent = '删除'; }, 2000);
-                }));
+                remove.addEventListener('click', () => {
+                    if (!window.confirm('确定删除这条评注吗？')) {
+                        return;
+                    }
+                    removeAnnotation(annotation.id, () => {
+                        remove.textContent = '删除失败，请重试';
+                        window.setTimeout(() => { remove.textContent = '删除'; }, 2000);
+                    });
+                });
                 actions.append(edit, remove);
                 footer.appendChild(actions);
             }
@@ -490,61 +496,6 @@ window.initAnnotations = function () {
                 active.classList.add('bd-annotation-feed-item-active');
             }
         }
-    }
-
-    function openInlineEditor(annotation, item) {
-        item.replaceChildren();
-        item.classList.add('bd-annotation-feed-item-editing');
-
-        const quote = document.createElement('blockquote');
-        quote.textContent = annotation.selectedText;
-        item.appendChild(quote);
-
-        const input = document.createElement('textarea');
-        input.className = 'bd-annotation-inline-editor-text';
-        input.maxLength = 2000;
-        input.value = annotation.annotationText || '';
-        input.setAttribute('aria-label', '编辑评注内容');
-        item.appendChild(input);
-
-        const footer = document.createElement('footer');
-        footer.className = 'bd-annotation-feed-footer bd-annotation-inline-editor-footer';
-        const visibility = document.createElement('select');
-        visibility.className = 'bd-annotation-inline-editor-visibility';
-        visibility.setAttribute('aria-label', '评论可见范围');
-        visibility.innerHTML = '<option value="PUBLIC">公开</option><option value="PRIVATE">仅自己可见</option>';
-        visibility.value = annotation.visibility;
-
-        const actions = document.createElement('div');
-        actions.className = 'bd-annotation-feed-actions';
-        const cancel = document.createElement('button');
-        cancel.type = 'button';
-        cancel.textContent = '取消';
-        cancel.addEventListener('click', renderFeed);
-        const save = document.createElement('button');
-        save.type = 'button';
-        save.className = 'bd-annotation-inline-editor-save';
-        save.textContent = '保存';
-        save.addEventListener('click', () => {
-            const annotationText = input.value.trim();
-            api(`/${annotation.id}`, 'PATCH', {annotationText: annotationText || null, visibility: visibility.value})
-                .then(saved => {
-                    const index = annotations.findIndex(itemAnnotation => String(itemAnnotation.id) === String(saved.id));
-                    if (index >= 0) {
-                        annotations[index] = saved;
-                    }
-                    renderMarks();
-                    renderFeed();
-                })
-                .catch(() => {
-                    save.textContent = '保存失败，请重试';
-                });
-        });
-        actions.append(cancel, save);
-        footer.append(visibility, actions);
-        item.appendChild(footer);
-        requestAnimationFrame(layoutFeed);
-        input.focus();
     }
 
     function selectColor(nextColor) {

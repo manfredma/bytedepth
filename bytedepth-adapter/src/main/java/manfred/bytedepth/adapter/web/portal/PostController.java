@@ -41,6 +41,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -180,13 +181,14 @@ public class PostController {
 
     private record AnnotationBootstrapDTO(Long id, String selectedText, String annotationText, String color,
                                           AnnotationVisibility visibility,
-                                          int startOffset, int endOffset, boolean ownedByCurrentVisitor) {
+                                          int startOffset, int endOffset, String createdAt, boolean ownedByCurrentVisitor) {
         private static AnnotationBootstrapDTO from(PostAnnotation annotation,
                                                    Long currentUserId, String ownerTokenHash) {
             boolean ownedByCurrentVisitor = (currentUserId != null && currentUserId.equals(annotation.userId()))
                     || (ownerTokenHash != null && ownerTokenHash.equals(annotation.ownerTokenHash()));
             return new AnnotationBootstrapDTO(annotation.id(), annotation.selectedText(), annotation.annotationText(),
                     annotation.color(), annotation.visibility(), annotation.startOffset(), annotation.endOffset(),
+                    annotation.createdAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
                     ownedByCurrentVisitor);
         }
     }
