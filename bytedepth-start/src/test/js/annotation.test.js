@@ -491,6 +491,13 @@ describe('annotation sidebar', () => {
     expect(annotationJs).toContain('const anchorTop = markRect.top - feedRect.top + feed.scrollTop;');
   });
 
+  test('comment feed clips exactly at the compact sidebar header divider', () => {
+    expect(annotationCss).toMatch(/\.bd-annotation-sidebar\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*}/s);
+    expect(annotationCss).toMatch(/\.bd-annotation-sidebar-header\s*\{[^}]*padding:\s*21px 21px 6px;[^}]*}/s);
+    expect(annotationCss).toMatch(/\.bd-annotation-feed\s*\{[^}]*position:\s*relative;[^}]*flex:\s*1 1 auto;[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto;[^}]*}/s);
+    expect(annotationCss).not.toMatch(/\.bd-annotation-feed\s*\{[^}]*top:/s);
+  });
+
   test('dismisses the selection menu after an outside click even if the browser retains the old selection', () => {
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3); range.getBoundingClientRect = () => ({left: 10, bottom: 20});
