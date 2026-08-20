@@ -35,6 +35,14 @@ window.initAnnotations = function () {
     const feed = sidebar.querySelector('.bd-annotation-feed');
     const sidebarCount = sidebar.querySelector('.bd-annotation-comment-count');
     const toolbarCount = toggle.querySelector('.bd-annotation-toolbar-count');
+    const typePicker = composer.querySelector('.bd-annotation-type-picker');
+    const typeTrigger = composer.querySelector('.bd-annotation-type-trigger');
+    const typeLabel = composer.querySelector('.bd-annotation-type-label');
+    const typeMenu = composer.querySelector('.bd-annotation-type-menu');
+
+    function annotationTypeLabel(annotationColor) {
+        return {blue: '补充说明', yellow: '重点摘录', green: '实践结论', red: '疑问待办'}[annotationColor] || '补充说明';
+    }
 
     function isMobile() {
         return Boolean(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
@@ -395,6 +403,11 @@ window.initAnnotations = function () {
             const footer = document.createElement('footer');
             footer.className = 'bd-annotation-feed-footer';
 
+            const type = document.createElement('span');
+            type.className = `bd-annotation-feed-type bd-annotation-type-${annotation.color}`;
+            type.textContent = annotationTypeLabel(annotation.color);
+            footer.appendChild(type);
+
             const meta = document.createElement('span');
             meta.className = 'bd-annotation-feed-meta';
             meta.textContent = annotation.visibility === 'PRIVATE' ? '仅自己可见' : '公开评论';
@@ -536,9 +549,16 @@ window.initAnnotations = function () {
 
     function selectColor(nextColor) {
         color = nextColor;
-        sidebar.querySelectorAll('[data-bd-annotation-color]').forEach(button => {
-            button.classList.toggle('bd-annotation-color-selected', button.dataset.bdAnnotationColor === color);
+        typeLabel.textContent = annotationTypeLabel(color);
+        typeTrigger.dataset.color = color;
+        typeMenu.querySelectorAll('[data-bd-annotation-type]').forEach(button => {
+            button.setAttribute('aria-selected', String(button.dataset.bdAnnotationType === color));
         });
+    }
+
+    function setTypeMenuOpen(open) {
+        typeMenu.hidden = !open;
+        typeTrigger.setAttribute('aria-expanded', String(open));
     }
 
     function openComposer(data, existing) {
@@ -549,13 +569,15 @@ window.initAnnotations = function () {
         composer.querySelector('.bd-annotation-composer-text').value = existing ? existing.annotationText || '' : '';
         composer.querySelector('.bd-annotation-visibility').value = existing ? existing.visibility : 'PRIVATE';
         visibilityChanged = Boolean(existing);
-        selectColor(existing ? existing.color : 'yellow');
+        selectColor(existing ? existing.color : 'blue');
+        setTypeMenuOpen(false);
         setOpen(true);
         requestAnimationFrame(() => composer.querySelector('.bd-annotation-composer-text').focus());
     }
 
     function closeComposer() {
         composer.hidden = true;
+        setTypeMenuOpen(false);
         selected = null;
         delete composer.dataset.editId;
         if (isOpen()) {
@@ -792,8 +814,12 @@ window.initAnnotations = function () {
     });
     sidebar.querySelector('.bd-annotation-composer-cancel').addEventListener('click', closeComposer);
     sidebar.querySelector('.bd-annotation-composer-save').addEventListener('click', saveComposer);
-    sidebar.querySelectorAll('[data-bd-annotation-color]').forEach(button => {
-        button.addEventListener('click', () => selectColor(button.dataset.bdAnnotationColor));
+    typeTrigger.addEventListener('click', () => setTypeMenuOpen(typeMenu.hidden));
+    typeMenu.querySelectorAll('[data-bd-annotation-type]').forEach(button => {
+        button.addEventListener('click', () => {
+            selectColor(button.dataset.bdAnnotationType);
+            setTypeMenuOpen(false);
+        });
     });
     composer.querySelector('.bd-annotation-visibility').addEventListener('change', () => {
         visibilityChanged = true;
@@ -820,6 +846,12 @@ window.initAnnotations = function () {
         showPopup(range);
     }
     document.addEventListener('mouseup', onDocMouseUp);
+
+    document.addEventListener('click', event => {
+        if (!typePicker.contains(event.target)) {
+            setTypeMenuOpen(false);
+        }
+    });
 
     content.addEventListener('click', event => {
         const mark = event.target.closest && event.target.closest('mark.bd-annotation-highlight');

@@ -806,19 +806,23 @@
         </header>
         <section class="bd-annotation-feed" aria-live="polite"></section>
         <section class="bd-annotation-composer" hidden>
-            <div class="bd-annotation-composer-topline"><span>针对划线写评论</span><button type="button" class="bd-annotation-composer-cancel" aria-label="取消编辑">取消</button></div>
             <div class="bd-annotation-composer-quote"></div>
-            <div class="bd-annotation-color-row" aria-label="划线颜色">
-                <button type="button" data-bd-annotation-color="yellow" aria-label="琥珀色划线"><span></span></button>
-                <button type="button" data-bd-annotation-color="red" aria-label="珊瑚色划线"><span></span></button>
-                <button type="button" data-bd-annotation-color="green" aria-label="绿色划线"><span></span></button>
-                <button type="button" data-bd-annotation-color="blue" aria-label="蓝色划线"><span></span></button>
-            </div>
             <textarea class="bd-annotation-composer-text" maxlength="2000" placeholder="留下你的想法…"></textarea>
-            <label class="bd-annotation-visibility-label"><span>可见范围</span>
+            <div class="bd-annotation-composer-controls">
+                <div class="bd-annotation-type-picker">
+                    <button type="button" class="bd-annotation-type-trigger" aria-haspopup="listbox" aria-expanded="false"><span class="bd-annotation-type-label">补充说明</span><span aria-hidden="true">⌄</span></button>
+                    <div class="bd-annotation-type-menu" role="listbox" hidden>
+                        <button type="button" class="bd-annotation-type-blue" data-bd-annotation-type="blue" role="option" aria-selected="true">补充说明</button>
+                        <button type="button" class="bd-annotation-type-yellow" data-bd-annotation-type="yellow" role="option" aria-selected="false">重点摘录</button>
+                        <button type="button" class="bd-annotation-type-green" data-bd-annotation-type="green" role="option" aria-selected="false">实践结论</button>
+                        <button type="button" class="bd-annotation-type-red" data-bd-annotation-type="red" role="option" aria-selected="false">疑问待办</button>
+                    </div>
+                </div>
+                <label class="bd-annotation-visibility-label"><span class="bd-annotation-visually-hidden">可见范围</span>
                 <select class="bd-annotation-visibility" aria-label="评论可见范围"><option value="PUBLIC">公开</option><option value="PRIVATE">仅自己可见</option></select>
-            </label>
-            <div class="bd-annotation-composer-actions">
+                </label>
+                <span class="bd-annotation-composer-controls-spacer"></span>
+                <button type="button" class="bd-annotation-composer-cancel" aria-label="取消编辑">取消</button>
                 <button type="button" class="bd-annotation-composer-save">保存</button>
             </div>
         </section>

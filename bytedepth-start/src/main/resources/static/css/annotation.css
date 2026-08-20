@@ -390,6 +390,14 @@
     line-height: 20px;
 }
 
+.bd-annotation-feed-type {
+    font: 600 11px/20px var(--sans, sans-serif);
+}
+.bd-annotation-type-blue { color: #315efb; }
+.bd-annotation-type-yellow { color: #b7791f; }
+.bd-annotation-type-green { color: #25855a; }
+.bd-annotation-type-red { color: #ca5b56; }
+
 .bd-annotation-feed-actions {
     display: flex;
     gap: 4px;
@@ -454,25 +462,7 @@
     box-shadow: 0 12px 30px rgba(42, 67, 128, .18);
 }
 
-.bd-annotation-composer-topline,
-.bd-annotation-composer-actions,
-.bd-annotation-visibility-label {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.bd-annotation-composer-topline { margin-bottom: 10px; color: var(--bd-annotation-ink); font-size: 12px; font-weight: 700; }
 .bd-annotation-composer-quote { margin-bottom: 10px; }
-
-.bd-annotation-color-row { display: flex; gap: 7px; margin: 0 0 11px; }
-.bd-annotation-color-row button { display: grid; width: 22px; height: 22px; padding: 0; border: 2px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; place-items: center; }
-.bd-annotation-color-row button span { display: block; width: 14px; height: 14px; border-radius: 50%; }
-.bd-annotation-color-row button[data-bd-annotation-color="yellow"] span { background: #f7c948; }
-.bd-annotation-color-row button[data-bd-annotation-color="red"] span { background: #eb807b; }
-.bd-annotation-color-row button[data-bd-annotation-color="green"] span { background: #61bf8d; }
-.bd-annotation-color-row button[data-bd-annotation-color="blue"] span { background: #6fa3ef; }
-.bd-annotation-color-row .bd-annotation-color-selected { border-color: #315efb; }
 
 .bd-annotation-composer-text {
     display: block;
@@ -490,11 +480,23 @@
 }
 
 .bd-annotation-composer-text:focus { border-color: #84a2ff; background: #fff; box-shadow: 0 0 0 3px rgba(49, 94, 251, .10); }
-.bd-annotation-visibility-label { margin-top: 10px; color: var(--bd-annotation-muted); font-size: 12px; }
-.bd-annotation-visibility { border: 0; background: transparent; color: var(--bd-annotation-ink); cursor: pointer; font: inherit; }
-.bd-annotation-composer-actions { justify-content: flex-end; margin-top: 11px; }
-.bd-annotation-composer-save { border: 0; border-radius: 8px; background: var(--bd-annotation-accent); color: #fff; cursor: pointer; font: 600 12px/1 var(--sans, sans-serif); padding: 8px 14px; transition: background-color 160ms ease, transform 160ms ease; }
+.bd-annotation-composer-controls { display: flex; align-items: center; gap: 4px; margin-top: 10px; font-family: var(--sans, sans-serif); }
+.bd-annotation-composer-controls-spacer { flex: 1; }
+.bd-annotation-type-picker { position: relative; }
+.bd-annotation-type-trigger { display: inline-flex; align-items: center; gap: 2px; padding: 4px 1px; border: 0; background: transparent; color: #315efb; cursor: pointer; font: 600 12px/1.4 var(--sans, sans-serif); }
+.bd-annotation-type-trigger[data-color="yellow"] { color: #b7791f; }
+.bd-annotation-type-trigger[data-color="green"] { color: #25855a; }
+.bd-annotation-type-trigger[data-color="red"] { color: #ca5b56; }
+.bd-annotation-type-menu { position: absolute; z-index: 4; bottom: calc(100% + 7px); left: -6px; display: grid; min-width: 116px; padding: 5px; border: 1px solid #dce2ec; border-radius: 9px; background: #fff; box-shadow: 0 8px 22px rgba(27, 39, 62, .16); }
+.bd-annotation-type-menu[hidden] { display: none; }
+.bd-annotation-type-menu button { padding: 6px 7px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; text-align: left; font: 600 12px/1.4 var(--sans, sans-serif); }
+.bd-annotation-type-menu button:hover { background: #f0f3f8; }
+.bd-annotation-visibility-label { color: var(--bd-annotation-muted); font-size: 12px; }
+.bd-annotation-visibility { border: 0; background: transparent; color: var(--bd-annotation-ink); cursor: pointer; font: 11px/1.4 var(--sans, sans-serif); }
+.bd-annotation-composer-controls .bd-annotation-composer-cancel { padding: 4px 3px; }
+.bd-annotation-composer-save { border: 0; border-radius: 8px; background: var(--bd-annotation-accent); color: #fff; cursor: pointer; font: 600 12px/1 var(--sans, sans-serif); padding: 7px 8px; transition: background-color 160ms ease, transform 160ms ease; }
 .bd-annotation-composer-save:hover { background: #244bdb; transform: translateY(-1px); }
+.bd-annotation-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .bd-annotation-popup {
     position: fixed;
