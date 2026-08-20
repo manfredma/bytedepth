@@ -194,7 +194,7 @@ class PostControllerTest {
     }
 
     @Test
-    void getPostDetail_withAnnotationRendersBootstrapDataWithoutLocalDateTime() throws Exception {
+    void getPostDetail_withAnnotationRendersBootstrapDataWithFormattedCreationTime() throws Exception {
         PostDTO dto = new PostDTO();
         dto.setId(3L);
         dto.setSlug("annotated-post");
@@ -211,13 +211,14 @@ class PostControllerTest {
         when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
         when(postViewCounter.getCount(3L)).thenReturn(0L);
         when(listAnnotationsQryExe.execute(3L, null, null)).thenReturn(List.of(new PostAnnotation(9L, 3L, null,
-                "visitor", "正文", "这是一条评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now(), false)));
+                "visitor", "正文", "这是一条评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2,
+                LocalDateTime.of(2026, 8, 20, 17, 6), false)));
 
         mockMvc.perform(get("/posts/annotated-post"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("window.__ANNOTATIONS__ = [{\"id\":9")))
                 .andExpect(content().string(containsString("\"visibility\":\"PUBLIC\"")))
-                .andExpect(content().string(not(containsString("\"createdAt\""))));
+                .andExpect(content().string(containsString("\"createdAt\":\"2026-08-20 17:06\"")));
     }
 
     @Test
@@ -250,9 +251,11 @@ class PostControllerTest {
             mockMvc.perform(get("/posts/annotation-owner"))
                     .andExpect(status().isOk())
                     .andExpect(result -> assertThat(result.getModelAndView().getModel().get("annotations").toString())
-                            .contains("id=11, selectedText=正文, annotationText=评论11, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, ownedByCurrentVisitor=true")
-                            .contains("id=12, selectedText=正文, annotationText=评论12, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, ownedByCurrentVisitor=true")
-                            .contains("id=13, selectedText=正文, annotationText=评论13, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, ownedByCurrentVisitor=false"));
+                            .contains("id=11, selectedText=正文, annotationText=评论11, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, createdAt=")
+                            .contains("id=12, selectedText=正文, annotationText=评论12, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, createdAt=")
+                            .contains("id=13, selectedText=正文, annotationText=评论13, color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2, createdAt=")
+                            .contains("ownedByCurrentVisitor=true")
+                            .contains("ownedByCurrentVisitor=false"));
         } finally {
             SecurityContextHolder.clearContext();
         }

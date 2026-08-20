@@ -355,8 +355,10 @@
 .bd-annotation-feed-item blockquote,
 .bd-annotation-composer-quote {
     overflow: hidden;
-    margin: 0 0 6px;
+    margin: 0 0 5px;
+    padding-bottom: 0;
     padding-left: 9px;
+    border-bottom: .5px solid var(--bd-annotation-item-color, #9ab2ff);
     border-left: 2px solid var(--bd-annotation-item-color, #9ab2ff);
     color: #66758b;
     font-size: 12px;
@@ -366,21 +368,23 @@
     white-space: nowrap;
 }
 
+.bd-annotation-composer-quote { border-bottom: 0; }
+
 .bd-annotation-feed-text {
     margin: 0;
     color: #243b5a;
-    font-size: 15px;
-    font-weight: 560;
-    line-height: 1.55;
+    font-family: Georgia, "Songti SC", "SimSun", serif;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.7;
     white-space: pre-wrap;
 }
 
 .bd-annotation-feed-footer {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 7px;
+    gap: 6px;
+    margin-top: 8px;
     min-height: 20px;
 }
 
@@ -419,27 +423,6 @@
 .bd-annotation-feed-actions button:hover,
 .bd-annotation-composer-cancel:hover { background: #f0f3f8; color: var(--bd-annotation-ink); }
 
-.bd-annotation-feed-item-editing { border-color: #c9d7ff; box-shadow: 0 5px 16px rgba(49, 94, 251, .10); }
-
-.bd-annotation-inline-editor-text {
-    display: block;
-    width: 100%;
-    min-height: 74px;
-    box-sizing: border-box;
-    padding: 8px 9px;
-    border: 1px solid #dce2ec;
-    border-radius: 8px;
-    background: #fbfcff;
-    color: var(--bd-annotation-ink);
-    font: 14px/1.55 var(--sans, sans-serif);
-    outline: none;
-    resize: vertical;
-}
-
-.bd-annotation-inline-editor-text:focus { border-color: #84a2ff; background: #fff; box-shadow: 0 0 0 3px rgba(49, 94, 251, .10); }
-.bd-annotation-inline-editor-visibility { border: 0; background: transparent; color: var(--bd-annotation-muted); cursor: pointer; font: 11px/20px var(--sans, sans-serif); }
-.bd-annotation-inline-editor-save { background: #edf2ff !important; color: #315efb !important; font-weight: 700 !important; }
-.bd-annotation-inline-editor-save:hover { background: #dfe8ff !important; }
 
 .bd-annotation-empty {
     margin: 44px 18px;
