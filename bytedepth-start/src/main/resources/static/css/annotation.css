@@ -445,6 +445,19 @@
     box-shadow: 0 12px 30px rgba(42, 67, 128, .18);
 }
 
+.bd-annotation-feed-item-editing {
+    border-color: #c9d7ff;
+    box-shadow: 0 5px 16px rgba(49, 94, 251, .10);
+}
+
+.bd-annotation-feed-item .bd-annotation-composer {
+    position: static;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
 .bd-annotation-composer-quote { margin-bottom: 10px; }
 
 .bd-annotation-composer-text {
