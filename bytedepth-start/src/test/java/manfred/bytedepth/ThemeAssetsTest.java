@@ -26,6 +26,7 @@ class ThemeAssetsTest {
         assertThat(css)
                 .contains("--bd-bg")
                 .contains("scrollbar-gutter: stable")
+                .contains("overscroll-behavior-y: none")
                 .contains("html[data-theme=\"paper\"]")
                 .contains("html[data-theme=\"blue\"]")
                 .contains("html[data-theme=\"green\"]")

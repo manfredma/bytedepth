@@ -39,6 +39,7 @@
 
 html {
     scrollbar-gutter: stable;
+    overscroll-behavior-y: none;
 }
 
 html[data-theme="paper"] {

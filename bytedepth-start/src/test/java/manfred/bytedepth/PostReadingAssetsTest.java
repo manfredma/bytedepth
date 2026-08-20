@@ -62,6 +62,34 @@ class PostReadingAssetsTest {
                 .contains("window.history.pushState");
     }
 
+    @Test
+    void annotationComposerUsesAnUpwardSemanticTypePicker() throws IOException {
+        String template = classpathText("/templates/public/posts/detail.html");
+        String css = classpathText("/static/css/annotation.css");
+        String script = classpathText("/static/js/annotation.js");
+
+        assertThat(template)
+                .contains("bd-annotation-composer-controls")
+                .contains("data-bd-annotation-type=\"blue\"")
+                .contains("data-bd-annotation-type=\"yellow\"")
+                .contains("data-bd-annotation-type=\"green\"")
+                .contains("data-bd-annotation-type=\"red\"")
+                .doesNotContain("针对划线写评论");
+        assertThat(css)
+                .contains(".bd-annotation-type-menu")
+                .contains("bottom: calc(100% + 7px)")
+                .contains(".bd-annotation-feed-type")
+                .contains(".bd-annotation-type-blue")
+                .contains(".bd-annotation-type-yellow")
+                .contains(".bd-annotation-type-green")
+                .contains(".bd-annotation-type-red");
+        assertThat(script)
+                .contains("selectColor(existing ? existing.color : 'blue')")
+                .contains("setTypeMenuOpen")
+                .contains("annotationTypeLabel")
+                .contains("data-bd-annotation-type");
+    }
+
     private String classpathText(String path) throws IOException {
         try (InputStream in = getClass().getResourceAsStream(path)) {
             assertThat(in).as("classpath resource %s", path).isNotNull();
