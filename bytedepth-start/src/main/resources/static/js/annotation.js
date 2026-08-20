@@ -336,47 +336,16 @@ window.initAnnotations = function () {
 
     function layoutFeed() {
         const items = Array.from(feed.querySelectorAll('.bd-annotation-feed-item'));
-        if (!items.length) {
-            return;
-        }
-        // 仅在宽屏 sticky 布局下让卡片随划线滚动、在 feed 顶部横线处离场；
-        // 中屏桌面（侧栏位于正文下方）的 feed 与正文分属不同区域，划线必然落在 feed 顶部之上，
-        // 若沿用 feedRect.top 作为离场边界会把所有卡片整体隐藏，故展开为常规可读列表。
-        if (getComputedStyle(sidebar).position !== 'sticky') {
-            items.forEach(item => {
-                item.hidden = false;
-                item.style.top = '';
-                item.style.opacity = '';
-            });
-            const flatSpacer = feed.querySelector('.bd-annotation-feed-spacer');
-            if (flatSpacer) {
-                flatSpacer.style.height = '';
-            }
-            return;
-        }
-        const feedRect = feed.getBoundingClientRect();
-        const composerHeight = composer.hidden ? 0 : composer.offsetHeight + 28;
-        // 评论内容区顶部的分隔线就是卡片的视觉离场边界，不能使用浏览器或导航栏顶部。
-        const viewportTop = feedRect.top;
-        let nextTop = Number.NEGATIVE_INFINITY;
+        // 评注是固定侧栏中的常规列表，不再追随正文划线滚动、淡出或离场。
         items.forEach(item => {
-            const mark = content.querySelector(`mark[data-id="${item.dataset.id}"]`);
-            const markRect = mark && mark.getBoundingClientRect();
-            const visible = markRect && markRect.bottom > viewportTop && markRect.top < window.innerHeight;
-            item.hidden = !visible;
-            if (!visible) {
-                item.style.removeProperty('opacity');
-                return;
-            }
-            const edgeDistance = Math.min(markRect.bottom - viewportTop, window.innerHeight - markRect.top);
-            item.style.opacity = String(Math.max(0, Math.min(1, edgeDistance / 48)));
-            const anchorTop = markRect.top - feedRect.top + feed.scrollTop;
-            const top = Math.max(anchorTop, nextTop);
-            item.style.top = `${top}px`;
-            nextTop = top + Math.max(item.offsetHeight, 94) + 12;
+            item.hidden = false;
+            item.style.top = '';
+            item.style.opacity = '';
         });
         const spacer = feed.querySelector('.bd-annotation-feed-spacer');
-        spacer.style.height = `${(Number.isFinite(nextTop) ? nextTop : 0) + composerHeight}px`;
+        if (spacer) {
+            spacer.style.height = '';
+        }
     }
 
     function renderFeed() {
@@ -840,9 +809,6 @@ window.initAnnotations = function () {
 
     function onScroll() {
         renderCommentOutlines();
-        if (isOpen()) {
-            requestAnimationFrame(layoutFeed);
-        }
     }
     window.addEventListener('scroll', onScroll, {passive: true});
 

@@ -217,10 +217,12 @@
     }
 
     .bd-annotation-reading-layout-open .bd-annotation-sidebar {
-        position: sticky;
+        /* 宽屏阅读轨道固定在视口：文章滚动不再带动评注面板。 */
+        position: fixed;
         z-index: 1;
         top: 60px;
         right: auto;
+        left: calc(50% + 312px);
         grid-column: 2;
         grid-row: 1;
         width: 360px;
@@ -292,15 +294,18 @@
     bottom: 0;
     left: 0;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     padding: 12px 18px 36px;
     scrollbar-color: #d8dee9 transparent;
     scrollbar-width: thin;
 }
 
 .bd-annotation-feed-item {
-    position: absolute;
-    right: 18px;
-    left: 18px;
+    position: relative;
+    right: auto;
+    left: auto;
     box-sizing: border-box;
     padding: 11px 13px 10px;
     border: 1px solid #e7ebf1;
@@ -309,6 +314,8 @@
     box-shadow: 0 3px 11px rgba(26, 39, 62, .055);
     transition: opacity 100ms linear;
 }
+
+.bd-annotation-feed-spacer { display: none; }
 
 .bd-annotation-feed-item[data-color="yellow"] { --bd-annotation-item-color: #d69e2e; }
 .bd-annotation-feed-item[data-color="red"] { --bd-annotation-item-color: #dc6c67; }

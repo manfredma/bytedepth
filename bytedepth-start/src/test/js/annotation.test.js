@@ -286,6 +286,14 @@ describe('annotation sidebar', () => {
     expect(annotationCss).toContain('text-decoration-skip-ink: none;');
   });
 
+  test('keeps the wide-screen comment rail and its cards stationary while reading', () => {
+    expect(annotationCss).toContain('left: calc(50% + 312px);');
+    expect(annotationCss).toContain('display: flex;');
+    expect(annotationCss).toContain('position: relative;');
+    expect(annotationJs).not.toContain('item.style.top = `${top}px`;');
+    expect(annotationJs).not.toContain('const markRect = mark && mark.getBoundingClientRect();');
+  });
+
   test('dismisses the selection menu after an outside click even if the browser retains the old selection', () => {
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3); range.getBoundingClientRect = () => ({left: 10, bottom: 20});
@@ -419,14 +427,15 @@ describe('annotation sidebar', () => {
     expect(annotationCss).toContain('.bd-annotation-comment-trigger');
     expect(annotationCss).toContain('transform: translateY(-50%);');
     expect(annotationJs).toContain('const labelGutter = index === 0 ? 9 : 0;');
-    expect(annotationJs).toContain('item.hidden = !visible;');
-    expect(annotationJs).toContain('let nextTop = Number.NEGATIVE_INFINITY;');
-    expect(annotationJs).toContain('const viewportTop = feedRect.top;');
-    expect(annotationJs).toContain('markRect.bottom > viewportTop');
-    expect(annotationJs).toContain('item.style.opacity = String(Math.max(0, Math.min(1, edgeDistance / 48)));');
+    expect(annotationJs).toContain('item.hidden = false;');
+    expect(annotationJs).toContain("item.style.top = '';");
+    expect(annotationJs).toContain("item.style.opacity = '';");
+    expect(annotationJs).not.toContain('let nextTop = Number.NEGATIVE_INFINITY;');
+    expect(annotationJs).not.toContain('const viewportTop = feedRect.top;');
+    expect(annotationJs).not.toContain('markRect.bottom > viewportTop');
     expect(annotationCss).toContain('bd-annotation-pop-in 150ms ease-out forwards');
     expect(annotationCss).toContain('max-width: 1599px');
-    expect(annotationCss).toContain('position: sticky');
+    expect(annotationCss).toContain('position: fixed');
     expect(annotationCss).toContain('@media (min-width: 1600px)');
     // #9 聚焦批注高亮：彩色左条 + 轻染背景。
     expect(annotationCss).toContain('.bd-annotation-feed-item-active');
