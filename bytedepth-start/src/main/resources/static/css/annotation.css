@@ -50,6 +50,12 @@
     position: fixed;
 }
 
+/* 选中态正文划线框：仅加深边框，不填充背景。 */
+.bd-annotation-comment-outline-active {
+    border: 2px solid #202938;
+    border-style: solid;
+}
+
 .bd-annotation-scope .bd-annotation-comment-trigger {
     position: absolute;
     top: 0;
@@ -143,90 +149,57 @@
     font-family: var(--sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
     opacity: 0;
     pointer-events: none;
-    transform: translateX(calc(100% + 32px));
-    transition: transform 220ms cubic-bezier(.2, .8, .2, 1), opacity 160ms ease;
+    /* 关闭时立即消失无过渡（transition:none），打开时才有淡入过渡。 */
+    transition: none;
 }
 
 .bd-annotation-sidebar.bd-annotation-sidebar-open {
     opacity: 1;
     pointer-events: auto;
-    transform: translateX(0);
+    transition: opacity 160ms ease;
 }
 
 /*
- * 批注不覆盖正文：超宽屏保留原有正文行宽，在文章右侧建立阅读轨道；
- * 其它桌面宽度将批注置于文章之后，避免为了并排而挤压正文。
+ * 只分两档：手机屏(≤768px) 与 PC屏(≥769px)。PC 屏不再细分中屏/大屏，
+ * 统一并排布局：正文在左、批注轨道 fixed 在右侧 container 右沿；
+ * 侧栏宽度随屏宽 clamp 自适应，跨屏宽平滑缩放无突变。
  */
-@media (min-width: 769px) and (max-width: 1599px) {
-    .bd-annotation-scope.bd-annotation-reading-layout-open {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .bd-annotation-reading-layout-open .bd-annotation-reading-content { order: 1; }
-
-    .bd-annotation-reading-layout-open .bd-annotation-sidebar {
-        position: relative;
-        order: 2;
-        top: auto;
-        right: auto;
-        width: 100%;
-        height: min(640px, 75dvh);
-        margin-top: 32px;
-        opacity: 1;
-        pointer-events: auto;
-        transform: none;
-    }
-
-    /* 侧栏位于正文下方时，卡片不再随划线绝对定位，改为常规流堆叠，避免被离场逻辑整体隐藏。 */
-    .bd-annotation-reading-layout-open .bd-annotation-feed-item {
-        position: relative;
-        right: auto;
-        left: auto;
-    }
-}
-
-@media (min-width: 1600px) {
-    body.bd-annotation-comments-open .reading-toolbar {
-        /* 置于右侧批注栏之外，避免占用文章与批注的阅读间距。 */
-        right: calc(50% - 760px);
-    }
-
+@media (min-width: 769px) {
     body.bd-annotation-comments-open .container {
-        width: min(1400px, calc(100% - 64px));
-        max-width: 1400px;
+        /* 侧栏打开时整体横向不收缩：保持与关闭时一致的 max-width 80vw，
+           仅去掉左右 padding 让正文与侧栏并排填满卡片宽度。 */
         margin: 32px auto;
         padding: 0 0 64px;
     }
 
     .bd-annotation-scope.bd-annotation-reading-layout-open {
         display: grid;
-        grid-template-columns: minmax(0, 980px) 360px;
+        grid-template-columns: minmax(0, 1fr) clamp(240px, 24vw, 360px);
         align-items: start;
         justify-content: center;
-        gap: 32px;
+        gap: 0.5vw;
     }
 
     .bd-annotation-reading-layout-open .bd-annotation-reading-content {
         min-width: 0;
-        /* 专栏收起按钮 fixed 在左侧约 36px 宽，批注打开后正文左移会让按钮压住正文；
-           左侧预留 48px（按钮宽 + 余量）避免遮挡，右侧保持 8px。 */
-        padding: 48px 56px;
+        /* 专栏收起按钮 fixed 在左侧约 36px 宽，左侧预留 3vw 避让；右侧再收窄一半拉近距离。 */
+        padding: 3vw 0.875vw;
         grid-column: 1;
         grid-row: 1;
     }
 
     .bd-annotation-reading-layout-open .bd-annotation-sidebar {
-        /* 宽屏阅读轨道固定在视口：文章滚动不再带动评注面板。 */
         position: fixed;
         z-index: 1;
-        top: 60px;
-        right: auto;
-        left: calc(50% + 312px);
+        /* 与文章卡片顶部齐平：导航栏 60px + 卡片 margin 32px = 92px。 */
+        top: 92px;
+        /* 贴 container(80vw 居中) 右沿内侧：右沿距视口右 10vw。 */
+        right: 10vw;
+        left: auto;
         grid-column: 2;
         grid-row: 1;
-        width: 360px;
-        height: calc(100dvh - 96px);
+        width: clamp(240px, 24vw, 360px);
+        height: calc(100dvh - 128px);
         opacity: 1;
         pointer-events: auto;
         transform: none;
@@ -287,6 +260,36 @@
 .bd-annotation-sidebar-close:hover { background: #f1f4f8; color: var(--bd-annotation-ink); }
 .bd-annotation-sidebar-close svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 
+/* 展示方式切换：segmented control，自隔离字体/盒模型。 */
+.bd-annotation-layout-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-right: 4px;
+    padding: 2px;
+    border: 1px solid var(--bd-annotation-line);
+    border-radius: 9px;
+    background: #f1f4f8;
+    font-family: var(--sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+}
+.bd-annotation-layout-switch button {
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--bd-annotation-muted);
+    cursor: pointer;
+    font: 600 11px/1 var(--sans, sans-serif);
+    letter-spacing: .02em;
+    padding: 5px 9px;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+.bd-annotation-layout-switch button:hover { color: var(--bd-annotation-ink); }
+.bd-annotation-layout-switch button[aria-pressed="true"] {
+    background: var(--bd-annotation-panel);
+    color: var(--bd-annotation-accent);
+    box-shadow: 0 1px 3px rgba(26, 39, 62, .12);
+}
+
 .bd-annotation-feed {
     position: absolute;
     top: 78px;
@@ -317,15 +320,25 @@
 
 .bd-annotation-feed-spacer { display: none; }
 
+/* 跟随型布局：PC(≥769px) fixed 侧栏下，卡片脱离常规流、按划线高度绝对定位，随正文滚动联动。
+   compact 型保持常规流堆叠（默认 .bd-annotation-feed-item 的 position: relative）。 */
+.bd-annotation-feed-follow .bd-annotation-feed-spacer { display: block; }
+@media (min-width: 769px) {
+    .bd-annotation-feed-follow .bd-annotation-feed-item {
+        position: absolute;
+        right: 18px;
+        left: 18px;
+    }
+}
+
 .bd-annotation-feed-item[data-color="yellow"] { --bd-annotation-item-color: #d69e2e; }
 .bd-annotation-feed-item[data-color="red"] { --bd-annotation-item-color: #dc6c67; }
 .bd-annotation-feed-item[data-color="green"] { --bd-annotation-item-color: #45a979; }
 .bd-annotation-feed-item[data-color="blue"] { --bd-annotation-item-color: #5d8fd9; }
 
-/* 当前聚焦批注：彩色左条 + 轻染背景，沿用批注自身颜色变量。 */
+/* 当前聚焦批注：只加深卡片边框，不改背景/文字/阴影。 */
 .bd-annotation-feed-item-active {
-    background: #eef3ff;
-    box-shadow: 0 6px 18px rgba(26, 39, 62, .12);
+    border-color: #5b6b85;
 }
 
 .bd-annotation-feed-item-active::before {
