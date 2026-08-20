@@ -9,7 +9,8 @@
 }
 
 .bd-annotation-scope .bd-annotation-highlight {
-    padding: 0 1px 2px;
+    /* 标记会按正文的内联节点拆分；横向内边距会在相邻片段之间留下断口。 */
+    padding: 0 0 2px;
     border-radius: 2px;
     background: transparent;
     box-decoration-break: clone;
@@ -17,6 +18,7 @@
     color: inherit;
     text-decoration-line: underline;
     text-decoration-thickness: 2px;
+    text-decoration-skip-ink: none;
     text-underline-offset: .23em;
     transition: color 160ms ease, text-decoration-thickness 160ms ease;
 }
