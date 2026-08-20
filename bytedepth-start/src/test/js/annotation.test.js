@@ -22,15 +22,34 @@ describe('annotation sidebar', () => {
     delete document.execCommand;
   });
 
-  test('sidebar is closed on first visit and persists an explicit open choice', () => {
+  test('sidebar is closed on first visit and toggling remains a per-session choice', () => {
+    // 默认关闭：不再读取 localStorage 偏好，首屏阅读区保持完整。
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
+    expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(false);
     document.querySelector('#bd-annotation-sidebar-toggle').click();
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
     expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(true);
-    expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('true');
     document.querySelector('.bd-annotation-sidebar-close').click();
     expect(document.querySelector('#post-article').classList.contains('bd-annotation-reading-layout-open')).toBe(false);
-    expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('false');
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
+  });
+
+  test('a persisted open preference in localStorage no longer auto-opens the sidebar', () => {
+    // 即使历史遗留了「打开」偏好，初始化也保持关闭，不再自动展开。
+    localStorage.setItem('bd.annotation.sidebar.open', 'true');
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+    // 初始化 setOpen(false)：侧栏关闭，且不再回写 localStorage（若回写会变成 'false'）。
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
+    expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('true');
+    // 主动打开后也不再回写 localStorage（若回写会保持 'true'，此处仍验证原值不被改写）。
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('true');
+    // 关闭同样不回写：先置 'true'，关闭后验证未被改成 'false'。
+    document.querySelector('.bd-annotation-sidebar-close').click();
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
+    expect(localStorage.getItem('bd.annotation.sidebar.open')).toBe('true');
   });
 
   test('toggle remains usable when browser storage is unavailable', () => {
@@ -165,8 +184,10 @@ describe('annotation sidebar', () => {
     commentTrigger.click();
     expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
     expect(document.querySelector('.bd-annotation-popup')).toBeNull();
+    // 再次点击同一 trigger：取消选中，但侧栏保持打开（与点击卡片行为一致）。
     commentTrigger.click();
-    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    expect(document.querySelector('.bd-annotation-feed-item-active')).toBeNull();
 
     window.getSelection().removeAllRanges();
     document.querySelector('mark[data-id="2"]').click();
@@ -179,7 +200,7 @@ describe('annotation sidebar', () => {
     expect(document.querySelector('.bd-annotation-popup').classList.contains('bd-annotation-popup-open')).toBe(false);
   });
 
-  test('clicking the same annotation trigger twice closes the sidebar but a different one keeps it open', async () => {
+  test('clicking the same annotation trigger twice deselects but a different one switches the focus', async () => {
     window.__ANNOTATIONS__ = [
       { id: 1, selectedText: '可批', annotationText: '第一条评论', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 },
       { id: 3, selectedText: '注文', annotationText: '第二条评论', color: 'red', visibility: 'PUBLIC', startOffset: 2, endOffset: 4 }
@@ -207,11 +228,11 @@ describe('annotation sidebar', () => {
     expect(document.querySelector('.bd-annotation-feed-item[data-id="3"]').classList.contains('bd-annotation-feed-item-active')).toBe(true);
     expect(document.querySelector('.bd-annotation-feed-item[data-id="1"]').classList.contains('bd-annotation-feed-item-active')).toBe(false);
 
-    // 再次点击同一条：回收侧栏，高亮清零。
+    // 再次点击同一条：取消选中，高亮清零，但侧栏保持打开（与点击卡片行为一致）。
     triggerB.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     triggerB.click();
     await new Promise(resolve => setTimeout(resolve, 0));
-    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(false);
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
     expect(document.querySelectorAll('.bd-annotation-feed-item-active')).toHaveLength(0);
   });
 
@@ -231,6 +252,90 @@ describe('annotation sidebar', () => {
     expect(item).not.toBeNull();
     expect(item.hidden).toBe(false);
     expect(item.style.opacity).toBe('');
+  });
+
+  test('defaults to follow layout and switching to compact clears absolute positioning', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 1, selectedText: '可批', annotationText: '评论', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><div class="bd-annotation-layout-switch" role="group"><button type="button" data-bd-layout="follow" aria-pressed="true">跟随</button><button type="button" data-bd-layout="compact" aria-pressed="false">紧凑</button></div><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    // 默认跟随型：侧栏带 follow class，切换按钮 aria-pressed 正确。
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-feed-follow')).toBe(true);
+    expect(document.querySelector('[data-bd-layout="follow"]').getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('[data-bd-layout="compact"]').getAttribute('aria-pressed')).toBe('false');
+
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    // jsdom 下 sidebar 非 fixed，跟随型不实际定位（走重置分支），但 feedLayout 状态仍是 follow。
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-feed-follow')).toBe(true);
+
+    // 切换到紧凑型：follow class 移除、compact class 加上、aria-pressed 翻转。
+    document.querySelector('[data-bd-layout="compact"]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-feed-follow')).toBe(false);
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-feed-compact')).toBe(true);
+    expect(document.querySelector('[data-bd-layout="follow"]').getAttribute('aria-pressed')).toBe('false');
+    expect(document.querySelector('[data-bd-layout="compact"]').getAttribute('aria-pressed')).toBe('true');
+
+    // 切回跟随型。
+    document.querySelector('[data-bd-layout="follow"]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-feed-follow')).toBe(true);
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-feed-compact')).toBe(false);
+  });
+
+  test('clicking a feed card focuses the annotation, scrolls the article mark, and toggles off on reclick', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 1, selectedText: '可批', annotationText: '第一条', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><div class="bd-annotation-layout-switch" role="group"><button type="button" data-bd-layout="follow" aria-pressed="true">跟随</button><button type="button" data-bd-layout="compact" aria-pressed="false">紧凑</button></div><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+    document.querySelector('#bd-annotation-sidebar-toggle').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const mark = document.querySelector('mark[data-id="1"]');
+    const scrollIntoView = jest.fn();
+    mark.scrollIntoView = scrollIntoView;
+
+    // 点击卡片：选中该批注，正文 mark 滚动到视口中心，卡片与正文划线框变深色选中。
+    document.querySelector('.bd-annotation-feed-item').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(document.querySelector('.bd-annotation-feed-item').classList.contains('bd-annotation-feed-item-active')).toBe(true);
+    expect(document.querySelector('.bd-annotation-comment-outline-active')).not.toBeNull();
+    expect(scrollIntoView).toHaveBeenCalledWith({block: 'center', behavior: 'smooth'});
+
+    // 再次点击同一卡片：取消选中，深色态清零。
+    document.querySelector('.bd-annotation-feed-item').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(document.querySelector('.bd-annotation-feed-item').classList.contains('bd-annotation-feed-item-active')).toBe(false);
+    expect(document.querySelector('.bd-annotation-comment-outline-active')).toBeNull();
+  });
+
+  test('clicking the in-article comment trigger and the sidebar card stay in sync', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 1, selectedText: '可批', annotationText: '评论', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><div class="bd-annotation-layout-switch" role="group"><button type="button" data-bd-layout="follow" aria-pressed="true">跟随</button><button type="button" data-bd-layout="compact" aria-pressed="false">紧凑</button></div><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-color-row"><button data-bd-annotation-color="yellow"></button></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    // 点击正文「评注」标签：侧栏打开 + 卡片选中。
+    const trigger = document.querySelector('.bd-annotation-comment-trigger');
+    trigger.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    trigger.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(document.querySelector('#bd-annotation-sidebar').classList.contains('bd-annotation-sidebar-open')).toBe(true);
+    expect(document.querySelector('.bd-annotation-feed-item-active')).not.toBeNull();
+    expect(document.querySelector('.bd-annotation-comment-outline-active')).not.toBeNull();
+
+    // 再次点击正文标签：取消选中。
+    trigger.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    trigger.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(document.querySelector('.bd-annotation-feed-item-active')).toBeNull();
+    expect(document.querySelector('.bd-annotation-comment-outline-active')).toBeNull();
   });
 
   test('reports failure on the delete button inside the sidebar card', async () => {
@@ -286,12 +391,13 @@ describe('annotation sidebar', () => {
     expect(annotationCss).toContain('text-decoration-skip-ink: none;');
   });
 
-  test('keeps the wide-screen comment rail and its cards stationary while reading', () => {
-    expect(annotationCss).toContain('left: calc(50% + 312px);');
+  test('wide-screen comment rail stays fixed while cards follow the article scroll', () => {
+    expect(annotationCss).toContain('right: 10vw;');
     expect(annotationCss).toContain('display: flex;');
-    expect(annotationCss).toContain('position: relative;');
-    expect(annotationJs).not.toContain('item.style.top = `${top}px`;');
-    expect(annotationJs).not.toContain('const markRect = mark && mark.getBoundingClientRect();');
+    // 跟随型布局：卡片按划线高度绝对定位，随正文滚动联动（非静止列表）。
+    expect(annotationJs).toContain('item.style.top = `${top}px`;');
+    expect(annotationJs).toContain('const markRect = mark && mark.getBoundingClientRect();');
+    expect(annotationJs).toContain('const anchorTop = markRect.top - feedRect.top + feed.scrollTop;');
   });
 
   test('dismisses the selection menu after an outside click even if the browser retains the old selection', () => {
@@ -428,30 +534,40 @@ describe('annotation sidebar', () => {
     expect(annotationCss).toContain('transform: translateY(-50%);');
     expect(annotationJs).toContain('const labelGutter = index === 0 ? 9 : 0;');
     expect(annotationJs).toContain('item.hidden = false;');
+    // 跟随型定位与 compact 重置两种分支并存。
     expect(annotationJs).toContain("item.style.top = '';");
     expect(annotationJs).toContain("item.style.opacity = '';");
-    expect(annotationJs).not.toContain('let nextTop = Number.NEGATIVE_INFINITY;');
-    expect(annotationJs).not.toContain('const viewportTop = feedRect.top;');
-    expect(annotationJs).not.toContain('markRect.bottom > viewportTop');
+    expect(annotationJs).toContain('item.style.top = `${top}px`;');
+    expect(annotationJs).toContain('let nextTop = Number.NEGATIVE_INFINITY;');
+    expect(annotationJs).toContain('const viewportTop = feedRect.top;');
     expect(annotationCss).toContain('bd-annotation-pop-in 150ms ease-out forwards');
-    expect(annotationCss).toContain('max-width: 1599px');
+    // 只分两档：手机屏(≤768px) 与 PC屏(≥769px)，不再细分中屏/大屏。
+    expect(annotationCss).not.toContain('max-width: 1599px');
+    expect(annotationCss).not.toContain('@media (min-width: 1600px)');
+    expect(annotationCss).toContain('@media (min-width: 769px)');
     expect(annotationCss).toContain('position: fixed');
-    expect(annotationCss).toContain('@media (min-width: 1600px)');
-    // #9 聚焦批注高亮：彩色左条 + 轻染背景。
+    // 聚焦批注选中态：只加深卡片边框，不改背景/文字。
     expect(annotationCss).toContain('.bd-annotation-feed-item-active');
     expect(annotationCss).toContain('.bd-annotation-feed-item-active::before');
     expect(annotationCss).toContain('width: 4px');
-    expect(annotationCss).toContain('background: var(--bd-annotation-item-color, #315efb)');
-    // 宽屏批注打开时保留受限阅读宽度与完整内边距。
-    expect(annotationCss).toContain('grid-template-columns: minmax(0, 980px) 360px');
-    expect(annotationCss).toContain('padding: 48px 56px');
-    // 批注打开时，工具栏位于右侧批注栏的外侧，而非文章与侧栏之间。
-    expect(annotationCss).toContain('right: calc(50% - 760px);');
-    expect(annotationCss).toContain('height: calc(100dvh - 96px);');
+    expect(annotationCss).toContain('border-color: #5b6b85');
+    expect(annotationCss).toContain('.bd-annotation-comment-outline-active');
+    // PC(≥769px) 统一并排：正文 1fr 填满 80vw container，侧栏相对宽度浮右侧。
+    expect(annotationCss).toContain('grid-template-columns: minmax(0, 1fr) clamp(240px, 24vw, 360px)');
+    expect(annotationCss).toContain('right: 10vw;');
+    // 工具栏位置不随侧栏开关改变（保持原始 right: calc(10vw - 68px)，不覆盖）。
+    expect(annotationCss).not.toContain('right: calc(50% - 760px);');
+    // 侧栏顶部与文章卡片齐平（导航栏 60 + margin 32 = 92），底部留 36px。
+    expect(annotationCss).toContain('top: 92px;');
+    expect(annotationCss).toContain('height: calc(100dvh - 128px);');
     expect(annotationCss).not.toMatch(/\.bd-annotation-comments-open \.reading-toolbar\s*\{\s*display: none;/);
-    // #9 同一批注二次点击回收、不同批注保持打开。
-    expect(annotationJs).toContain('const sameAnnotation = isOpen() && activeAnnotationId === annotation.id');
-    expect(annotationJs).toContain('activeAnnotationId = sameAnnotation ? null : annotation.id');
+    // 侧栏关闭时原地淡出（仅 opacity 过渡），不平移飞出浏览器。
+    expect(annotationCss).not.toContain('translateX(calc(100% + 32px))');
+    expect(annotationCss).not.toContain('transform: translateX(100%);');
+    // 点击卡片/正文标签聚焦批注：focusAnnotation 统一处理选中与滚动定位，再次聚焦同一条则取消。
+    expect(annotationJs).toContain('function focusAnnotation(annotationId)');
+    expect(annotationJs).toContain('const same = activeAnnotationId === annotationId');
+    expect(annotationJs).toContain('activeAnnotationId = same ? null : annotationId');
     expect(annotationJs).toContain('function updateActiveItem()');
     // #2 写操作失败反馈（popup 删除/划线 + 侧栏删除按钮）。
     expect(annotationJs).toContain('删除失败，请重试');

@@ -25,36 +25,19 @@ window.initAnnotations = function () {
     let mobileNote;
     // 当前在侧栏中聚焦展示的批注 id；用于判断点击同一批注 trigger 时是否应回收侧栏。
     let activeAnnotationId = null;
+    // 评注展示方式：'follow'（卡片钉在划线高度，随正文滚动联动）/ 'compact'（铺开列表，不联动）。
+    let feedLayout = 'follow';
+    // layoutFeed 节流帧句柄，避免滚动事件连续触发重复计算。
+    let layoutFeedFrame = 0;
 
     const csrf = (document.querySelector('meta[name="_csrf"]') || {}).content || '';
     const composer = sidebar.querySelector('.bd-annotation-composer');
     const feed = sidebar.querySelector('.bd-annotation-feed');
     const sidebarCount = sidebar.querySelector('.bd-annotation-comment-count');
     const toolbarCount = toggle.querySelector('.bd-annotation-toolbar-count');
-    const storageKey = 'bd.annotation.sidebar.open';
 
     function isMobile() {
         return Boolean(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
-    }
-
-    function readSidebarState() {
-        try {
-            const stored = localStorage.getItem(storageKey);
-            if (stored !== null) {
-                return stored === 'true';
-            }
-            return false; // 首次访问保持阅读区完整，用户主动打开后再记住偏好
-        } catch {
-            return false;
-        }
-    }
-
-    function persistSidebarState(open) {
-        try {
-            localStorage.setItem(storageKey, String(open));
-        } catch {
-            // 存储不可用时仍允许当前页面使用批注。
-        }
     }
 
     function api(path, method, payload) {
@@ -95,7 +78,6 @@ window.initAnnotations = function () {
         sidebar.setAttribute('aria-hidden', String(!open));
         toggle.setAttribute('aria-expanded', String(open));
         document.body.classList.toggle('bd-annotation-comments-open', open);
-        persistSidebarState(open);
         if (!open) {
             activeAnnotationId = null;
         }
@@ -178,11 +160,9 @@ window.initAnnotations = function () {
         trigger.addEventListener('click', event => {
             event.preventDefault();
             event.stopPropagation();
-            // 侧栏已打开且点击的是当前同一批注时才回收；切换到不同批注时保持打开并滚动定位。
-            const sameAnnotation = isOpen() && activeAnnotationId === annotation.id;
-            setOpen(!sameAnnotation);
-            activeAnnotationId = sameAnnotation ? null : annotation.id;
-            updateActiveItem();
+            // 点击正文「评注」标签：聚焦/取消该批注，滚动正文到划线并选中；与点击卡片双向同步。
+            focusAnnotation(annotation.id);
+            // 聚焦后让对应卡片滚入侧栏可视区（跟随型下卡片已对齐划线，紧凑型下需主动滚入）。
             const item = feed.querySelector(`[data-id="${annotation.id}"]`);
             if (isOpen() && item) {
                 item.scrollIntoView?.({block: 'nearest', behavior: 'smooth'});
@@ -278,6 +258,9 @@ window.initAnnotations = function () {
                 const labelGutter = index === 0 ? 9 : 0;
                 const outline = document.createElement('div');
                 outline.className = `bd-annotation-comment-outline bd-annotation-color-${annotation.color}`;
+                if (String(activeAnnotationId) === String(annotation.id)) {
+                    outline.classList.add('bd-annotation-comment-outline-active');
+                }
                 outline.dataset.annotationId = annotation.id;
                 outline.dataset.textTop = String(row.top);
                 outline.style.left = `${row.left}px`;
@@ -336,15 +319,50 @@ window.initAnnotations = function () {
 
     function layoutFeed() {
         const items = Array.from(feed.querySelectorAll('.bd-annotation-feed-item'));
-        // 评注是固定侧栏中的常规列表，不再追随正文划线滚动、淡出或离场。
-        items.forEach(item => {
-            item.hidden = false;
-            item.style.top = '';
-            item.style.opacity = '';
-        });
         const spacer = feed.querySelector('.bd-annotation-feed-spacer');
+
+        // 紧凑型，或侧栏非 fixed（中屏侧栏在正文下方）时：常规流堆叠，清掉跟随定位。
+        const followMode = feedLayout === 'follow'
+            && getComputedStyle(sidebar).position === 'fixed';
+        if (!followMode) {
+            items.forEach(item => {
+                item.hidden = false;
+                item.style.top = '';
+                item.style.opacity = '';
+            });
+            if (spacer) {
+                spacer.style.height = '';
+            }
+            return;
+        }
+
+        // 跟随型：每张卡片钉在侧栏内对应划线的高度，正文滚动时同步上下移动。
+        const feedRect = feed.getBoundingClientRect();
+        const viewportTop = feedRect.top;
+        let nextTop = Number.NEGATIVE_INFINITY;
+        items.forEach(item => {
+            const mark = content.querySelector(`mark[data-id="${item.dataset.id}"]`);
+            const markRect = mark && mark.getBoundingClientRect();
+            // 找不到对应划线（划线被删除等）时退回常规流堆叠，避免卡片丢失。
+            if (!markRect) {
+                item.hidden = false;
+                item.style.top = '';
+                item.style.opacity = '';
+                return;
+            }
+            // 划线是否落在侧栏可视纵向范围内（上下各外扩 48px 做渐隐缓冲）。
+            const inViewport = markRect.bottom > viewportTop - 48
+                && markRect.top < viewportTop + feed.clientHeight + 48;
+            item.hidden = false;
+            const anchorTop = markRect.top - feedRect.top + feed.scrollTop;
+            const top = Math.max(anchorTop, nextTop);
+            item.style.top = `${top}px`;
+            // 卡片不重叠：下一张至少从本张底部 + 间距起算，最小高度 94px 兜底。
+            nextTop = top + Math.max(item.offsetHeight, 94) + 12;
+            item.style.opacity = inViewport ? '' : '0.32';
+        });
         if (spacer) {
-            spacer.style.height = '';
+            spacer.style.height = `${Math.max(nextTop, 0)}px`;
         }
     }
 
@@ -400,6 +418,13 @@ window.initAnnotations = function () {
                 footer.appendChild(actions);
             }
             item.appendChild(footer);
+            item.addEventListener('click', event => {
+                // 点击编辑/删除按钮时不触发定位选中。
+                if (event.target.closest('button')) {
+                    return;
+                }
+                focusAnnotation(annotation.id);
+            });
             feed.appendChild(item);
         });
         const spacer = document.createElement('div');
@@ -408,6 +433,38 @@ window.initAnnotations = function () {
         feed.appendChild(spacer);
         updateActiveItem();
         requestAnimationFrame(layoutFeed);
+    }
+
+    // 切换评注展示方式：follow=卡片钉划线高度随正文联动；compact=铺开列表不联动。
+    function setFeedLayout(next) {
+        if (next !== 'follow' && next !== 'compact') {
+            return;
+        }
+        feedLayout = next;
+        sidebar.classList.toggle('bd-annotation-feed-follow', next === 'follow');
+        sidebar.classList.toggle('bd-annotation-feed-compact', next === 'compact');
+        sidebar.querySelectorAll('[data-bd-layout]').forEach(button => {
+            button.setAttribute('aria-pressed', String(button.dataset.bdLayout === next));
+        });
+        renderFeed();
+    }
+
+    // 点击评注卡片 / 正文评注标签时聚焦某条批注：滚动正文到对应划线、卡片与正文划线框变深色选中。
+    // 再次聚焦同一条则取消选中。侧栏关闭时聚焦会先打开侧栏。
+    function focusAnnotation(annotationId) {
+        const same = activeAnnotationId === annotationId;
+        activeAnnotationId = same ? null : annotationId;
+        if (!isOpen()) {
+            setOpen(true);
+        }
+        updateActiveItem();
+        renderCommentOutlines();
+        if (activeAnnotationId !== null) {
+            const mark = content.querySelector(`mark[data-id="${annotationId}"]`);
+            if (mark) {
+                mark.scrollIntoView?.({block: 'center', behavior: 'smooth'});
+            }
+        }
     }
 
     function updateActiveItem() {
@@ -730,6 +787,9 @@ window.initAnnotations = function () {
 
     toggle.addEventListener('click', () => setOpen(!isOpen()));
     sidebar.querySelector('.bd-annotation-sidebar-close').addEventListener('click', () => setOpen(false));
+    sidebar.querySelectorAll('[data-bd-layout]').forEach(button => {
+        button.addEventListener('click', () => setFeedLayout(button.dataset.bdLayout));
+    });
     sidebar.querySelector('.bd-annotation-composer-cancel').addEventListener('click', closeComposer);
     sidebar.querySelector('.bd-annotation-composer-save').addEventListener('click', saveComposer);
     sidebar.querySelectorAll('[data-bd-annotation-color]').forEach(button => {
@@ -809,6 +869,16 @@ window.initAnnotations = function () {
 
     function onScroll() {
         renderCommentOutlines();
+        // 跟随型布局下，正文滚动时评注卡片需按新划线坐标重新定位。
+        if (isOpen() && feedLayout === 'follow') {
+            if (layoutFeedFrame) {
+                cancelAnimationFrame(layoutFeedFrame);
+            }
+            layoutFeedFrame = requestAnimationFrame(() => {
+                layoutFeedFrame = 0;
+                layoutFeed();
+            });
+        }
     }
     window.addEventListener('scroll', onScroll, {passive: true});
 
@@ -832,7 +902,13 @@ window.initAnnotations = function () {
 
     renderMarks();
     updateCommentCount();
-    setOpen(readSidebarState() && !isMobile());
+    // 默认跟随型布局：卡片钉在划线高度，随正文滚动联动。
+    sidebar.classList.add('bd-annotation-feed-follow');
+    sidebar.querySelectorAll('[data-bd-layout="follow"]').forEach(button => {
+        button.setAttribute('aria-pressed', 'true');
+    });
+    // 侧栏默认关闭：阅读区首屏保持完整，用户主动点击工具栏「评论」后再展开。
+    setOpen(false);
     article.dataset.bdAnnotationReady = 'true';
 };
 
