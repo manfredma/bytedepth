@@ -9,6 +9,7 @@
 - 查询数据库表结构、字段与表间关系：读 [数据库表结构](architecture/database-schema.md)。
 - 讨论全局业务概念、限界上下文和名称边界：读 [统一语言](architecture/ubiquitous-language.md)。
 - 新增后台页面：读 [后台布局](architecture/admin-layout.md)。
+- 修改前端页面、组件、视觉样式或交互：**必须先读** [前端设计语言](architecture/frontend-design-language.md)，再按需读 [前端公共组件模式](engineering/frontend-patterns.md) 与 [前端组件约束](agent-guides/frontend-components.md)。
 - 修改分页：读 [前端模式](engineering/frontend-patterns.md)。
 - 查询所有路由：读 [路由一览](architecture/routes.md)。
 - 排查已知问题：读 [工程陷阱](engineering/gotchas.md)。
