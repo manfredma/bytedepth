@@ -1,9 +1,11 @@
 package manfred.bytedepth.infrastructure.config;
 
+import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class MybatisPlusConfigTest {
 
@@ -11,7 +13,8 @@ class MybatisPlusConfigTest {
     void createsPaginationInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusConfig().mybatisPlusInterceptor();
 
-        // MyBatis-Plus 3.5.17 内置分页支持，无需额外注册 PaginationInnerInterceptor
-        assertEquals(0, interceptor.getInterceptors().size());
+        assertThat(interceptor.getInterceptors()).singleElement()
+                .isInstanceOfSatisfying(PaginationInnerInterceptor.class,
+                        pagination -> assertThat(pagination.getDbType()).isEqualTo(DbType.MYSQL));
     }
 }
