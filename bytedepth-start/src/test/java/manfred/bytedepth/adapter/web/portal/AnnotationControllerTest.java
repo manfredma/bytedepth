@@ -76,6 +76,7 @@ class AnnotationControllerTest {
         mockMvc.perform(get("/posts/test-post/annotations")).andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].visibility").value("PUBLIC"))
                 .andExpect(jsonPath("$[0].annotationHtml").value("<p><strong>评论</strong></p>"))
+                .andExpect(jsonPath("$[0].createdAt").value("2026-08-22 07:42"))
                 .andExpect(jsonPath("$[0].ownedByCurrentVisitor").value(false))
                 .andExpect(jsonPath("$[0].userId").doesNotExist());
     }
@@ -86,6 +87,7 @@ class AnnotationControllerTest {
         when(markdownRenderer.render(null)).thenReturn("");
         mockMvc.perform(post("/posts/test-post/annotations").with(csrf()).contentType("application/json").content("{\"selectedText\":\"文本\",\"annotationText\":null,\"color\":\"yellow\",\"visibility\":\"PRIVATE\",\"startOffset\":0,\"endOffset\":2}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.ownedByCurrentVisitor").value(true))
+                .andExpect(jsonPath("$.createdAt").value("2026-08-22 07:42"))
                 .andExpect(jsonPath("$.annotationHtml").value(""));
         verify(createAnnotationCmdExe).execute(eq(1L), eq(null), eq("hash"), eq("文本"), eq(null), eq("yellow"), eq(AnnotationVisibility.PRIVATE), eq(0), eq(2));
     }
@@ -105,9 +107,11 @@ class AnnotationControllerTest {
         verify(deleteAnnotationCmdExe).execute(10L, 1L, null, "hash");
         mockMvc.perform(patch("/posts/test-post/annotations/10").with(csrf()).contentType("application/json").content("{\"annotationText\":\"新评论\",\"visibility\":\"PRIVATE\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.visibility").value("PRIVATE"))
+                .andExpect(jsonPath("$.createdAt").value("2026-08-22 07:42"))
                 .andExpect(jsonPath("$.annotationHtml").value(""));
     }
 
-    private static PostAnnotation annotation() { return new PostAnnotation(10L, 1L, 42L, null, "文本", "评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now(), false); }
-    private static PostAnnotation anonymousAnnotation() { return new PostAnnotation(10L, 1L, null, "hash", "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 2, LocalDateTime.now(), false); }
+    private static PostAnnotation annotation() { return new PostAnnotation(10L, 1L, 42L, null, "文本", "评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, createdAt(), false); }
+    private static PostAnnotation anonymousAnnotation() { return new PostAnnotation(10L, 1L, null, "hash", "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 2, createdAt(), false); }
+    private static LocalDateTime createdAt() { return LocalDateTime.of(2026, 8, 22, 7, 42, 11, 762_920_262); }
 }
