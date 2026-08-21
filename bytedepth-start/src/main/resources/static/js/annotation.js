@@ -23,6 +23,8 @@ window.initAnnotations = function () {
     let visibilityChanged = false;
     let popup;
     let mobileNote;
+    let mobileAnnotation;
+    let mobileMark;
     // 当前在侧栏中聚焦展示的批注 id；用于判断点击同一批注 trigger 时是否应回收侧栏。
     let activeAnnotationId = null;
     let editingAnnotationId = null;
@@ -675,10 +677,32 @@ window.initAnnotations = function () {
             document.body.appendChild(mobileNote);
         }
         renderAnnotationText(mobileNote, annotation);
-        const rect = mark.getBoundingClientRect();
+        mobileAnnotation = annotation;
+        mobileMark = mark;
+        mobileNote.hidden = false;
+        updateMobileCommentPosition();
+    }
+
+    function updateMobileCommentPosition() {
+        if (!mobileNote || !mobileAnnotation || !mobileMark) {
+            return;
+        }
+        const rect = mobileMark.getBoundingClientRect();
+        if (rect.bottom <= 0 || rect.top >= window.innerHeight) {
+            mobileNote.hidden = true;
+            return;
+        }
+        mobileNote.hidden = false;
         mobileNote.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - 316))}px`;
         mobileNote.style.top = `${Math.min(window.innerHeight - 88, rect.bottom + 10)}px`;
-        mobileNote.hidden = false;
+    }
+
+    function dismissMobileComment() {
+        if (mobileNote) {
+            mobileNote.hidden = true;
+        }
+        mobileAnnotation = null;
+        mobileMark = null;
     }
 
     function showPrimaryMenu() {
@@ -880,13 +904,14 @@ window.initAnnotations = function () {
 
     function onDocClickMobileNote(event) {
         if (mobileNote && !mobileNote.hidden && !mobileNote.contains(event.target) && !event.target.closest('mark.bd-annotation-highlight')) {
-            mobileNote.hidden = true;
+            dismissMobileComment();
         }
     }
     document.addEventListener('click', onDocClickMobileNote);
 
     function onScroll() {
         renderCommentOutlines();
+        updateMobileCommentPosition();
         // 跟随型布局下，正文滚动时评注卡片需按新划线坐标重新定位。
         if (isOpen() && feedLayout === 'follow') {
             if (layoutFeedFrame) {
@@ -902,6 +927,7 @@ window.initAnnotations = function () {
 
     function onResize() {
         renderCommentOutlines();
+        updateMobileCommentPosition();
         if (isOpen()) {
             renderFeed();
         }

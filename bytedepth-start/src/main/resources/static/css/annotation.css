@@ -571,8 +571,6 @@
     font: 13px/1.55 var(--sans, sans-serif);
 }
 
-.bd-annotation-mobile-note::before { display: block; margin-bottom: 5px; color: var(--bd-annotation-muted); content: "划线评论"; font-size: 11px; font-weight: 700; letter-spacing: .05em; }
-
 @media (max-width: 768px) {
     .bd-annotation-toolbar-item,
     .bd-annotation-sidebar,

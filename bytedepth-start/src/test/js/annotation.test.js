@@ -463,6 +463,37 @@ describe('annotation sidebar', () => {
     expect(document.querySelector('.bd-annotation-mobile-note strong').textContent).toBe('重点');
   });
 
+  test('mobile note reanchors while its highlight is visible and has no redundant title', () => {
+    expect(annotationJs).toContain('function updateMobileCommentPosition()');
+    expect(annotationJs).toContain('if (rect.bottom <= 0 || rect.top >= window.innerHeight)');
+    expect(annotationCss).not.toContain('.bd-annotation-mobile-note::before');
+  });
+
+  test('mobile note hides when scrolling moves its highlight out of view', () => {
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    window.__ANNOTATIONS__ = [
+      { id: 8, selectedText: '可批', annotationText: '移动批注', color: 'blue', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    eval(annotationJs);
+    const mark = document.querySelector('mark[data-id="8"]');
+    mark.getBoundingClientRect = () => ({left: 12, top: 20, bottom: 40});
+    mark.click();
+    const note = document.querySelector('.bd-annotation-mobile-note');
+    expect(note.hidden).toBe(false);
+    mark.getBoundingClientRect = () => ({left: 12, top: -30, bottom: -10});
+    window.dispatchEvent(new Event('scroll'));
+    expect(note.hidden).toBe(true);
+
+    mark.getBoundingClientRect = () => ({left: 12, top: 20, bottom: 40});
+    window.dispatchEvent(new Event('scroll'));
+    expect(note.hidden).toBe(false);
+
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(note.hidden).toBe(true);
+    window.dispatchEvent(new Event('scroll'));
+    expect(note.hidden).toBe(true);
+  });
+
   test('keeps Markdown blocks compact inside the annotation typography', () => {
     expect(annotationCss).toMatch(/\.bd-annotation-feed-text\s*\{[^}]*white-space:\s*normal;[^}]*}/s);
     expect(annotationCss).toContain('.bd-annotation-feed-text > :first-child { margin-top: 0; }');
