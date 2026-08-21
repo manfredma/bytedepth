@@ -433,7 +433,7 @@ describe('annotation sidebar', () => {
     await new Promise(resolve => setTimeout(resolve, 0));
 
     const item = document.querySelector('.bd-annotation-feed-item');
-    expect(item.style.top).toBe('-80px');
+    expect(item.style.transform).toBe('translate3d(0, -80px, 0)');
     expect(item.style.opacity).toBe('');
   });
 
@@ -494,6 +494,48 @@ describe('annotation sidebar', () => {
     expect(note.hidden).toBe(true);
   });
 
+  test('coalesces mobile annotation scroll updates into one frame and moves with a transform', () => {
+    const frames = [];
+    const originalRequestAnimationFrame = global.requestAnimationFrame;
+    const originalCancelAnimationFrame = global.cancelAnimationFrame;
+    const requestAnimationFrame = jest.fn(callback => {
+      frames.push(callback);
+      return frames.length;
+    });
+    window.requestAnimationFrame = requestAnimationFrame;
+    global.requestAnimationFrame = requestAnimationFrame;
+    window.cancelAnimationFrame = jest.fn();
+    global.cancelAnimationFrame = window.cancelAnimationFrame;
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    window.__ANNOTATIONS__ = [
+      { id: 8, selectedText: '可批', annotationText: '移动批注', color: 'blue', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    eval(annotationJs);
+    while (frames.length) {
+      frames.shift()();
+    }
+    const mark = document.querySelector('mark[data-id="8"]');
+    mark.getBoundingClientRect = () => ({left: 12, top: 20, bottom: 40});
+    mark.click();
+    const note = document.querySelector('.bd-annotation-mobile-note');
+    frames.length = 0;
+    requestAnimationFrame.mockClear();
+
+    mark.getBoundingClientRect = () => ({left: 16, top: 60, bottom: 80});
+    window.dispatchEvent(new Event('scroll'));
+    window.dispatchEvent(new Event('scroll'));
+    window.dispatchEvent(new Event('scroll'));
+
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+    frames.shift()();
+    expect(note.style.transform).toContain('translate3d(16px, 90px, 0)');
+    expect(note.style.top).toBe('');
+    global.requestAnimationFrame = originalRequestAnimationFrame;
+    global.cancelAnimationFrame = originalCancelAnimationFrame;
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+    window.cancelAnimationFrame = originalCancelAnimationFrame;
+  });
+
   test('keeps Markdown blocks compact inside the annotation typography', () => {
     expect(annotationCss).toMatch(/\.bd-annotation-feed-text\s*\{[^}]*white-space:\s*normal;[^}]*}/s);
     expect(annotationCss).toContain('.bd-annotation-feed-text > :first-child { margin-top: 0; }');
@@ -517,7 +559,7 @@ describe('annotation sidebar', () => {
     expect(annotationCss).toContain('right: 10vw;');
     expect(annotationCss).toContain('display: flex;');
     // 跟随型布局：卡片按划线高度绝对定位，随正文滚动联动（非静止列表）。
-    expect(annotationJs).toContain('item.style.top = `${top}px`;');
+    expect(annotationJs).toContain('const transform = `translate3d(0, ${top}px, 0)`;');
     expect(annotationJs).toContain('const markRect = mark && mark.getBoundingClientRect();');
     expect(annotationJs).toContain('const anchorTop = markRect.top - feedRect.top + feed.scrollTop;');
   });
@@ -664,9 +706,9 @@ describe('annotation sidebar', () => {
     expect(annotationJs).toContain('const labelGutter = index === 0 ? 9 : 0;');
     expect(annotationJs).toContain('item.hidden = false;');
     // 跟随型定位与 compact 重置两种分支并存。
-    expect(annotationJs).toContain("item.style.top = '';");
+    expect(annotationJs).toContain("item.style.transform = '';");
     expect(annotationJs).toContain("item.style.opacity = '';");
-    expect(annotationJs).toContain('item.style.top = `${top}px`;');
+    expect(annotationJs).toContain('const transform = `translate3d(0, ${top}px, 0)`;');
     expect(annotationJs).toContain('item.style.opacity = \'\';');
     expect(annotationCss).toContain('bd-annotation-pop-in 150ms ease-out forwards');
     // 只分两档：手机屏(≤768px) 与 PC屏(≥769px)，不再细分中屏/大屏。

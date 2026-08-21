@@ -48,6 +48,9 @@
     box-sizing: border-box;
     pointer-events: none;
     position: fixed;
+    top: 0;
+    left: 0;
+    will-change: transform;
 }
 
 /* 选中态正文划线框：仅加深边框，不填充背景。 */
@@ -327,8 +330,10 @@
 @media (min-width: 769px) {
     .bd-annotation-feed-follow .bd-annotation-feed-item {
         position: absolute;
+        top: 0;
         right: 18px;
         left: 18px;
+        will-change: transform;
     }
 }
 
@@ -560,6 +565,8 @@
 
 .bd-annotation-mobile-note {
     position: fixed;
+    top: 0;
+    left: 0;
     z-index: 330;
     max-width: min(304px, calc(100vw - 24px));
     padding: 13px 14px;
@@ -569,6 +576,7 @@
     box-shadow: 0 12px 30px rgba(24, 39, 66, .18);
     color: var(--bd-annotation-ink);
     font: 13px/1.55 var(--sans, sans-serif);
+    will-change: transform;
 }
 
 @media (max-width: 768px) {
