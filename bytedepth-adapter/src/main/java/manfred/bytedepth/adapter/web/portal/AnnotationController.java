@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.PatchMapping;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -32,6 +33,8 @@ import java.util.NoSuchElementException;
 @RequestMapping("/posts/{postSlug}/annotations")
 @RequiredArgsConstructor
 public class AnnotationController {
+
+    private static final DateTimeFormatter ANNOTATION_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final PostRepository postRepository;
     private final ListAnnotationsQryExe listAnnotationsQryExe;
@@ -123,12 +126,12 @@ public class AnnotationController {
 
     record AnnotationResponse(Long id, Long postId, String selectedText, String annotationText,
                               String annotationHtml, String color, AnnotationVisibility visibility,
-                              int startOffset, int endOffset, java.time.LocalDateTime createdAt,
+                              int startOffset, int endOffset, String createdAt,
                               boolean ownedByCurrentVisitor) {
         private static AnnotationResponse from(PostAnnotationDTO annotation, String annotationHtml) {
             return new AnnotationResponse(annotation.id(), annotation.postId(), annotation.selectedText(),
                     annotation.annotationText(), annotationHtml, annotation.color(), annotation.visibility(),
-                    annotation.startOffset(), annotation.endOffset(), annotation.createdAt(),
+                    annotation.startOffset(), annotation.endOffset(), annotation.createdAt().format(ANNOTATION_TIME_FORMAT),
                     annotation.ownedByCurrentVisitor());
         }
     }
