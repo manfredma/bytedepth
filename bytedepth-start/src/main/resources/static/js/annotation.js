@@ -16,6 +16,7 @@ window.initAnnotations = function () {
     commentOutlineLayer.className = 'bd-annotation-comment-outline-layer';
     commentOutlineLayer.setAttribute('aria-hidden', 'true');
     article.appendChild(commentOutlineLayer);
+    const outlineNodes = new Map();
 
     let annotations = window.__ANNOTATIONS__ || [];
     let selected = null;
@@ -30,8 +31,8 @@ window.initAnnotations = function () {
     let editingAnnotationId = null;
     // 评注展示方式：'follow'（卡片钉在划线高度，随正文滚动联动）/ 'compact'（铺开列表，不联动）。
     let feedLayout = 'follow';
-    // layoutFeed 节流帧句柄，避免滚动事件连续触发重复计算。
-    let layoutFeedFrame = 0;
+    // 全部跟随元素共用一个帧句柄：同一滚动帧只读写一次，避免文字与批注产生布局反馈。
+    let positionUpdateFrame = 0;
 
     const csrf = (document.querySelector('meta[name="_csrf"]') || {}).content || '';
     const composer = sidebar.querySelector('.bd-annotation-composer');
@@ -93,7 +94,7 @@ window.initAnnotations = function () {
             activeAnnotationId = null;
         }
         // 侧栏开关会改变正文的 Grid 布局；下一帧后评注框必须按新坐标重绘。
-        requestAnimationFrame(renderCommentOutlines);
+        scheduleAnnotationPositionUpdate();
         if (open) {
             renderFeed();
         }
@@ -139,6 +140,7 @@ window.initAnnotations = function () {
 
     function unwrapMarks() {
         commentOutlineLayer.replaceChildren();
+        outlineNodes.clear();
         content.querySelectorAll('mark.bd-annotation-highlight').forEach(mark => {
             const parent = mark.parentNode;
             while (mark.firstChild) {
@@ -260,7 +262,7 @@ window.initAnnotations = function () {
     }
 
     function renderCommentOutlines() {
-        commentOutlineLayer.replaceChildren();
+        const activeKeys = new Set();
         const renderedRanges = new Set();
         annotations.filter(hasComment).forEach(annotation => {
             const rangeKey = `${annotation.startOffset}:${annotation.endOffset}`;
@@ -275,22 +277,42 @@ window.initAnnotations = function () {
             commentRows(range).forEach((row, index) => {
                 // 为首行的“评注”标签预留垂直槽位，标签不覆盖正文文字。
                 const labelGutter = index === 0 ? 9 : 0;
-                const outline = document.createElement('div');
+                const outlineKey = `${annotation.id}:${index}`;
+                activeKeys.add(outlineKey);
+                let outline = outlineNodes.get(outlineKey);
+                if (!outline) {
+                    outline = document.createElement('div');
+                    outlineNodes.set(outlineKey, outline);
+                    commentOutlineLayer.appendChild(outline);
+                }
                 outline.className = `bd-annotation-comment-outline bd-annotation-color-${annotation.color}`;
                 if (String(activeAnnotationId) === String(annotation.id)) {
                     outline.classList.add('bd-annotation-comment-outline-active');
                 }
                 outline.dataset.annotationId = annotation.id;
                 outline.dataset.textTop = String(row.top);
-                outline.style.left = `${row.left}px`;
-                outline.style.top = `${row.top - labelGutter}px`;
-                outline.style.width = `${row.right - row.left}px`;
-                outline.style.height = `${row.bottom - row.top + labelGutter}px`;
-                if (index === 0) {
+                const transform = `translate3d(${row.left}px, ${row.top - labelGutter}px, 0)`;
+                if (outline.style.transform !== transform) {
+                    outline.style.transform = transform;
+                }
+                const width = `${row.right - row.left}px`;
+                const height = `${row.bottom - row.top + labelGutter}px`;
+                if (outline.style.width !== width) {
+                    outline.style.width = width;
+                }
+                if (outline.style.height !== height) {
+                    outline.style.height = height;
+                }
+                if (index === 0 && !outline.firstChild) {
                     outline.appendChild(createCommentTrigger(annotation));
                 }
-                commentOutlineLayer.appendChild(outline);
             });
+        });
+        outlineNodes.forEach((outline, outlineKey) => {
+            if (!activeKeys.has(outlineKey)) {
+                outline.remove();
+                outlineNodes.delete(outlineKey);
+            }
         });
     }
 
@@ -336,7 +358,7 @@ window.initAnnotations = function () {
         renderCommentOutlines();
     }
 
-    function layoutFeed() {
+    function layoutFeed(updateSpacer = false) {
         const items = Array.from(feed.querySelectorAll('.bd-annotation-feed-item'));
         const spacer = feed.querySelector('.bd-annotation-feed-spacer');
 
@@ -346,7 +368,7 @@ window.initAnnotations = function () {
         if (!followMode) {
             items.forEach(item => {
                 item.hidden = false;
-                item.style.top = '';
+                item.style.transform = '';
                 item.style.opacity = '';
             });
             if (spacer) {
@@ -364,21 +386,25 @@ window.initAnnotations = function () {
             // 找不到对应划线（划线被删除等）时退回常规流堆叠，避免卡片丢失。
             if (!markRect) {
                 item.hidden = false;
-                item.style.top = '';
+                item.style.transform = '';
                 item.style.opacity = '';
                 return;
             }
             item.hidden = false;
             const anchorTop = markRect.top - feedRect.top + feed.scrollTop;
             const top = Math.max(anchorTop, nextTop);
-            item.style.top = `${top}px`;
+            const transform = `translate3d(0, ${top}px, 0)`;
+            if (item.style.transform !== transform) {
+                item.style.transform = transform;
+            }
             // 卡片不重叠：下一张至少从本张底部 + 间距起算，最小高度 94px 兜底。
             nextTop = top + Math.max(item.offsetHeight, 94) + 12;
             // 保留真实跟随坐标（可为负）。由 feed 的滚动裁切区在标题下沿遮住离场卡片，
             // 不再降低整张卡片透明度，避免内容发白。
             item.style.opacity = '';
         });
-        if (spacer) {
+        // 占位高度只在重绘或尺寸变化时更新；滚动中改它会触发侧栏的滚动锚定，反过来抖动卡片。
+        if (spacer && updateSpacer) {
             spacer.style.height = `${Math.max(nextTop, 0)}px`;
         }
     }
@@ -466,7 +492,7 @@ window.initAnnotations = function () {
         spacer.setAttribute('aria-hidden', 'true');
         feed.appendChild(spacer);
         updateActiveItem();
-        requestAnimationFrame(layoutFeed);
+        requestAnimationFrame(() => layoutFeed(true));
     }
 
     // 切换评注展示方式：follow=卡片钉划线高度随正文联动；compact=铺开列表不联动。
@@ -693,8 +719,12 @@ window.initAnnotations = function () {
             return;
         }
         mobileNote.hidden = false;
-        mobileNote.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - 316))}px`;
-        mobileNote.style.top = `${Math.min(window.innerHeight - 88, rect.bottom + 10)}px`;
+        const left = Math.max(12, Math.min(rect.left, window.innerWidth - 316));
+        const top = Math.min(window.innerHeight - 88, rect.bottom + 10);
+        const transform = `translate3d(${left}px, ${top}px, 0)`;
+        if (mobileNote.style.transform !== transform) {
+            mobileNote.style.transform = transform;
+        }
     }
 
     function dismissMobileComment() {
@@ -909,25 +939,27 @@ window.initAnnotations = function () {
     }
     document.addEventListener('click', onDocClickMobileNote);
 
-    function onScroll() {
-        renderCommentOutlines();
-        updateMobileCommentPosition();
-        // 跟随型布局下，正文滚动时评注卡片需按新划线坐标重新定位。
-        if (isOpen() && feedLayout === 'follow') {
-            if (layoutFeedFrame) {
-                cancelAnimationFrame(layoutFeedFrame);
-            }
-            layoutFeedFrame = requestAnimationFrame(() => {
-                layoutFeedFrame = 0;
-                layoutFeed();
-            });
+    function scheduleAnnotationPositionUpdate() {
+        if (positionUpdateFrame) {
+            return;
         }
+        positionUpdateFrame = requestAnimationFrame(() => {
+            positionUpdateFrame = 0;
+            renderCommentOutlines();
+            updateMobileCommentPosition();
+            if (isOpen() && feedLayout === 'follow') {
+                layoutFeed();
+            }
+        });
+    }
+
+    function onScroll() {
+        scheduleAnnotationPositionUpdate();
     }
     window.addEventListener('scroll', onScroll, {passive: true});
 
     function onResize() {
-        renderCommentOutlines();
-        updateMobileCommentPosition();
+        scheduleAnnotationPositionUpdate();
         if (isOpen()) {
             renderFeed();
         }
@@ -942,6 +974,9 @@ window.initAnnotations = function () {
         document.removeEventListener('click', onDocClickMobileNote);
         window.removeEventListener('scroll', onScroll);
         window.removeEventListener('resize', onResize);
+        if (positionUpdateFrame) {
+            cancelAnimationFrame(positionUpdateFrame);
+        }
     };
 
     renderMarks();
