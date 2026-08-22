@@ -89,6 +89,7 @@ test.describe('划线评论', () => {
     test('桌面端：拖选后显示两级菜单，并可创建和删除评论', async ({page}, testInfo) => {
         test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
         const errors = captureBrowserErrors(page);
+        page.on('dialog', dialog => dialog.accept());
         await page.goto(postPath, {waitUntil: 'commit'});
         await waitForAnnotationReady(page);
 
@@ -215,13 +216,15 @@ test.describe('划线评论', () => {
         const normalDesktopLayout = await page.evaluate(() => {
             const content = document.querySelector('.bd-annotation-reading-content').getBoundingClientRect();
             const sidebar = document.querySelector('#bd-annotation-sidebar').getBoundingClientRect();
-            return {contentBottom: content.bottom, sidebarTop: sidebar.top};
+            return {contentRight: content.right, sidebarLeft: sidebar.left};
         });
-        expect(normalDesktopLayout.sidebarTop).toBeGreaterThan(normalDesktopLayout.contentBottom);
+        // 两档布局：PC(≥769) 正文与侧栏并排，侧栏在右、不覆盖正文（容亚像素渲染）。
+        expect(normalDesktopLayout.contentRight).toBeLessThan(normalDesktopLayout.sidebarLeft + 1);
 
         await page.setViewportSize({width: 1440, height: 1000});
         await page.reload({waitUntil: 'commit'});
         await waitForAnnotationReady(page);
+        await page.locator('#bd-annotation-sidebar-toggle').click();
         await expect(page.locator('#post-article')).toHaveClass(/bd-annotation-reading-layout-open/);
         const wideDesktopLayout = await page.evaluate(() => {
             const content = document.querySelector('.bd-annotation-reading-content').getBoundingClientRect();
@@ -240,15 +243,17 @@ test.describe('划线评论', () => {
                 sidebarPosition: getComputedStyle(sidebar).position
             };
         });
-        expect(wideDesktopLayout.contentWidth).toBeGreaterThan(800);
-        expect(wideDesktopLayout.contentRight).toBeLessThan(wideDesktopLayout.sidebarLeft);
-        expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(70);
+        // 两档布局：content 是 grid 1fr = container(80vw) − sidebar(24vw) − gap ≈ 799
+        expect(wideDesktopLayout.contentWidth).toBeGreaterThan(780);
+        expect(wideDesktopLayout.contentRight).toBeLessThan(wideDesktopLayout.sidebarLeft + 1);
+        expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(100);
         expect(wideDesktopLayout.headingTop).toBeGreaterThanOrEqual(0);
-        expect(wideDesktopLayout.headingBottom).toBeLessThan(120);
+        // h1 clamp(1.8rem,3vw,2.6rem) 大标题，headingBottom ≈ top(92) + 标题高
+        expect(wideDesktopLayout.headingBottom).toBeLessThan(195);
         expect(wideDesktopLayout.sidebarTop).toBeGreaterThanOrEqual(0);
-        expect(wideDesktopLayout.sidebarTop).toBeLessThanOrEqual(70);
+        expect(wideDesktopLayout.sidebarTop).toBeLessThanOrEqual(100);
         expect(wideDesktopLayout.sidebarBottom).toBeGreaterThan(0);
-        expect(wideDesktopLayout.sidebarPosition).toBe('sticky');
+        expect(wideDesktopLayout.sidebarPosition).toBe('fixed');
     });
 
     test('桌面端：反复开关批注栏后评注框仍贴合正文', async ({page}, testInfo) => {

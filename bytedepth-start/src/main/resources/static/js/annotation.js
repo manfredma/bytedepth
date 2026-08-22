@@ -15,7 +15,7 @@ window.initAnnotations = function () {
     const commentOutlineLayer = document.createElement('div');
     commentOutlineLayer.className = 'bd-annotation-comment-outline-layer';
     commentOutlineLayer.setAttribute('aria-hidden', 'true');
-    article.appendChild(commentOutlineLayer);
+    content.appendChild(commentOutlineLayer);
     const outlineNodes = new Map();
 
     let annotations = window.__ANNOTATIONS__ || [];
@@ -131,6 +131,7 @@ window.initAnnotations = function () {
         }
         // 侧栏开关会改变正文的 Grid 布局；下一帧后评注框必须按新坐标重绘。
         scheduleAnnotationPositionUpdate();
+        requestAnimationFrame(renderCommentOutlines);
         if (open) {
             renderFeed();
         }
@@ -298,6 +299,8 @@ window.initAnnotations = function () {
     }
 
     function renderCommentOutlines() {
+        const contentRect = content.getBoundingClientRect();
+        const contentTop = contentRect.top + window.scrollY;
         const activeKeys = new Set();
         const renderedRanges = new Set();
         annotations.filter(hasComment).forEach(annotation => {
@@ -327,9 +330,14 @@ window.initAnnotations = function () {
                 }
                 outline.dataset.annotationId = annotation.id;
                 outline.dataset.textTop = String(row.top);
-                const transform = `translate3d(${row.left}px, ${row.top - labelGutter}px, 0)`;
-                if (outline.style.transform !== transform) {
-                    outline.style.transform = transform;
+                // absolute 锚 .content：文档坐标（不随滚动变）一次算定，滚动时随容器整体带走。
+                const top = `${row.top + window.scrollY - contentTop - labelGutter}px`;
+                const left = `${row.left - contentRect.left}px`;
+                if (outline.style.top !== top) {
+                    outline.style.top = top;
+                }
+                if (outline.style.left !== left) {
+                    outline.style.left = left;
                 }
                 const width = `${row.right - row.left}px`;
                 const height = `${row.bottom - row.top + labelGutter}px`;
@@ -429,6 +437,10 @@ window.initAnnotations = function () {
             item.hidden = false;
             const anchorTop = markRect.top - feedRect.top + feed.scrollTop;
             const top = Math.max(anchorTop, nextTop);
+            // 划线滚出视口上方时隐藏对应卡片；下方待滚入的卡片保持可见。
+            if (markRect.bottom < 0) {
+                item.hidden = true;
+            }
             const transform = `translate3d(0, ${top}px, 0)`;
             if (item.style.transform !== transform) {
                 item.style.transform = transform;
@@ -986,7 +998,6 @@ window.initAnnotations = function () {
         }
         positionUpdateFrame = requestAnimationFrame(() => {
             positionUpdateFrame = 0;
-            renderCommentOutlines();
             updateMobileCommentPosition();
             if (isOpen() && feedLayout === 'follow') {
                 layoutFeed();
@@ -1000,6 +1011,7 @@ window.initAnnotations = function () {
     window.addEventListener('scroll', onScroll, {passive: true});
 
     function onResize() {
+        renderCommentOutlines();
         scheduleAnnotationPositionUpdate();
         if (isOpen()) {
             renderFeed();
@@ -1030,6 +1042,10 @@ window.initAnnotations = function () {
     // 侧栏默认关闭：阅读区首屏保持完整，用户主动点击工具栏「评论」后再展开。
     setOpen(false);
     article.dataset.bdAnnotationReady = 'true';
+    // 字体加载完成后文字位置变化，重算一次框坐标（其余时机随容器滚动天然跟随）。
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(renderCommentOutlines);
+    }
 };
 
 // 首次加载自动初始化
