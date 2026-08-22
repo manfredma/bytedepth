@@ -52,6 +52,9 @@ self.addEventListener('fetch', event => {
 
   // 管理后台和搜索不走缓存（实时性要求高）
   if (url.pathname.startsWith('/admin')) return;
+
+  // CSRF token 刷新请求必须直达网络取最新页面，否则 cache-first 会返回带旧 token 的缓存 HTML。
+  if (request.headers.get('X-CSRF-Refresh')) return;
   if (request.mode === 'navigate') {
     // 页面导航：network-first，断网回退离线页
     event.respondWith(

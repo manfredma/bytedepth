@@ -34,7 +34,7 @@ window.initAnnotations = function () {
     // 全部跟随元素共用一个帧句柄：同一滚动帧只读写一次，避免文字与批注产生布局反馈。
     let positionUpdateFrame = 0;
 
-    const csrf = (document.querySelector('meta[name="_csrf"]') || {}).content || '';
+    let csrf = (document.querySelector('meta[name="_csrf"]') || {}).content || '';
     const composer = sidebar.querySelector('.bd-annotation-composer');
     const feed = sidebar.querySelector('.bd-annotation-feed');
     const sidebarCount = sidebar.querySelector('.bd-annotation-comment-count');
@@ -52,14 +52,50 @@ window.initAnnotations = function () {
         return Boolean(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
     }
 
-    function api(path, method, payload) {
+    function sendAnnotationRequest(path, method, payload) {
         return fetch(window.location.pathname + '/annotations' + path, {
             method,
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf},
             body: payload ? JSON.stringify(payload) : undefined
-        }).then(response => {
+        });
+    }
+
+    // session 过期后旧 CSRF token 失效：重新拉取当前页面，从 meta 里取最新 token。
+    // X-CSRF-Refresh 头让 Service Worker 放行，cache: 'no-store' 绕开 HTTP 缓存，确保拿到新 HTML。
+    function refreshCsrfToken() {
+        return fetch(window.location.pathname, {
+            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Refresh': '1'},
+            cache: 'no-store'
+        })
+            .then(response => response.ok ? response.text() : Promise.reject(new Error('csrf refresh failed')))
+            .then(html => {
+                const meta = new DOMParser().parseFromString(html, 'text/html').querySelector('meta[name="_csrf"]');
+                if (meta && meta.content) {
+                    csrf = meta.content;
+                }
+            })
+            .catch(() => { /* 刷新失败时保留现有 token，交由调用方按原状态码失败 */ });
+    }
+
+    function api(path, method, payload) {
+        return sendAnnotationRequest(path, method, payload).then(response => {
+            if (response.status === 403) {
+                // CSRF token 失效（session 过期）：刷新一次 token 后重试，仍失败则按重试状态码报错。
+                return refreshCsrfToken()
+                    .then(() => sendAnnotationRequest(path, method, payload))
+                    .then(retry => {
+                        if (!retry.ok) {
+                            const err = new Error('annotation request failed');
+                            err.status = retry.status;
+                            throw err;
+                        }
+                        return retry.status === 204 ? null : retry.json();
+                    });
+            }
             if (!response.ok) {
-                throw new Error('annotation request failed');
+                const err = new Error('annotation request failed');
+                err.status = response.status;
+                throw err;
             }
             return response.status === 204 ? null : response.json();
         });
@@ -469,8 +505,9 @@ window.initAnnotations = function () {
                     if (!window.confirm('确定删除这条评注吗？')) {
                         return;
                     }
-                    removeAnnotation(annotation.id, () => {
+                    removeAnnotation(annotation.id, (status) => {
                         remove.textContent = '删除失败，请重试';
+                        remove.setAttribute('data-status', status);
                         window.setTimeout(() => { remove.textContent = '删除'; }, 2000);
                     });
                 });
@@ -628,8 +665,10 @@ window.initAnnotations = function () {
             closeComposer();
             restoreSelection(annotatedSelection);
             updateCommentCount();
-        }).catch(() => {
-            composer.querySelector('.bd-annotation-composer-save').textContent = '保存失败，请重试';
+        }).catch(err => {
+            const saveButton = composer.querySelector('.bd-annotation-composer-save');
+            saveButton.textContent = '保存失败，请重试';
+            saveButton.setAttribute('data-status', err && err.status ? String(err.status) : '0');
         });
     }
 
@@ -638,10 +677,10 @@ window.initAnnotations = function () {
             annotations = annotations.filter(annotation => String(annotation.id) !== String(id));
             renderMarks();
             renderFeed();
-        }).catch(() => {
+        }).catch(err => {
             // 删除失败时不移除本地标记，避免与服务端不一致；向用户反馈。
             if (typeof onFailure === 'function') {
-                onFailure();
+                onFailure(err && err.status ? String(err.status) : '0');
             }
         });
     }
@@ -785,7 +824,7 @@ window.initAnnotations = function () {
         popup.innerHTML = '<button type="button" data-delete-annotation>删除划线</button>';
         popup.querySelector('[data-delete-annotation]').addEventListener('click', () => {
             hidePopup();
-            removeAnnotation(annotation.id, () => {
+            removeAnnotation(annotation.id, (status) => {
                 if (!popup) {
                     buildPopup();
                 }
@@ -793,10 +832,11 @@ window.initAnnotations = function () {
                 const rect = mark.getBoundingClientRect();
                 popup.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8))}px`;
                 popup.style.top = `${Math.max(8, rect.bottom + 9)}px`;
-                popup.replaceChildren(Object.assign(document.createElement('span'), {
-                    className: 'bd-annotation-copy-result',
-                    textContent: '删除失败，请重试'
-                }));
+                const result = document.createElement('span');
+                result.className = 'bd-annotation-copy-result';
+                result.textContent = '删除失败，请重试';
+                result.setAttribute('data-status', status);
+                popup.replaceChildren(result);
                 window.setTimeout(() => {
                     if (popup.contains(popup.querySelector('.bd-annotation-copy-result'))) {
                         hidePopup();
@@ -831,14 +871,15 @@ window.initAnnotations = function () {
                 renderFeed();
             }
             hidePopup();
-        }).catch(() => {
+        }).catch(err => {
             if (!popup) {
                 return;
             }
-            popup.replaceChildren(Object.assign(document.createElement('span'), {
-                className: 'bd-annotation-copy-result',
-                textContent: '划线失败，请重试'
-            }));
+            const result = document.createElement('span');
+            result.className = 'bd-annotation-copy-result';
+            result.textContent = '划线失败，请重试';
+            result.setAttribute('data-status', err && err.status ? String(err.status) : '0');
+            popup.replaceChildren(result);
             window.setTimeout(() => {
                 if (popup.contains(popup.querySelector('.bd-annotation-copy-result'))) {
                     hidePopup();
