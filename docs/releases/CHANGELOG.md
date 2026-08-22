@@ -7,8 +7,8 @@
 ## [v2.11.6] - 2026-08-22
 
 **Tag**：`v2.11.6`
-**Commit**：`（tag 创建后回填）`
-**部署**：待验收
+**Commit**：`d74a8a5909de850acecb3a4f14847f9a4891a098`
+**部署**：2026-08-22 14:15–14:25 CST；数据节点（`175.24.197.202`）与应用节点（`124.221.143.25`）均已部署并验收
 **回滚基线**：`v2.11.5`
 
 ### Fixed
@@ -22,7 +22,9 @@
 
 ### Deployment Acceptance
 
-- 待验收。
+- 两节点部署记录的 Tag 与完整 SHA 完全一致（`d74a8a5`）；数据节点完整 Compose 服务（MySQL/Redis/MeiliSearch healthy、app、nginx、file-server）与应用节点 Compose 服务（app、nginx）均正常。
+- 两节点应用均成功连接 MySQL 并经 Flyway 验证 schema；本次为纯前端 CSS/JS 修复，无数据库迁移。
+- 两节点分别经 IP 与 SNI HTTPS（`https://bytedepth.cn`）验证首页、文章列表与实际文章详情均返回 `200`。
 
 ## [v2.11.5] - 2026-08-22
 
