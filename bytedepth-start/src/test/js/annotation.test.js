@@ -518,9 +518,12 @@ describe('annotation sidebar', () => {
     mark.getBoundingClientRect = () => ({left: 12, top: 20, bottom: 40});
     mark.click();
     const note = document.querySelector('.bd-annotation-mobile-note');
+    const placedTransform = note.style.transform;
     frames.length = 0;
     requestAnimationFrame.mockClear();
 
+    // 划线仍在视口内时滚动：仍合并到一帧（用于判断可见性），但 absolute 定位随容器带走，
+    // 不重算 transform。
     mark.getBoundingClientRect = () => ({left: 16, top: 60, bottom: 80});
     window.dispatchEvent(new Event('scroll'));
     window.dispatchEvent(new Event('scroll'));
@@ -528,12 +531,71 @@ describe('annotation sidebar', () => {
 
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
     frames.shift()();
-    expect(note.style.transform).toContain('translate3d(16px, 90px, 0)');
+    expect(note.style.transform).toBe(placedTransform);
     expect(note.style.top).toBe('');
+    expect(note.hidden).toBe(false);
     global.requestAnimationFrame = originalRequestAnimationFrame;
     global.cancelAnimationFrame = originalCancelAnimationFrame;
     window.requestAnimationFrame = originalRequestAnimationFrame;
     window.cancelAnimationFrame = originalCancelAnimationFrame;
+  });
+
+  test('mobile note anchors inside .content with absolute position, not body fixed', () => {
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    window.__ANNOTATIONS__ = [
+      { id: 8, selectedText: '可批', annotationText: '移动批注', color: 'blue', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    eval(annotationJs);
+    const mark = document.querySelector('mark[data-id="8"]');
+    mark.getBoundingClientRect = () => ({left: 12, top: 20, bottom: 40});
+    mark.click();
+    const note = document.querySelector('.bd-annotation-mobile-note');
+    // 锚进正文容器，随其滚动整体带走；不再挂在 body 上用 fixed 逐帧跟随。
+    expect(note.parentElement).toBe(document.querySelector('#post-article .content'));
+    expect(annotationCss).toMatch(/\.bd-annotation-mobile-note\s*\{[^}]*position:\s*absolute/);
+    expect(annotationCss).not.toMatch(/\.bd-annotation-mobile-note\s*\{[^}]*position:\s*fixed/);
+  });
+
+  test('mobile note keeps its position during scroll without per-frame transform recalculation', () => {
+    const frames = [];
+    const originalRequestAnimationFrame = global.requestAnimationFrame;
+    const originalCancelAnimationFrame = global.cancelAnimationFrame;
+    const requestAnimationFrame = jest.fn(callback => { frames.push(callback); return frames.length; });
+    window.requestAnimationFrame = requestAnimationFrame;
+    global.requestAnimationFrame = requestAnimationFrame;
+    window.cancelAnimationFrame = jest.fn();
+    global.cancelAnimationFrame = window.cancelAnimationFrame;
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    window.__ANNOTATIONS__ = [
+      { id: 8, selectedText: '可批', annotationText: '移动批注', color: 'blue', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    eval(annotationJs);
+    while (frames.length) { frames.shift()(); }
+    const content = document.querySelector('#post-article .content');
+    const mark = document.querySelector('mark[data-id="8"]');
+    // 划线仍在视口内，弹出卡片并定位。
+    mark.getBoundingClientRect = () => ({left: 12, top: 20, bottom: 40});
+    mark.click();
+    const note = document.querySelector('.bd-annotation-mobile-note');
+    const placedTransform = note.style.transform;
+    expect(placedTransform).toContain('translate3d');
+
+    frames.length = 0;
+    requestAnimationFrame.mockClear();
+    // 滚动时划线仍可见：位置不应重算（浏览器原生滚动带走 absolute 元素），只可能切 hidden。
+    mark.getBoundingClientRect = () => ({left: 12, top: 50, bottom: 70});
+    window.dispatchEvent(new Event('scroll'));
+    window.dispatchEvent(new Event('scroll'));
+    // 仍可能调度一帧用于判断可见性，但 transform 必须保持不变。
+    while (frames.length) { frames.shift()(); }
+    expect(note.style.transform).toBe(placedTransform);
+    expect(note.hidden).toBe(false);
+
+    global.requestAnimationFrame = originalRequestAnimationFrame;
+    global.cancelAnimationFrame = originalCancelAnimationFrame;
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+    window.cancelAnimationFrame = originalCancelAnimationFrame;
+    void content;
   });
 
   test('keeps Markdown blocks compact inside the annotation typography', () => {
