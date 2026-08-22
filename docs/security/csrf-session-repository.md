@@ -17,6 +17,7 @@ HTTP Session 仓库不依赖浏览器 cookie 中的 CSRF token 下发，符合�
 - 不要为“前端可读 token”重新启用 Cookie 仓库，除非同时完成完整的登录后 token 轮换与浏览器端回归验证。
 - 新增 POST 表单优先使用 Thymeleaf `th:action`，让框架注入 hidden token。
 - API 或测试中的手工 POST 必须携带有效 CSRF token；仅对经过审查的无状态端点显式豁免。
+- 会话共享与记住我实现见 [会话与认证](authentication.md)；权限模型与授权分层见 [角色与权限模型](rbac.md)。
 
 ## 验证
 
