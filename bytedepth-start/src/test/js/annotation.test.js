@@ -920,4 +920,25 @@ describe('annotation sidebar', () => {
     expect(annotationJs).toContain('删除失败，请重试');
     expect(annotationJs).toContain('划线失败，请重试');
   });
+
+  test('comment outline anchors the content container and positions with top/left instead of a transform', () => {
+    window.__ANNOTATIONS__ = [
+      { id: 1, selectedText: '可批', annotationText: '评论', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    // 框锚正文文字容器（随其滚动整体带走），不再挂在 article 视口层。
+    const content = document.querySelector('.content');
+    const layer = document.querySelector('.bd-annotation-comment-outline-layer');
+    expect(layer.parentElement).toBe(content);
+    // 用文档坐标 top/left 一次算定，不再逐帧 translate3d 跟随。
+    const outline = document.querySelector('.bd-annotation-comment-outline');
+    expect(outline.style.transform).toBe('');
+    expect(outline.style.top).not.toBe('');
+    expect(outline.style.left).not.toBe('');
+    // 首行仍为「评注」标签预留 labelGutter，dataset.textTop 记录文字视口顶。
+    expect(outline.dataset.textTop).not.toBe('');
+    expect(outline.querySelector('.bd-annotation-comment-trigger').textContent).toBe('评注');
+  });
 });
