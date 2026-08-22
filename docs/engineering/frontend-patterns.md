@@ -44,3 +44,22 @@ th:with="baseUrl='/posts?' +
 - `static/js/bd-dialog.js`
 
 导航 fragment 统一加载资源。表单通过 `data-bd-confirm` 及相关 `data-bd-confirm-*` 属性接入；异步操作调用 `window.BytedepthDialog.confirm(...)`。组件基于原生 `<dialog>`，负责 Esc 关闭、焦点管理和返回焦点；调用方只提供业务文案与后续动作。
+
+## 过滤栏组件
+
+位置：`bytedepth-start/src/main/resources/templates/fragments/filter-bar.html`
+
+```text
+filterBar(action, fields)
+```
+
+| 参数 | 含义 |
+| --- | --- |
+| `action` | 过滤表单提交的 GET URL，即列表页自身路径。 |
+| `fields` | `List<FilterField>`，Controller 构建的配置驱动字段。 |
+
+每个 `FilterField` 由 Controller 用静态工厂构建：`text(name, label, value, placeholder)`、`number(...)` 或 `select(name, label, value, options)`；组件零改动即可新增字段。
+
+过滤表单为服务端渲染 GET 表单，URL 可分享、可刷新；翻页时需将当前过滤条件编码进 `filterBaseUrl` 传给分页组件，确保翻页不丢失条件。组件自身使用 `bd-filter-bar` 命名空间；消费页不应覆盖这些选择器。
+
+接入新后台列表页时，Controller 构建 `List<FilterField>` 传入模型即可，不需要改组件；分页 `baseUrl` 必须拼接当前过滤参数。

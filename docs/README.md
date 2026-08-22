@@ -13,7 +13,10 @@
 - 修改分页：读 [前端模式](engineering/frontend-patterns.md)。
 - 查询所有路由：读 [路由一览](architecture/routes.md)。
 - 排查已知问题：读 [工程陷阱](engineering/gotchas.md)。
+- 修改访问日志、阅读统计或首页排序：读 [访问日志与统计](engineering/view-log-and-analytics.md)。
 - 修改登录、表单或 CSRF：读 [CSRF 决策记录](security/csrf-session-repository.md)。
+- 修改会话、记住我或 Session 共享：读 [会话与认证](security/authentication.md)。
+- 新增后台权限或调整授权分层：读 [角色与权限模型](security/rbac.md)。
 - 批注与划线写操作的权限管理：读 [批注写操作权限管理](security/annotation-write-permissions.md)。
 - 构建、测试、覆盖率：读 [Maven 指南](agent-guides/maven.md)。
 - 创建 worktree、分支、PR 与受控发布：读 [Git 工作流](engineering/git-workflow.md)。
@@ -21,6 +24,7 @@
 - 部署、回滚和双机验收：只读 [部署手册](../deploy/README.md)。
 - 创建版本、记录变更、发布与回滚：读 [发布管理](releases/README.md)。
 - 了解后台运维页面的权限边界：读 [运维页面说明](security/ops.md)。
+- 维护知识库本身（新增、修改或删除文档）：读 [知识库建设原则](knowledge-base-principles.md)。
 
 ## 目录边界
 
@@ -31,12 +35,13 @@
 | `security/` | 安全决策与事故复盘 | 密钥、Cookie、真实账号信息 |
 | `releases/` | 版本策略、发布记录与变更日志 | 机器私有部署日志或密钥 |
 | `agent-guides/` | 人与自动化代理共同遵守的任务操作指南 | 通用架构说明 |
-| `superpowers/` | 已完成需求的设计与计划历史 | 当前操作手册 |
 
 ## 维护规则
 
-1. 文档以当前代码和唯一操作手册为准；无法验证的历史说明不迁入。
-2. 一个主题只有一个权威入口。部署以 `deploy/README.md` 为准，构建测试以 `agent-guides/maven.md` 为准，笔记同步以 `agent-guides/obsidian-sync.md` 为准。
-3. 先写摘要、约束和链接；只有执行任务所需的细节才放入下层文档。这是渐进式披露，不以重复粘贴换取“完整”。
-4. 架构决策、公共组件契约与会影响后续改动的故障复盘必须随代码一并提交。
-5. `.omc/`、根目录 `.superpowers/` 等工具运行目录只保存本机状态，永不作为项目知识库。
+知识库建设的完整原则见 [知识库建设原则](knowledge-base-principles.md)。要点：
+
+1. 以当前代码和唯一操作手册为准；无法验证的不迁入。
+2. 一个主题一个权威入口；其余用链接，不复制。
+3. 入口只放结论与链接，细节按需展开（渐进式披露）。
+4. 架构决策、组件契约、故障复盘随代码一并提交。
+5. `.omc/`、`.superpowers/` 等工具目录不入知识库。

@@ -37,5 +37,5 @@
 
 - 身份与 Cookie 机制：[CSRF 与会话存储](csrf-session-repository.md)
 - 匿名读者/作者概念边界：[统一语言](../architecture/ubiquitous-language.md)
-- 后台权限模型（RBAC）：`docs/superpowers/specs/2026-06-11-account-rbac-design.md`
+- 后台权限模型（RBAC）：[角色与权限模型](rbac.md)
 - 限流框架：`bytedepth-adapter` 的 `RateLimitFilter` / `RateLimitProperties`（`bytedepth.rate-limit.*`）

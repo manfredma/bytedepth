@@ -33,6 +33,20 @@ bash scripts/configure-git-hooks.sh
 
 该命令启用仓库内的 pre-commit hook，阻止在 `main` 上创建普通提交。Hook 不是远端分支保护的替代品：仓库管理员还必须在 GitHub 为 `main` 启用“Require a pull request before merging”、禁止 force push 与删除，并将质量检查设为必需。
 
+## worktree 生命周期
+
+worktree 是临时工作空间，不是长期副本。分支合并到 `main`（或 PR 关闭、放弃）后，必须立即删除对应 worktree 和已合并的本地分支，避免堆积陈旧副本与分支污染。
+
+```bash
+# 在主工作区确认改动已合并后删除 worktree（未提交改动时拒绝删除；确认丢弃用 -f）
+git worktree remove ../bytedepth-feature
+
+# 删除已合并的本地分支（未合并分支需 -D 强删，删除前确认无未推送提交）
+git branch -d feat/<topic>
+```
+
+Claude Code 会话内用 `ExitWorktree`（action: `remove`）退出并清理；存在未提交改动时会拒绝删除，需先确认或显式 `discard_changes`。删除前确认 worktree 内无未推送或未合并的改动：worktree 共享主仓库的对象库，误删分支不会丢失已提交对象，但工作区未提交的改动会丢失。
+
 ## 发布例外
 
 Maven Release Plugin 需要创建“发布版本”和“下一开发版本”两次版本提交。这属于受控发布操作而非开发：只能从干净、已合并的 `main` 运行 `scripts/prepare-release.sh`，脚本会设置仅供该操作使用的 `BYTEDEPTH_RELEASE_MODE=1`。任何手工设置该变量绕过 hook 的行为均不合规。
