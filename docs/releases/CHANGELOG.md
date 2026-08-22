@@ -4,6 +4,26 @@
 
 ## Unreleased
 
+## [v2.11.6] - 2026-08-22
+
+**Tag**：`v2.11.6`
+**Commit**：`（tag 创建后回填）`
+**部署**：待验收
+**回滚基线**：`v2.11.5`
+
+### Fixed
+
+- 评注框定位：原 `position:fixed` + JS `requestAnimationFrame` 逐帧 `translate3d` 跟随文字，滚动慢一帧、手机端惯性滚动漂移明显（“框飘字稳”）。改为 `position:absolute` 锚正文文字容器，位置用文档坐标一次算定，滚动时随容器整体带走，0 逐帧漂移。删除 `onScroll` 中 outline 逐帧跟随，仅 load/resize/renderMarks/侧栏开闭/字体加载时重算。`comment-trigger` `top:0→-1px` 修正 active 态边框对齐。`layoutFeed` 卡片在划线滚出视口上方时设 `hidden`。
+- 项目规范增补「不带病上线」原则：发布前所有测试必须全绿，既有失败同样不构成放行理由。
+
+### Compatibility
+
+- 无数据库迁移、API 破坏性变更或部署配置变更；纯前端 CSS/JS 修复；可回滚至 `v2.11.5`。
+
+### Deployment Acceptance
+
+- 待验收。
+
 ## [v2.11.5] - 2026-08-22
 
 **Tag**：`v2.11.5`
