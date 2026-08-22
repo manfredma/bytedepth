@@ -4,6 +4,18 @@
 
 ## Unreleased
 
+## [v2.11.5] - 2026-08-22
+
+**部署**：待验收
+
+### Fixed
+
+- 修复 session 过期（默认 60 分钟）后 CSRF token 随旧 session 失效、页面加载时一次性读取的 token 过期，导致 POST `/annotations` 被后端 CSRF 过滤器拦截返回 403、前端兜底成「划线失败，请重试」的问题。前端现对 403 自动刷新 token（GET 当前页用 DOMParser 取最新 `meta[name="_csrf"]`，带 `X-CSRF-Refresh` 头并 `cache: no-store`）并重试一次；非 403 不重试。Service Worker 放行带 `X-CSRF-Refresh` 头的请求直达网络，避免 cache-first 返回带旧 token 的缓存 HTML。失败时把 HTTP 状态码挂到失败元素的 `data-status` 属性以便诊断，用户可见文案不变。该修复同时覆盖写评注与删除划线。
+
+### Compatibility
+
+- 无数据库迁移、API 破坏性变更或部署配置变更；可回滚至 `v2.11.4`。
+
 ## [v2.11.4] - 2026-08-22
 
 **Tag**：`v2.11.4`
