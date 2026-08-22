@@ -35,4 +35,5 @@
 - 文章统计路径统一为 `/posts/{post.id}`，须与 `RedisStatsService.flushToDB()` 落库路径一致。
 - 热门排序为 `pv_count DESC, published_at DESC, id DESC`（三级排序保证分页稳定）。
 - `sort` 参数允许值仅为 `latest` 与 `hot`，分页 URL 保留当前 `sort`。
+- 默认排序为 `hot`：`HomeController.normalizeSort` 将 `latest` 以外的值（含 null）归一为 `hot`。这是有意决策（`337709e`），非设计稿时期的 `latest` 默认；首页无 `sort` 参数时展示热门文章。
 - 热门页"最新发布"补充区块在数据库层排除（避免应用层超量读取），最多 3 篇，不参与热门分页。
