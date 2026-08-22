@@ -688,6 +688,183 @@ describe('annotation sidebar', () => {
     expect(document.querySelector('.bd-annotation-copy-result').textContent).toBe('划线失败，请重试');
   });
 
+  test('refreshes csrf token and retries after 403 when creating a highlight', async () => {
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    const content = document.querySelector('.content');
+    const range = document.createRange();
+    range.setStart(content.firstChild, 0);
+    range.setEnd(content.firstChild, 2);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    content.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document.querySelector('.bd-annotation-popup [data-highlight]').click();
+
+    // 顺序：POST(403) → GET 刷新页面拿到新 token → POST 重试成功
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 403 }));
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: true, text: () => Promise.resolve('<meta name="_csrf" content="token2">') }));
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 1, selectedText: '可批', color: 'yellow', visibility: 'PRIVATE', startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true }) }));
+    document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    // 首次 POST 带旧 token；刷新后第二次 POST 带新 token。
+    expect(window.fetch.mock.calls[0][1].headers['X-CSRF-TOKEN']).toBe('token');
+    expect(window.fetch.mock.calls[2][1].headers['X-CSRF-TOKEN']).toBe('token2');
+    expect(window.fetch.mock.calls[2][1].method).toBe('POST');
+    // 重试成功后写入 mark，不显示失败。
+    expect(document.querySelector('mark[data-id="1"]')).not.toBeNull();
+    expect(document.querySelector('.bd-annotation-copy-result')).toBeNull();
+  });
+
+  test('retries after 403 when saving a comment', async () => {
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    const content = document.querySelector('.content');
+    const range = document.createRange();
+    range.setStart(content.firstChild, 0);
+    range.setEnd(content.firstChild, 2);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    document.querySelector('.bd-annotation-popup [data-comment]').click();
+    const input = document.querySelector('.bd-annotation-composer-text');
+    input.value = '我的评论';
+
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 403 }));
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: true, text: () => Promise.resolve('<meta name="_csrf" content="token2">') }));
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 2, selectedText: '可批', annotationText: '我的评论', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true }) }));
+    document.querySelector('.bd-annotation-composer-save').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(window.fetch.mock.calls[2][1].headers['X-CSRF-TOKEN']).toBe('token2');
+    // 重试成功：composer 关闭，且未出现失败文案。
+    expect(document.querySelector('.bd-annotation-composer').hidden).toBe(true);
+    expect(document.querySelector('.bd-annotation-composer-save').textContent).not.toBe('保存失败，请重试');
+  });
+
+  test('reports data-status 403 when token refresh cannot find a new meta', async () => {
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    const content = document.querySelector('.content');
+    const range = document.createRange();
+    range.setStart(content.firstChild, 0);
+    range.setEnd(content.firstChild, 2);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    content.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document.querySelector('.bd-annotation-popup [data-highlight]').click();
+
+    // POST(403) → 刷新页面无 meta → 重试仍 403 → 失败且带状态码
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 403 }));
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: true, text: () => Promise.resolve('<html><body>no meta here</body></html>') }));
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 403 }));
+    document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(document.querySelector('.bd-annotation-copy-result').textContent).toBe('划线失败，请重试');
+    expect(document.querySelector('.bd-annotation-copy-result').getAttribute('data-status')).toBe('403');
+  });
+
+  test('reports data-status 500 for non-403 failures without retrying', async () => {
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    const content = document.querySelector('.content');
+    const range = document.createRange();
+    range.setStart(content.firstChild, 0);
+    range.setEnd(content.firstChild, 2);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    content.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document.querySelector('.bd-annotation-popup [data-highlight]').click();
+
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 500 }));
+    document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    // 非 403 不触发刷新重试，只发一次请求。
+    expect(window.fetch).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('.bd-annotation-copy-result').getAttribute('data-status')).toBe('500');
+  });
+
+  test('reports data-status 0 for network errors', async () => {
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    const content = document.querySelector('.content');
+    const range = document.createRange();
+    range.setStart(content.firstChild, 0);
+    range.setEnd(content.firstChild, 2);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    content.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document.querySelector('.bd-annotation-popup [data-highlight]').click();
+
+    window.fetch.mockReturnValueOnce(Promise.reject(new Error('network down')));
+    document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(document.querySelector('.bd-annotation-copy-result').getAttribute('data-status')).toBe('0');
+  });
+
+  test('keeps the old token when the refresh page itself returns non-ok', async () => {
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    const content = document.querySelector('.content');
+    const range = document.createRange();
+    range.setStart(content.firstChild, 0);
+    range.setEnd(content.firstChild, 2);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    content.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document.querySelector('.bd-annotation-popup [data-highlight]').click();
+
+    // POST(403) → 刷新页面自身返回 500 → 保留旧 token → 重试仍 403 → 失败带状态码
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 403 }));
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 500 }));
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 403 }));
+    document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(document.querySelector('.bd-annotation-copy-result').getAttribute('data-status')).toBe('403');
+  });
+
+  test('refreshes csrf token and retries a 403 delete with a 204 response', async () => {
+    window.__ANNOTATIONS__ = [
+      { id: 7, selectedText: '可批', annotationText: null, color: 'yellow', visibility: 'PRIVATE', startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true }
+    ];
+    document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
+    eval(annotationJs);
+
+    document.querySelector('mark[data-id="7"]').click();
+    // DELETE(403) → GET 刷新拿新 token → DELETE 重试 204 成功
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 403 }));
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: true, text: () => Promise.resolve('<meta name="_csrf" content="token2">') }));
+    window.fetch.mockReturnValueOnce(Promise.resolve({ ok: true, status: 204 }));
+    document.querySelector('.bd-annotation-popup [data-delete-annotation]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    // 重试 DELETE 用新 token，且 204 不解析 body；mark 被移除。
+    expect(window.fetch.mock.calls[2][1].headers['X-CSRF-TOKEN']).toBe('token2');
+    expect(window.fetch.mock.calls[2][1].method).toBe('DELETE');
+    expect(document.querySelector('mark[data-id="7"]')).toBeNull();
+  });
+
   test('styles remain inside the bd-annotation namespace', () => {
     expect(annotationCss).not.toMatch(/(^|\n)\.content\s+/);
     expect(annotationCss).toContain('.bd-annotation-sidebar');
