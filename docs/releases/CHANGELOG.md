@@ -6,7 +6,10 @@
 
 ## [v2.11.5] - 2026-08-22
 
-**部署**：待验收
+**Tag**：`v2.11.5`
+**Commit**：`7be3edb4d22238a8d24f64f8e217cbd2cf7bf357`
+**部署**：2026-08-22 11:33–11:38 CST；数据节点（`175.24.197.202`）与应用节点（`124.221.143.25`）均已部署并验收
+**回滚基线**：`v2.11.4`
 
 ### Fixed
 
@@ -15,6 +18,12 @@
 ### Compatibility
 
 - 无数据库迁移、API 破坏性变更或部署配置变更；可回滚至 `v2.11.4`。
+
+### Deployment Acceptance
+
+- 两节点部署记录的 Tag 与完整 SHA 完全一致（`7be3edb`）；数据节点完整 Compose 服务（MySQL/Redis/MeiliSearch healthy、app、nginx、file-server）与应用节点 Compose 服务（app、nginx）均正常，应用节点 NFS 图片挂载就绪。
+- 两节点应用均成功连接 MySQL 并经 Flyway 验证 schema，无 Flyway、MySQL、Redis 或 MeiliSearch 连接错误；本次为纯前端修复，无数据库迁移。
+- 两节点分别经 SNI HTTPS 验证首页最新/翻页/热门、文章列表与详情、旧 ID 跳转、专栏、搜索、项目及实际文章图片均返回 `200`；实际域名的同名回归同样全部返回 `200`。
 
 ## [v2.11.4] - 2026-08-22
 
