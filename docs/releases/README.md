@@ -59,6 +59,8 @@ bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
 
 ## staging 预检与生产单机发布
 
+**发布前置**：进入发布流程前，所有待办任务必须全部解决；有阻塞项先解决或与项目所有者确认暂缓（需明确说"暂时不解决"），不得带遗留项上线。
+
 1. 记录当前已验收发布的 Tag，作为回滚基线。
 2. 在 staging 部署 `main`（或候选 ref）并用真实数据预检：`deploy-staging.sh <ref>`。
 3. staging 执行查询回归与写测试验证。
