@@ -86,7 +86,10 @@ rm -f "$DUMP"
 log "MySQL: 完成"
 
 # --- Redis ---
-# Redis 7 用 appendonlydir + manifest。必须先清空目标 AOF/RDB，否则旧数据残留。
+# Redis 7 配置 appendonly yes，启动时优先加载 AOF 而非 RDB。
+# 若直接拷 dump.rdb 后正常启动，Redis 创建空 AOF 忽略 RDB，导致数据丢失。
+# 正确流程：清空数据目录 → 拷生产 RDB → 以 --appendonly no 临时启动加载 RDB
+# → BGREWRITEAOF 生成 AOF → 停止临时实例 → 正常启动（appendonly yes 从 AOF 加载）。
 log "Redis: 停止 staging redis..."
 staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh stop redis"
 log "Redis: 清空 staging redis 数据目录..."
@@ -100,8 +103,21 @@ log "Redis: 传输 dump.rdb..."
 docker cp bytedepth-redis-1:/data/dump.rdb /tmp/bytedepth-sync-dump.rdb
 staging_send /tmp/bytedepth-sync-dump.rdb "/tmp/dump.rdb"
 rm -f /tmp/bytedepth-sync-dump.rdb
-staging_exec "sudo mv /tmp/dump.rdb /data/redis/dump.rdb && cd /opt/bytedepth && sudo ./deploy/ctl.sh up -d redis"
-log "Redis: 完成（以 RDB 启动，重建 AOF）"
+# 在 124 上：放 RDB → 临时以 --appendonly no 启动加载 RDB → BGREWRITEAOF 生成 AOF → 停止
+# REDIS_PASSWORD 从 124 本地 .env 读取（与生产不同）
+staging_exec 'set -a && . /opt/bytedepth/.env && set +a && \
+    sudo mv /tmp/dump.rdb /data/redis/dump.rdb && \
+    sudo docker run -d --rm --name redis-restore \
+        -v /data/redis:/data redis:7-alpine \
+        redis-server --appendonly no --requirepass "$REDIS_PASSWORD" && \
+    sleep 3 && \
+    docker exec redis-restore redis-cli -a "$REDIS_PASSWORD" BGREWRITEAOF && \
+    sleep 2 && \
+    sudo docker stop redis-restore'
+log "Redis: 正常启动 staging redis（从 AOF 加载）..."
+staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh up -d redis"
+sleep 3
+log "Redis: 完成（RDB→AOF 恢复）"
 
 # --- MeiliSearch ---
 # snapshot 放目录后重启不会导入，必须 --import-snapshot 启动，且清空旧 DB。
