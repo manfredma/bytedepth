@@ -1,0 +1,36 @@
+# staging overlay：叠加在 deploy/docker-compose.single-host.yml 上。
+# 不修改 single-host.yml（生产 175 仍用），所有 staging 差异在此声明。
+# Compose 的 volumes 和 environment 列表会被 overlay 完整替换，因此 nginx volumes
+# 必须在此重新声明完整列表（用 staging.conf.template 替代 nginx.conf）。
+services:
+  mysql:
+    command: ["mysqld", "--innodb-buffer-pool-size=128M"]
+
+  app:
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bytedepth?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env}
+      BYTEDEPTH_SEARCH_URL: http://meilisearch:7700
+      BYTEDEPTH_SEARCH_API_KEY: ${MEILI_MASTER_KEY:?MEILI_MASTER_KEY must be set in .env}
+      BYTEDEPTH_GEOIP_DB_PATH: /data/geoip/GeoLite2-City.mmdb
+      BYTEDEPTH_REMEMBER_ME_KEY: ${BYTEDEPTH_REMEMBER_ME_KEY:?BYTEDEPTH_REMEMBER_ME_KEY must be set in .env}
+      BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE: "true"
+      BYTEDEPTH_SESSION_COOKIE_SECURE: "true"
+      BYTEDEPTH_ENVIRONMENT: ${BYTEDEPTH_ENVIRONMENT:-production}
+      BYTEDEPTH_DEPLOY_SOCKET_PATH: /run/bytedepth-deploy/deploy.sock
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Shanghai --enable-native-access=ALL-UNNAMED}
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/staging.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - app
