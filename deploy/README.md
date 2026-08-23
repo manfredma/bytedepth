@@ -169,7 +169,7 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 
 ### 部署
 
-`deploy/deploy-staging.sh <ref>` 在 124 执行，接受来自 main 或已 Tag 的 ref（不直接接受任意裸 SHA）。
+`deploy/deploy-staging.sh <ref>` 在 124 执行，接受 origin 上已命名的分支或 Tag（默认 `main`，不直接接受任意裸 SHA）。功能分支先部署到 staging 验收、通过后再合并 `main`。
 
 ## 6. 正式版本发布
 
@@ -177,15 +177,16 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 
 ### 6.1 staging 预检
 
-在 staging 部署 `main`（或候选 ref）并用真实数据验证：
+在 staging 部署候选 ref 并用真实数据验证：
 
 ```bash
-# staging 接受来自 main 分支或已打 Tag 的 ref
+# staging 接受 origin 上已命名的分支或 Tag（默认 main）
+# 功能分支先部署验收，通过后再合并 main
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
-  "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh main"
+  "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh <分支或Tag>"
 ```
 
-涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。必须先完成前置门禁与 PR 合并，再部署 `main` 到 staging；项目所有者明确验收通过后，才能进入 6.2 创建生产版本与部署生产。
+涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。流程固定为：实现并补测试 → 跑前置门禁 → 部署候选 ref（分支或 `main`）到 staging → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能进入 6.2 创建生产版本与部署生产。
 
 在 `staging.bytedepth.cn` 执行查询回归与写测试验证。staging 验证失败则修代码回到此步，不发布生产。
 

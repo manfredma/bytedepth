@@ -16,7 +16,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 部署时必须重建并启动完整 compose 服务，不能只 `up --build -d app`。
 - 每次生产部署必须是一个新的、不可变的 SemVer 发布版本：先完成版本记录并创建新 annotated Git Tag，再部署该 Tag；不得部署 `main`、裸 commit、分支或已部署过的 Tag。
 - 前端公共组件必须自隔离，组件之间除相对位置外不得互相影响。
-- 涉及界面交互、视觉、布局的改动，项目所有者的验收环境固定为 staging（124，`staging.bytedepth.cn`），不得要求项目所有者验收未部署的本机代码。流程固定为：实现并补测试 → 跑前置门禁 → PR 合并到 `main` → 执行 `deploy/deploy-staging.sh main` → 项目所有者在 staging 验收；验收通过前不得创建生产版本、Tag 或部署生产。
+- 涉及界面交互、视觉、布局的改动，项目所有者的验收环境固定为 staging（124，`staging.bytedepth.cn`），不得要求项目所有者验收未部署的本机代码。staging 是测试环境，用于验证尚未合并 `main` 的功能分支。流程固定为：实现并补测试 → 跑前置门禁 → 部署候选 ref（功能分支或 `main`）到 staging（`deploy/deploy-staging.sh <ref>`）→ 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能创建生产版本、Tag 或部署生产。
 - 后续测试在 staging 上进行，不依赖本机。本机测试无法覆盖 Flyway 迁移、Docker Compose、Nginx、Redis 等运维层面。
 
 ## 按需读取

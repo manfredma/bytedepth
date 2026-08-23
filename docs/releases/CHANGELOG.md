@@ -8,11 +8,14 @@
 
 - 图片灯箱接管手机双指、Mac 触控板与 Safari gesture 缩放，只缩放预览图片并阻止底层页面跟随缩放；普通滚轮与单指平移保持原行为，缩放限制为 1–4 倍且切换图片时自动重置。
 - staging 部署现在校验并向完整 Compose 重建流程传递 `BYTEDEPTH_DEPLOY_MODE=staging`，避免错误安装仅供生产使用的部署 Socket。
+- staging 部署在执行目标 `bootstrap-ops-deploy.sh` 前校验其是否引用 `BYTEDEPTH_DEPLOY_MODE`，拒绝不认识 staging 的旧 Tag（其 bootstrap 会无条件安装生产部署 Socket）。
+- staging 部署脚本测试在非容器环境（宿主）直接执行时拒绝运行，避免覆盖宿主真实 `/etc/bytedepth-deploy.conf`。
 
 ### Changed
 
 - 前端单元测试迁移到 Node 22、Vitest 与 Happy DOM，默认 `npm test` 强制执行灯箱脚本行、分支、函数和语句 100% 覆盖门禁；移除误提交的本机绝对路径 `node_modules` 符号链接并清理弃用依赖告警。
 - 明确界面交互、视觉和布局改动统一在 staging 由项目所有者验收，验收通过前不得创建生产版本或部署生产。
+- staging 验收提前到 PR 合并 `main` 之前：`deploy-staging.sh` 接受 origin 上任意命名分支（默认 `main`）用于预发验收，验收通过后才合并 `main`。
 
 ### Compatibility
 
