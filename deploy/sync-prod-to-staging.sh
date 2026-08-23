@@ -138,7 +138,12 @@ docker cp "bytedepth-meilisearch-1:$SNAP_SRC" /tmp/meili-snapshot
 staging_send /tmp/meili-snapshot "/tmp/meili-snapshot"
 rm -f /tmp/meili-snapshot
 log "MeiliSearch: 导入 snapshot（一次性 docker run --import-snapshot）..."
-staging_exec "sudo mv /tmp/meili-snapshot /data/meilisearch/snapshot.snapshot && sudo docker run --rm --entrypoint /bin/sh -v /data/meilisearch:/data getmeili/meilisearch:v1.7 -c 'meilisearch --import-snapshot /data/snapshot.snapshot --db-path /data/data.ms' && sudo rm /data/meilisearch/snapshot.snapshot"
+# meilisearch --import-snapshot 导入后会继续作为服务前台运行不退出，
+# 用 timeout 限时 120s：导入完成、服务启动后即杀掉（data.ms 已建好）。
+# --ignore-snapshot-db-check 忽略已有 db（先 rm data.ms 兜底）。
+staging_exec "sudo mv /tmp/meili-snapshot /data/meilisearch/snapshot.snapshot && sudo rm -rf /data/meilisearch/data.ms && sudo timeout 120 docker run --rm --entrypoint /bin/sh -v /data/meilisearch:/data getmeili/meilisearch:v1.7 -c 'meilisearch --import-snapshot /data/snapshot.snapshot --db-path /data/data.ms' || true && sudo rm -f /data/meilisearch/snapshot.snapshot"
+# 验证 data.ms 已创建
+staging_exec "test -d /data/meilisearch/data.ms" || { log "ERROR: MeiliSearch import 失败，data.ms 未创建"; exit 1; }
 log "MeiliSearch: 启动 staging meili..."
 staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh up -d meilisearch"
 log "MeiliSearch: 完成"
