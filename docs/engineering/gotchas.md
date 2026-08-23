@@ -16,6 +16,11 @@
 - staging 数据每周由生产覆盖（drop+重建），会清空 staging 的写测试数据。staging 回滚需重新灌入生产基线再部署，非无风险。
 - 不要修改已执行的 Flyway 迁移或手工修正 schema history；应通过新的迁移演进数据库。
 - 应用节点（`124.221.143.25`）出网到 `github.com:22` 超时，但 `ssh.github.com:443` 可达；数据节点 22 端口正常。在该节点执行 `deploy-release.sh` 前，确认 `~/.ssh/config` 已将 `github.com` 指向 `ssh.github.com:443`，否则 `git fetch` tag 会卡在 SSH 超时。
+- 运维脚本（部署、同步、发布）必须在非生产环境或 dry-run 模式先完整跑通，再用于生产。staging 的 `sync-prod-to-staging.sh` 首次运行暴露 7 个问题（SSH sudo 读不到用户级 config、目标端密码用错、MeiliSearch v1.7 API 响应格式与文档不符、import entrypoint 错、`--import-snapshot` 导入后不退出、rsync 对 root 目录无写权限、Redis 7 `appendonly yes` 启动忽略 RDB），每个都需临时修+重新部署。根因是未先验证就上生产。
+- 涉及 sudo/cron 的脚本用显式绝对路径和显式参数，不依赖用户级 `~/.ssh/config`、`$HOME` 或 `$PATH`——sudo 后 HOME 变 `/root`，用户级配置读不到。
+- 对外部服务（MySQL/Redis/MeiliSearch）的 API 调用，先用 `curl`/`redis-cli` 手动确认实际响应格式再写进脚本，不凭文档假设。MeiliSearch v1.7 的 `/snapshots` 只支持 POST（创建），不支持 GET（列出下载）；snapshot 文件写磁盘而非 API 返回。
+- 长时间运行的 `docker run`（如 `--import-snapshot`）必须设 `timeout` 并验证产物（如 `data.ms` 是否创建）；`meilisearch --import-snapshot` 导入后会作为服务前台运行不退出，需 timeout 限时。
+- 临时容器（`docker run --rm`）要确认确实退出；残留容器占内存，在 1.9G 小机器上可能导致后续操作失败。
 
 ## 安全与表单
 
