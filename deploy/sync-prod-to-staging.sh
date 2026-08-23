@@ -150,7 +150,8 @@ log "MeiliSearch: 完成"
 
 # --- 图片 ---
 log "图片: rsync 同步（--delete 保持一致）..."
-rsync -avz --delete -e "ssh ${SSH_OPTS[*]}" /data/images/ "$STAGING_USER:/data/images/"
+# /data/images 为 root 所有，rsync 需通过 sudo 在目标端写入
+rsync -avz --delete --rsync-path="sudo rsync" -e "ssh ${SSH_OPTS[*]}" /data/images/ "$STAGING_USER:/data/images/"
 log "图片: 完成"
 
 # --- 恢复 staging app ---
