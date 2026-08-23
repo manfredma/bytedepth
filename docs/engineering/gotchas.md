@@ -12,7 +12,7 @@
 ## 部署
 
 - `docker restart` 不会构建或替换镜像。发布必须走 `sudo ./deploy/bootstrap-ops-deploy.sh`，它会按完整 Compose 定义重建服务。
-- 生产为单机（175），staging 预发独立部署（124）。发布流程：staging 预检任意 ref → 生产打 Tag 单机部署。完整流程、回滚与只读回归见 [部署手册](../../deploy/README.md)。
+- 生产为单机（175），staging 预发独立部署（124）。**staging 是测试环境**，用于验证尚未合并 `main` 的功能分支；发布流程：staging 部署候选 ref 验收 → 合并 `main` → 生产打 Tag 单机部署。完整流程、回滚与只读回归见 [部署手册](../../deploy/README.md)。
 - staging 数据每周由生产覆盖（drop+重建），会清空 staging 的写测试数据。staging 回滚需重新灌入生产基线再部署，非无风险。
 - 不要修改已执行的 Flyway 迁移或手工修正 schema history；应通过新的迁移演进数据库。
 - 应用节点（`124.221.143.25`）出网到 `github.com:22` 超时，但 `ssh.github.com:443` 可达；数据节点 22 端口正常。在该节点执行 `deploy-release.sh` 前，确认 `~/.ssh/config` 已将 `github.com` 指向 `ssh.github.com:443`，否则 `git fetch` tag 会卡在 SSH 超时。
@@ -21,6 +21,19 @@
 - 对外部服务（MySQL/Redis/MeiliSearch）的 API 调用，先用 `curl`/`redis-cli` 手动确认实际响应格式再写进脚本，不凭文档假设。MeiliSearch v1.7 的 `/snapshots` 只支持 POST（创建），不支持 GET（列出下载）；snapshot 文件写磁盘而非 API 返回。
 - 长时间运行的 `docker run`（如 `--import-snapshot`）必须设 `timeout` 并验证产物（如 `data.ms` 是否创建）；`meilisearch --import-snapshot` 导入后会作为服务前台运行不退出，需 timeout 限时。
 - 临时容器（`docker run --rm`）要确认确实退出；残留容器占内存，在 1.9G 小机器上可能导致后续操作失败。
+
+## 预发部署防踩坑
+
+staging 部署链路（`deploy-staging.sh` → `bootstrap-ops-deploy.sh` → `ctl.sh`）出过的事故与固化规则：
+
+- **部署模式必须跨脚本显式传递**：`deploy-staging.sh` 读取 `/etc/bytedepth-deploy.conf` 的 `BYTEDEPTH_DEPLOY_MODE` 后必须 `export`，不能假设子脚本能读到配置文件。bootstrap 依据该环境变量决定是否安装生产部署 Socket。
+- **「允许部署 Tag/分支」要与环境能力兼容**：`bootstrap-ops-deploy.sh` 随目标 commit 一起 checkout，由 root 执行。早期 Tag 的 bootstrap 无条件调用 `install-host-service.sh`（装生产 Socket），不认识 staging。`deploy-staging.sh` 在执行目标 bootstrap 前校验其是否引用 `BYTEDEPTH_DEPLOY_MODE`，不认识的旧 Tag 直接拒绝。
+- **测试脚本也要有安全边界**：`test-deploy-staging.sh` 会写 `/etc/bytedepth-deploy.conf`，必须默认拒绝宿主执行；`--container` 模式用 `/.dockerenv` 校验确实运行在容器内，非容器环境立即退出。
+- **不假设部署日志路径存在**：`/var/log/bytedepth-deploy.log` 不一定存在；部署脚本应让 stdout/stderr 可靠落盘，README 以实现为准，否则故障时难追溯。
+- **排障避免并发、频繁 SSH 重试**：2C2G 机器上 sshd 有 `MaxStartups` 节流，重复 SSH 探测会放大未认证连接积压导致失联。复用单连接、指数退避、限制并发。
+- **不展示 `docker compose config` 完整输出**：它会展开密钥。用脱敏检查命令或只查所需字段。
+- **「零 WARNING」自动化**：部署、测试、静态检查输出统一捕获并扫描；历史 Docker healthcheck 告警不能因「非本次引入」放行。
+- **2C2G 容量模型**：运行态（app + MySQL + Redis + MeiliSearch）勉强够，但「运行服务 + Docker Maven 构建」是另一种容量模型。构建峰值单独评估，限制 Maven heap、加受控 swap，或改 CI 构建镜像后部署。
 
 ## 安全与表单
 
