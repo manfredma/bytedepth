@@ -105,18 +105,36 @@ log "Redis: 完成（以 RDB 启动，重建 AOF）"
 
 # --- MeiliSearch ---
 # snapshot 放目录后重启不会导入，必须 --import-snapshot 启动，且清空旧 DB。
+# MeiliSearch v1.7：POST /snapshots 触发异步 task，snapshot 文件写到磁盘
+# /data/meilisearch/snapshots/，不通过 API 下载，直接从磁盘拷贝。
 log "MeiliSearch: 停止 staging meili..."
 staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh stop meilisearch"
 log "MeiliSearch: 清空 staging DB..."
 staging_exec "sudo rm -rf /data/meilisearch/data.ms"
-log "MeiliSearch: 生产创建 snapshot..."
-SNAP_UID=$(curl -s -X POST "http://127.0.0.1:7700/snapshots" -H "Authorization: Bearer $MEILI_MASTER_KEY" | grep -o '"uid":"[^"]*"' | cut -d'"' -f4)
-while [ "$(curl -s "http://127.0.0.1:7700/snapshots/$SNAP_UID" -H "Authorization: Bearer $MEILI_MASTER_KEY" | grep -o '"status":"[^"]*"' | cut -d'"' -f4)" != "succeeded" ]; do
+log "MeiliSearch: 生产创建 snapshot（异步 task）..."
+# data-access 模式下 MeiliSearch 绑定内网 IP，非 127.0.0.1
+MEILI_BIND_IP=${BYTEDEPTH_DATA_BIND_IP:-127.0.0.1}
+MEILI_URL="http://$MEILI_BIND_IP:7700"
+TASK_UID=$(curl -s -X POST "$MEILI_URL/snapshots" -H "Authorization: Bearer $MEILI_MASTER_KEY" | grep -o '"taskUid":[0-9]*' | cut -d: -f2)
+if [[ -z "$TASK_UID" ]]; then
+    log "ERROR: 创建 snapshot task 失败"
+    exit 1
+fi
+log "MeiliSearch: 等待 snapshot task $TASK_UID 完成..."
+while true; do
+    TASK_STATUS=$(curl -s "$MEILI_URL/tasks/$TASK_UID" -H "Authorization: Bearer $MEILI_MASTER_KEY" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+    [[ "$TASK_STATUS" == "succeeded" ]] && break
+    [[ "$TASK_STATUS" == "failed" ]] && { log "ERROR: snapshot task failed"; exit 1; }
     sleep 2
 done
-SNAP_DL=$(curl -s "http://127.0.0.1:7700/snapshots/$SNAP_UID" -H "Authorization: Bearer $MEILI_MASTER_KEY" | grep -o '"downloadUrl":"[^"]*"' | cut -d'"' -f4)
-log "MeiliSearch: 下载并传输 snapshot..."
-curl -s -o /tmp/meili-snapshot "http://127.0.0.1:7700$SNAP_DL" -H "Authorization: Bearer $MEILI_MASTER_KEY"
+log "MeiliSearch: 从生产磁盘拷贝 snapshot 文件..."
+# snapshot 文件在容器的 /meili_data/snapshots/，宿主机映射到 /data/meilisearch/snapshots/
+SNAP_SRC=$(docker exec bytedepth-meilisearch-1 sh -c 'ls /meili_data/snapshots/*.snapshot 2>/dev/null | sort | tail -1')
+if [[ -z "$SNAP_SRC" ]]; then
+    log "ERROR: 未找到 snapshot 文件"
+    exit 1
+fi
+docker cp "bytedepth-meilisearch-1:$SNAP_SRC" /tmp/meili-snapshot
 staging_send /tmp/meili-snapshot "/tmp/meili-snapshot"
 rm -f /tmp/meili-snapshot
 log "MeiliSearch: 导入 snapshot（一次性 docker run --import-snapshot）..."
