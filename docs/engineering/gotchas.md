@@ -12,7 +12,8 @@
 ## 部署
 
 - `docker restart` 不会构建或替换镜像。发布必须走 `sudo ./deploy/bootstrap-ops-deploy.sh`，它会按完整 Compose 定义重建服务。
-- 双机发布必须先数据节点、再应用节点；两节点验收通过前不能宣布上线。完整流程、回滚与只读回归见 [部署手册](../../deploy/README.md)。
+- 生产为单机（175），staging 预发独立部署（124）。发布流程：staging 预检任意 ref → 生产打 Tag 单机部署。完整流程、回滚与只读回归见 [部署手册](../../deploy/README.md)。
+- staging 数据每周由生产覆盖（drop+重建），会清空 staging 的写测试数据。staging 回滚需重新灌入生产基线再部署，非无风险。
 - 不要修改已执行的 Flyway 迁移或手工修正 schema history；应通过新的迁移演进数据库。
 - 应用节点（`124.221.143.25`）出网到 `github.com:22` 超时，但 `ssh.github.com:443` 可达；数据节点 22 端口正常。在该节点执行 `deploy-release.sh` 前，确认 `~/.ssh/config` 已将 `github.com` 指向 `ssh.github.com:443`，否则 `git fetch` tag 会卡在 SSH 超时。
 

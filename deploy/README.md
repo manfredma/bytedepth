@@ -29,10 +29,10 @@
 
 | 角色 | 公网 / 内网地址 | 部署模式 | 职责 |
 | --- | --- | --- | --- |
-| 数据节点 | `175.24.197.202` / `10.0.4.15` | `data-access` | MySQL、Redis、MeiliSearch、图片 NFS，以及一套应用和 Nginx |
-| 应用节点 | `124.221.143.25` / `10.0.0.5` | `external-services` | 通过私网使用数据服务和 NFS 图片目录，并运行一套应用和 Nginx |
+| 生产 | `175.24.197.202` / `10.0.4.15` | `data-access` | MySQL、Redis、MeiliSearch、图片，以及一套应用和 Nginx，服务 `bytedepth.cn` |
+| 预发 | `124.221.143.25` / `10.0.0.5` | `staging` | 独立 single-host 数据栈（自带 MySQL/Redis/MeiliSearch），服务 `staging.bytedepth.cn`；数据每周由生产覆盖 |
 
-DNS 或负载均衡完全切走数据节点前，两台机器必须保持相同的已发布版本和完整提交 SHA。网页单节点操作不能替代双机发布。
+生产应用层为单机（175）。staging 完全独立，与生产物理隔离，数据由 175 周期覆盖。DNS 已配置：`bytedepth.cn` → 175、`staging.bytedepth.cn` → 124，无通配符。
 
 ## 2. 所有机器的前置条件
 
