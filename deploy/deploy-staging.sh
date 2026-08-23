@@ -35,6 +35,13 @@ fi
 
 # deploy key（复用 /etc/bytedepth-deploy.conf 中的 GitHub deploy key）
 CONFIG_FILE=/etc/bytedepth-deploy.conf
+deploy_mode="$(awk -F= '$1=="BYTEDEPTH_DEPLOY_MODE"{value=$2} END{print value}' "$CONFIG_FILE" 2>/dev/null || true)"
+if [[ "$deploy_mode" != "staging" ]]; then
+    printf 'Refusing: BYTEDEPTH_DEPLOY_MODE must be staging, got %s\n' "${deploy_mode:-unset}" >&2
+    exit 1
+fi
+# bootstrap-ops-deploy.sh 依据环境变量决定是否安装生产部署 Socket。
+export BYTEDEPTH_DEPLOY_MODE="$deploy_mode"
 deploy_ssh_key="$(awk -F= '$1=="BYTEDEPTH_DEPLOY_SSH_KEY"{print $2}' "$CONFIG_FILE" 2>/dev/null || true)"
 if [[ -z "$deploy_ssh_key" || ! -r "$deploy_ssh_key" ]]; then
     printf 'Refusing: BYTEDEPTH_DEPLOY_SSH_KEY missing or unreadable\n' >&2
