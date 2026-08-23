@@ -6,7 +6,7 @@
 <link rel="stylesheet" th:href="@{/css/nav.css}">
 <link rel="stylesheet" th:href="@{/css/bd-dialog.css}">
 <script defer th:src="@{/js/bd-dialog.js}"></script>
-<nav class="nav-bar">
+<nav class="nav-bar" th:attr="data-env=${environment}">
     <div class="nav-inner">
         <div class="nav-left">
             <a th:href="@{/}" class="nav-brand">

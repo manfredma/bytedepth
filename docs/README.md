@@ -21,7 +21,7 @@
 - 构建、测试、覆盖率：读 [Maven 指南](agent-guides/maven.md)。
 - 创建 worktree、分支、PR 与受控发布：读 [Git 工作流](engineering/git-workflow.md)。
 - 同步 Obsidian 笔记：读 [同步指南](agent-guides/obsidian-sync.md)。
-- 部署、回滚和双机验收：只读 [部署手册](../deploy/README.md)。
+- 部署、回滚和生产与 staging 验收：只读 [部署手册](../deploy/README.md)。
 - 创建版本、记录变更、发布与回滚：读 [发布管理](releases/README.md)。
 - 了解后台运维页面的权限边界：读 [运维页面说明](security/ops.md)。
 - 维护知识库本身（新增、修改或删除文档）：读 [知识库建设原则](knowledge-base-principles.md)。

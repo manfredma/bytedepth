@@ -38,6 +38,9 @@ case "$deploy_mode" in
             exit 1
         fi
         ;;
+    staging)
+        compose_args=(-p bytedepth -f deploy/docker-compose.single-host.yml -f deploy/docker-compose.staging.yml)
+        ;;
     *)
         printf 'Unsupported BYTEDEPTH_DEPLOY_MODE: %s\n' "$deploy_mode" >&2
         exit 1

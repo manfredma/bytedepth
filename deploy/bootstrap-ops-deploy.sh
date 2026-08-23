@@ -21,7 +21,12 @@ require_ssh_origin() {
 cd "$SOURCE_ROOT"
 git_cmd() { git -c safe.directory="$SOURCE_ROOT" "$@"; }
 require_ssh_origin
-./deploy/install-host-service.sh
+
+# staging 模式不安装生产部署 Socket（避免任意 ref 与 Tag-only 语义冲突）。
+# staging 部署只走 SSH 脚本 deploy-staging.sh。
+if [[ "${BYTEDEPTH_DEPLOY_MODE:-}" != "staging" ]]; then
+    ./deploy/install-host-service.sh
+fi
 
 # compose 文件选择与 NFS 挂载检查统一由 ctl.sh 按部署模式处理。
 ./deploy/ctl.sh up --build -d

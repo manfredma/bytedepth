@@ -60,6 +60,7 @@ mybatis-plus:
       id-type: auto
 
 bytedepth:
+  environment: ${BYTEDEPTH_ENVIRONMENT:production}
   site:
     url: ${BYTEDEPTH_SITE_URL:https://bytedepth.cn}
   upload:
