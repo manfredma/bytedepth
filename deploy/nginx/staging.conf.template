@@ -1,55 +1,50 @@
-events {
-    worker_connections 1024;
+# staging server 配置（由 envsubst 处理 ${BYTEDEPTH_DOMAIN}）。
+# 此文件被 include 在 http{} 内（由 staging-root.conf 的 http 块引入），
+# 因此只含 server 块，不能有 events/http 块。
+# resolver 在 staging-root.conf 的 http 块中已声明。
+
+# HTTP -> HTTPS 跳转（仅 staging 域名）
+server {
+    listen 80;
+    server_name ${BYTEDEPTH_DOMAIN};
+    return 301 https://$host$request_uri;
 }
 
-http {
-    # Docker 会在 app 容器重建后分配新 IP；请求时经 Docker DNS 重新解析，避免 Nginx 持有旧 IP。
-    resolver 127.0.0.11 ipv6=off valid=10s;
-    resolver_timeout 5s;
+# IP 地址直接 HTTP 访问（不做 HTTPS 跳转）
+server {
+    listen 80 default_server;
+    server_name _;
 
-    # HTTP -> HTTPS 跳转（仅 staging 域名）
-    server {
-        listen 80;
-        server_name ${BYTEDEPTH_DOMAIN};
-        return 301 https://$host$request_uri;
+    client_max_body_size 10m;
+
+    location / {
+        set $app_upstream app:8080;
+        proxy_pass http://$app_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
+}
 
-    # IP 地址直接 HTTP 访问（不做 HTTPS 跳转）
-    server {
-        listen 80 default_server;
-        server_name _;
+# HTTPS
+server {
+    listen 443 ssl;
+    server_name ${BYTEDEPTH_DOMAIN};
 
-        client_max_body_size 10m;
+    ssl_certificate /etc/letsencrypt/live/${BYTEDEPTH_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${BYTEDEPTH_DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
 
-        location / {
-            set $app_upstream app:8080;
-            proxy_pass http://$app_upstream;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-    }
+    client_max_body_size 10m;
 
-    # HTTPS
-    server {
-        listen 443 ssl;
-        server_name ${BYTEDEPTH_DOMAIN};
-
-        ssl_certificate /etc/letsencrypt/live/${BYTEDEPTH_DOMAIN}/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/${BYTEDEPTH_DOMAIN}/privkey.pem;
-        ssl_protocols TLSv1.2 TLSv1.3;
-        ssl_ciphers HIGH:!aNULL:!MD5;
-
-        client_max_body_size 10m;
-
-        location / {
-            set $app_upstream app:8080;
-            proxy_pass http://$app_upstream;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
+    location / {
+        set $app_upstream app:8080;
+        proxy_pass http://$app_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
