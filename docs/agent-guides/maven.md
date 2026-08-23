@@ -35,3 +35,5 @@ bash scripts/verify-changed-coverage.sh
 ```bash
 $(/usr/libexec/java_home -v 25)/bin/java --enable-native-access=ALL-UNNAMED -jar target/xxx.jar
 ```
+
+改完 Java 源码后需重新构建并重启应用才能生效——旧进程不会热加载改动。本机开发时：`mvn package -DskipTests` → 停旧进程 → 重新启动 → 验证。不要改完代码不重启就让用户验证，导致用户看到的是旧版本。最终验证应在 staging 上进行（见 [AGENTS.md](../../AGENTS.md)），本机重启仅用于开发期快速确认。
