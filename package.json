@@ -4,27 +4,20 @@
   "private": true,
   "description": "ByteDepth 前端脚本与测试",
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
     "lint": "eslint bytedepth-start/src/main/resources/static/js/ tests/ playwright.config.mjs",
     "test:e2e": "env -u NO_COLOR playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.62.1",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^9.39.5",
-    "globals": "^17.8.0",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0"
-  },
-  "jest": {
-    "testEnvironment": "jsdom",
-    "setupFiles": [
-      "<rootDir>/jest.setup.js"
-    ],
-    "testMatch": [
-      "**/__tests__/**/*.test.js",
-      "**/src/test/js/**/*.test.js"
-    ]
+    "globals": "^17.10.0",
+    "happy-dom": "^20.11.6",
+    "jsdom": "^27.4.0",
+    "vitest": "^4.1.11"
   }
 }
