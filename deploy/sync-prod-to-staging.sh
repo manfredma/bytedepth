@@ -138,7 +138,7 @@ docker cp "bytedepth-meilisearch-1:$SNAP_SRC" /tmp/meili-snapshot
 staging_send /tmp/meili-snapshot "/tmp/meili-snapshot"
 rm -f /tmp/meili-snapshot
 log "MeiliSearch: 导入 snapshot（一次性 docker run --import-snapshot）..."
-staging_exec "sudo mv /tmp/meili-snapshot /data/meilisearch/snapshot.snapshot && sudo docker run --rm -v /data/meilisearch:/data getmeili/meilisearch:v1.7 --import-snapshot /data/snapshot.snapshot --db-path /data/data.ms && sudo rm /data/meilisearch/snapshot.snapshot"
+staging_exec "sudo mv /tmp/meili-snapshot /data/meilisearch/snapshot.snapshot && sudo docker run --rm --entrypoint /bin/sh -v /data/meilisearch:/data getmeili/meilisearch:v1.7 -c 'meilisearch --import-snapshot /data/snapshot.snapshot --db-path /data/data.ms' && sudo rm /data/meilisearch/snapshot.snapshot"
 log "MeiliSearch: 启动 staging meili..."
 staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh up -d meilisearch"
 log "MeiliSearch: 完成"
