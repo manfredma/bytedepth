@@ -185,6 +185,8 @@ ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
   "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh main"
 ```
 
+涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。必须先完成前置门禁与 PR 合并，再部署 `main` 到 staging；项目所有者明确验收通过后，才能进入 6.2 创建生产版本与部署生产。
+
 在 `staging.bytedepth.cn` 执行查询回归与写测试验证。staging 验证失败则修代码回到此步，不发布生产。
 
 ### 6.2 生产部署
