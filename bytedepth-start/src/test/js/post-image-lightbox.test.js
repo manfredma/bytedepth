@@ -81,8 +81,8 @@ test('trackpad pinch zooms only the preview and leaves ordinary wheel scrolling 
   dialog.dispatchEvent(pinch);
 
   expect(pinch.defaultPrevented).toBe(true);
-  expect(preview.style.transform).toMatch(/^scale\([1-4](?:\.\d+)?\)$/);
-  expect(preview.style.transform).not.toBe('scale(1)');
+  expect(preview.style.transform).toMatch(/scale\([1-4](?:\.\d+)?\)/);
+  expect(preview.style.transform).not.toMatch(/scale\(1\)/);
 
   const ordinaryWheel = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -60 });
   dialog.dispatchEvent(ordinaryWheel);
@@ -103,7 +103,7 @@ test('two-finger pinch scales the preview instead of the page', async () => {
 
   expect(start.defaultPrevented).toBe(true);
   expect(move.defaultPrevented).toBe(true);
-  expect(preview.style.transform).toBe('scale(2)');
+  expect(preview.style.transform).toMatch(/scale\(2\)/);
 });
 
 test('Safari gesture zoom is bounded and resets when another image opens', async () => {
@@ -121,11 +121,11 @@ test('Safari gesture zoom is bounded and resets when another image opens', async
 
   expect(start.defaultPrevented).toBe(true);
   expect(enlarge.defaultPrevented).toBe(true);
-  expect(preview.style.transform).toBe('scale(4)');
+  expect(preview.style.transform).toMatch(/scale\(4\)/);
 
   dialog.querySelector('.bd-image-lightbox__close').click();
   images[1].click();
-  expect(preview.style.transform).toBe('scale(1)');
+  expect(preview.style.transform).toMatch(/scale\(1\)/);
 });
 
 test('closed or incomplete gestures never take over page input', async () => {
@@ -171,17 +171,17 @@ test('Safari gesture wins over duplicate touchmove and releases control on gestu
   const duplicateMove = touchEvent('touchmove', [{ clientX: 0, clientY: 0 }, { clientX: 400, clientY: 0 }]);
   dialog.dispatchEvent(duplicateMove);
   expect(duplicateMove.defaultPrevented).toBe(true);
-  expect(preview.style.transform).toBe('scale(1)');
+  expect(preview.style.transform).toMatch(/scale\(1\)/);
 
   dialog.dispatchEvent(gestureEvent('gesturechange', 2));
   const end = gestureEvent('gestureend');
   dialog.dispatchEvent(end);
   expect(end.defaultPrevented).toBe(true);
-  expect(preview.style.transform).toBe('scale(2)');
+  expect(preview.style.transform).toMatch(/scale\(2\)/);
 
   const resumedTouchMove = touchEvent('touchmove', [{ clientX: 0, clientY: 0 }, { clientX: 400, clientY: 0 }]);
   dialog.dispatchEvent(resumedTouchMove);
-  expect(preview.style.transform).toBe('scale(4)');
+  expect(preview.style.transform).toMatch(/scale\(4\)/);
   dialog.dispatchEvent(touchEvent('touchend', [{ clientX: 0, clientY: 0 }, { clientX: 400, clientY: 0 }]));
   dialog.dispatchEvent(touchEvent('touchend', [{ clientX: 0, clientY: 0 }]));
   const moveAfterEnd = touchEvent('touchmove', [{ clientX: 0, clientY: 0 }, { clientX: 50, clientY: 0 }]);
@@ -220,5 +220,103 @@ test('keyboard, backdrop, currentSrc, and fallback labels preserve lightbox beha
   dialog.dispatchEvent(new Event('close'));
   const shrink = new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: 1000 });
   dialog.dispatchEvent(shrink);
-  expect(preview.style.transform).toBe('scale(1)');
+  expect(preview.style.transform).toMatch(/scale\(1\)/);
+});
+
+test('dragging the preview after zoom pans it within the lightbox', async () => {
+  document.body.innerHTML = '<article id="post-article"><div class="content"><img src="/images/example.png" alt="示例图"></div></article>';
+  await loadLightbox();
+  document.querySelector('.content img').click();
+  const dialog = document.querySelector('.bd-image-lightbox');
+  const preview = dialog.querySelector('.bd-image-lightbox__image');
+
+  // 放大到 2 倍后才允许拖动平移。
+  dialog.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -70 }));
+  expect(preview.style.transform).toMatch(/scale\(2/);
+
+  // 鼠标按下后拖动，图片应平移（transform 含 translate）。
+  const down = new Event('pointerdown', { bubbles: true, cancelable: true });
+  Object.defineProperties(down, { clientX: { value: 100 }, clientY: { value: 100 }, pointerId: { value: 1 } });
+  preview.dispatchEvent(down);
+  const move = new Event('pointermove', { bubbles: true, cancelable: true });
+  Object.defineProperties(move, { clientX: { value: 140 }, clientY: { value: 110 } });
+  window.dispatchEvent(move);
+  expect(preview.style.transform).toMatch(/translate\(/);
+  window.dispatchEvent(new Event('pointerup', { bubbles: true, cancelable: true }));
+
+  // 关闭重开后平移重置。
+  dialog.dispatchEvent(new Event('close'));
+  expect(preview.style.transform).not.toMatch(/translate\([^0]/);
+});
+
+test('pointerdown before zoom does not start panning', async () => {
+  document.body.innerHTML = '<article id="post-article"><div class="content"><img src="/images/example.png" alt="示例图"></div></article>';
+  await loadLightbox();
+  document.querySelector('.content img').click();
+  const dialog = document.querySelector('.bd-image-lightbox');
+  const preview = dialog.querySelector('.bd-image-lightbox__image');
+
+  // 未放大（scale=1）时 pointerdown 不应启动平移。
+  const down = new Event('pointerdown', { bubbles: true, cancelable: true });
+  Object.defineProperties(down, { clientX: { value: 100 }, clientY: { value: 100 }, pointerId: { value: 1 } });
+  preview.dispatchEvent(down);
+  const move = new Event('pointermove', { bubbles: true, cancelable: true });
+  Object.defineProperties(move, { clientX: { value: 200 }, clientY: { value: 200 } });
+  window.dispatchEvent(move);
+  expect(preview.style.transform).not.toMatch(/translate\([^0]/);
+});
+
+test('second touch pointerdown does not start panning', async () => {
+  document.body.innerHTML = '<article id="post-article"><div class="content"><img src="/images/example.png" alt="示例图"></div></article>';
+  await loadLightbox();
+  document.querySelector('.content img').click();
+  const dialog = document.querySelector('.bd-image-lightbox');
+  const preview = dialog.querySelector('.bd-image-lightbox__image');
+  dialog.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -70 }));
+
+  // 双指的第二指（pointerType=touch, isPrimary=false）不触发平移。
+  const down = new Event('pointerdown', { bubbles: true, cancelable: true });
+  Object.defineProperties(down, { clientX: { value: 100 }, clientY: { value: 100 }, pointerId: { value: 2 }, pointerType: { value: 'touch' }, isPrimary: { value: false } });
+  preview.dispatchEvent(down);
+  const move = new Event('pointermove', { bubbles: true, cancelable: true });
+  Object.defineProperties(move, { clientX: { value: 300 }, clientY: { value: 300 } });
+  window.dispatchEvent(move);
+  expect(preview.style.transform).toMatch(/translate\(0px, 0px\)/);
+});
+
+test('pointercancel stops panning', async () => {
+  document.body.innerHTML = '<article id="post-article"><div class="content"><img src="/images/example.png" alt="示例图"></div></article>';
+  await loadLightbox();
+  document.querySelector('.content img').click();
+  const dialog = document.querySelector('.bd-image-lightbox');
+  const preview = dialog.querySelector('.bd-image-lightbox__image');
+
+  // 放大后开始拖动，再用 pointercancel 中断。
+  dialog.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -70 }));
+  const down = new Event('pointerdown', { bubbles: true, cancelable: true });
+  Object.defineProperties(down, { clientX: { value: 100 }, clientY: { value: 100 }, pointerId: { value: 1 } });
+  preview.dispatchEvent(down);
+  window.dispatchEvent(new Event('pointercancel', { bubbles: true, cancelable: true }));
+  const moveAfterCancel = new Event('pointermove', { bubbles: true, cancelable: true });
+  Object.defineProperties(moveAfterCancel, { clientX: { value: 300 }, clientY: { value: 300 } });
+  window.dispatchEvent(moveAfterCancel);
+  // pointercancel 后 pointermove 不应再改变平移（translate 仍为拖动起始的 0）。
+  expect(preview.style.transform).toMatch(/translate\(0px, 0px\)/);
+});
+
+test('setPointerCapture is invoked when available', async () => {
+  document.body.innerHTML = '<article id="post-article"><div class="content"><img src="/images/example.png" alt="示例图"></div></article>';
+  await loadLightbox();
+  document.querySelector('.content img').click();
+  const dialog = document.querySelector('.bd-image-lightbox');
+  const preview = dialog.querySelector('.bd-image-lightbox__image');
+  const capture = vi.fn();
+  preview.setPointerCapture = capture;
+
+  dialog.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -70 }));
+  const down = new Event('pointerdown', { bubbles: true, cancelable: true });
+  Object.defineProperties(down, { clientX: { value: 100 }, clientY: { value: 100 }, pointerId: { value: 7 } });
+  preview.dispatchEvent(down);
+
+  expect(capture).toHaveBeenCalledWith(7);
 });

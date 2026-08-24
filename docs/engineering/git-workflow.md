@@ -2,15 +2,33 @@
 
 ## 结论
 
-项目采用 **GitHub Flow + 发布 Tag**：`main` 是唯一集成分支，短生命周期工作分支通过 PR 合并；生产版本由 `main` 上经受控流程创建的不可变 annotated Tag 部署。不使用长期 `develop` 或 `release` 分支，避免单一 Spring Boot 应用在多分支间产生额外的迁移与部署漂移。
+项目采用 **GitHub Flow + staging 验收 + 发布 Tag**：`main` 是唯一集成分支，短生命周期工作分支通过 PR 合并；**涉及界面交互、视觉、布局的改动必须先部署 staging 由项目所有者验收，验收通过后才合并 `main`**；生产版本由 `main` 上经受控流程创建的不可变 annotated Tag 部署。不使用长期 `develop` 或 `release` 分支，避免单一 Spring Boot 应用在多分支间产生额外的迁移与部署漂移。
+
+## 完整开发流程
+
+每个改动从开分支到上生产，固定走以下阶段。前一阶段未完成不得进入下一阶段：
+
+1. **开分支与 worktree**：从最新 `origin/main` 创建独立分支与 worktree（`feat/<topic>` / `fix/<topic>` / `docs/<topic>`）。
+2. **实现并补测试**：写代码 + 单元测试，业务分支覆盖 100%。TDD：先写失败测试，再最小实现。
+3. **跑前置门禁**：`bash scripts/verify-changed-coverage.sh`（Java 变更覆盖率 + 拒绝 Maven WARNING）、前端 `npm test` 与 `npm run lint`、部署脚本 `bash scripts/test-deploy-staging.sh`。零 WARNING，全绿才继续。
+4. **staging 预发验收**（界面/视觉/布局改动必须，后端改动建议）：
+   - 推送工作分支到 `origin`。
+   - 在 124 执行 `deploy-staging.sh <分支>` 部署该分支（staging 是测试环境，接受任意命名分支用于验收）。
+   - 项目所有者在 `staging.bytedepth.cn` 验收。**未收到明确「staging 验收通过」不得合并 `main`。**
+5. **PR 合并 `main`**：验收通过后创建 PR，全部必需检查通过后合并。合并后立即删除 worktree 与分支。
+6. **创建生产版本**：从干净 `main` 运行 `scripts/prepare-release.sh` 创建新 SemVer annotated Tag。
+7. **生产部署**：部署该 Tag（不接受 `main`、分支、裸 commit 或已部署 Tag）。
+
+> 纯后端、无界面影响的改动，可跳过 staging 验收直接 PR 合并；但后端改动仍建议在 staging 验证 Flyway/Compose/Nginx/Redis 等运维层面（本机测试无法覆盖）。
 
 ## 强制约束
 
 1. 禁止直接在 `main` 修改、提交或推送功能、修复、测试和文档。
 2. 开始工作前从最新 `origin/main` 创建独立分支与 worktree：功能用 `feat/<topic>`，修复用 `fix/<topic>`，文档用 `docs/<topic>`。
 3. 提交前必须独立运行 `bash scripts/verify-changed-coverage.sh`；它会依据最近正式 Tag 自动检查生产 Java 变更的行、分支、方法 100% 覆盖，并拒绝 Maven 输出中的 WARNING。
-4. 推送工作分支、创建 PR，全部必需检查通过后才合并到 `main`。采用 squash merge 或 merge commit 均可，但不得 rebase 已创建的发布 Tag。
-5. `main` 上只允许受控发布流程创建版本提交与 Tag；部署只接受新的 annotated Tag，绝不部署分支。
+4. **涉及界面交互、视觉、布局的改动，PR 合并 `main` 前必须完成 staging 验收**：`deploy-staging.sh <分支>` 部署 → 项目所有者明确验收通过 → 才合并。不得用本机代码要求所有者验收。
+5. 推送工作分支、创建 PR，全部必需检查通过后才合并到 `main`。采用 squash merge 或 merge commit 均可，但不得 rebase 已创建的发布 Tag。
+6. `main` 上只允许受控发布流程创建版本提交与 Tag；生产部署只接受新的 annotated Tag，绝不部署 `main`、分支或裸 commit。
 
 ## 日常操作
 
@@ -22,7 +40,11 @@ cd ../bytedepth-feature
 # 开发、补测试后
 bash scripts/verify-changed-coverage.sh
 git push -u origin feat/<topic>
-# 创建并合并 PR
+
+# 界面/视觉改动：先部署 staging 验收
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
+  "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh feat/<topic>"
+# 项目所有者在 staging.bytedepth.cn 验收通过后，再创建并合并 PR
 ```
 
 首次克隆或切换工作站后执行一次：

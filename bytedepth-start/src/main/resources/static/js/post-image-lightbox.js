@@ -15,18 +15,31 @@
     const MIN_SCALE = 1;
     const MAX_SCALE = 4;
     let scale = MIN_SCALE;
+    let panX = 0;
+    let panY = 0;
     let pinchStartDistance = 0;
     let pinchStartScale = MIN_SCALE;
     let gestureStartScale = MIN_SCALE;
     let gestureActive = false;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let pointerStartPanX = 0;
+    let pointerStartPanY = 0;
+    let pointerActive = false;
 
+    const applyTransform = () => {
+        preview.style.transform = `translate(${panX}px, ${panY}px) scale(${Number(scale.toFixed(3))})`;
+    };
     const applyScale = requestedScale => {
         scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, requestedScale));
-        preview.style.transform = `scale(${Number(scale.toFixed(3))})`;
+        applyTransform();
     };
     const resetZoom = () => {
         pinchStartDistance = 0;
         gestureActive = false;
+        pointerActive = false;
+        panX = 0;
+        panY = 0;
         applyScale(MIN_SCALE);
     };
     const touchDistance = touches => Math.hypot(
@@ -99,6 +112,37 @@
         event.preventDefault();
         gestureActive = false;
     }, { passive: false });
+    // 放大后（scale > 1）允许在灯箱内拖动平移查看溢出部分。
+    // 用 Pointer Events 统一鼠标与单指触摸；双指缩放由上面 Touch/Gesture 事件处理，
+    // 这里只在非双指手势期间接管单指/鼠标拖动。
+    preview.addEventListener('pointerdown', event => {
+        if (!dialog.open || scale <= MIN_SCALE || (event.pointerType === 'touch' && event.isPrimary === false)) {
+            return;
+        }
+        pointerStartX = event.clientX;
+        pointerStartY = event.clientY;
+        pointerStartPanX = panX;
+        pointerStartPanY = panY;
+        pointerActive = true;
+        if (typeof preview.setPointerCapture === 'function') {
+            preview.setPointerCapture(event.pointerId);
+        }
+    });
+    window.addEventListener('pointermove', event => {
+        if (!pointerActive) {
+            return;
+        }
+        event.preventDefault();
+        panX = pointerStartPanX + (event.clientX - pointerStartX);
+        panY = pointerStartPanY + (event.clientY - pointerStartY);
+        applyTransform();
+    }, { passive: false });
+    window.addEventListener('pointerup', () => {
+        pointerActive = false;
+    });
+    window.addEventListener('pointercancel', () => {
+        pointerActive = false;
+    });
 
     const isSvgImage = image => {
         const source = image.currentSrc || image.src;

@@ -8,7 +8,11 @@ services:
     volumes:
       - /data/mysql:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      # 用 MYSQL_PWD 环境变量传密码（不暴露在命令行，避免 MySQL 的
+      # "Using a password on the command line interface can be insecure" warning）。
+      # MYSQL_ROOT_PASSWORD 由 compose environment 注入容器，healthcheck 进程内展开。
+      # --silent 抑制 ping 成功时的 stdout，只看 exit code。
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_ROOT_PASSWORD mysqladmin ping -h localhost --silent"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -7,15 +7,21 @@
 ### Fixed
 
 - 图片灯箱接管手机双指、Mac 触控板与 Safari gesture 缩放，只缩放预览图片并阻止底层页面跟随缩放；普通滚轮与单指平移保持原行为，缩放限制为 1–4 倍且切换图片时自动重置。
+- 图片灯箱尺寸：宽度 `calc(100vw - 48px)` 撑满视窗（留 24px 边距不贴边）`max-height: calc(100dvh - 48px)` 不超出视窗；`overflow: hidden` 裁剪放大溢出在灯箱内，backdrop 始终覆盖视口，溢出部分有深色底色不露底层页面。
+- 图片灯箱放大后（scale > 1）支持灯箱内拖动平移查看溢出部分：Pointer Events 统一鼠标与单指拖动，双指缩放仍由 Touch/Gesture 事件处理；关闭重开平移重置。
+- staging 部署的 `bootstrap-ops-deploy.sh` 无条件安装部署 Socket（不再按 mode 跳过）：Socket 是远程触发部署的通道，staging 作为测试环境同样安装以验证该通道；`deploy-staging.sh` 仍校验 `BYTEDEPTH_DEPLOY_MODE=staging` 作为护栏，防止误在生产机运行。
+- staging 部署脚本测试在非容器环境（宿主）直接执行时拒绝运行，避免覆盖宿主真实 `/etc/bytedepth-deploy.conf`。
+- MySQL healthcheck 改用 `MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysqladmin ping --silent`，消除不带密码导致的 `Access denied` 告警（密码走环境变量，不触发命令行密码 insecure 告警）。
 
 ### Changed
 
 - 前端单元测试迁移到 Node 22、Vitest 与 Happy DOM，默认 `npm test` 强制执行灯箱脚本行、分支、函数和语句 100% 覆盖门禁；移除误提交的本机绝对路径 `node_modules` 符号链接并清理弃用依赖告警。
 - 明确界面交互、视觉和布局改动统一在 staging 由项目所有者验收，验收通过前不得创建生产版本或部署生产。
+- staging 验收提前到 PR 合并 `main` 之前：`deploy-staging.sh` 接受 origin 上任意命名分支（默认 `main`）用于预发验收，验收通过后才合并 `main`。
 
 ### Compatibility
 
-- 无数据库迁移、API 破坏性变更或部署配置变更；纯前端 CSS/JS、测试工具链与流程文档调整。
+- 无数据库迁移、API 破坏性变更或部署配置格式变更；包含纯前端 CSS/JS、测试工具链、流程文档及 staging 部署隔离修复。
 
 ## [v2.11.6] - 2026-08-22
 
