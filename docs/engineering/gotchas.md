@@ -35,7 +35,7 @@ staging 部署链路（`deploy-staging.sh` → `bootstrap-ops-deploy.sh` → `ct
 - **「零 WARNING」自动化**：部署、测试、静态检查输出统一捕获并扫描；历史 Docker healthcheck 告警不能因「非本次引入」放行。
 - **2C2G 容量模型**：运行态（app + MySQL + Redis + MeiliSearch）勉强够，但「运行服务 + Docker Maven 构建」是另一种容量模型。构建峰值单独评估，限制 Maven heap、加受控 swap，或改 CI 构建镜像后部署。
 - **Docker BuildKit session healthcheck warning（平台层，非项目可修）**：Docker 29.x 构建期间 journalctl 会出现 `level=warning "healthcheck failed" error="only one connection allowed"`，这是 BuildKit gRPC session healthcheck 与 containerd 单连接限制的已知冲突。只在构建期出现，构建结束 session 关闭后不再出现；不影响部署结果与运行态容器健康。需等 Docker/BuildKit 上游修复，项目层不改。
-- **MySQL healthcheck 必须用 MYSQL_PWD 传密码**：`mysqladmin ping` 不带密码会报 `Access denied`（虽 exit=0 但 stderr 有告警）；直接命令行 `-p` 会触发 `Using a password on the command line can be insecure` warning。用 `MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysqladmin ping --silent`：密码走环境变量不暴露在命令行，`--silent` 抑制成功输出。
+- **MySQL healthcheck 必须用 MYSQL_PWD 传密码**：`mysqladmin ping` 不带密码会报 `Access denied`（虽 exit=0 但 stderr 有告警）；直接命令行 `-p` 会触发 `Using a password on the command line can be insecure` warning。用 `MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysqladmin ping --silent`：密码走环境变量不暴露在命令行，`--silent` 抑制成功输出。**前瞻**：`MYSQL_PWD` 在 MySQL 8.0.34 起标记弃用，当前 8.0.x 无运行期 warning；若未来 patch 加 deprecation warning（违反零 WARNING），改用 `--defaults-extra-file` 指向 root-only 临时密码文件，或 pin 具体 patch 版本（如 `mysql:8.0.36`）而非浮动的 `mysql:8.0`。
 
 ## 安全与表单
 
