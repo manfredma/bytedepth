@@ -1,17 +1,18 @@
 .bd-image-lightbox {
-    width: 100vw;
-    max-width: none;
-    max-height: 100dvh;
+    width: min(100vw - 48px, 1600px);
+    max-width: calc(100vw - 48px);
+    max-height: calc(100dvh - 48px);
     margin: auto;
     padding: 0;
     border: 0;
     background: transparent;
+    overflow: hidden;
     overscroll-behavior: contain;
 }
 .bd-image-lightbox::backdrop { background: rgba(13, 20, 32, .82); }
-.bd-image-lightbox__frame { position: relative; display: grid; place-items: center; width: 100%; height: 100dvh; touch-action: pan-x pan-y; }
+.bd-image-lightbox__frame { position: relative; display: grid; place-items: center; width: 100%; height: 100%; touch-action: pan-x pan-y; }
 .bd-image-lightbox__frame--svg { background: #fff; }
-.bd-image-lightbox__image { display: block; max-width: 100vw; max-height: 100dvh; object-fit: contain; transform-origin: center; }
+.bd-image-lightbox__image { display: block; max-width: 100%; max-height: calc(100dvh - 48px); object-fit: contain; transform-origin: center; }
 .bd-image-lightbox__close { position: fixed; top: 14px; right: 14px; width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .92); color: #202938; cursor: pointer; font: 24px/1 sans-serif; }
 .content img[data-bd-lightbox] { cursor: zoom-in; }
 .content img[data-bd-lightbox]:focus-visible { outline: 3px solid var(--accent, #315efb); outline-offset: 4px; }
