@@ -7,7 +7,7 @@
 ### Fixed
 
 - 图片灯箱接管手机双指、Mac 触控板与 Safari gesture 缩放，只缩放预览图片并阻止底层页面跟随缩放；普通滚轮与单指平移保持原行为，缩放限制为 1–4 倍且切换图片时自动重置。
-- 图片灯箱尺寸：宽度 `calc(100vw - 48px)` 撑满视窗（留 24px 边距不贴边），图片 `min-height: 50dvh` 保证横向图高度不低于视窗一半、`max-height: calc(100dvh - 48px)` 不超出视窗；`overflow: hidden` 裁剪放大溢出在灯箱内，backdrop 始终覆盖视口，溢出部分有深色底色不露底层页面。
+- 图片灯箱尺寸：宽度 `calc(100vw - 48px)` 撑满视窗（留 24px 边距不贴边）`max-height: calc(100dvh - 48px)` 不超出视窗；`overflow: hidden` 裁剪放大溢出在灯箱内，backdrop 始终覆盖视口，溢出部分有深色底色不露底层页面。
 - 图片灯箱放大后（scale > 1）支持灯箱内拖动平移查看溢出部分：Pointer Events 统一鼠标与单指拖动，双指缩放仍由 Touch/Gesture 事件处理；关闭重开平移重置。
 - staging 部署的 `bootstrap-ops-deploy.sh` 无条件安装部署 Socket（不再按 mode 跳过）：Socket 是远程触发部署的通道，staging 作为测试环境同样安装以验证该通道；`deploy-staging.sh` 仍校验 `BYTEDEPTH_DEPLOY_MODE=staging` 作为护栏，防止误在生产机运行。
 - staging 部署脚本测试在非容器环境（宿主）直接执行时拒绝运行，避免覆盖宿主真实 `/etc/bytedepth-deploy.conf`。
