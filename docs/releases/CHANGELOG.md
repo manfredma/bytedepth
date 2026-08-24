@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- MySQL healthcheck 加 `start_period: 60s`：MySQL 8.0 冷启动（InnoDB 初始化 + TLS 配置约 48 秒）期间不计入 retries，避免部署时 app 依赖因 healthcheck 偶发 unhealthy 启动失败。
+
 ## [v2.11.7] - 2026-08-24
 
 **Tag**：`v2.11.7`
