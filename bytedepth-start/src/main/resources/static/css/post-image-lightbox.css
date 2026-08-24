@@ -1,6 +1,6 @@
 .bd-image-lightbox {
-    width: min(100vw - 48px, 1600px);
-    max-width: calc(100vw - 48px);
+    width: calc(100vw - 48px);
+    max-width: none;
     max-height: calc(100dvh - 48px);
     margin: auto;
     padding: 0;
