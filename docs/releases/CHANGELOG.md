@@ -7,7 +7,8 @@
 ### Fixed
 
 - 图片灯箱接管手机双指、Mac 触控板与 Safari gesture 缩放，只缩放预览图片并阻止底层页面跟随缩放；普通滚轮与单指平移保持原行为，缩放限制为 1–4 倍且切换图片时自动重置。
-- 图片灯箱占满浏览器视窗：去除 1280px 宽度上限，灯箱与图片 `width: 100vw` + `max-height: 100dvh`，避免大屏上图片周围浪费空间。
+- 图片灯箱尺寸调大为 `min(100vw - 48px, 1600px)`（原 1280px），留 24px 边距不拥挤；`overflow: hidden` 裁剪放大溢出在灯箱内，backdrop 始终覆盖视口，溢出部分有深色底色不露底层页面。
+- 图片灯箱放大后（scale > 1）支持灯箱内拖动平移查看溢出部分：Pointer Events 统一鼠标与单指拖动，双指缩放仍由 Touch/Gesture 事件处理；关闭重开平移重置。
 - staging 部署的 `bootstrap-ops-deploy.sh` 无条件安装部署 Socket（不再按 mode 跳过）：Socket 是远程触发部署的通道，staging 作为测试环境同样安装以验证该通道；`deploy-staging.sh` 仍校验 `BYTEDEPTH_DEPLOY_MODE=staging` 作为护栏，防止误在生产机运行。
 - staging 部署脚本测试在非容器环境（宿主）直接执行时拒绝运行，避免覆盖宿主真实 `/etc/bytedepth-deploy.conf`。
 - MySQL healthcheck 改用 `MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysqladmin ping --silent`，消除不带密码导致的 `Access denied` 告警（密码走环境变量，不触发命令行密码 insecure 告警）。
