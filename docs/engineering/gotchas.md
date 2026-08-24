@@ -15,7 +15,7 @@
 - 生产为单机（175），staging 预发独立部署（124）。**staging 是测试环境**，用于验证尚未合并 `main` 的功能分支；发布流程：staging 部署候选 ref 验收 → 合并 `main` → 生产打 Tag 单机部署。完整流程、回滚与只读回归见 [部署手册](../../deploy/README.md)。
 - staging 数据每周由生产覆盖（drop+重建），会清空 staging 的写测试数据。staging 回滚需重新灌入生产基线再部署，非无风险。
 - 不要修改已执行的 Flyway 迁移或手工修正 schema history；应通过新的迁移演进数据库。
-- 应用节点（`124.221.143.25`）出网到 `github.com:22` 超时，但 `ssh.github.com:443` 可达；数据节点 22 端口正常。在该节点执行 `deploy-release.sh` 前，确认 `~/.ssh/config` 已将 `github.com` 指向 `ssh.github.com:443`，否则 `git fetch` tag 会卡在 SSH 超时。
+- 应用节点（`124.221.143.25`）出网到 `github.com:22` 超时，但 `ssh.github.com:443` 可达；数据节点 22 端口正常。在该节点执行 `deploy-release.sh` 或 `deploy-staging.sh` 前，确认 root 的 `~/.ssh/config` 已将 `github.com` 指向 `ssh.github.com:443`（这两个脚本以 sudo 运行，root 无用户级 ssh config 会卡在 22 端口超时）。
 - 运维脚本（部署、同步、发布）必须在非生产环境或 dry-run 模式先完整跑通，再用于生产。staging 的 `sync-prod-to-staging.sh` 首次运行暴露 7 个问题（SSH sudo 读不到用户级 config、目标端密码用错、MeiliSearch v1.7 API 响应格式与文档不符、import entrypoint 错、`--import-snapshot` 导入后不退出、rsync 对 root 目录无写权限、Redis 7 `appendonly yes` 启动忽略 RDB），每个都需临时修+重新部署。根因是未先验证就上生产。
 - 涉及 sudo/cron 的脚本用显式绝对路径和显式参数，不依赖用户级 `~/.ssh/config`、`$HOME` 或 `$PATH`——sudo 后 HOME 变 `/root`，用户级配置读不到。
 - 对外部服务（MySQL/Redis/MeiliSearch）的 API 调用，先用 `curl`/`redis-cli` 手动确认实际响应格式再写进脚本，不凭文档假设。MeiliSearch v1.7 的 `/snapshots` 只支持 POST（创建），不支持 GET（列出下载）；snapshot 文件写磁盘而非 API 返回。
@@ -26,8 +26,8 @@
 
 staging 部署链路（`deploy-staging.sh` → `bootstrap-ops-deploy.sh` → `ctl.sh`）出过的事故与固化规则：
 
-- **部署模式必须跨脚本显式传递**：`deploy-staging.sh` 读取 `/etc/bytedepth-deploy.conf` 的 `BYTEDEPTH_DEPLOY_MODE` 后必须 `export`，不能假设子脚本能读到配置文件。bootstrap 依据该环境变量决定是否安装生产部署 Socket。
-- **「允许部署 Tag/分支」要与环境能力兼容**：`bootstrap-ops-deploy.sh` 随目标 commit 一起 checkout，由 root 执行。早期 Tag 的 bootstrap 无条件调用 `install-host-service.sh`（装生产 Socket），不认识 staging。`deploy-staging.sh` 在执行目标 bootstrap 前校验其是否引用 `BYTEDEPTH_DEPLOY_MODE`，不认识的旧 Tag 直接拒绝。
+- **部署 Socket 在所有模式安装**：`bytedepth-deploy.socket` 是远程触发部署的 systemd 通道（外部往 socket 发 `deploy-tag vX.Y.Z` → 以 root 部署）。生产用于远程触发 Tag 部署；staging 作为测试环境同样安装，以便验证该通道。`bootstrap-ops-deploy.sh` 无条件调用 `install-host-service.sh`，不按 mode 跳过。Socket 触发的 `bytedepth-deploy-socket` 只接受 SemVer Tag（正则校验），不接受任意 ref。
+- **deploy-staging.sh 的 mode 校验是护栏**：`deploy-staging.sh` 读取 `/etc/bytedepth-deploy.conf` 校验 `BYTEDEPTH_DEPLOY_MODE=staging`，确保只在 staging 机器上运行（防止误在生产机跑 staging 脚本）。但 `ctl.sh` 自己读 conf 选 compose 文件，不依赖 deploy-staging.sh 传递 mode 环境变量。
 - **测试脚本也要有安全边界**：`test-deploy-staging.sh` 会写 `/etc/bytedepth-deploy.conf`，必须默认拒绝宿主执行；`--container` 模式用 `/.dockerenv` 校验确实运行在容器内，非容器环境立即退出。
 - **不假设部署日志路径存在**：`/var/log/bytedepth-deploy.log` 不一定存在；部署脚本应让 stdout/stderr 可靠落盘，README 以实现为准，否则故障时难追溯。
 - **排障避免并发、频繁 SSH 重试**：2C2G 机器上 sshd 有 `MaxStartups` 节流，重复 SSH 探测会放大未认证连接积压导致失联。复用单连接、指数退避、限制并发。

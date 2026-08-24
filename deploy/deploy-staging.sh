@@ -37,8 +37,6 @@ if [[ "$deploy_mode" != "staging" ]]; then
     printf 'Refusing: BYTEDEPTH_DEPLOY_MODE must be staging, got %s\n' "${deploy_mode:-unset}" >&2
     exit 1
 fi
-# bootstrap-ops-deploy.sh 依据环境变量决定是否安装生产部署 Socket。
-export BYTEDEPTH_DEPLOY_MODE="$deploy_mode"
 deploy_ssh_key="$(awk -F= '$1=="BYTEDEPTH_DEPLOY_SSH_KEY"{print $2}' "$CONFIG_FILE" 2>/dev/null || true)"
 if [[ -z "$deploy_ssh_key" || ! -r "$deploy_ssh_key" ]]; then
     printf 'Refusing: BYTEDEPTH_DEPLOY_SSH_KEY missing or unreadable\n' >&2
@@ -62,20 +60,6 @@ if [[ -z "$(git_cmd ls-remote --heads --tags origin "$REF" 2>/dev/null)" ]]; the
 fi
 
 git_cmd checkout --detach "$COMMIT"
-
-# staging 兼容性校验（review A）：
-# bootstrap-ops-deploy.sh 随目标 commit 一起 checkout，由 root 执行。
-# 早期 Tag 的 bootstrap 无条件调用 install-host-service.sh（安装生产部署 Socket），
-# 不认识 BYTEDEPTH_DEPLOY_MODE，部署到 staging 会违反「staging 不装 Socket」约定。
-# 这里校验 checkout 出来的 bootstrap 是否引用了 staging mode 判定，
-# 不认识的旧 Tag 在执行前直接拒绝，绝不触发其 installer。
-readonly BOOTSTRAP="$SOURCE_ROOT/deploy/bootstrap-ops-deploy.sh"
-if ! grep -q 'BYTEDEPTH_DEPLOY_MODE' "$BOOTSTRAP" 2>/dev/null; then
-    printf 'Refusing: %s has a non-staging-aware bootstrap (no BYTEDEPTH_DEPLOY_MODE check)\n' "$REF" >&2
-    printf '旧 Tag 的 bootstrap 会无条件安装生产部署 Socket，禁止部署到 staging\n' >&2
-    exit 1
-fi
-
 ./deploy/bootstrap-ops-deploy.sh
 
 install -d -m 0700 "$STATE_DIR"

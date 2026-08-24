@@ -38,8 +38,8 @@ trap 'rm -rf "$FIXTURE_ROOT"' EXIT
 
 readonly ORIGIN="$FIXTURE_ROOT/origin.git"
 readonly CHECKOUT="$FIXTURE_ROOT/checkout"
-readonly MODE_CAPTURE="$FIXTURE_ROOT/bootstrap-mode"
 readonly INSTALL_MARKER="$FIXTURE_ROOT/install-called"
+readonly BOOTSTRAP_RAN="$FIXTURE_ROOT/bootstrap-ran"
 readonly FAKE_BIN="$FIXTURE_ROOT/bin"
 
 DEPLOY_KEY=/tmp/bytedepth-test-deploy-key
@@ -66,13 +66,9 @@ SCRIPT
     chmod +x "$FAKE_BIN/git"
 }
 
-# 构造一个 bare origin + 本地 checkout，用给定的 bootstrap 内容提交并推到 origin/main。
-# $1 = bootstrap 脚本内容（heredoc 体）
-# $2 = 可选，"real-deps" 时放置 fake install-host-service.sh 与 ctl.sh（供真实 bootstrap 调用）
+# 构造一个 bare origin + 本地 checkout，用真实 bootstrap 提交并推到 origin/main。
+# "real-deps" 时放置 fake install-host-service.sh 与 ctl.sh（供真实 bootstrap 调用）。
 setup_fixture() {
-    local bootstrap_body="$1"
-    local with_deps="${2:-}"
-
     git init --bare --initial-branch=main "$ORIGIN" >/dev/null
     git init --initial-branch=main "$CHECKOUT" >/dev/null
     git -C "$CHECKOUT" config user.name test
@@ -81,22 +77,20 @@ setup_fixture() {
 
     mkdir -p "$CHECKOUT/deploy"
     cp /workspace/deploy/deploy-staging.sh "$CHECKOUT/deploy/deploy-staging.sh"
-    printf '%s\n' "$bootstrap_body" > "$CHECKOUT/deploy/bootstrap-ops-deploy.sh"
+    cp /workspace/deploy/bootstrap-ops-deploy.sh "$CHECKOUT/deploy/bootstrap-ops-deploy.sh"
     chmod +x "$CHECKOUT/deploy/deploy-staging.sh" "$CHECKOUT/deploy/bootstrap-ops-deploy.sh"
 
-    if [[ "$with_deps" == "real-deps" ]]; then
-        # fake install-host-service.sh：记录被调用（真实版会装生产 Socket）。
-        cat > "$CHECKOUT/deploy/install-host-service.sh" <<SCRIPT
+    # fake install-host-service.sh：记录被调用（真实版装部署 Socket）。
+    cat > "$CHECKOUT/deploy/install-host-service.sh" <<SCRIPT
 #!/usr/bin/env bash
 printf '%s\n' 'install-called' > "$INSTALL_MARKER"
 SCRIPT
-        # fake ctl.sh：空操作成功，避免真实 compose 依赖。
-        cat > "$CHECKOUT/deploy/ctl.sh" <<'SCRIPT'
+    # fake ctl.sh：空操作成功，避免真实 compose 依赖。
+    cat > "$CHECKOUT/deploy/ctl.sh" <<'SCRIPT'
 #!/usr/bin/env bash
 exit 0
 SCRIPT
-        chmod +x "$CHECKOUT/deploy/install-host-service.sh" "$CHECKOUT/deploy/ctl.sh"
-    fi
+    chmod +x "$CHECKOUT/deploy/install-host-service.sh" "$CHECKOUT/deploy/ctl.sh"
 
     printf 'fixture\n' > "$CHECKOUT/fixture.txt"
     git -C "$CHECKOUT" add .
@@ -105,113 +99,71 @@ SCRIPT
 }
 
 reset_state() {
-    rm -rf "$ORIGIN" "$CHECKOUT" "$MODE_CAPTURE" "$INSTALL_MARKER" "$FAKE_BIN"
+    rm -rf "$ORIGIN" "$CHECKOUT" "$INSTALL_MARKER" "$BOOTSTRAP_RAN" "$FAKE_BIN"
 }
 
-# --- 用例 1：staging mode 成功传播给 bootstrap ---
-
-STAGING_AWARE_BOOTSTRAP='#!/usr/bin/env bash
-set -Eeuo pipefail
-printf "%s\n" "${BYTEDEPTH_DEPLOY_MODE:-unset}" > "'"$MODE_CAPTURE"'"
-# 引用 BYTEDEPTH_DEPLOY_MODE，模拟 staging-aware 的真实 bootstrap。
-if [[ "${BYTEDEPTH_DEPLOY_MODE:-}" != "staging" ]]; then
-    : # 真实 bootstrap 在此调用 install-host-service.sh；测试用空操作代替
-fi'
+# --- 用例 1：配置为非 staging mode 时 deploy-staging.sh 拒绝，且不执行 bootstrap ---
 
 reset_state
 install_fake_git
-setup_fixture "$STAGING_AWARE_BOOTSTRAP"
-write_conf staging
-
-(cd "$CHECKOUT" && PATH="$FAKE_BIN:$PATH" ./deploy/deploy-staging.sh main) >/dev/null
-actual_mode="$(cat "$MODE_CAPTURE")"
-if [[ "$actual_mode" != "staging" ]]; then
-    printf 'Expected bootstrap mode staging, got %s\n' "$actual_mode" >&2
-    exit 1
-fi
-
-# --- 用例 2：配置为非 staging mode 时拒绝，且不执行 bootstrap ---
-
-rm -f "$MODE_CAPTURE"
+setup_fixture
 write_conf single-host
 
 if (cd "$CHECKOUT" && PATH="$FAKE_BIN:$PATH" ./deploy/deploy-staging.sh main) >/tmp/non-staging.out 2>&1; then
     printf 'Expected staging deployment to reject single-host mode\n' >&2
     exit 1
 fi
-if [[ -e "$MODE_CAPTURE" ]]; then
-    printf 'Bootstrap ran after staging deployment rejected the configured mode\n' >&2
-    exit 1
-fi
-
-# --- 用例 3（review A）：目标 commit 的 bootstrap 不引用 BYTEDEPTH_DEPLOY_MODE
-# （模拟旧 Tag 的无条件 install-host-service.sh）时，必须拒绝且不执行该 bootstrap。 ---
-
-reset_state
-install_fake_git
-# 旧式 bootstrap：无条件调用 install（用标记文件模拟），完全不引用 mode 变量。
-OLD_BOOTSTRAP='#!/usr/bin/env bash
-set -Eeuo pipefail
-printf "%s\n" "install-called" > "'"$INSTALL_MARKER"'"
-printf "%s\n" "ran" > "'"$MODE_CAPTURE"'"'
-setup_fixture "$OLD_BOOTSTRAP"
-write_conf staging
-
-if (cd "$CHECKOUT" && PATH="$FAKE_BIN:$PATH" ./deploy/deploy-staging.sh main) >/tmp/old-tag.out 2>&1; then
-    printf 'Expected staging deployment to reject non-staging-aware bootstrap\n' >&2
-    exit 1
-fi
 if [[ -e "$INSTALL_MARKER" ]]; then
-    printf 'install-host-service ran for a non-staging-aware bootstrap\n' >&2
-    exit 1
-fi
-if [[ -e "$MODE_CAPTURE" ]]; then
-    printf 'Bootstrap executed despite being non-staging-aware\n' >&2
+    printf 'install-host-service ran after staging deployment rejected the configured mode\n' >&2
     exit 1
 fi
 
-# --- 用例 4（Minor 集成测试）：真实 bootstrap + fake installer 端到端验证。
-# staging mode 经 deploy-staging.sh export 后，真实 bootstrap 必须跳过 install-host-service.sh
-# （即不装生产 Socket）。这是「Socket 不会安装」事故路径的回归保护。 ---
+# --- 用例 2：staging mode 下 bootstrap 无条件调用 install-host-service.sh（装 Socket）。
+# Socket 是远程触发部署的通道，所有模式（含 staging）都安装，staging 用于测试该通道。 ---
 
 reset_state
 install_fake_git
-setup_fixture "$(cat /workspace/deploy/bootstrap-ops-deploy.sh)" real-deps
+setup_fixture
 write_conf staging
 
-if ! (cd "$CHECKOUT" && PATH="$FAKE_BIN:$PATH" ./deploy/deploy-staging.sh main) >/tmp/integration.out 2>&1; then
+if ! (cd "$CHECKOUT" && PATH="$FAKE_BIN:$PATH" ./deploy/deploy-staging.sh main) >/tmp/staging.out 2>&1; then
     printf 'staging deployment with real bootstrap failed:\n' >&2
-    cat /tmp/integration.out >&2
-    exit 1
-fi
-if [[ -e "$INSTALL_MARKER" ]]; then
-    printf 'Real bootstrap called install-host-service.sh under staging mode\n' >&2
-    exit 1
-fi
-
-# --- 用例 5（Minor 集成测试）：真实 bootstrap 在非 staging 环境下必须调用 install。
-# 直接执行 bootstrap（绕过 deploy-staging.sh，后者会拒绝非 staging），验证 mode 分支对称性。 ---
-
-rm -f "$INSTALL_MARKER"
-# 非 staging 环境变量，直接跑真实 bootstrap + fake installer。
-if ! (cd "$CHECKOUT" && PATH="$FAKE_BIN:$PATH" env BYTEDEPTH_DEPLOY_MODE=single-host \
-        ./deploy/bootstrap-ops-deploy.sh) >/tmp/bootstrap-nostaging.out 2>&1; then
-    printf 'Real bootstrap failed under single-host mode:\n' >&2
-    cat /tmp/bootstrap-nostaging.out >&2
+    cat /tmp/staging.out >&2
     exit 1
 fi
 if [[ ! -e "$INSTALL_MARKER" ]]; then
-    printf 'Real bootstrap did not call install-host-service.sh under non-staging mode\n' >&2
+    printf 'Real bootstrap did not call install-host-service.sh under staging mode\n' >&2
+    printf 'Socket 应在所有模式安装（含 staging，用于测试远程部署通道）\n' >&2
     exit 1
 fi
 
-# --- 用例 6（分支 ref 接受）：staging 应接受 origin 上的非 main 分支用于预发验收。
+# --- 用例 3：bootstrap 是 mode-agnostic——不读 BYTEDEPTH_DEPLOY_MODE 环境变量。
+# 直接执行 bootstrap（绕过 deploy-staging.sh），无论 mode 环境变量如何都调 install。 ---
+
+reset_state
+install_fake_git
+setup_fixture
+
+# 即使设了 staging mode 环境变量，bootstrap 仍应调 install（不再有 mode 跳过逻辑）。
+if ! (cd "$CHECKOUT" && PATH="$FAKE_BIN:$PATH" env BYTEDEPTH_DEPLOY_MODE=staging \
+        ./deploy/bootstrap-ops-deploy.sh) >/tmp/bootstrap-staging-env.out 2>&1; then
+    printf 'Real bootstrap failed with BYTEDEPTH_DEPLOY_MODE=staging env:\n' >&2
+    cat /tmp/bootstrap-staging-env.out >&2
+    exit 1
+fi
+if [[ ! -e "$INSTALL_MARKER" ]]; then
+    printf 'bootstrap skipped install when BYTEDEPTH_DEPLOY_MODE=staging was set\n' >&2
+    printf 'bootstrap 应 mode-agnostic，不再因 staging 跳过 install\n' >&2
+    exit 1
+fi
+
+# --- 用例 4：分支 ref 接受——staging 接受 origin 上的非 main 分支用于预发验收。
 # 场景：功能分支尚未合并 main，先部署到 staging 让所有者验收。
 # 关键：该分支的 commit 必须不在 origin/main 上，否则测不到「非 main 分支」语义。 ---
 
 reset_state
 install_fake_git
-setup_fixture "$(cat /workspace/deploy/bootstrap-ops-deploy.sh)" real-deps
+setup_fixture
 # 在 main 之上新增一个 commit，只推到 feat 分支，不推回 main。
 git -C "$CHECKOUT" commit --allow-empty -m 'feature commit not on main' >/dev/null
 git -C "$CHECKOUT" branch feat/verify-staging
@@ -224,12 +176,12 @@ if ! (cd "$CHECKOUT" && PATH="$FAKE_BIN:$PATH" ./deploy/deploy-staging.sh feat/v
     exit 1
 fi
 
-# --- 用例 7（裸 SHA 拒绝）：任意裸 SHA 不在 origin 任何命名分支或 Tag 上时，必须拒绝。
+# --- 用例 5：裸 SHA 拒绝——任意裸 SHA 不在 origin 任何命名分支或 Tag 上时，必须拒绝。
 # 安全底线：不能让任意 commit 以 root 构建+挂载。 ---
 
 reset_state
 install_fake_git
-setup_fixture "$(cat /workspace/deploy/bootstrap-ops-deploy.sh)" real-deps
+setup_fixture
 write_conf staging
 # 制造一个不在任何分支/Tag 的裸 SHA：在 checkout 上新建一个 commit 但不推到 origin 任何 ref。
 BARE_COMMIT=$(git -C "$CHECKOUT" commit-tree -m 'orphan' \

@@ -154,7 +154,7 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 2. `.env` 用 `deploy/.env.example` 生成，填 staging 专用新密钥（不复用生产），追加 `BYTEDEPTH_DOMAIN=staging.bytedepth.cn`、`BYTEDEPTH_ENVIRONMENT=staging`、`JAVA_TOOL_OPTIONS=...-Xmx256m`。
 3. 申请 TLS 证书：`sudo certbot certonly --standalone -d staging.bytedepth.cn`
 4. 首次启动：先 `ctl.sh up -d mysql redis meilisearch`，执行首次数据同步（见下），再 `ctl.sh up -d`。
-5. staging 不安装生产部署 Socket（`bootstrap-ops-deploy.sh` 在 staging 模式自动跳过）。
+5. staging 同样安装部署 Socket（`bootstrap-ops-deploy.sh` 无条件安装，所有模式一致）：Socket 是远程触发部署的通道，staging 作为测试环境也装以便验证该通道。`deploy-staging.sh` 仍校验 `BYTEDEPTH_DEPLOY_MODE=staging` 防止误在生产机运行。
 
 ### 数据同步（生产→staging）
 

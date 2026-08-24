@@ -7,8 +7,7 @@
 ### Fixed
 
 - 图片灯箱接管手机双指、Mac 触控板与 Safari gesture 缩放，只缩放预览图片并阻止底层页面跟随缩放；普通滚轮与单指平移保持原行为，缩放限制为 1–4 倍且切换图片时自动重置。
-- staging 部署现在校验并向完整 Compose 重建流程传递 `BYTEDEPTH_DEPLOY_MODE=staging`，避免错误安装仅供生产使用的部署 Socket。
-- staging 部署在执行目标 `bootstrap-ops-deploy.sh` 前校验其是否引用 `BYTEDEPTH_DEPLOY_MODE`，拒绝不认识 staging 的旧 Tag（其 bootstrap 会无条件安装生产部署 Socket）。
+- staging 部署的 `bootstrap-ops-deploy.sh` 无条件安装部署 Socket（不再按 mode 跳过）：Socket 是远程触发部署的通道，staging 作为测试环境同样安装以验证该通道；`deploy-staging.sh` 仍校验 `BYTEDEPTH_DEPLOY_MODE=staging` 作为护栏，防止误在生产机运行。
 - staging 部署脚本测试在非容器环境（宿主）直接执行时拒绝运行，避免覆盖宿主真实 `/etc/bytedepth-deploy.conf`。
 
 ### Changed
