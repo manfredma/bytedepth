@@ -7,6 +7,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 不允许在 `main` 分支直接开发。功能、修复和文档改动必须在独立 `feat/*`、`fix/*` 或 `docs/*` 分支的 Git worktree 中完成；通过前置质量门禁后经 PR 合并。`main` 仅允许受控发布流程写入版本提交。worktree 合并到 `main` 后必须立即删除，不长期保留。详见 [Git 工作流](docs/engineering/git-workflow.md)。
 - Maven 命令必须使用 Java 25：`JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn ...`
 - 不得忽略任何构建、测试、静态分析、发布或部署验收输出中的 `WARNING`：必须在继续流程前定位并修复；无法修复时立即中止并报告，不能将含告警的结果称为成功。
+- 本机可能同 IP 部署多个工程（如 career）共用 bytedepth-nginx 与 `bytedepth_default` 网络：各工程 compose service 名必须带工程前缀（`bytedepth-app`、`career-app`），**禁止用 `app` 等通用名**（别名冲突导致 nginx 轮询路由错误）；其他工程路由通过宿主 `/opt/nginx-conf.d/*.conf` 注入（nginx.conf 已 include），**禁止 `docker cp` 到容器**（nginx 重建会丢）；详见 [部署手册](deploy/README.md) 同 IP 多站点约束与 [工程陷阱](docs/engineering/gotchas.md)。
 - 改完代码必须跑测试，不能只编译通过。
 - 不带病上线：发布前所有测试（单元、E2E、静态分析）必须全绿；既有的、非本次引入的失败同样不构成放行理由，发现必须当场修复或中止发布并报告，不得以「pre-existing」为由跳过。
 - 每项代码改动必须补齐单元测试；本次改动涉及的业务逻辑分支覆盖率必须达到 100%，并在提交前提供覆盖率验证结果。
