@@ -37,4 +37,4 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /mnt/bytedepth-images:/srv/images:ro
     depends_on:
-      - app
+      - bytedepth-app
