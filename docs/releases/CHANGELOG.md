@@ -7,8 +7,8 @@
 ## [v2.11.10] - 2026-08-25
 
 **Tag**：`v2.11.10`
-**Commit**：（发布后补）
-**部署**：（部署验收后补）
+**Commit**: d90fd1f4bb41fb968e11632d6d6df4f88bd4f7e9
+**部署**: 2026-08-25 11:36 CST；生产单机(175.24.197.202)已部署。nginx conf.d 宿主挂载生效,career 路由 nginx 重建后不丢;certbot deploy hook 已安装。career.bytedepth.cn 证书正确、HTTP 302;bytedepth.cn HTTP 200、连续 3 次无 career 间歇;部署零 ERROR。
 **回滚基线**：`v2.11.9`
 
 ### Fixed
