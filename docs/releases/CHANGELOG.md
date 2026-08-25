@@ -7,8 +7,8 @@
 ## [v2.11.9] - 2026-08-25
 
 **Tag**：`v2.11.9`
-**Commit**：（发布后补）
-**部署**：（部署验收后补）
+**Commit**: 26b4fdabaa4b4ea773b2f94f5f98f0ac50bee1e8
+**部署**: 2026-08-25 11:09 CST；生产单机(175.24.197.202)已部署。nginx service 名 bytedepth-app 生效,--remove-orphans 清旧容器,部署零 ERROR。首页 HTTPS 200、连续 6 次稳定返回 bytedepth(无 career 间歇)。
 **回滚基线**：`v2.11.8`
 
 ### Fixed
