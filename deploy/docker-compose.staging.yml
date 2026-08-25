@@ -36,7 +36,7 @@ services:
       BYTEDEPTH_DOMAIN: ${BYTEDEPTH_DOMAIN:?BYTEDEPTH_DOMAIN must be set in .env}
     volumes:
       - ./nginx/staging-root.conf:/etc/nginx/nginx.conf:ro
-      - /opt/nginx-conf.d:/etc/nginx/conf.d:ro
+      - /opt/nginx-conf.d:/etc/nginx/conf.d
       - ./nginx/staging.conf.template:/etc/nginx/templates/default.conf.template:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
