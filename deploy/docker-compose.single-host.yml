@@ -46,7 +46,7 @@ services:
       timeout: 5s
       retries: 5
 
-  app:
+  bytedepth-app:
     build:
       context: ..
     restart: unless-stopped
@@ -86,4 +86,4 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
-      - app
+      - bytedepth-app

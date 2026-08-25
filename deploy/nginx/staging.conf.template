@@ -18,7 +18,7 @@ server {
     client_max_body_size 10m;
 
     location / {
-        set $app_upstream app:8080;
+        set $app_upstream bytedepth-app:8080;
         proxy_pass http://$app_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -40,7 +40,7 @@ server {
     client_max_body_size 10m;
 
     location / {
-        set $app_upstream app:8080;
+        set $app_upstream bytedepth-app:8080;
         proxy_pass http://$app_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
