@@ -28,6 +28,7 @@ require_ssh_origin
 ./deploy/install-host-service.sh
 
 # compose 文件选择与 NFS 挂载检查统一由 ctl.sh 按部署模式处理。
-./deploy/ctl.sh up --build -d
+# --remove-orphans 清理旧 service 名残留容器（如 service 改名后旧容器不再属于当前 compose project）。
+./deploy/ctl.sh up --build -d --remove-orphans
 ./deploy/ctl.sh up -d --force-recreate nginx
 ./deploy/ctl.sh ps
