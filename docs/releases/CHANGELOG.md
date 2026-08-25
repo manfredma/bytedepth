@@ -4,6 +4,19 @@
 
 ## Unreleased
 
+## [v2.11.9] - 2026-08-25
+
+**Tag**：`v2.11.9`
+**Commit**：（发布后补）
+**部署**：（部署验收后补）
+**回滚基线**：`v2.11.8`
+
+### Fixed
+
+- 修复 bytedepth.cn 间歇性返回 career 页面：bytedepth 与 career 共用 Docker 网络，两工程 app service 都叫 `app` 导致 nginx 轮询解析。app service 改名 `bytedepth-app`，nginx upstream 用唯一 service 名；bootstrap 加 `--remove-orphans` 清理旧容器。
+- Maven 镜像 `mirrorOf` 从 `central` 改为 `*`，覆盖所有仓库（含 Spring），加速服务器端 Docker 构建。
+- 2C2G staging 内存限制：app `-Xmx256m`、Redis `maxmemory 64mb`、Dockerfile Maven `-Xmx512m`，避免构建期间内存耗尽导致 SSH 失联。只 staging 生效，生产不受限。
+
 ## [v2.11.8] - 2026-08-24
 
 **Tag**：`v2.11.8`
