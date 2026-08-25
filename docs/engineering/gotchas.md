@@ -22,7 +22,11 @@
 - 长时间运行的 `docker run`（如 `--import-snapshot`）必须设 `timeout` 并验证产物（如 `data.ms` 是否创建）；`meilisearch --import-snapshot` 导入后会作为服务前台运行不退出，需 timeout 限时。
 - 临时容器（`docker run --rm`）要确认确实退出；残留容器占内存，在 1.9G 小机器上可能导致后续操作失败。
 
-## 预发部署防踩坑
+## 跨工程网络别名冲突（critical）
+
+bytedepth 与 career 共用 `bytedepth_default` Docker 网络（career 加入 `external: bytedepth_default`）。**两个工程的 compose app service 都叫 `app`**，各自在网络注册 `app` 别名，导致 nginx `proxy_pass http://app:8080` 的 DNS 轮询解析到两个容器——**bytedepth.cn 间歇性返回 career 页面**（登录页变 career、登录后变 bytedepth，间歇出现）。
+
+修复：bytedepth app service 改名 `bytedepth-app`，career app service 改名 `career-app`，nginx upstream 用唯一 service 名。**规则：共用 Docker 网络的多个工程，service 名必须带工程前缀，不能用 `app`/`web` 等通用名**。`getent hosts <name>` 在 nginx 容器内验证是否唯一解析。
 
 staging 部署链路（`deploy-staging.sh` → `bootstrap-ops-deploy.sh` → `ctl.sh`）出过的事故与固化规则：
 
