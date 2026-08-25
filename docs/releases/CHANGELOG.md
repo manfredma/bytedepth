@@ -4,6 +4,19 @@
 
 ## Unreleased
 
+## [v2.11.10] - 2026-08-25
+
+**Tag**：`v2.11.10`
+**Commit**：（发布后补）
+**部署**：（部署验收后补）
+**回滚基线**：`v2.11.9`
+
+### Fixed
+
+- nginx conf.d 持久化挂载：`nginx.conf` 加 `include /etc/nginx/conf.d/*.conf`，compose nginx 挂载宿主 `/opt/nginx-conf.d`，解决同 IP 多站点（career）路由在 nginx 容器重建后丢失导致证书域名不匹配的问题。新增域名的 conf 写入 `/opt/nginx-conf.d/` 自动加载、部署不丢。
+- certbot 续期 deploy hook：`/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh` 续期后自动 reload nginx，所有证书续期生效无需手动操作。
+- `deploy/README.md` 增补同 IP 多站点部署约束（service 名带工程前缀、conf.d 注入规则、禁止 docker cp 到容器）。
+
 ## [v2.11.9] - 2026-08-25
 
 **Tag**：`v2.11.9`
