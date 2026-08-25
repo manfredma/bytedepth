@@ -36,4 +36,4 @@ services:
       - ./nginx/staging.conf.template:/etc/nginx/templates/default.conf.template:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
-      - app
+      - bytedepth-app
