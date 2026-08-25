@@ -6,7 +6,7 @@ services:
   mysql:
     command: ["mysqld", "--innodb-buffer-pool-size=128M"]
 
-  app:
+  bytedepth-app:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bytedepth?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root

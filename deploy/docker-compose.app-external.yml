@@ -2,7 +2,7 @@
 # Run from the repository root:
 # docker compose --env-file .env -f deploy/docker-compose.app-external.yml up --build -d
 services:
-  app:
+  bytedepth-app:
     build:
       context: ..
     restart: unless-stopped
