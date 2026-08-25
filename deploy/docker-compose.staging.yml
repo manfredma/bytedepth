@@ -21,7 +21,10 @@ services:
       BYTEDEPTH_SESSION_COOKIE_SECURE: "true"
       BYTEDEPTH_ENVIRONMENT: ${BYTEDEPTH_ENVIRONMENT:-production}
       BYTEDEPTH_DEPLOY_SOCKET_PATH: /run/bytedepth-deploy/deploy.sock
-      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Shanghai --enable-native-access=ALL-UNNAMED}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Shanghai --enable-native-access=ALL-UNNAMED -Xmx256m}
+
+  redis:
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env}", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
 
   nginx:
     image: nginx:alpine
