@@ -12,6 +12,11 @@
 - Git remote 固定为 `git@github.com:manfredma/bytedepth.git`；部署脚本拒绝 HTTPS remote，避免服务器出网策略变化导致发布卡住。
 - 数据库、Redis、MeiliSearch 只应在内网/VPN 可达，不能暴露到公网。
 - 本手册是仓库内唯一的部署、发布、切流、回滚和灾备操作说明，不能以其他文档作为执行依据。
+- **同 IP 多站点部署（critical）**：本机可能同时部署其他工程（如 career），共用 bytedepth-nginx 边缘容器与 `bytedepth_default` Docker 网络。多站点共存规则：
+  - 各工程的 compose service 名必须带工程前缀（如 `bytedepth-app`、`career-app`），**不能用 `app` 等通用名**——否则网络别名冲突导致 nginx 轮询解析到错误容器（bytedepth.cn 间歇返回 career 页面）。
+  - 其他工程的路由通过 `/opt/nginx-conf.d/*.conf` 注入（nginx.conf `include /etc/nginx/conf.d/*.conf` 加载）；该目录宿主挂载，nginx 容器重建不丢失。
+  - 其他工程的 `docker cp` 注入 nginx conf 已废弃——必须写入 `/opt/nginx-conf.d/`，否则 bytedepth 部署 nginx 重建后路由丢失。
+  - 新增域名：签证书（certbot）+ 放 conf 到 `/opt/nginx-conf.d/` + 证书续期 deploy hook 自动 reload nginx。
 
 ## 1. 选择拓扑
 
