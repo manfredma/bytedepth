@@ -763,11 +763,11 @@
         <div class="series-panel" id="seriesPanel">
             <div class="series-panel-header">专栏文章</div>
             <div class="series-name" th:text="${series.name}">专栏名</div>
-            <a th:each="item : ${seriesPosts}"
+            <a th:each="item, iterStat : ${seriesPosts}"
                th:href="@{/posts/{slug}(slug=${item.slug})}"
                th:classappend="${item.id == post.id ? ' active' : ''}"
                class="series-item">
-                <span class="order" th:text="${item.seriesOrder} + '.'"></span>
+                <span class="order" th:text="${iterStat.count} + '.'"></span>
                 <span th:text="${item.title}">文章标题</span>
             </a>
         </div>

@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.portal;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -111,5 +112,56 @@ class PostControllerSeriesDetailRenderingTest {
                 .andExpect(view().name("public/posts/detail"))
                 .andExpect(content().string(containsString("专栏文章")))
                 .andExpect(content().string(containsString("/images/cache.png")));
+    }
+
+    @Test
+    void seriesPanelShowsPositionalOrderStartingFromOne() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(77L);
+        dto.setSlug("retrospective-software-engineering-practice");
+        dto.setTitle("软件工程实践复盘");
+        dto.setContent("正文内容");
+        dto.setStatus("PUBLISHED");
+        dto.setPublishedAt(LocalDateTime.of(2026, 8, 1, 9, 0));
+        dto.setUpdatedAt(LocalDateTime.of(2026, 8, 1, 9, 0));
+        when(getPostQryExe.executeBySlug(dto.getSlug())).thenReturn(dto);
+
+        Post post = Post.reconstruct(77L, dto.getSlug(), dto.getTitle(), dto.getContent(), PostStatus.PUBLISHED,
+                dto.getPublishedAt(), dto.getPublishedAt(), dto.getUpdatedAt(), null, 1L, false);
+        post.assignSeries(13L, 5);
+        when(postRepository.findById(77L)).thenReturn(Optional.of(post));
+        when(postRepository.findPrevPublished(77L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(77L)).thenReturn(Optional.empty());
+        when(seriesRepository.findById(13L)).thenReturn(Optional.of(Series.reconstruct(13L,
+                "工程实践", "engineering-practice", null, 1L)));
+
+        // 模拟 series_order 存在空洞：4、5、6（前序文章被移出专栏后未重排），展示序号仍应为 1、2、3
+        when(getSeriesPostsQryExe.execute(13L)).thenReturn(List.of(
+                seriesItem(76L, "first-post", "第一篇", 4),
+                seriesItem(77L, dto.getSlug(), dto.getTitle(), 5),
+                seriesItem(78L, "last-post", "末篇", 6)));
+        when(listTagsQryExe.findByPostId(77L)).thenReturn(List.of());
+        when(listCommentsQryExe.findApprovedByPostId(77L)).thenReturn(List.of());
+        when(postViewCounter.getCount(77L)).thenReturn(0L);
+
+        mockMvc.perform(get("/posts/" + dto.getSlug()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("public/posts/detail"))
+                // 展示序号用列表位置（1、2、3），而非 series_order 原值（4、5、6）
+                .andExpect(content().string(containsString("<span class=\"order\">1.</span>")))
+                .andExpect(content().string(containsString("<span class=\"order\">2.</span>")))
+                .andExpect(content().string(containsString("<span class=\"order\">3.</span>")))
+                .andExpect(content().string(not(containsString("<span class=\"order\">4.</span>"))))
+                .andExpect(content().string(not(containsString("<span class=\"order\">5.</span>"))))
+                .andExpect(content().string(not(containsString("<span class=\"order\">6.</span>"))));
+    }
+
+    private static SeriesPostItemDTO seriesItem(Long id, String slug, String title, int seriesOrder) {
+        SeriesPostItemDTO item = new SeriesPostItemDTO();
+        item.setId(id);
+        item.setSlug(slug);
+        item.setTitle(title);
+        item.setSeriesOrder(seriesOrder);
+        return item;
     }
 }
