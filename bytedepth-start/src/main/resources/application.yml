@@ -144,5 +144,6 @@ bytedepth:
       capacity: 10
       period: 1m
     upload-ip:
-      capacity: 20
-      period: 1h
+      # 60/min：单管理员批量上传（Obsidian 同步脚本）需要，桶容量 60、每秒补 1 令牌
+      capacity: 60
+      period: 1m
