@@ -68,7 +68,7 @@
             <thead><tr><th>#</th><th>标题</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
                 <tr th:each="post,iter : ${series.posts}">
-                    <td th:text="${post.seriesOrder}">1</td>
+                    <td th:text="${iter.count}">1</td>
                     <td th:text="${post.title}">标题</td>
                     <td>
                         <span th:if="${post.status == 'PUBLISHED'}" class="badge badge-PUBLISHED">已发布</span>

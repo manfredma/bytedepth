@@ -63,11 +63,11 @@
 
     <div th:if="${#lists.isEmpty(series.posts)}" class="empty">该专栏暂无已发布文章</div>
 
-    <a th:each="post : ${series.posts}"
+    <a th:each="post, postStat : ${series.posts}"
        th:href="@{/posts/{slug}(slug=${post.slug})}"
        class="post-card">
         <div class="post-header">
-            <span class="post-order" th:text="${post.seriesOrder} + '.'">01.</span>
+            <span class="post-order" th:text="${(series.currentPage - 1) * pageSize + postStat.count} + '.'">01.</span>
             <span class="post-title" th:text="${post.title}">文章标题</span>
         </div>
         <p th:if="${post.summary != null and !#strings.isEmpty(post.summary)}" class="post-summary" th:text="${post.summary}">摘要</p>

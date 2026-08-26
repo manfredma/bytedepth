@@ -21,6 +21,7 @@
 - 对外部服务（MySQL/Redis/MeiliSearch）的 API 调用，先用 `curl`/`redis-cli` 手动确认实际响应格式再写进脚本，不凭文档假设。MeiliSearch v1.7 的 `/snapshots` 只支持 POST（创建），不支持 GET（列出下载）；snapshot 文件写磁盘而非 API 返回。
 - 长时间运行的 `docker run`（如 `--import-snapshot`）必须设 `timeout` 并验证产物（如 `data.ms` 是否创建）；`meilisearch --import-snapshot` 导入后会作为服务前台运行不退出，需 timeout 限时。
 - 临时容器（`docker run --rm`）要确认确实退出；残留容器占内存，在 1.9G 小机器上可能导致后续操作失败。
+- **SSH 断开后远程命令不会继续执行（除非脱离会话）**：`ssh user@host "cmd"` 这种前台形式，客户端断开（网络抖动、超时、关闭）时 sshd 向远程会话发 `SIGHUP`，前台脚本及其子进程（`docker build`、`compose up`）默认被终止；只有 `docker compose up -d` 已启动的 detached 容器不受会话影响会继续运行。长任务（部署、镜像构建）必须 `nohup ./deploy-staging.sh > /tmp/x.log 2>&1 &`（或 `setsid`/tmux）脱离会话、再本地轮询日志；不要用同步 SSH 阻塞等待长任务，连接抖动会中断构建且无日志留存。
 
 ## 跨工程网络别名冲突（critical）
 
