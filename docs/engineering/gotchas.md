@@ -22,6 +22,7 @@
 - 长时间运行的 `docker run`（如 `--import-snapshot`）必须设 `timeout` 并验证产物（如 `data.ms` 是否创建）；`meilisearch --import-snapshot` 导入后会作为服务前台运行不退出，需 timeout 限时。
 - 临时容器（`docker run --rm`）要确认确实退出；残留容器占内存，在 1.9G 小机器上可能导致后续操作失败。
 - **SSH 断开后远程命令不会继续执行（除非脱离会话）**：`ssh user@host "cmd"` 这种前台形式，客户端断开（网络抖动、超时、关闭）时 sshd 向远程会话发 `SIGHUP`，前台脚本及其子进程（`docker build`、`compose up`）默认被终止；只有 `docker compose up -d` 已启动的 detached 容器不受会话影响会继续运行。长任务（部署、镜像构建）必须 `nohup ./deploy-staging.sh > /tmp/x.log 2>&1 &`（或 `setsid`/tmux）脱离会话、再本地轮询日志；不要用同步 SSH 阻塞等待长任务，连接抖动会中断构建且无日志留存。
+- **部署版本确认需 sudo 读 release-history**：`deploy-release.sh` 把 `version=vX.Y.Z` 写入 `/var/lib/bytedepth-deploy/release-history`，文件权限 root 0600（STATE_DIR 0700）。ubuntu 用户无 sudo 读不了，`grep` 无输出会误判「未部署」。确认部署版本必须 `sudo grep "version=vX.Y.Z" /var/lib/bytedepth-deploy/release-history`。
 
 ## 跨工程网络别名冲突（critical）
 
@@ -46,6 +47,7 @@ staging 部署链路（`deploy-staging.sh` → `bootstrap-ops-deploy.sh` → `ct
 
 - 默认 CSRF 仓库存于 HTTP Session。Thymeleaf 表单会自动注入 `_csrf`；手工 POST 和测试必须显式携带有效 CSRF token。
 - CSRF 仓库选型与历史故障见 [CSRF 决策记录](../security/csrf-session-repository.md)。
+- 限流放宽验收：图片上传限流 `upload-ip`（`RateLimitFilter`，认证前执行 + Redis/Bucket4j 令牌桶，配置 `bytedepth.rate-limit.upload-ip`）。登录后连续 POST `/admin/images/upload` N 次（N>旧 capacity）统计 429。CSRF token 从 `/login` 与 `/admin/posts/new` 的 hidden field `name="_csrf"` 读，放 form body `_csrf`，**不加** `X-CSRF-TOKEN` header（加会 302→405）。无文件 POST 返回 **500**（controller 空文件异常），**不干扰** 429 统计（429 是限流层独有）；带文件 200 返回 `{"url":"/images/...","filename":"..."}`。旧 `upload-ip` 20/h 第 21 次起 429，放宽后 0 个 429 即生效。
 
 ## Obsidian 同步
 

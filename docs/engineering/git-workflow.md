@@ -55,6 +55,12 @@ bash scripts/configure-git-hooks.sh
 
 该命令启用仓库内的 pre-commit hook，阻止在 `main` 上创建普通提交。Hook 不是远端分支保护的替代品：仓库管理员还必须在 GitHub 为 `main` 启用“Require a pull request before merging”、禁止 force push 与删除，并将质量检查设为必需。
 
+### 在 worktree 内合并 PR 的注意
+
+- Claude Code 的 `EnterWorktree` 生成的分支名是 `worktree-<type>+<topic>`（斜杠变加号、加 `worktree-` 前缀），不符合本仓库 `feat/*`/`fix/*`/`docs/*` 规范。进入 worktree 后立即 `git branch -m worktree-<type>+<topic> <type>/<topic>` 重命名，并 `git fetch origin` 确认基准对齐 `origin/main`。
+- 在 worktree 会话内 `gh pr merge --squash --delete-branch` 会失败（`fatal: 'main' is already used by worktree at <主仓库>`），因为 gh 尝试本地 git 操作碰被主 worktree 占用的 `main`。改用 `gh pr merge --squash`（不带 `--delete-branch`）纯 API 合并；注意首次调用即使报错也可能已完成远端合并，重试会提示 “already merged”。本地分支删除交由 `ExitWorktree action:remove`。
+- squash merge 不保留原分支 commit，worktree 分支的 commit 不在 `main`，`ExitWorktree action:remove` 会因「commits not on the original branch」拒绝。提交已推送、PR 已合并时丢弃安全，用 `ExitWorktree action:remove discard_changes=true` 强制清理 worktree 与本地分支。
+
 ## worktree 生命周期
 
 worktree 是临时工作空间，不是长期副本。分支合并到 `main`（或 PR 关闭、放弃）后，必须立即删除对应 worktree 和已合并的本地分支，避免堆积陈旧副本与分支污染。
