@@ -25,6 +25,8 @@ main（下一版本 -SNAPSHOT）
   → main 推进到下一个 -SNAPSHOT
 ```
 
+**CHANGELOG 版本号标题时序**：开发改动在 PR 阶段往 `## Unreleased` 下写变更内容（`### Changed`/`### Fixed`），合并 `main`；发版前在 `main` 上把 `## Unreleased` 改为 `## [vX.Y.Z] - 日期` 标题，填 `**Tag**`、`**回滚基线**`（`**Commit**`/`**部署**` 等 release:prepare 与部署后再补），提交。`prepare-release.sh` grep 校验 CHANGELOG 含 `## [vX.Y.Z]`，缺失则拒绝——版本号标题必须在 `prepare-release.sh` 之前出现在 `main`。该标题改动与部署后的验收记录补填，均属发布流程的 `docs(release)` 提交（先例 `36918d0`），非普通开发改动，不与「`main` 仅允许受控发布流程写入」冲突。
+
 发布工具必须自动校验工作区、版本号、Tag 格式和 Tag 唯一性；部署脚本必须只接受已验证的 Tag，并在状态中保存 `version` 与完整 SHA。发布工具完成前，禁止执行下一次生产部署。
 
 创建版本只使用受控脚本；它会校验 `main`、干净工作区、Tag 唯一性和 Changelog 条目，并按项目规则刷新缓存、执行全量测试、创建 annotated Tag、推送以及清理本机事务状态。示例发布 `1.2.3`，下一开发版本为 `1.2.4-SNAPSHOT`：

@@ -19,6 +19,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 前端公共组件必须自隔离，组件之间除相对位置外不得互相影响。
 - 涉及界面交互、视觉、布局的改动，项目所有者的验收环境固定为 staging（124，`staging.bytedepth.cn`），不得要求项目所有者验收未部署的本机代码。staging 是测试环境，用于验证尚未合并 `main` 的功能分支。流程固定为：实现并补测试 → 跑前置门禁 → 部署候选 ref（功能分支或 `main`）到 staging（`deploy/deploy-staging.sh <ref>`）→ 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能创建生产版本、Tag 或部署生产。
 - 后续测试在 staging 上进行，不依赖本机。本机测试无法覆盖 Flyway 迁移、Docker Compose、Nginx、Redis 等运维层面。
+- 知识沉淀必须写入项目文档（`docs/`、`deploy/`、`AGENTS.md` 等），禁止放入 agent 特有的记忆（如 `~/.claude` 下的 memory 文件）；既有 agent 记忆应迁移到项目文档后删除，不得在 agent 记忆与项目文档间重复维护同一事实。
 
 ## 按需读取
 
