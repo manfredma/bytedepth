@@ -86,6 +86,21 @@ async function createCommentAnnotation(page, annotationText, startOffset = 0) {
 }
 
 test.describe('划线评论', () => {
+    test('移动端：选中文字后只显示划线操作', async ({page}, testInfo) => {
+        test.skip(testInfo.project.name !== 'mobile-chromium', '仅在移动 Chromium 执行');
+        const errors = captureBrowserErrors(page);
+        await page.goto(postPath, {waitUntil: 'commit'});
+        await waitForAnnotationReady(page);
+
+        const popup = page.locator('.bd-annotation-popup');
+        await selectArticleText(page, 0, 2);
+        await expect(popup).toHaveClass(/bd-annotation-popup-open/);
+        await expect(popup.getByRole('button', {name: '划线'})).toBeVisible();
+        await expect(popup.getByRole('button', {name: '复制'})).toHaveCount(0);
+        await expect(popup.getByRole('button', {name: '评论'})).toHaveCount(0);
+        expect(errors).toEqual([]);
+    });
+
     test('桌面端：拖选后显示两级菜单，并可创建和删除评论', async ({page}, testInfo) => {
         test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
         const errors = captureBrowserErrors(page);

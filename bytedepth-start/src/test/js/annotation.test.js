@@ -145,13 +145,18 @@ describe('annotation sidebar', () => {
     expect(document.querySelector('.bd-annotation-copy-result').textContent).toBe('已复制到剪贴板');
   });
 
-  test('mobile selection does not open the desktop annotation menu', () => {
+  test('mobile selection opens a highlight-only menu', () => {
     window.matchMedia = jest.fn(() => ({ matches: true }));
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3);
     const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    expect(document.querySelector('.bd-annotation-popup')).toBeNull();
+    const popup = document.querySelector('.bd-annotation-popup');
+    expect(popup).not.toBeNull();
+    expect(popup.classList.contains('bd-annotation-popup-open')).toBe(true);
+    expect(popup.querySelector('[data-highlight]').textContent).toBe('划线');
+    expect(popup.querySelector('[data-copy]')).toBeNull();
+    expect(popup.querySelector('[data-comment]')).toBeNull();
   });
 
   test('only comments contribute to the reading toolbar badge', async () => {

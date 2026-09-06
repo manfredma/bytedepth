@@ -585,8 +585,7 @@
 
 @media (max-width: 768px) {
     .bd-annotation-toolbar-item,
-    .bd-annotation-sidebar,
-    .bd-annotation-popup { display: none !important; }
+    .bd-annotation-sidebar { display: none !important; }
     .bd-annotation-comments-open .reading-toolbar .rt-item:not(.bd-annotation-toolbar-item) { display: flex; }
     .bd-annotation-scope .bd-annotation-comment-trigger { display: none; }
 }
