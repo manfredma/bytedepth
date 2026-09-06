@@ -8,13 +8,13 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "lint": "eslint bytedepth-start/src/main/resources/static/js/ tests/ playwright.config.mjs",
-    "test:e2e": "env -u NO_COLOR playwright test"
+    "test:e2e": "env -u NO_COLOR -u FORCE_COLOR playwright test"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
+    "@eslint/js": "10.0.1",
     "@playwright/test": "^1.62.1",
     "@vitest/coverage-v8": "^4.1.11",
-    "eslint": "^9.39.5",
+    "eslint": "10.9.0",
     "globals": "^17.10.0",
     "happy-dom": "^20.11.6",
     "jsdom": "^27.4.0",

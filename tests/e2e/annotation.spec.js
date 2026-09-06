@@ -55,6 +55,11 @@ async function waitForAnnotationReady(page) {
     await expect(page.locator('#post-article[data-bd-annotation-ready="true"]')).toBeVisible();
 }
 
+function visibleAnnotationMark(page, id) {
+    // 同一划线可跨多个文本节点，其中换行节点会生成隐藏的空 mark。
+    return page.locator(`mark[data-id="${id}"]`).filter({hasText: /\S/});
+}
+
 async function removeAnnotation(page, id) {
     await page.evaluate(async annotationId => {
         const token = document.querySelector('meta[name="_csrf"]').content;
@@ -86,6 +91,25 @@ async function createCommentAnnotation(page, annotationText, startOffset = 0) {
 }
 
 test.describe('划线评论', () => {
+    test('移动端：选中文字后只显示划线操作', async ({page}, testInfo) => {
+        test.skip(testInfo.project.name !== 'mobile-chromium', '仅在移动 Chromium 执行');
+        const errors = captureBrowserErrors(page);
+        await page.goto(postPath, {waitUntil: 'commit'});
+        await waitForAnnotationReady(page);
+
+        const popup = page.locator('.bd-annotation-popup');
+        await selectArticleText(page, 0, 2);
+        await expect(popup).toHaveClass(/bd-annotation-popup-open/);
+        await expect(popup.getByRole('button', {name: '划线'})).toBeVisible();
+        await expect(popup.getByRole('button', {name: '复制'})).toHaveCount(0);
+        await expect(popup.getByRole('button', {name: '评论'})).toHaveCount(0);
+        await popup.getByRole('button', {name: '划线'}).click();
+        await popup.getByRole('button', {name: '返回'}).click();
+        await expect(popup.getByRole('button', {name: '复制'})).toHaveCount(0);
+        await expect(popup.getByRole('button', {name: '评论'})).toHaveCount(0);
+        expect(errors).toEqual([]);
+    });
+
     test('桌面端：拖选后显示两级菜单，并可创建和删除评论', async ({page}, testInfo) => {
         test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
         const errors = captureBrowserErrors(page);
@@ -139,7 +163,7 @@ test.describe('划线评论', () => {
         try {
             await page.reload({waitUntil: 'commit'});
             await waitForAnnotationReady(page);
-            await page.locator(`mark[data-id="${annotation.id}"]`).click();
+            await visibleAnnotationMark(page, annotation.id).first().click();
             await expect(page.locator('.bd-annotation-mobile-note')).toHaveText('移动端基础评论');
             expect(errors).toEqual([]);
         } finally {
@@ -178,7 +202,7 @@ test.describe('划线评论', () => {
             await popup.getByRole('button', {name: '琥珀色波浪线'}).click();
             const first = await (await firstResponse).json();
             createdIds.push(first.id);
-            await expect(page.locator(`mark[data-id="${first.id}"]`).first()).toBeVisible();
+            await expect(visibleAnnotationMark(page, first.id).first()).toBeVisible();
 
             await selectArticleText(page, 2, 2);
             await popup.getByRole('button', {name: '划线'}).click();
@@ -190,7 +214,7 @@ test.describe('划线评论', () => {
             await expect(page.locator(`mark[data-id="${first.id}"] mark[data-id="${second.id}"]`).first()).toBeVisible();
 
             await page.evaluate(() => window.getSelection().removeAllRanges());
-            await page.locator(`mark[data-id="${second.id}"]`).last().click();
+            await visibleAnnotationMark(page, second.id).last().click();
             await expect(popup.getByRole('button', {name: '删除划线'})).toBeVisible();
             const deleteResponse = page.waitForResponse(response => response.url().endsWith(`/annotations/${second.id}`)
                 && response.request().method() === 'DELETE');

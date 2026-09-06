@@ -798,9 +798,20 @@ window.initAnnotations = function () {
         });
     }
 
+    function showMobileHighlightMenu() {
+        popup.innerHTML = '<button type="button" data-highlight>划线</button>';
+        popup.querySelector('[data-highlight]').addEventListener('click', showHighlightMenu);
+    }
+
     function showHighlightMenu() {
         popup.innerHTML = '<button type="button" data-back>返回</button><button type="button" data-color="yellow" aria-label="琥珀色波浪线"></button><button type="button" data-color="red" aria-label="珊瑚色直线"></button><button type="button" data-color="green" aria-label="绿色虚线"></button><button type="button" data-color="blue" aria-label="蓝色双线"></button><button type="button" data-cancel>取消</button>';
-        popup.querySelector('[data-back]').addEventListener('click', showPrimaryMenu);
+        popup.querySelector('[data-back]').addEventListener('click', () => {
+            if (isMobile()) {
+                showMobileHighlightMenu();
+                return;
+            }
+            showPrimaryMenu();
+        });
         popup.querySelector('[data-cancel]').addEventListener('click', hidePopup);
         popup.querySelectorAll('[data-color]').forEach(button => {
             button.addEventListener('click', () => {
@@ -822,7 +833,11 @@ window.initAnnotations = function () {
             buildPopup();
         }
         selected = selectionData(range);
-        showPrimaryMenu();
+        if (isMobile()) {
+            showMobileHighlightMenu();
+        } else {
+            showPrimaryMenu();
+        }
         popup.classList.add('bd-annotation-popup-open');
         const rect = range.getBoundingClientRect();
         popup.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8))}px`;
@@ -924,7 +939,7 @@ window.initAnnotations = function () {
     });
 
     function onDocMouseUp(event) {
-        if (isMobile() || sidebar.contains(event.target) || popup && popup.contains(event.target)) {
+        if (sidebar.contains(event.target) || popup && popup.contains(event.target)) {
             return;
         }
         const selection = window.getSelection();
