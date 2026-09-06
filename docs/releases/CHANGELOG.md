@@ -4,7 +4,9 @@
 
 ## [v2.12.0] - 2026-09-06
 
-**Tag**：`v2.12.0`（待创建）
+**Tag**：`v2.12.0`
+**Commit**：`b3f58afb5272b804e68d38590d22e06944e72f02`
+**部署**：2026-09-06 22:49 CST；生产单机（175.24.197.202）已部署。完整 Compose 服务正常（MySQL、Redis、MeiliSearch healthy；app、nginx、file-server Up）；SNI 首页、最新/翻页/热门、文章、旧链接 302→200、专栏、搜索、项目及实际文章图片均返回 200，应用日志无 WARNING/ERROR。
 **回滚基线**：`v2.11.12`
 
 ### Added
