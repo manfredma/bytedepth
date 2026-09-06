@@ -568,7 +568,7 @@
 .bd-annotation-popup .bd-annotation-copy-result { padding: 0 8px; color: #f8fafc; font: 500 12px/30px var(--sans, sans-serif); white-space: nowrap; }
 
 .bd-annotation-mobile-note {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     z-index: 330;
@@ -580,7 +580,6 @@
     box-shadow: 0 12px 30px rgba(24, 39, 66, .18);
     color: var(--bd-annotation-ink);
     font: 13px/1.55 var(--sans, sans-serif);
-    will-change: transform;
 }
 
 @media (max-width: 768px) {

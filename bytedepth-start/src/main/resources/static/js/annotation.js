@@ -751,11 +751,14 @@ window.initAnnotations = function () {
         if (!mobileNote) {
             mobileNote = document.createElement('aside');
             mobileNote.className = 'bd-annotation-mobile-note';
-            document.body.appendChild(mobileNote);
+            // 锚进正文容器：position:absolute 相对 .content，随其滚动整体带走，无需逐帧 JS 跟随。
+            content.appendChild(mobileNote);
         }
         renderAnnotationText(mobileNote, annotation);
         mobileAnnotation = annotation;
         mobileMark = mark;
+        // 每次弹出都重新定位：不同划线位置不同，不复用上次的 placed 坐标。
+        delete mobileNote.dataset.placed;
         mobileNote.hidden = false;
         updateMobileCommentPosition();
     }
@@ -770,11 +773,14 @@ window.initAnnotations = function () {
             return;
         }
         mobileNote.hidden = false;
-        const left = Math.max(12, Math.min(rect.left, window.innerWidth - 316));
-        const top = Math.min(window.innerHeight - 88, rect.bottom + 10);
-        const transform = `translate3d(${left}px, ${top}px, 0)`;
-        if (mobileNote.style.transform !== transform) {
-            mobileNote.style.transform = transform;
+        // 定位用相对 .content 的文档坐标（markRect - contentRect），不随滚动变化；
+        // absolute 元素随 .content 滚动整体带走，scroll 时无需重算 transform。
+        if (!mobileNote.dataset.placed) {
+            const contentRect = content.getBoundingClientRect();
+            const left = Math.max(12, Math.min(rect.left - contentRect.left, contentRect.width - 304));
+            const top = rect.bottom - contentRect.top + 10;
+            mobileNote.style.transform = `translate3d(${Math.round(left)}px, ${Math.round(top)}px, 0)`;
+            mobileNote.dataset.placed = '1';
         }
     }
 
