@@ -15,7 +15,8 @@ if [[ "${EUID}" -ne 0 ]]; then
     exit 1
 fi
 
-readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
 readonly ENV_FILE="$SOURCE_ROOT/.env"
 readonly SYNC_CONF=/etc/bytedepth-sync.conf
 readonly LOG=/var/log/bytedepth/sync-prod-to-staging.log
@@ -43,6 +44,7 @@ fi
 
 # 加载 175 .env（源端 DB_PASSWORD/REDIS_PASSWORD/MEILI_MASTER_KEY）
 set -a
+# shellcheck disable=SC1090
 . "$ENV_FILE"
 set +a
 
@@ -54,6 +56,7 @@ log "===== 开始同步 ====="
 
 # 在 124 执行命令（source 124 本地 .env 获取目标端密码）
 staging_exec() {
+    # shellcheck disable=SC2029
     ssh "${SSH_OPTS[@]}" "$STAGING_USER" "$1"
 }
 # 传文件到 124
@@ -65,22 +68,22 @@ staging_send() {
 
 # --- 停止 staging app（避免导入时 app 继续写、且新代码与旧 schema 不兼容）---
 log "停止 staging app..."
-staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh stop app" || true
+staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh stop bytedepth-app" || true
 
 # --- MySQL ---
 log "MySQL: 导出生产（--single-transaction 一致性快照）..."
 DUMP=$(mktemp /tmp/bytedepth-sync-XXXX.sql)
 chmod 600 "$DUMP"
-docker exec bytedepth-mysql-1 mysqldump --single-transaction --quick \
-    --routines --events --triggers --no-tablespaces \
-    -u root -p"$DB_PASSWORD" bytedepth > "$DUMP"
+docker exec -e MYSQL_PWD="$DB_PASSWORD" bytedepth-mysql-1 mysqldump --single-transaction --quick \
+    --routines --events --triggers --no-tablespaces --user=root bytedepth > "$DUMP"
 log "MySQL: 传输到 124..."
 staging_send "$DUMP" "/tmp/bytedepth-sync.sql"
 log "MySQL: 导入到 staging（drop+create 库，用 124 本地密码）..."
 # 在 124 上 source .env 获取目标端 DB_PASSWORD（与生产不同）
+# shellcheck disable=SC2016
 staging_exec 'set -a && . /opt/bytedepth/.env && set +a && \
-    docker exec -i bytedepth-mysql-1 mysql -u root -p"$DB_PASSWORD" -e "DROP DATABASE IF EXISTS bytedepth; CREATE DATABASE bytedepth CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" && \
-    docker exec -i bytedepth-mysql-1 mysql -u root -p"$DB_PASSWORD" bytedepth < /tmp/bytedepth-sync.sql && \
+    docker exec -i -e MYSQL_PWD="$DB_PASSWORD" bytedepth-mysql-1 mysql --user=root -e "DROP DATABASE IF EXISTS bytedepth; CREATE DATABASE bytedepth CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" && \
+    docker exec -i -e MYSQL_PWD="$DB_PASSWORD" bytedepth-mysql-1 mysql --user=root bytedepth < /tmp/bytedepth-sync.sql && \
     rm /tmp/bytedepth-sync.sql'
 rm -f "$DUMP"
 log "MySQL: 完成"
@@ -95,8 +98,8 @@ staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh stop redis"
 log "Redis: 清空 staging redis 数据目录..."
 staging_exec "sudo rm -rf /data/redis/dump.rdb /data/redis/appendonlydir /data/redis/appendonly.aof.* /data/redis/manifest"
 log "Redis: 生产 BGSAVE..."
-docker exec bytedepth-redis-1 redis-cli -a "$REDIS_PASSWORD" BGSAVE
-while [ "$(docker exec bytedepth-redis-1 redis-cli -a "$REDIS_PASSWORD" INFO persistence 2>/dev/null | grep rdb_bgsave_in_progress | tr -d '\r' | cut -d: -f2)" != "0" ]; do
+docker exec -e REDISCLI_AUTH="$REDIS_PASSWORD" bytedepth-redis-1 redis-cli BGSAVE
+while [ "$(docker exec -e REDISCLI_AUTH="$REDIS_PASSWORD" bytedepth-redis-1 redis-cli INFO persistence 2>/dev/null | grep rdb_bgsave_in_progress | tr -d '\r' | cut -d: -f2)" != "0" ]; do
     sleep 1
 done
 log "Redis: 传输 dump.rdb..."
@@ -105,13 +108,14 @@ staging_send /tmp/bytedepth-sync-dump.rdb "/tmp/dump.rdb"
 rm -f /tmp/bytedepth-sync-dump.rdb
 # 在 124 上：放 RDB → 临时以 --appendonly no 启动加载 RDB → BGREWRITEAOF 生成 AOF → 停止
 # REDIS_PASSWORD 从 124 本地 .env 读取（与生产不同）
+# shellcheck disable=SC2016
 staging_exec 'set -a && . /opt/bytedepth/.env && set +a && \
     sudo mv /tmp/dump.rdb /data/redis/dump.rdb && \
     sudo docker run -d --rm --name redis-restore \
         -v /data/redis:/data redis:7-alpine \
         redis-server --appendonly no --requirepass "$REDIS_PASSWORD" && \
     sleep 3 && \
-    docker exec redis-restore redis-cli -a "$REDIS_PASSWORD" BGREWRITEAOF && \
+    docker exec -e REDISCLI_AUTH="$REDIS_PASSWORD" redis-restore redis-cli BGREWRITEAOF && \
     sleep 2 && \
     sudo docker stop redis-restore'
 log "Redis: 正常启动 staging redis（从 AOF 加载）..."
@@ -157,7 +161,7 @@ log "MeiliSearch: 导入 snapshot（一次性 docker run --import-snapshot）...
 # meilisearch --import-snapshot 导入后会继续作为服务前台运行不退出，
 # 用 timeout 限时 120s：导入完成、服务启动后即杀掉（data.ms 已建好）。
 # --ignore-snapshot-db-check 忽略已有 db（先 rm data.ms 兜底）。
-staging_exec "sudo mv /tmp/meili-snapshot /data/meilisearch/snapshot.snapshot && sudo rm -rf /data/meilisearch/data.ms && sudo timeout 120 docker run --rm --entrypoint /bin/sh -v /data/meilisearch:/data getmeili/meilisearch:v1.7 -c 'meilisearch --import-snapshot /data/snapshot.snapshot --db-path /data/data.ms' || true && sudo rm -f /data/meilisearch/snapshot.snapshot"
+staging_exec "sudo mv /tmp/meili-snapshot /data/meilisearch/snapshot.snapshot && sudo rm -rf /data/meilisearch/data.ms && sudo docker rm -f bytedepth-meili-restore >/dev/null 2>&1 || true; sudo docker run -d --name bytedepth-meili-restore --entrypoint /bin/sh -v /data/meilisearch:/data getmeili/meilisearch:v1.7 -c 'meilisearch --import-snapshot /data/snapshot.snapshot --db-path /data/data.ms'; sleep 120; sudo docker stop --timeout 15 bytedepth-meili-restore; sudo docker rm bytedepth-meili-restore; sudo rm -f /data/meilisearch/snapshot.snapshot"
 # 验证 data.ms 已创建
 staging_exec "test -d /data/meilisearch/data.ms" || { log "ERROR: MeiliSearch import 失败，data.ms 未创建"; exit 1; }
 log "MeiliSearch: 启动 staging meili..."
@@ -172,7 +176,7 @@ log "图片: 完成"
 
 # --- 恢复 staging app ---
 log "启动 staging app（Flyway 自动迁移）..."
-staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh up -d app"
+staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh up -d bytedepth-app"
 
 # --- 验证 ---
 log "验证 staging..."
