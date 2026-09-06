@@ -55,6 +55,11 @@ async function waitForAnnotationReady(page) {
     await expect(page.locator('#post-article[data-bd-annotation-ready="true"]')).toBeVisible();
 }
 
+function visibleAnnotationMark(page, id) {
+    // 同一划线可跨多个文本节点，其中换行节点会生成隐藏的空 mark。
+    return page.locator(`mark[data-id="${id}"]`).filter({hasText: /\S/});
+}
+
 async function removeAnnotation(page, id) {
     await page.evaluate(async annotationId => {
         const token = document.querySelector('meta[name="_csrf"]').content;
@@ -154,7 +159,7 @@ test.describe('划线评论', () => {
         try {
             await page.reload({waitUntil: 'commit'});
             await waitForAnnotationReady(page);
-            await page.locator(`mark[data-id="${annotation.id}"]`).click();
+            await visibleAnnotationMark(page, annotation.id).first().click();
             await expect(page.locator('.bd-annotation-mobile-note')).toHaveText('移动端基础评论');
             expect(errors).toEqual([]);
         } finally {
@@ -193,7 +198,7 @@ test.describe('划线评论', () => {
             await popup.getByRole('button', {name: '琥珀色波浪线'}).click();
             const first = await (await firstResponse).json();
             createdIds.push(first.id);
-            await expect(page.locator(`mark[data-id="${first.id}"]`).first()).toBeVisible();
+            await expect(visibleAnnotationMark(page, first.id).first()).toBeVisible();
 
             await selectArticleText(page, 2, 2);
             await popup.getByRole('button', {name: '划线'}).click();
@@ -205,7 +210,7 @@ test.describe('划线评论', () => {
             await expect(page.locator(`mark[data-id="${first.id}"] mark[data-id="${second.id}"]`).first()).toBeVisible();
 
             await page.evaluate(() => window.getSelection().removeAllRanges());
-            await page.locator(`mark[data-id="${second.id}"]`).last().click();
+            await visibleAnnotationMark(page, second.id).last().click();
             await expect(popup.getByRole('button', {name: '删除划线'})).toBeVisible();
             const deleteResponse = page.waitForResponse(response => response.url().endsWith(`/annotations/${second.id}`)
                 && response.request().method() === 'DELETE');
