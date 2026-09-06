@@ -157,6 +157,11 @@ describe('annotation sidebar', () => {
     expect(popup.querySelector('[data-highlight]').textContent).toBe('划线');
     expect(popup.querySelector('[data-copy]')).toBeNull();
     expect(popup.querySelector('[data-comment]')).toBeNull();
+    popup.querySelector('[data-highlight]').click();
+    popup.querySelector('[data-back]').click();
+    expect(popup.querySelector('[data-highlight]').textContent).toBe('划线');
+    expect(popup.querySelector('[data-copy]')).toBeNull();
+    expect(popup.querySelector('[data-comment]')).toBeNull();
   });
 
   test('only comments contribute to the reading toolbar badge', async () => {

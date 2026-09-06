@@ -805,7 +805,13 @@ window.initAnnotations = function () {
 
     function showHighlightMenu() {
         popup.innerHTML = '<button type="button" data-back>返回</button><button type="button" data-color="yellow" aria-label="琥珀色波浪线"></button><button type="button" data-color="red" aria-label="珊瑚色直线"></button><button type="button" data-color="green" aria-label="绿色虚线"></button><button type="button" data-color="blue" aria-label="蓝色双线"></button><button type="button" data-cancel>取消</button>';
-        popup.querySelector('[data-back]').addEventListener('click', showPrimaryMenu);
+        popup.querySelector('[data-back]').addEventListener('click', () => {
+            if (isMobile()) {
+                showMobileHighlightMenu();
+                return;
+            }
+            showPrimaryMenu();
+        });
         popup.querySelector('[data-cancel]').addEventListener('click', hidePopup);
         popup.querySelectorAll('[data-color]').forEach(button => {
             button.addEventListener('click', () => {

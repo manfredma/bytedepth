@@ -103,6 +103,10 @@ test.describe('划线评论', () => {
         await expect(popup.getByRole('button', {name: '划线'})).toBeVisible();
         await expect(popup.getByRole('button', {name: '复制'})).toHaveCount(0);
         await expect(popup.getByRole('button', {name: '评论'})).toHaveCount(0);
+        await popup.getByRole('button', {name: '划线'}).click();
+        await popup.getByRole('button', {name: '返回'}).click();
+        await expect(popup.getByRole('button', {name: '复制'})).toHaveCount(0);
+        await expect(popup.getByRole('button', {name: '评论'})).toHaveCount(0);
         expect(errors).toEqual([]);
     });
 

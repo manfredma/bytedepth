@@ -2,7 +2,7 @@
 
 本文件记录正式发布版本；每个条目必须与一个不可变 annotated Git Tag 一一对应。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
-## [v2.11.13] - 2026-09-06
+## Unreleased
 
 ### Added
 
