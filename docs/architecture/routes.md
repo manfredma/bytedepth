@@ -26,6 +26,7 @@ bytedepth 是 Thymeleaf SSR 应用，所有 Controller 返回视图名或重定�
 | `/register` | POST | RegisterController | 提交注册 |
 | `/login` | GET | LoginController | 登录页面 |
 | `/sitemap.xml` | GET | SitemapController | 站点地图 |
+| `/feed.xml` | GET | FeedController | RSS 2.0 最近更新订阅源 |
 
 ## 后台管理
 

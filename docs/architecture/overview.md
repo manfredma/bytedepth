@@ -45,6 +45,7 @@ start ───────────▶ adapter + infrastructure
 
 ## 延伸阅读
 
+- [架构决策记录（ADR）](decisions/README.md)
 - [后台布局](admin-layout.md)
 - [前端模式](../engineering/frontend-patterns.md)
 - [CSRF 决策记录](../security/csrf-session-repository.md)
