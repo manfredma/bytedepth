@@ -16,6 +16,7 @@ import manfred.bytedepth.app.series.SeriesPortalDTO;
 import manfred.bytedepth.adapter.web.util.SearchHighlight;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
+import manfred.bytedepth.domain.post.PostStatus;
 import manfred.bytedepth.domain.search.SearchResult;
 import manfred.bytedepth.domain.series.Series;
 import manfred.bytedepth.domain.series.SeriesRepository;
@@ -200,5 +201,28 @@ class SimplePortalControllerCoverageTest {
 
         when(posts.findAllPublished()).thenReturn(List.of());
         assertThat(controller.feed()).doesNotContain("<lastBuildDate>");
+    }
+
+    @Test
+    void feedOrdersByMostRecentPublicationOrUpdate() {
+        PostRepository posts = mock(PostRepository.class);
+        Post newlyPublished = Post.reconstruct(1L, "new", "New post", "new content", PostStatus.PUBLISHED,
+                LocalDateTime.of(2026, 8, 1, 8, 0), LocalDateTime.of(2026, 8, 6, 8, 0),
+                LocalDateTime.of(2026, 8, 6, 8, 0), null, null, false);
+        Post updatedPost = Post.reconstruct(2L, "updated", "Updated post", "updated content", PostStatus.PUBLISHED,
+                LocalDateTime.of(2026, 8, 1, 8, 0), LocalDateTime.of(2026, 8, 2, 8, 0),
+                LocalDateTime.of(2026, 8, 7, 8, 0), null, null, false);
+        when(posts.findAllPublished()).thenReturn(List.of(newlyPublished, updatedPost));
+        FeedController controller = new FeedController(posts);
+        ReflectionTestUtils.setField(controller, "siteUrl", "https://example.test");
+
+        String xml = controller.feed();
+
+        assertThat(xml.indexOf("<title>Updated post</title>"))
+                .isLessThan(xml.indexOf("<title>New post</title>"));
+        assertThat(xml).contains("<lastBuildDate>Fri, 7 Aug 2026 08:00:00 +0800</lastBuildDate>")
+                .contains("<title>Updated post</title>\n<link>https://example.test/posts/updated</link>\n"
+                        + "<guid isPermaLink=\"true\">https://example.test/posts/updated</guid>\n"
+                        + "<description>updated content</description>\n<pubDate>Fri, 7 Aug 2026 08:00:00 +0800</pubDate>");
     }
 }

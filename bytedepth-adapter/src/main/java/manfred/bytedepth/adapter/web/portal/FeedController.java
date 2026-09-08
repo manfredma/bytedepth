@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -15,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /** RSS 2.0 最近文章 feed，供订阅器和搜索引擎发现新内容。 */
 @Controller
@@ -28,10 +28,13 @@ public class FeedController {
 
     private final PostRepository postRepository;
 
-    @GetMapping(value = "/feed.xml", produces = MediaType.APPLICATION_XML_VALUE)
+    @GetMapping(value = "/feed.xml", produces = "application/rss+xml")
     @ResponseBody
     public String feed() {
-        List<Post> posts = postRepository.findAllPublished().stream().limit(20).toList();
+        List<Post> posts = postRepository.findAllPublished().stream()
+                .sorted(Comparator.comparing((Post post) -> latestChange(post).orElse(LocalDateTime.MIN)).reversed())
+                .limit(20)
+                .toList();
         String feedUrl = siteUrl + "/feed.xml";
         StringBuilder xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.append("<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n<channel>\n")
@@ -52,16 +55,18 @@ public class FeedController {
                 .append(escapeXml(url)).append("</link>\n<guid isPermaLink=\"true\">")
                 .append(escapeXml(url)).append("</guid>\n<description>").append(escapeXml(summary(post.getContent())))
                 .append("</description>\n");
-        changedAt(post).ifPresent(value -> xml.append("<pubDate>").append(rfc1123(value)).append("</pubDate>\n"));
+        latestChange(post).ifPresent(value -> xml.append("<pubDate>").append(rfc1123(value)).append("</pubDate>\n"));
         xml.append("</item>\n");
     }
 
     private Optional<LocalDateTime> latestChange(List<Post> posts) {
-        return posts.stream().map(this::changedAt).flatMap(Optional::stream).max(Comparator.naturalOrder());
+        return posts.stream().map(this::latestChange).flatMap(Optional::stream).max(Comparator.naturalOrder());
     }
 
-    private Optional<LocalDateTime> changedAt(Post post) {
-        return Optional.ofNullable(post.getPublishedAt()).or(() -> Optional.ofNullable(post.getUpdatedAt()));
+    private Optional<LocalDateTime> latestChange(Post post) {
+        return Stream.of(post.getPublishedAt(), post.getUpdatedAt())
+                .filter(value -> value != null)
+                .max(Comparator.naturalOrder());
     }
 
     private String summary(String content) {

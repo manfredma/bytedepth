@@ -267,6 +267,13 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void publicHeadDeclaresRssAutodiscovery() throws Exception {
+        assertThat(classpathText("/templates/fragments/pwa-head.html"))
+                .contains("rel=\"alternate\" type=\"application/rss+xml\"")
+                .contains("href=\"/feed.xml\"");
+    }
+
+    @Test
     void navbarUsesBoundedHeaderLayout() throws Exception {
         String nav = classpathText("/templates/fragments/nav.html");
 
