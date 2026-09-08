@@ -5,8 +5,8 @@
 ## [v2.13.0] - 2026-09-08
 
 **Tag**：`v2.13.0`
-**Commit**：待 `prepare-release.sh` 创建发布提交后补录。
-**部署**：待验收。
+**Commit**：`40a7dcd231da5c11bdeee2c00e2d03397aaffcd2`
+**部署**：2026-09-08 20:42 CST；生产单机（175.24.197.202）已部署并验收。完整 Compose 服务正常（MySQL、Redis、MeiliSearch healthy；app、nginx、file-server Up）；SNI 首页、RSS、项目页与搜索均返回 200，`/feed.xml` 返回标准 `application/rss+xml;charset=UTF-8`，首页含 RSS 自动发现标记与顶部订阅图标，应用日志无 WARNING/ERROR。
 **回滚基线**：`v2.12.0`
 
 ### Added
