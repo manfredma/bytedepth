@@ -73,13 +73,17 @@ async function removeAnnotation(page, id) {
 }
 
 async function createCommentAnnotation(page, annotationText, startOffset = 0) {
-    return page.evaluate(async ({text, start}) => {
+    const selectedText = await page.locator('#post-article .content').evaluate((content, start) => {
+        const text = Array.from(content.childNodes).map(node => node.textContent).join('');
+        return text.slice(start, start + 2);
+    }, startOffset);
+    return page.evaluate(async ({text, start, selectedText}) => {
         const token = document.querySelector('meta[name="_csrf"]').content;
         const response = await fetch(`${window.location.pathname}/annotations`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': token},
             body: JSON.stringify({
-                selectedText: 'He', annotationText: text, color: 'yellow', visibility: 'PUBLIC',
+                selectedText, annotationText: text, color: 'yellow', visibility: 'PUBLIC',
                 startOffset: start, endOffset: start + 2
             })
         });
@@ -87,7 +91,7 @@ async function createCommentAnnotation(page, annotationText, startOffset = 0) {
             throw new Error(`annotation setup failed: ${response.status}`);
         }
         return response.json();
-    }, {text: annotationText, start: startOffset});
+    }, {text: annotationText, start: startOffset, selectedText});
 }
 
 test.describe('划线评论', () => {
