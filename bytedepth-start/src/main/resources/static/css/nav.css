@@ -81,6 +81,29 @@
     opacity:1;
 }
 
+.nav-rss {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    border:1px solid transparent;
+    border-radius:4px;
+}
+
+.nav-rss svg {
+    width:18px;
+    height:18px;
+    fill:currentColor;
+}
+
+.nav-rss:hover,
+.nav-rss:focus-visible {
+    border-color:var(--bd-nav-accent, #f05268);
+    color:var(--bd-nav-accent, #f05268);
+    outline:none;
+}
+
 .nav-actions {
     display:flex;
     align-items:center;
