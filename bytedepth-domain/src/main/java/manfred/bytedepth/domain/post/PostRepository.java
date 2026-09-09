@@ -8,6 +8,7 @@ public interface PostRepository {
     Optional<Post> findById(Long id);
     List<Post> findPublished(int page, int size);
     List<HotPost> findPublishedByHotness(int page, int size);
+    List<HotPost> findPublishedByHotnessExcluding(List<Long> excludedIds, int page, int size);
     List<Post> findLatestPublishedExcluding(List<Long> excludedIds, int limit);
     long countPublished();
     List<Post> findPublishedByTag(String tagSlug, int page, int size);

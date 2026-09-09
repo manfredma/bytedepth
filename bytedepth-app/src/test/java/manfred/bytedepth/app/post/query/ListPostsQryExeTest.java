@@ -116,6 +116,19 @@ class ListPostsQryExeTest {
         assertTrue(exe.executeByHotness(0, 5).isEmpty());
     }
 
+    @Test
+    void executeByHotnessExcluding_omitsDiscoveryPostsFromTheHotPage() {
+        Post post = postWithoutCategory(1L, "slug-1", "Hot Title");
+        when(postRepository.findPublishedByHotnessExcluding(List.of(9L, 10L), 2, 5))
+                .thenReturn(List.of(new HotPost(post, 999L)));
+
+        List<PostDTO> result = exe.executeByHotnessExcluding(List.of(9L, 10L), 2, 5);
+
+        assertEquals(1, result.size());
+        assertEquals(1L, result.getFirst().getId());
+        assertEquals(999L, result.getFirst().getViewCount());
+    }
+
     // --- executeLatestExcluding ---
 
     @Test

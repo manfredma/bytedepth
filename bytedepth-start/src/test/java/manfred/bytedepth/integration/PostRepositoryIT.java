@@ -120,6 +120,11 @@ class PostRepositoryIT {
                 .containsExactly(second.getId(), first.getId(), third.getId());
         assertThat(hotPosts.get(2).viewCount()).isZero();
 
+        var hotPostsWithoutSecond = postRepository.findPublishedByHotnessExcluding(List.of(second.getId()), 1, 3);
+        assertThat(hotPostsWithoutSecond)
+                .extracting(row -> row.post().getId())
+                .containsExactly(first.getId(), third.getId());
+
         List<Post> latest = postRepository.findLatestPublishedExcluding(List.of(third.getId()), 3);
         assertThat(latest)
                 .extracting(Post::getId)

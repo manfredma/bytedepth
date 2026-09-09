@@ -130,7 +130,7 @@ class PostRepositoryImplTest {
     @Test
     void findPublishedByHotness_mapsViewCountWhenNotNull() {
         HotPostDO hot = hotRow(1L, 42L);
-        when(postMapper.findPublishedByHotness(0, 10)).thenReturn(List.of(hot));
+        when(postMapper.findPublishedByHotnessExcluding(List.of(), 0, 10)).thenReturn(List.of(hot));
 
         var result = repository.findPublishedByHotness(1, 10);
 
@@ -142,7 +142,7 @@ class PostRepositoryImplTest {
     @Test
     void findPublishedByHotness_viewCountNullDefaultsToZero() {
         HotPostDO hot = hotRow(1L, null);
-        when(postMapper.findPublishedByHotness(10, 5)).thenReturn(List.of(hot));
+        when(postMapper.findPublishedByHotnessExcluding(List.of(), 10, 5)).thenReturn(List.of(hot));
 
         var result = repository.findPublishedByHotness(3, 5);
 
@@ -151,9 +151,22 @@ class PostRepositoryImplTest {
 
     @Test
     void findPublishedByHotness_emptyListReturnsEmpty() {
-        when(postMapper.findPublishedByHotness(0, 10)).thenReturn(List.of());
+        when(postMapper.findPublishedByHotnessExcluding(List.of(), 0, 10)).thenReturn(List.of());
 
         assertTrue(repository.findPublishedByHotness(1, 10).isEmpty());
+    }
+
+    @Test
+    void findPublishedByHotnessExcluding_passesIdsAndMapsResults() {
+        HotPostDO hot = hotRow(2L, 17L);
+        when(postMapper.findPublishedByHotnessExcluding(List.of(9L, 10L), 10, 5)).thenReturn(List.of(hot));
+
+        var result = repository.findPublishedByHotnessExcluding(List.of(9L, 10L), 3, 5);
+
+        assertEquals(1, result.size());
+        assertEquals(2L, result.getFirst().post().getId());
+        assertEquals(17L, result.getFirst().viewCount());
+        verify(postMapper).findPublishedByHotnessExcluding(List.of(9L, 10L), 10, 5);
     }
 
     // ---- findLatestPublishedExcluding ----
