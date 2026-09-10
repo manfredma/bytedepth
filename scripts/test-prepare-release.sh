@@ -19,6 +19,7 @@ assert_maven_test_boundaries() {
   local failsafe="$profile/*[local-name()='build']/*[local-name()='plugins']/*[local-name()='plugin'][*[local-name()='artifactId' and text()='maven-failsafe-plugin']]"
   local surefire="/*[local-name()='project']/*[local-name()='build']/*[local-name()='pluginManagement']/*[local-name()='plugins']/*[local-name()='plugin'][*[local-name()='artifactId' and text()='maven-surefire-plugin']]"
   local expected_arg_line='${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar'
+  local byte_buddy_agent_dependency="*[local-name()='dependencies']/*[local-name()='dependency'][*[local-name()='groupId' and text()='net.bytebuddy'] and *[local-name()='artifactId' and text()='byte-buddy-agent'] and *[local-name()='version' and text()='\${byte-buddy.version}']]"
 
   # Unit tests must stay offline: Failsafe is exclusive to this inactive staging profile.
   assert_xpath_true "$pom_file" "count($profile) = 1 and count($profile/*[local-name()='activation']) = 0" || return 1
@@ -26,6 +27,9 @@ assert_maven_test_boundaries() {
   assert_xpath_true "$pom_file" "count($failsafe/*[local-name()='configuration']/*[local-name()='includes']/*[local-name()='include']) = 1 and $failsafe/*[local-name()='configuration']/*[local-name()='includes']/*[local-name()='include' and text()='**/*IT.java']" || return 1
   assert_xpath_true "$pom_file" "count($failsafe/*[local-name()='executions']/*[local-name()='execution']/*[local-name()='goals']/*[local-name()='goal']) = 2 and count($failsafe/*[local-name()='executions']/*[local-name()='execution']/*[local-name()='goals']/*[local-name()='goal' and text()='integration-test']) = 1 and count($failsafe/*[local-name()='executions']/*[local-name()='execution']/*[local-name()='goals']/*[local-name()='goal' and text()='verify']) = 1" || return 1
   assert_xpath_true "$pom_file" "$failsafe/*[local-name()='configuration']/*[local-name()='argLine' and normalize-space(text())='$expected_arg_line']" || return 1
+  assert_xpath_true "$pom_file" "$surefire/*[local-name()='configuration']/*[local-name()='argLine' and normalize-space(text())='$expected_arg_line']" || return 1
+  assert_xpath_true "$pom_file" "count($surefire/$byte_buddy_agent_dependency) = 1" || return 1
+  assert_xpath_true "$pom_file" "count($failsafe/$byte_buddy_agent_dependency) = 1" || return 1
   assert_xpath_true "$pom_file" "count(//*[local-name()='argLine'][contains(text(), '-javaagent:') and contains(text(), 'mockito-core')]) = 0" || return 1
   assert_xpath_true "$pom_file" "$failsafe/*[local-name()='configuration']/*[local-name()='systemPropertyVariables']/*[local-name()='bytedepth.it.redis.password' and text()='\${env.BYTEDEPTH_IT_REDIS_PASSWORD}']" || return 1
   assert_xpath_true "$pom_file" "$surefire/*[local-name()='configuration']/*[local-name()='excludes']/*[local-name()='exclude' and text()='**/*IT.java']" || return 1
