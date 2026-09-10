@@ -245,6 +245,11 @@
                             </dependency>
                         </dependencies>
                         <configuration>
+                            <!--
+                                Spring Boot repackage replaces the main artifact with a fat jar.
+                                Failsafe must load application classes from target/classes instead.
+                            -->
+                            <classesDirectory>${project.build.outputDirectory}</classesDirectory>
                             <argLine>${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
                             <includes>
                                 <include>**/*IT.java</include>

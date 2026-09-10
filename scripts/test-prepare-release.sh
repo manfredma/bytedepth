@@ -25,6 +25,10 @@ assert_maven_test_boundaries() {
   assert_xpath_true "$pom_file" "count($profile) = 1 and count($profile/*[local-name()='activation']) = 0" || return 1
   assert_xpath_true "$pom_file" "count(//*[local-name()='artifactId' and text()='maven-failsafe-plugin']) = 1 and count($failsafe) = 1" || return 1
   assert_xpath_true "$pom_file" "count($failsafe/*[local-name()='configuration']/*[local-name()='includes']/*[local-name()='include']) = 1 and $failsafe/*[local-name()='configuration']/*[local-name()='includes']/*[local-name()='include' and text()='**/*IT.java']" || return 1
+  # Spring Boot repackage replaces the project artifact with a fat jar.  Force
+  # Failsafe to put target/classes, rather than that archive, on the IT JVM's
+  # classpath so application configuration remains loadable.
+  assert_xpath_true "$pom_file" "count($failsafe/*[local-name()='configuration']/*[local-name()='classesDirectory']) = 1 and $failsafe/*[local-name()='configuration']/*[local-name()='classesDirectory' and normalize-space(text())='\${project.build.outputDirectory}']" || return 1
   assert_xpath_true "$pom_file" "count($failsafe/*[local-name()='executions']/*[local-name()='execution']/*[local-name()='goals']/*[local-name()='goal']) = 2 and count($failsafe/*[local-name()='executions']/*[local-name()='execution']/*[local-name()='goals']/*[local-name()='goal' and text()='integration-test']) = 1 and count($failsafe/*[local-name()='executions']/*[local-name()='execution']/*[local-name()='goals']/*[local-name()='goal' and text()='verify']) = 1" || return 1
   assert_xpath_true "$pom_file" "$failsafe/*[local-name()='configuration']/*[local-name()='argLine' and normalize-space(text())='$expected_arg_line']" || return 1
   assert_xpath_true "$pom_file" "$surefire/*[local-name()='configuration']/*[local-name()='argLine' and normalize-space(text())='$expected_arg_line']" || return 1
@@ -45,6 +49,18 @@ cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/invalid-pom.xml"
 sed -i '' 's/<id>staging-integration<\/id>/<id>not-staging-integration<\/id>/' "$TEMP_ROOT/invalid-pom.xml"
 if assert_maven_test_boundaries "$TEMP_ROOT/invalid-pom.xml"; then
     printf 'Expected structural POM assertion to reject a Failsafe profile outside staging-integration.\n' >&2
+    exit 1
+fi
+cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/missing-failsafe-classes-directory.xml"
+sed -i '' '/<classesDirectory>\${project.build.outputDirectory}<\/classesDirectory>/d' "$TEMP_ROOT/missing-failsafe-classes-directory.xml"
+if assert_maven_test_boundaries "$TEMP_ROOT/missing-failsafe-classes-directory.xml"; then
+    printf 'Expected structural POM assertion to reject Failsafe without target/classes.\n' >&2
+    exit 1
+fi
+cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml"
+sed -i '' 's#<classesDirectory>\${project.build.outputDirectory}</classesDirectory>#<classesDirectory>\${project.build.directory}/\${project.build.finalName}.jar</classesDirectory>#' "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml"
+if assert_maven_test_boundaries "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml"; then
+    printf 'Expected structural POM assertion to reject Failsafe loading the repackaged fat jar.\n' >&2
     exit 1
 fi
 printf '## [v1.2.3]\n' > "$TEMP_ROOT/docs/releases/CHANGELOG.md"
