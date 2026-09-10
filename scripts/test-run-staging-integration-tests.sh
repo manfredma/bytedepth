@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
 readonly RUNNER="$SOURCE_ROOT/deploy/run-staging-integration-tests.sh"
-readonly TEMP_ROOT="$(mktemp -d)"
+TEMP_ROOT="$(mktemp -d)"
+readonly TEMP_ROOT
 trap 'rm -rf "$TEMP_ROOT"' EXIT
 
 if [[ ! -f "$RUNNER" ]]; then
@@ -17,8 +19,10 @@ readonly FIXTURE_CONFIG="$FIXTURE_ROOT/bytedepth-deploy.conf"
 readonly EVIDENCE_DIR="$FIXTURE_ROOT/test-history"
 readonly DEPLOY_HISTORY="$FIXTURE_ROOT/deploy-history"
 readonly LOCK_FILE="$FIXTURE_ROOT/deployment-test.lock"
+readonly DOCKER_SOCKET="$FIXTURE_ROOT/docker.sock"
 readonly FAKE_BIN="$TEMP_ROOT/bin"
 readonly DOCKER_ARGS="$TEMP_ROOT/docker.args"
+readonly DOCKER_INFO_ARGS="$TEMP_ROOT/docker-info.args"
 readonly FLOCK_ARGS="$TEMP_ROOT/flock.args"
 readonly GIT_LOG="$TEMP_ROOT/git.log"
 readonly INSTALL_ARGS="$TEMP_ROOT/install.args"
@@ -28,6 +32,7 @@ readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
 
 mkdir -p "$FIXTURE_SOURCE" "$FAKE_BIN"
 printf 'fixture source\n' > "$FIXTURE_SOURCE/fixture-marker"
+printf 'fixture Docker socket placeholder\n' > "$DOCKER_SOCKET"
 printf 'REDIS_PASSWORD=%s\nUNRELATED_SECRET=must-not-be-read\n' "$REDIS_SECRET" > "$FIXTURE_SOURCE/.env"
 printf 'ref=main\ncommit=%s\ndeployed_at=2026-09-10T10:11:12Z\n---\n' "$CURRENT_SHA" > "$DEPLOY_HISTORY"
 
@@ -37,6 +42,7 @@ sed \
     -e "s@^readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history\$@readonly EVIDENCE_DIR=$EVIDENCE_DIR@" \
     -e "s@^readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history\$@readonly DEPLOY_HISTORY=$DEPLOY_HISTORY@" \
     -e "s@^readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock\$@readonly LOCK_FILE=$LOCK_FILE@" \
+    -e "s@^readonly DOCKER_SOCKET=/var/run/docker.sock\$@readonly DOCKER_SOCKET=$DOCKER_SOCKET@" \
     -e '/^if \[\[ "${EUID}" -ne 0 \]\]; then$/,/^fi$/d' \
     "$RUNNER" > "$TEMP_ROOT/runner"
 chmod +x "$TEMP_ROOT/runner"
@@ -67,6 +73,13 @@ chmod +x "$FAKE_BIN/flock"
 
 cat > "$FAKE_BIN/docker" <<'SCRIPT'
 #!/usr/bin/env bash
+if [[ "${1:-}" == '-H' && "${3:-}" == 'info' ]]; then
+    printf '%s\n' "$@" > "$STAGING_RUNNER_DOCKER_INFO_ARGS"
+    [[ "$2" == "unix://$STAGING_RUNNER_DOCKER_SOCKET" ]]
+    [[ -e "$STAGING_RUNNER_DOCKER_SOCKET" ]]
+    exit "${STAGING_RUNNER_DOCKER_INFO_EXIT:-0}"
+fi
+
 printf '%s\n' "$@" > "$STAGING_RUNNER_DOCKER_ARGS"
 
 workspace=''
@@ -155,6 +168,8 @@ write_config() {
 run_runner() {
     PATH="$FAKE_BIN:$PATH" \
         STAGING_RUNNER_DOCKER_ARGS="$DOCKER_ARGS" \
+        STAGING_RUNNER_DOCKER_INFO_ARGS="$DOCKER_INFO_ARGS" \
+        STAGING_RUNNER_DOCKER_SOCKET="$DOCKER_SOCKET" \
         STAGING_RUNNER_FLOCK_ARGS="$FLOCK_ARGS" \
         STAGING_RUNNER_LOCK_FILE="$LOCK_FILE" \
         STAGING_RUNNER_SOURCE="$FIXTURE_SOURCE" \
@@ -187,6 +202,14 @@ grep -Fqx 'run' "$DOCKER_ARGS"
 grep -Fqx -- '--rm' "$DOCKER_ARGS"
 grep -Fqx -- '--network' "$DOCKER_ARGS"
 grep -Fqx 'bytedepth_default' "$DOCKER_ARGS"
+grep -Fqx -- '--add-host' "$DOCKER_ARGS"
+grep -Fqx 'host.docker.internal:host-gateway' "$DOCKER_ARGS"
+grep -Fqx -- '--env' "$DOCKER_ARGS"
+grep -Fqx 'TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal' "$DOCKER_ARGS"
+grep -Fqx -- '-v' "$DOCKER_ARGS"
+grep -Fqx "$DOCKER_SOCKET:$DOCKER_SOCKET" "$DOCKER_ARGS"
+grep -Fqx -- '-H' "$DOCKER_INFO_ARGS"
+grep -Fqx "unix://$DOCKER_SOCKET" "$DOCKER_INFO_ARGS"
 grep -Fqx -- '-Dbytedepth.it.redis.host=redis' "$DOCKER_ARGS"
 grep -Fqx -- '-Dbytedepth.it.redis.port=6379' "$DOCKER_ARGS"
 grep -Fqx -- '--env-file' "$DOCKER_ARGS"
@@ -214,6 +237,8 @@ readonly RELEASE_FILE="$TEMP_ROOT/docker-release"
 rm -f "$DOCKER_ARGS" "$GIT_LOG" "$TEMP_ROOT/git.count" "$STARTED_FILE" "$RELEASE_FILE"
 PATH="$FAKE_BIN:$PATH" \
     STAGING_RUNNER_DOCKER_ARGS="$DOCKER_ARGS" \
+    STAGING_RUNNER_DOCKER_INFO_ARGS="$DOCKER_INFO_ARGS" \
+    STAGING_RUNNER_DOCKER_SOCKET="$DOCKER_SOCKET" \
     STAGING_RUNNER_FLOCK_ARGS="$FLOCK_ARGS" \
     STAGING_RUNNER_LOCK_FILE="$LOCK_FILE" \
     STAGING_RUNNER_SOURCE="$FIXTURE_SOURCE" \
@@ -233,6 +258,8 @@ done
 [[ -e "$STARTED_FILE" ]]
 PATH="$FAKE_BIN:$PATH" \
     STAGING_RUNNER_DOCKER_ARGS="$DOCKER_ARGS" \
+    STAGING_RUNNER_DOCKER_INFO_ARGS="$DOCKER_INFO_ARGS" \
+    STAGING_RUNNER_DOCKER_SOCKET="$DOCKER_SOCKET" \
     STAGING_RUNNER_FLOCK_ARGS="$FLOCK_ARGS" \
     STAGING_RUNNER_LOCK_FILE="$LOCK_FILE" \
     STAGING_RUNNER_SOURCE="$FIXTURE_SOURCE" \
@@ -274,6 +301,30 @@ if run_runner; then
     printf 'Expected runner to reject a blank REDIS_PASSWORD.\n' >&2
     exit 1
 fi
+[[ ! -e "$DOCKER_ARGS" ]]
+
+# Testcontainers needs a usable Docker daemon socket.  A missing socket must
+# be rejected before the disposable Maven container starts.
+printf 'REDIS_PASSWORD=%s\n' "$REDIS_SECRET" > "$FIXTURE_SOURCE/.env"
+rm -f "$DOCKER_SOCKET" "$DOCKER_ARGS" "$DOCKER_INFO_ARGS"
+if run_runner; then
+    printf 'Expected runner to reject a missing Docker socket.\n' >&2
+    exit 1
+fi
+grep -Fq 'Docker daemon socket is unavailable' "$RUNNER_OUTPUT"
+[[ ! -e "$DOCKER_ARGS" ]]
+[[ ! -e "$DOCKER_INFO_ARGS" ]]
+printf 'fixture Docker socket placeholder\n' > "$DOCKER_SOCKET"
+
+# A path alone is insufficient: the runner must verify that the daemon behind
+# the socket can answer before Maven starts.
+rm -f "$DOCKER_ARGS" "$DOCKER_INFO_ARGS"
+if STAGING_RUNNER_DOCKER_INFO_EXIT=1 run_runner; then
+    printf 'Expected runner to reject an unusable Docker socket.\n' >&2
+    exit 1
+fi
+grep -Fq 'Docker daemon socket is not usable' "$RUNNER_OUTPUT"
+[[ -e "$DOCKER_INFO_ARGS" ]]
 [[ ! -e "$DOCKER_ARGS" ]]
 
 # Maven warnings are deployment-gate failures even when Docker exits zero.

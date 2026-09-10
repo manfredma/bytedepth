@@ -11,7 +11,9 @@ readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
-readonly WORK_DIR="$(mktemp -d)"
+readonly DOCKER_SOCKET=/var/run/docker.sock
+WORK_DIR="$(mktemp -d)"
+readonly WORK_DIR
 readonly MAVEN_LOG="$WORK_DIR/maven.log"
 readonly MAVEN_ENV_FILE="$WORK_DIR/maven.env"
 trap 'rm -rf "$WORK_DIR"' EXIT
@@ -50,6 +52,18 @@ invalidate_evidence() {
     rm -f "$EVIDENCE_DIR/staging-integration"
 }
 
+require_docker_socket() {
+    if [[ ! -e "$DOCKER_SOCKET" ]]; then
+        printf 'Refusing: Docker daemon socket is unavailable at %s; Testcontainers requires it.\n' "$DOCKER_SOCKET" >&2
+        exit 1
+    fi
+
+    if ! sudo docker -H "unix://$DOCKER_SOCKET" info >/dev/null; then
+        printf 'Refusing: Docker daemon socket is not usable at %s; Testcontainers requires it.\n' "$DOCKER_SOCKET" >&2
+        exit 1
+    fi
+}
+
 redact_redis_password() {
     local line
 
@@ -85,6 +99,7 @@ fi
 invalidate_evidence
 tested_commit="$(read_checked_out_commit)"
 require_deployed_commit "$tested_commit"
+require_docker_socket
 
 redis_password="$(awk '$0 ~ /^REDIS_PASSWORD=/ {value = substr($0, index($0, "=") + 1)} END {print value}' "$SOURCE_ROOT/.env" 2>/dev/null || true)"
 if [[ -z "${redis_password//[[:space:]]/}" ]]; then
@@ -102,9 +117,12 @@ cp -a "$SOURCE_ROOT/." "$WORK_DIR/source/"
 rm -f "$WORK_DIR/source/.env"
 
 if ! sudo docker run --rm --network bytedepth_default \
+    --add-host host.docker.internal:host-gateway \
     --env-file "$MAVEN_ENV_FILE" \
+    --env TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal \
     -v "$WORK_DIR/source":/workspace \
     -v "$WORK_DIR/m2":/root/.m2 \
+    -v "$DOCKER_SOCKET:$DOCKER_SOCKET" \
     -w /workspace \
     maven:3.9-eclipse-temurin-25 \
     mvn -Pstaging-integration verify \
