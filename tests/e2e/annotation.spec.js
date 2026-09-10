@@ -266,7 +266,7 @@ test.describe('划线评论', () => {
                 contentWidth: content.width,
                 contentRight: content.right,
                 contentTop: content.top,
-                headingTop: heading.top,
+                headingOffsetTop: heading.top - content.top,
                 headingHeight: heading.height,
                 sidebarLeft: sidebarRect.left,
                 sidebarTop: sidebarRect.top,
@@ -281,7 +281,9 @@ test.describe('划线评论', () => {
         // 正文紧接在导航及（staging 时）预发提示条之后，保留文章自身的最大 40px 顶部间距。
         expect(wideDesktopLayout.contentTop).toBeGreaterThanOrEqual(wideDesktopLayout.pageChromeBottom);
         expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(wideDesktopLayout.pageChromeBottom + 40);
-        expect(wideDesktopLayout.headingTop).toBeGreaterThanOrEqual(0);
+        // 阅读布局在 1440px 下以 3vw（43.2px）为正文内边距；相对正文测量，避免耦合页面 chrome 的绝对 Y 坐标。
+        expect(wideDesktopLayout.headingOffsetTop).toBeGreaterThanOrEqual(35);
+        expect(wideDesktopLayout.headingOffsetTop).toBeLessThanOrEqual(55);
         // h1 clamp(1.8rem,3vw,2.6rem)，行高 1.2；只约束标题自身尺寸，不耦合页面 chrome 的绝对 Y 坐标。
         expect(wideDesktopLayout.headingHeight).toBeLessThanOrEqual(55);
         expect(wideDesktopLayout.sidebarTop).toBeGreaterThanOrEqual(0);
