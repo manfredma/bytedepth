@@ -267,6 +267,17 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void navbarProvidesNetworkNavigationAndStagingProductionNotice() throws Exception {
+        String navTemplate = classpathText("/templates/fragments/nav.html");
+
+        assertThat(navTemplate)
+                .contains("th:href=\"@{/network}\"")
+                .contains("th:if=\"${environment == 'staging'}\"")
+                .contains("https://bytedepth.cn")
+                .contains("rel=\"noopener noreferrer\"");
+    }
+
+    @Test
     void publicHeadDeclaresRssAutodiscovery() throws Exception {
         assertThat(classpathText("/templates/fragments/pwa-head.html"))
                 .contains("rel=\"alternate\" type=\"application/rss+xml\"")

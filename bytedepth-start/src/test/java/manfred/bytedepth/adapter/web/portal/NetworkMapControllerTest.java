@@ -1,0 +1,98 @@
+package manfred.bytedepth.adapter.web.portal;
+
+import manfred.bytedepth.adapter.web.EnvironmentAttributeAdvice;
+import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.regex.Pattern;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+
+@WebMvcTest(value = NetworkMapController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class,
+        properties = "bytedepth.environment=staging")
+@EnableConfigurationProperties(NetworkMapProperties.class)
+@Import({ThymeleafSecurityHandlerConfig.class, EnvironmentAttributeAdvice.class})
+class NetworkMapControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private NetworkMapProperties properties;
+
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
+
+    @Test
+    void networkMapRendersCatalogGroups() throws Exception {
+        mockMvc.perform(get("/network"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("public/network"))
+                .andExpect(model().attribute("groups", properties.getGroups()))
+                .andExpect(content().string(containsString("Career")))
+                .andExpect(content().string(containsString("常用技术站点")));
+    }
+
+    @Test
+    void networkMapRendersEightSafeExternalCards() throws Exception {
+        mockMvc.perform(get("/network"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    String body = result.getResponse().getContentAsString();
+                    var cards = Pattern.compile("(?s)<a\\s+class=\"network-card\"(?:\\s|>).*?</a>")
+                            .matcher(body)
+                            .results()
+                            .toList();
+                    assertEquals(8, cards.size());
+                    assertTrue(Pattern.compile("<a\\s+class=\"network-card\"\\s+href=\"https://bytedepth\\.cn\""
+                                    + "\\s+target=\"_blank\"\\s+rel=\"noopener noreferrer\"")
+                            .matcher(body).find());
+                    for (var card : cards) {
+                        assertTrue(card.group().contains("<svg class=\"network-card-external-icon\""));
+                        assertTrue(card.group().contains("aria-hidden=\"true\""));
+                        assertTrue(card.group().contains("focusable=\"false\""));
+                    }
+                });
+    }
+
+    @Test
+    void networkMapRendersStagingNoticeWithSafeProductionLink() throws Exception {
+        mockMvc.perform(get("/network"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("预发环境 · 正式网站：")))
+                .andExpect(content().string(containsString("href=\"https://bytedepth.cn\"")))
+                .andExpect(content().string(containsString("target=\"_blank\" rel=\"noopener noreferrer\"")));
+    }
+
+    @Nested
+    @TestPropertySource(properties = "bytedepth.environment=production")
+    class ProductionEnvironment {
+
+        @Autowired
+        private MockMvc productionMockMvc;
+
+        @Test
+        void networkMapDoesNotRenderStagingNotice() throws Exception {
+            productionMockMvc.perform(get("/network"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.not(containsString("预发环境 · 正式网站："))));
+        }
+    }
+}
