@@ -176,6 +176,17 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 
 `deploy/deploy-staging.sh <ref>` 在 124 执行，接受 origin 上已命名的分支或 Tag（默认 `main`，不直接接受任意裸 SHA）。功能分支先部署到 staging 验收、通过后再合并 `main`。
 
+### 集成测试
+
+部署候选 ref 并确认 Compose 服务健康后，只能在 staging（124）的 `/opt/bytedepth` 执行以下命令：
+
+```bash
+cd /opt/bytedepth
+sudo ./deploy/run-staging-integration-tests.sh
+```
+
+该 runner 只接受 `/etc/bytedepth-deploy.conf` 中的 `BYTEDEPTH_DEPLOY_MODE=staging`。它只从 staging `.env` 提取非空的 `REDIS_PASSWORD`，不加载或输出其他变量；将 checkout 复制到私有临时目录后，以一次性 Maven 25 容器加入 `bytedepth_default` 网络。Failsafe 通过 Docker 服务 DNS `redis:6379` 访问测试专用 Redis 凭据，不发布端口，也不会让 Maven 写入已部署 checkout。Maven 输出含任意大小写 `WARNING` 时 runner 失败；密钥不得写入命令输出、日志或聊天记录。
+
 ## 6. 正式版本发布
 
 每次生产发布前，必须先按 [`docs/releases/README.md`](../docs/releases/README.md) 创建新的 SemVer annotated Tag 并更新 `docs/releases/CHANGELOG.md`。不得直接拉取 `main`。发布流程为：**staging 预检 → 生产部署**。
