@@ -232,6 +232,9 @@
                             <includes>
                                 <include>**/*IT.java</include>
                             </includes>
+                            <systemPropertyVariables>
+                                <bytedepth.it.redis.password>${env.BYTEDEPTH_IT_REDIS_PASSWORD}</bytedepth.it.redis.password>
+                            </systemPropertyVariables>
                         </configuration>
                         <executions>
                             <execution>

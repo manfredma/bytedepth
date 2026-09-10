@@ -9,25 +9,52 @@ fi
 readonly SOURCE_ROOT=/opt/bytedepth
 readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
+readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly CHROMIUM_EXECUTABLE=/usr/bin/chromium
 readonly WORK_DIR="$(mktemp -d)"
 readonly E2E_LOG="$WORK_DIR/playwright.log"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-write_evidence() {
+read_checked_out_commit() {
     local commit
-    local evidence_tmp
 
-    commit="$(git -C "$SOURCE_ROOT" rev-parse HEAD)"
+    commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-parse HEAD)"
     if [[ ! "$commit" =~ ^[0-9a-f]{40}$ ]]; then
         printf 'Refusing: unable to determine the full checked-out commit SHA.\n' >&2
         exit 1
     fi
+    printf '%s\n' "$commit"
+}
+
+require_deployed_commit() {
+    local expected_commit="$1"
+    local deployed_commit
+
+    deployed_commit="$(awk -F= '$1 == "commit" {value = $2} END {print value}' "$DEPLOY_HISTORY" 2>/dev/null || true)"
+    if [[ "$deployed_commit" != "$expected_commit" ]]; then
+        printf 'Refusing: staging app deployment does not match the tested checkout commit.\n' >&2
+        exit 1
+    fi
+}
+
+invalidate_evidence() {
+    rm -f "$EVIDENCE_DIR/staging-e2e"
+}
+
+write_evidence() {
+    local tested_commit="$1"
+    local evidence_tmp
+
+    if [[ "$(read_checked_out_commit)" != "$tested_commit" ]]; then
+        printf 'Refusing: checked-out commit changed during staging E2E tests.\n' >&2
+        exit 1
+    fi
+    require_deployed_commit "$tested_commit"
 
     install -d -o root -g root -m 0700 "$EVIDENCE_DIR"
     evidence_tmp="$(mktemp "$EVIDENCE_DIR/.staging-e2e.XXXXXX")"
     printf 'commit=%s\ncommand=run-staging-e2e-tests\ntimestamp=%s\nresult=passed\n' \
-        "$commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$evidence_tmp"
+        "$tested_commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$evidence_tmp"
     install -o root -g root -m 0600 "$evidence_tmp" "$EVIDENCE_DIR/staging-e2e"
     rm -f "$evidence_tmp"
 }
@@ -37,6 +64,10 @@ if [[ "$deploy_mode" != 'staging' ]]; then
     printf 'Refusing: BYTEDEPTH_DEPLOY_MODE must be staging, got %s\n' "${deploy_mode:-unset}" >&2
     exit 1
 fi
+
+invalidate_evidence
+tested_commit="$(read_checked_out_commit)"
+require_deployed_commit "$tested_commit"
 
 if [[ ! -x "$CHROMIUM_EXECUTABLE" ]]; then
     printf 'Refusing: staging Chromium executable is unavailable at %s\n' "$CHROMIUM_EXECUTABLE" >&2
@@ -56,5 +87,5 @@ if grep -qi 'warning' "$E2E_LOG"; then
     exit 1
 fi
 
-write_evidence
+write_evidence "$tested_commit"
 printf 'Staging E2E tests passed.\n'

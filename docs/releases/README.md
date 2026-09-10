@@ -35,8 +35,12 @@ main（下一版本 -SNAPSHOT）
 
 ```bash
 evidence_dir="$(mktemp -d)"
-scp -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25:/var/lib/bytedepth-staging/test-history/staging-integration "$evidence_dir/"
-scp -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25:/var/lib/bytedepth-staging/test-history/staging-e2e "$evidence_dir/"
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
+  'sudo cat -- /var/lib/bytedepth-staging/test-history/staging-integration' \
+  > "$evidence_dir/staging-integration"
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
+  'sudo cat -- /var/lib/bytedepth-staging/test-history/staging-e2e' \
+  > "$evidence_dir/staging-e2e"
 BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
 rm -rf "$evidence_dir"
 ```
@@ -80,10 +84,10 @@ BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1
 1. 记录当前已验收发布的 Tag，作为回滚基线。
 2. 在 staging 部署候选 ref 并用真实数据预检：`deploy-staging.sh <ref>`；项目所有者验收通过后合并 `main`。
 3. 在 staging 部署当前 `main`，执行查询回归、写测试、`sudo ./deploy/run-staging-integration-tests.sh` 和 `sudo ./deploy/run-staging-e2e-tests.sh`。两份记录的完整 SHA 必须等于 main HEAD。
-4. 将 `/var/lib/bytedepth-staging/test-history/staging-integration` 与 `staging-e2e` 用 SSH 复制到本地新建的 `mktemp -d` 目录，并以 `BYTEDEPTH_STAGING_EVIDENCE_DIR` 传给 `prepare-release.sh`；脚本检查通过后才可创建 Tag。
+4. 使用 SSH 上受控的 `sudo cat` 读取 root-owned `0700` `/var/lib/bytedepth-staging/test-history/` 内的 `staging-integration` 与 `staging-e2e`，写入本地新建的 `mktemp -d` 目录；不得用普通用户 `scp` 不可读路径。以 `BYTEDEPTH_STAGING_EVIDENCE_DIR` 传给 `prepare-release.sh`；脚本检查通过后才可创建 Tag。
 5. 通过后，生产打新 SemVer Tag，部署到 175（生产单机）：`deploy-release.sh vTag`。
 6. 生产验收（SNI 查询回归）通过后宣布上线。staging 验证失败则修代码回到第 2 步，不发布生产。
-6. 失败时，仅在数据库迁移兼容的前提下，才可部署回滚基线 Tag。数据恢复遵循部署手册。
+7. 失败时，仅在数据库迁移兼容的前提下，才可部署回滚基线 Tag。数据恢复遵循部署手册。
 
 staging 回滚非无风险：候选 ref 已执行 Flyway 后，直接部署旧 ref 可能不兼容当前 schema。正确回滚：停止 app → 重新灌入生产基线 → 部署目标 ref → Flyway → 验证。
 

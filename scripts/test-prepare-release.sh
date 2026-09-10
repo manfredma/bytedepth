@@ -26,6 +26,7 @@ assert_maven_test_boundaries() {
   assert_xpath_true "$pom_file" "count($failsafe/*[local-name()='configuration']/*[local-name()='includes']/*[local-name()='include']) = 1 and $failsafe/*[local-name()='configuration']/*[local-name()='includes']/*[local-name()='include' and text()='**/*IT.java']" || return 1
   assert_xpath_true "$pom_file" "count($failsafe/*[local-name()='executions']/*[local-name()='execution']/*[local-name()='goals']/*[local-name()='goal']) = 2 and count($failsafe/*[local-name()='executions']/*[local-name()='execution']/*[local-name()='goals']/*[local-name()='goal' and text()='integration-test']) = 1 and count($failsafe/*[local-name()='executions']/*[local-name()='execution']/*[local-name()='goals']/*[local-name()='goal' and text()='verify']) = 1" || return 1
   assert_xpath_true "$pom_file" "$failsafe/*[local-name()='configuration']/*[local-name()='argLine' and normalize-space(text())='$expected_arg_line']" || return 1
+  assert_xpath_true "$pom_file" "$failsafe/*[local-name()='configuration']/*[local-name()='systemPropertyVariables']/*[local-name()='bytedepth.it.redis.password' and text()='\${env.BYTEDEPTH_IT_REDIS_PASSWORD}']" || return 1
   assert_xpath_true "$pom_file" "$surefire/*[local-name()='configuration']/*[local-name()='excludes']/*[local-name()='exclude' and text()='**/*IT.java']" || return 1
 }
 
@@ -141,6 +142,29 @@ assert_release_rejects_without_maven 'mismatched staging integration commit' "$T
 cat > "$EVIDENCE_DIR/staging-integration" <<EOF
 commit=$CURRENT_SHA
 command=run-staging-integration-tests
+timestamp=2026-09-10T10:11:12Z
+result=passed
+EOF
+cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
+commit=$CURRENT_SHA
+command=run-staging-e2e-tests
+timestamp=2026-02-30T10:11:12Z
+result=passed
+EOF
+assert_release_rejects_without_maven 'an impossible UTC timestamp' "$TEMP_ROOT/impossible-timestamp.log"
+
+cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
+commit=$CURRENT_SHA
+command=run-staging-e2e-tests
+timestamp=2026-09-10T10:11:12Z
+result=passed
+EOF
+printf 'unterminated-extra-field' >> "$EVIDENCE_DIR/staging-e2e"
+assert_release_rejects_without_maven 'an incomplete fifth evidence line' "$TEMP_ROOT/incomplete-fifth-line.log"
+
+cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
+commit=$CURRENT_SHA
+command=run-staging-e2e-tests
 timestamp=2026-09-10T10:11:12Z
 result=passed
 EOF

@@ -28,3 +28,12 @@ The worktree initially lacked `node_modules`, so the first `npm test` and `npm r
 ## Deferred staging validation
 
 No Failsafe integration or Playwright command was run locally. The two runners must execute on staging after the current `main` SHA is deployed; only then may their copied records be supplied to release preparation.
+
+## Review round 1
+
+- Each runner now removes its previous evidence before validating and starting a new run. The mock suites prove a success followed by a failed or WARNING rerun leaves no passed record.
+- Both runners snapshot the complete checkout SHA before copying source or starting E2E, require the latest deployment-history SHA to match it, then recheck both before writing evidence.
+- Redis credentials now use a private `0600` Docker env file and the Failsafe profile maps the container environment to the test system property. They no longer appear in Maven or Docker arguments, and the runner replaces any exact password occurrence with `[REDACTED]` before `tee`; the mock regression test verifies both safeguards.
+- `run-staging-e2e-tests.sh` is tracked executable and its regression test checks the Git mode.
+- Evidence retrieval documentation now uses controlled `sudo cat` through SSH because the evidence directory deliberately remains root-owned `0700` with `0600` records.
+- Release parsing requires exactly four newline-terminated lines and normalizes the UTC ISO timestamp through the platform date parser; impossible timestamps and an incomplete fifth line are covered by negative tests.

@@ -185,7 +185,7 @@ cd /opt/bytedepth
 sudo ./deploy/run-staging-integration-tests.sh
 ```
 
-该 runner 只接受 `/etc/bytedepth-deploy.conf` 中的 `BYTEDEPTH_DEPLOY_MODE=staging`。它只从 staging `.env` 提取非空的 `REDIS_PASSWORD`，不加载或输出其他变量；将 checkout 复制到私有临时目录后，以一次性 Maven 25 容器加入 `bytedepth_default` 网络。Failsafe 通过 Docker 服务 DNS `redis:6379` 访问测试专用 Redis 凭据，不发布端口，也不会让 Maven 写入已部署 checkout。Maven 输出含任意大小写 `WARNING` 时 runner 失败；密钥不得写入命令输出、日志或聊天记录。
+该 runner 只接受 `/etc/bytedepth-deploy.conf` 中的 `BYTEDEPTH_DEPLOY_MODE=staging`。它会先读取完整 checkout SHA，并核对 `/var/lib/bytedepth-staging/deploy-history` 的最近部署 SHA；二者不一致时不会开始测试。它只从 staging `.env` 提取非空的 `REDIS_PASSWORD`，不加载或输出其他变量；密码写入 runner 私有的 `0600` Docker `--env-file`，Failsafe profile 再从容器环境读取，绝不会作为 Maven 或 Docker 命令行参数出现。runner 将 checkout 复制到私有临时目录后，以一次性 Maven 25 容器加入 `bytedepth_default` 网络。Failsafe 通过 Docker 服务 DNS `redis:6379` 访问测试专用 Redis 凭据，不发布端口，也不会让 Maven 写入已部署 checkout。进入 `tee` 前 runner 会将任何出现的精确密码替换为 `[REDACTED]`。Maven 输出含任意大小写 `WARNING` 时 runner 失败；密钥不得写入命令输出、日志或聊天记录。
 
 ### E2E 测试与 release evidence
 
@@ -196,9 +196,9 @@ cd /opt/bytedepth
 sudo ./deploy/run-staging-e2e-tests.sh
 ```
 
-该 wrapper 只在 staging 模式运行，固定 `E2E_BASE_URL=https://staging.bytedepth.cn` 和已安装的 `/usr/bin/chromium`；它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
+该 wrapper 只在 staging 模式运行，固定 `E2E_BASE_URL=https://staging.bytedepth.cn` 和已安装的 `/usr/bin/chromium`；它先把完整 checkout SHA 与最近 app 部署记录绑定，且在写 evidence 前再次确认 checkout 与部署记录均未变化。它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
 
-两个 runner 都只会在各自命令成功、输出零 `WARNING` 后，将 root-owned `0600` 记录写入 `/var/lib/bytedepth-staging/test-history/`：`staging-integration` 与 `staging-e2e`。每份记录严格含 `commit=<完整 SHA>`、对应 `command=`、UTC `timestamp=` 与 `result=passed`，不含凭据。创建 Release Tag 前，操作员必须将这两份记录复制到本机新建的临时目录，并把该目录显式传给 `prepare-release.sh`；详见 [发布流程](../docs/releases/README.md#staging-预检与生产单机发布)。
+两个 runner 都会在每次 staging run 开始时先删除自己的旧记录，因而失败或 WARNING 绝不保留旧的 passed 状态；只有各自命令成功、输出零 `WARNING`、checkout 与部署 SHA 均稳定时，才将 root-owned `0600` 记录写入 root-owned `0700` 的 `/var/lib/bytedepth-staging/test-history/`：`staging-integration` 与 `staging-e2e`。每份记录严格含 `commit=<完整 SHA>`、对应 `command=`、实际 UTC `timestamp=` 与 `result=passed`，不含凭据。由于记录不可由普通 staging 登录用户读取，创建 Release Tag 前必须通过受控 `sudo cat` over SSH 将两份记录写入本机新建的临时目录，并把该目录显式传给 `prepare-release.sh`；详见 [发布流程](../docs/releases/README.md#staging-预检与生产单机发布)。
 
 ## 6. 正式版本发布
 
