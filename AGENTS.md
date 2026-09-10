@@ -18,7 +18,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 每次生产部署必须是一个新的、不可变的 SemVer 发布版本：先完成版本记录并创建新 annotated Git Tag，再部署该 Tag；不得部署 `main`、裸 commit、分支或已部署过的 Tag。
 - 前端公共组件必须自隔离，组件之间除相对位置外不得互相影响。
 - staging（124，`staging.bytedepth.cn`）是唯一的 E2E、集成、部署验收和项目所有者验收环境，尤其适用于界面交互、视觉与布局改动；不得要求项目所有者验收未部署的本机代码。流程固定为：实现并补单元测试 → 部署候选 ref（功能分支或 `main`）到 staging（`deploy/deploy-staging.sh <ref>`）→ **在 staging 跑全部 E2E 与集成验收** → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能创建生产版本、Tag 或部署生产。
-- 本机只用于开发期的单元测试、静态检查和快速反馈，不能作为 E2E、集成或验收依据；本机缺少 Docker、Redis、Flyway、Nginx 等运行条件时，不得卡住功能分支的 staging 部署、测试或验收。此类验证一律在 staging 进行，本机结果不能替代 staging 结果。
+- 本机只用于开发期的纯单元测试、静态检查和快速反馈，不能作为 E2E、集成或验收依据。单元测试的边界是断网、无外部进程仍可执行：内存数据库、进程内 mock/fake（包括进程内 Redis 实现）均可在本机运行。连接独立 Redis、MySQL、Flyway、Docker/Testcontainers、Nginx 或其他跨进程服务的测试属于集成测试，必须在 staging 执行；即使这些服务在本机临时可用，也不得将本机结果作为集成验收依据。本机缺少这些条件时不得卡住功能分支的 staging 部署、测试或验收。
 - 知识沉淀必须写入项目文档（`docs/`、`deploy/`、`AGENTS.md` 等），禁止放入 agent 特有的记忆（如 `~/.claude` 下的 memory 文件）；既有 agent 记忆应迁移到项目文档后删除，不得在 agent 记忆与项目文档间重复维护同一事实。
 - 架构决策使用版本化 ADR，存于 `docs/architecture/decisions/`。设计 spec 之前先判断是否涉及模块边界、外部接口、长期约束或不易回退的方案取舍；需要时由项目所有者确认，先写 ADR 再写 spec，并随对应 PR 评审，不得事后补录。格式、状态流转和索引见 `docs/architecture/decisions/README.md`。
 
