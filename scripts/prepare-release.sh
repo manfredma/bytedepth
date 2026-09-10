@@ -23,6 +23,45 @@ release_mvn_cmd() {
     env JAVA_HOME="$JAVA_HOME" BYTEDEPTH_RELEASE_MODE=1 "$MAVEN_CMD" "$@"
 }
 
+require_staging_evidence() {
+    local evidence_name="$1"
+    local expected_command="$2"
+    local evidence_file="$BYTEDEPTH_STAGING_EVIDENCE_DIR/$evidence_name"
+    local line_count
+    local commit
+    local command
+    local timestamp
+    local result
+
+    if [[ ! -f "$evidence_file" || -L "$evidence_file" ]]; then
+        printf 'Missing staging evidence file: %s\n' "$evidence_name" >&2
+        exit 1
+    fi
+
+    line_count="$(wc -l < "$evidence_file")"
+    line_count="${line_count//[[:space:]]/}"
+    if [[ "$line_count" != 4 ]]; then
+        printf 'Malformed staging evidence file: %s\n' "$evidence_name" >&2
+        exit 1
+    fi
+
+    {
+        IFS= read -r commit
+        IFS= read -r command
+        IFS= read -r timestamp
+        IFS= read -r result
+    } < "$evidence_file"
+
+    if [[ ! "$commit" =~ ^commit=[0-9a-f]{40}$ ]] \
+        || [[ "$commit" != "commit=$HEAD_SHA" ]] \
+        || [[ "$command" != "command=$expected_command" ]] \
+        || [[ ! "$timestamp" =~ ^timestamp=[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] \
+        || [[ "$result" != 'result=passed' ]]; then
+        printf 'Malformed or mismatched staging evidence file: %s\n' "$evidence_name" >&2
+        exit 1
+    fi
+}
+
 [[ -n "$RELEASE_VERSION" && -n "$DEVELOPMENT_VERSION" ]] || usage
 [[ "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || usage
 [[ "$DEVELOPMENT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-SNAPSHOT$ ]] || usage
@@ -42,6 +81,22 @@ if [[ -n "$(git status --porcelain)" ]]; then
     printf 'Release preparation requires a clean working tree.\n' >&2
     exit 1
 fi
+
+if [[ -z "${BYTEDEPTH_STAGING_EVIDENCE_DIR:-}" ]] \
+    || [[ ! -d "$BYTEDEPTH_STAGING_EVIDENCE_DIR" ]] \
+    || [[ -L "$BYTEDEPTH_STAGING_EVIDENCE_DIR" ]]; then
+    printf 'Release preparation requires BYTEDEPTH_STAGING_EVIDENCE_DIR to name a copied staging evidence directory.\n' >&2
+    exit 1
+fi
+
+readonly HEAD_SHA="$(git rev-parse HEAD)"
+if [[ ! "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+    printf 'Unable to determine the full current commit SHA.\n' >&2
+    exit 1
+fi
+
+require_staging_evidence 'staging-integration' 'run-staging-integration-tests'
+require_staging_evidence 'staging-e2e' 'run-staging-e2e-tests'
 
 if git rev-parse --verify --quiet "refs/tags/$TAG" >/dev/null; then
     printf 'Release tag %s already exists locally.\n' "$TAG" >&2

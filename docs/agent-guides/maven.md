@@ -30,7 +30,16 @@ bash scripts/verify-changed-coverage.sh
 
 ## 测试环境边界
 
-本机只运行断网、无外部进程仍可执行的单元测试和静态检查；内存数据库与进程内 mock/fake（包括进程内 Redis 实现）属于单元测试。连接独立 Redis、MySQL、Flyway、Docker/Testcontainers、Nginx 或其他跨进程服务的测试属于集成测试，必须在 staging（124）执行；E2E 也必须在 staging 执行。将 `E2E_BASE_URL` 指向 staging 但仍在本机启动浏览器，不属于 staging E2E 验收。本机临时启动 Redis 或其他服务只能用于开发期诊断，不能替代 staging 集成验收。
+本机只运行断网、无外部进程仍可执行的单元测试和静态检查；内存数据库、内存实现与进程内 mock/fake（包括进程内 Redis 实现）都属于单元测试。连接任何独立进程（包括 Redis、MySQL、Flyway、Docker/Testcontainers、Nginx）的测试属于集成测试，必须在 staging（124）执行；E2E 也必须在 staging 执行。将 `E2E_BASE_URL` 指向 staging 但仍在本机启动浏览器，不属于 staging E2E 验收。本机临时启动 Redis 或其他服务只能用于开发期诊断，不能替代 staging 集成验收。
+
+离线单元测试只使用以下 Java 25 命令；它们不激活 `staging-integration`，默认 Surefire 也会排除 `**/*IT.java`：
+
+```bash
+JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn clean install -DskipTests -Dsort.skip=true
+JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn test -Dsort.skip=true
+```
+
+`*IT` 只能在 staging 主机由 `run-staging-integration-tests.sh` 运行；它在 Compose 网络中执行 `mvn -Pstaging-integration verify`。E2E 只能在同一 staging 主机由 `run-staging-e2e-tests.sh` 运行；该 wrapper 固定 `E2E_BASE_URL=https://staging.bytedepth.cn` 和 `/usr/bin/chromium`，不能用本机浏览器替代。两个命令及其 evidence 传递流程见 [部署手册](../../deploy/README.md#集成测试)。
 
 不得新增 Maven 模块；如确有必要，必须先获得项目所有者的明确同意。
 

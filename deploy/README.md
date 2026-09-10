@@ -187,6 +187,19 @@ sudo ./deploy/run-staging-integration-tests.sh
 
 该 runner 只接受 `/etc/bytedepth-deploy.conf` 中的 `BYTEDEPTH_DEPLOY_MODE=staging`。它只从 staging `.env` 提取非空的 `REDIS_PASSWORD`，不加载或输出其他变量；将 checkout 复制到私有临时目录后，以一次性 Maven 25 容器加入 `bytedepth_default` 网络。Failsafe 通过 Docker 服务 DNS `redis:6379` 访问测试专用 Redis 凭据，不发布端口，也不会让 Maven 写入已部署 checkout。Maven 输出含任意大小写 `WARNING` 时 runner 失败；密钥不得写入命令输出、日志或聊天记录。
 
+### E2E 测试与 release evidence
+
+在同一 staging checkout、完成 `*IT` 后，以 root 运行真实浏览器测试：
+
+```bash
+cd /opt/bytedepth
+sudo ./deploy/run-staging-e2e-tests.sh
+```
+
+该 wrapper 只在 staging 模式运行，固定 `E2E_BASE_URL=https://staging.bytedepth.cn` 和已安装的 `/usr/bin/chromium`；它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
+
+两个 runner 都只会在各自命令成功、输出零 `WARNING` 后，将 root-owned `0600` 记录写入 `/var/lib/bytedepth-staging/test-history/`：`staging-integration` 与 `staging-e2e`。每份记录严格含 `commit=<完整 SHA>`、对应 `command=`、UTC `timestamp=` 与 `result=passed`，不含凭据。创建 Release Tag 前，操作员必须将这两份记录复制到本机新建的临时目录，并把该目录显式传给 `prepare-release.sh`；详见 [发布流程](../docs/releases/README.md#staging-预检与生产单机发布)。
+
 ## 6. 正式版本发布
 
 每次生产发布前，必须先按 [`docs/releases/README.md`](../docs/releases/README.md) 创建新的 SemVer annotated Tag 并更新 `docs/releases/CHANGELOG.md`。不得直接拉取 `main`。发布流程为：**staging 预检 → 生产部署**。
@@ -204,7 +217,7 @@ ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
 
 涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。流程固定为：实现并补测试 → 跑前置门禁 → 部署候选 ref（分支或 `main`）到 staging → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能进入 6.2 创建生产版本与部署生产。
 
-在 `staging.bytedepth.cn` 执行查询回归与写测试验证。staging 验证失败则修代码回到此步，不发布生产。
+在 `staging.bytedepth.cn` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。准备 Release 前需对当前 `main` 的 SHA 重新取得两份 evidence；候选分支的结果不能替代 main。staging 验证失败则修代码回到此步，不发布生产。
 
 ### 6.2 生产部署
 

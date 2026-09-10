@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly RUNNER="$SOURCE_ROOT/deploy/run-staging-e2e-tests.sh"
+readonly TEMP_ROOT="$(mktemp -d)"
+readonly FIXTURE_ROOT="$TEMP_ROOT/fixture"
+readonly FIXTURE_SOURCE="$FIXTURE_ROOT/source"
+readonly FIXTURE_CONFIG="$FIXTURE_ROOT/bytedepth-deploy.conf"
+readonly EVIDENCE_DIR="$FIXTURE_ROOT/test-history"
+readonly FIXTURE_CHROMIUM="$FIXTURE_ROOT/chromium"
+readonly FAKE_BIN="$TEMP_ROOT/bin"
+readonly NPM_ARGS="$TEMP_ROOT/npm.args"
+readonly NPM_ENV="$TEMP_ROOT/npm.env"
+readonly GIT_LOG="$TEMP_ROOT/git.log"
+readonly INSTALL_ARGS="$TEMP_ROOT/install.args"
+readonly RUNNER_OUTPUT="$TEMP_ROOT/runner.out"
+readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
+trap 'rm -rf "$TEMP_ROOT"' EXIT
+
+if [[ ! -f "$RUNNER" ]]; then
+    printf 'Expected staging E2E runner at %s\n' "$RUNNER" >&2
+    exit 1
+fi
+
+mkdir -p "$FIXTURE_SOURCE" "$FAKE_BIN"
+touch "$FIXTURE_CHROMIUM"
+chmod +x "$FIXTURE_CHROMIUM"
+
+sed \
+    -e "s@^readonly SOURCE_ROOT=/opt/bytedepth\$@readonly SOURCE_ROOT=$FIXTURE_SOURCE@" \
+    -e "s@^readonly CONFIG_FILE=/etc/bytedepth-deploy.conf\$@readonly CONFIG_FILE=$FIXTURE_CONFIG@" \
+    -e "s@^readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history\$@readonly EVIDENCE_DIR=$EVIDENCE_DIR@" \
+    -e "s@^readonly CHROMIUM_EXECUTABLE=/usr/bin/chromium\$@readonly CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM@" \
+    -e '/^if \[\[ "${EUID}" -ne 0 \]\]; then$/,/^fi$/d' \
+    "$RUNNER" > "$TEMP_ROOT/runner"
+chmod +x "$TEMP_ROOT/runner"
+
+cat > "$FAKE_BIN/npm" <<'SCRIPT'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$STAGING_E2E_NPM_ARGS"
+printf 'E2E_BASE_URL=%s\nPLAYWRIGHT_CHROMIUM_EXECUTABLE=%s\n' "$E2E_BASE_URL" "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" > "$STAGING_E2E_NPM_ENV"
+[[ "$E2E_BASE_URL" == 'https://staging.bytedepth.cn' ]]
+[[ "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" == "$STAGING_E2E_CHROMIUM" ]]
+printf '%s\n' "${STAGING_E2E_NPM_OUTPUT:-Playwright passed}"
+exit "${STAGING_E2E_NPM_EXIT:-0}"
+SCRIPT
+chmod +x "$FAKE_BIN/npm"
+
+cat > "$FAKE_BIN/git" <<'SCRIPT'
+#!/usr/bin/env bash
+printf 'git %s\n' "$*" >> "$STAGING_E2E_GIT_LOG"
+if [[ "$*" == *'rev-parse HEAD'* ]]; then
+    printf '%s\n' "$STAGING_E2E_SHA"
+    exit 0
+fi
+exit 1
+SCRIPT
+chmod +x "$FAKE_BIN/git"
+
+cat > "$FAKE_BIN/install" <<'SCRIPT'
+#!/usr/bin/env bash
+printf '%s\n' "$@" >> "$STAGING_E2E_INSTALL_ARGS"
+arguments=()
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        -o|-g)
+            shift 2
+            ;;
+        *)
+            arguments+=("$1")
+            shift
+            ;;
+    esac
+done
+exec /usr/bin/install "${arguments[@]}"
+SCRIPT
+chmod +x "$FAKE_BIN/install"
+
+write_config() {
+    printf 'BYTEDEPTH_DEPLOY_MODE=%s\n' "$1" > "$FIXTURE_CONFIG"
+}
+
+run_runner() {
+    PATH="$FAKE_BIN:$PATH" \
+        STAGING_E2E_NPM_ARGS="$NPM_ARGS" \
+        STAGING_E2E_NPM_ENV="$NPM_ENV" \
+        STAGING_E2E_GIT_LOG="$GIT_LOG" \
+        STAGING_E2E_INSTALL_ARGS="$INSTALL_ARGS" \
+        STAGING_E2E_SHA="$CURRENT_SHA" \
+        STAGING_E2E_CHROMIUM="$FIXTURE_CHROMIUM" \
+        STAGING_E2E_NPM_OUTPUT="${STAGING_E2E_NPM_OUTPUT:-}" \
+        STAGING_E2E_NPM_EXIT="${STAGING_E2E_NPM_EXIT:-0}" \
+        "$TEMP_ROOT/runner" > "$RUNNER_OUTPUT" 2>&1
+}
+
+# A non-staging host is rejected before Playwright starts.
+write_config single-host
+if run_runner; then
+    printf 'Expected runner to reject a non-staging deployment mode.\n' >&2
+    exit 1
+fi
+[[ ! -e "$NPM_ARGS" ]]
+
+# The wrapper fixes the staging target and installed Chromium, then records the full deployed SHA.
+write_config staging
+run_runner
+grep -Fqx 'run' "$NPM_ARGS"
+grep -Fqx 'test:e2e' "$NPM_ARGS"
+grep -Fqx 'E2E_BASE_URL=https://staging.bytedepth.cn' "$NPM_ENV"
+grep -Fqx "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM" "$NPM_ENV"
+grep -Fqx "commit=$CURRENT_SHA" "$EVIDENCE_DIR/staging-e2e"
+grep -Fqx 'command=run-staging-e2e-tests' "$EVIDENCE_DIR/staging-e2e"
+grep -Eq '^timestamp=[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' "$EVIDENCE_DIR/staging-e2e"
+grep -Fqx 'result=passed' "$EVIDENCE_DIR/staging-e2e"
+grep -Fqx -- '-o' "$INSTALL_ARGS"
+grep -Fqx 'root' "$INSTALL_ARGS"
+
+# A warning is a gate failure and must not mint an evidence record.
+rm -f "$EVIDENCE_DIR/staging-e2e" "$GIT_LOG"
+if STAGING_E2E_NPM_OUTPUT='WARNING: simulated Playwright warning' run_runner; then
+    printf 'Expected runner to reject Playwright warning output.\n' >&2
+    exit 1
+fi
+grep -Fq 'WARNING: simulated Playwright warning' "$RUNNER_OUTPUT"
+[[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
+[[ ! -e "$GIT_LOG" ]]
+
+# Failed Playwright likewise cannot mint evidence or inspect a checked-out SHA.
+rm -f "$EVIDENCE_DIR/staging-e2e" "$GIT_LOG"
+if STAGING_E2E_NPM_EXIT=17 run_runner; then
+    printf 'Expected runner to reject failed Playwright.\n' >&2
+    exit 1
+fi
+grep -Fq 'Staging E2E tests failed.' "$RUNNER_OUTPUT"
+[[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
+[[ ! -e "$GIT_LOG" ]]
+
+printf 'staging E2E runner tests passed\n'

@@ -3,6 +3,8 @@ set -Eeuo pipefail
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly TEMP_ROOT="$(mktemp -d)"
+readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
+readonly EVIDENCE_DIR="$TEMP_ROOT/staging-evidence"
 trap 'rm -rf "$TEMP_ROOT"' EXIT
 
 assert_xpath_true() {
@@ -53,6 +55,7 @@ printf 'git %s\n' "$*" >> "$RELEASE_TEST_LOG"
 case "$1 $2" in
   'branch --show-current') printf 'main\n' ;;
   'status --porcelain') [[ "${RELEASE_TEST_DIRTY:-}" == 1 ]] && printf ' M pom.xml\n' ;;
+  'rev-parse HEAD') printf '%s\n' "$RELEASE_TEST_SHA" ;;
   'rev-parse --verify') exit 1 ;;
   'ls-remote --exit-code') exit 2 ;;
 esac
@@ -65,8 +68,83 @@ printf 'mvn release_mode=%s %s\n' "${BYTEDEPTH_RELEASE_MODE:-0}" "$*" >> "$RELEA
 EOF
 chmod +x "$TEMP_ROOT/java/bin/mvn"
 
-RELEASE_TEST_LOG="$TEMP_ROOT/release.log" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
-    "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT
+run_prepare() {
+    RELEASE_TEST_LOG="$1" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
+        RELEASE_TEST_SHA="$CURRENT_SHA" BYTEDEPTH_STAGING_EVIDENCE_DIR="$EVIDENCE_DIR" \
+        "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT
+}
+
+assert_release_rejects_without_maven() {
+    local description="$1"
+    local log_file="$2"
+    if run_prepare "$log_file" >/dev/null 2>&1; then
+        printf 'Expected release preparation to reject %s.\n' "$description" >&2
+        exit 1
+    fi
+    [[ ! -e "$log_file" ]] || ! grep -q '^mvn release_mode=1 ' "$log_file"
+}
+
+# Commit-bound staging records are mandatory; a bare green result is not evidence.
+assert_release_rejects_without_maven 'absent staging evidence' "$TEMP_ROOT/absent-evidence.log"
+
+mkdir -p "$EVIDENCE_DIR"
+printf 'green\n' > "$EVIDENCE_DIR/staging-integration"
+printf 'green\n' > "$EVIDENCE_DIR/staging-e2e"
+assert_release_rejects_without_maven 'malformed staging evidence' "$TEMP_ROOT/malformed-evidence.log"
+
+cat > "$EVIDENCE_DIR/staging-integration" <<EOF
+commit=$CURRENT_SHA
+command=run-staging-integration-tests
+timestamp=2026-09-10T10:11:12Z
+result=passed
+EOF
+rm "$EVIDENCE_DIR/staging-e2e"
+assert_release_rejects_without_maven 'absent staging E2E evidence' "$TEMP_ROOT/absent-e2e.log"
+
+cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
+commit=$CURRENT_SHA
+command=run-staging-e2e-tests
+timestamp=2026-09-10T10:11:12Z
+result=passed
+EOF
+rm "$EVIDENCE_DIR/staging-integration"
+assert_release_rejects_without_maven 'absent staging integration evidence' "$TEMP_ROOT/absent-integration.log"
+
+cat > "$EVIDENCE_DIR/staging-integration" <<EOF
+commit=$CURRENT_SHA
+command=run-staging-integration-tests
+timestamp=2026-09-10T10:11:12Z
+result=passed
+EOF
+cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
+commit=ffffffffffffffffffffffffffffffffffffffff
+command=run-staging-e2e-tests
+timestamp=2026-09-10T10:11:12Z
+result=passed
+EOF
+assert_release_rejects_without_maven 'mismatched staging E2E commit' "$TEMP_ROOT/mismatched-e2e.log"
+
+cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
+commit=$CURRENT_SHA
+command=run-staging-e2e-tests
+timestamp=2026-09-10T10:11:12Z
+result=passed
+EOF
+cat > "$EVIDENCE_DIR/staging-integration" <<EOF
+commit=ffffffffffffffffffffffffffffffffffffffff
+command=run-staging-integration-tests
+timestamp=2026-09-10T10:11:12Z
+result=passed
+EOF
+assert_release_rejects_without_maven 'mismatched staging integration commit' "$TEMP_ROOT/mismatched-integration.log"
+
+cat > "$EVIDENCE_DIR/staging-integration" <<EOF
+commit=$CURRENT_SHA
+command=run-staging-integration-tests
+timestamp=2026-09-10T10:11:12Z
+result=passed
+EOF
+run_prepare "$TEMP_ROOT/release.log"
 
 grep -Fqx 'coverage' "$TEMP_ROOT/release.log"
 grep -Fqx 'mvn release_mode=1 -B release:prepare -DskipTests -Darguments=-DskipTests -DreleaseVersion=1.2.3 -DdevelopmentVersion=1.2.4-SNAPSHOT' "$TEMP_ROOT/release.log"

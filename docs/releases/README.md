@@ -18,6 +18,8 @@ main（下一版本 -SNAPSHOT）
   → 实现与测试
   → `bash scripts/verify-changed-coverage.sh`（相对最近正式 Tag 的生产 Java 变更必须行、分支、方法 100%，且 Maven 输出零 WARNING）
   → 更新 CHANGELOG 的 Unreleased
+  → 在 staging 部署当前 main，并运行 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`（两份完整 SHA evidence 必须匹配 main HEAD）
+  → 将两份 staging evidence 复制到本地 `mktemp -d` 目录，作为发布前验证输入
   → 发布前验证（全量测试、覆盖率、文档）
   → 发布提交（去掉 -SNAPSHOT）
   → 创建并推送新的 annotated tag vX.Y.Z
@@ -29,10 +31,22 @@ main（下一版本 -SNAPSHOT）
 
 发布工具必须自动校验工作区、版本号、Tag 格式和 Tag 唯一性；部署脚本必须只接受已验证的 Tag，并在状态中保存 `version` 与完整 SHA。发布工具完成前，禁止执行下一次生产部署。
 
-创建版本只使用受控脚本；它会校验 `main`、干净工作区、Tag 唯一性和 Changelog 条目，并按项目规则刷新缓存、执行全量测试、创建 annotated Tag、推送以及清理本机事务状态。示例发布 `1.2.3`，下一开发版本为 `1.2.4-SNAPSHOT`：
+创建版本只使用受控脚本；它会校验 `main`、干净工作区、Tag 唯一性和 Changelog 条目，并按项目规则刷新缓存、执行全量测试、创建 annotated Tag、推送以及清理本机事务状态。它还会在 Maven Release Plugin 前拒绝没有两份 commit-bound staging evidence、格式错误的记录，或记录 SHA 与当前 `main` HEAD 不一致的情况。操作员必须先从 staging 复制**恰好**两份无凭据记录到新临时目录，再显式传入该目录；不能传入“green”文本、其他 ref 的结果或长期复用的目录：
 
 ```bash
-bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
+evidence_dir="$(mktemp -d)"
+scp -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25:/var/lib/bytedepth-staging/test-history/staging-integration "$evidence_dir/"
+scp -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25:/var/lib/bytedepth-staging/test-history/staging-e2e "$evidence_dir/"
+BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
+rm -rf "$evidence_dir"
+```
+
+每份记录必须分别为 `staging-integration` 或 `staging-e2e`，并严格包含 `commit=<完整 40 位 SHA>`、对应的 `command=`、UTC `timestamp=` 和 `result=passed`；不得包含凭据。以上命令示例发布 `1.2.3`，下一开发版本为 `1.2.4-SNAPSHOT`：
+
+```bash
+evidence_dir="$(mktemp -d)"
+# 先按上例复制 evidence，再执行：
+BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
 ```
 
 脚本内的 Maven Release Plugin 会将全部 Maven 模块从 `X.Y.Z-SNAPSHOT` 改为 `X.Y.Z`、创建 `vX.Y.Z` annotated Tag，再将 `main` 推进到下一 `-SNAPSHOT`。`release:prepare` 会在本机生成 `release.properties` 和各模块的 `pom.xml.releaseBackup`，它们只用于插件的恢复流程，绝不提交；脚本退出时会执行 `release:clean`。覆盖率门禁会自动识别相对最近正式 Tag 的生产 Java 变更；`COVERAGE_INCLUDES='**'` 仅用于清理历史覆盖债务。禁止绕过脚本手工编辑多个 POM 或创建轻量 Tag。
@@ -64,10 +78,11 @@ bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
 **发布前置**：进入发布流程前，所有待办任务必须全部解决；有阻塞项先解决或与项目所有者确认暂缓（需明确说"暂时不解决"），不得带遗留项上线。
 
 1. 记录当前已验收发布的 Tag，作为回滚基线。
-2. 在 staging 部署 `main`（或候选 ref）并用真实数据预检：`deploy-staging.sh <ref>`。
-3. staging 执行查询回归与写测试验证。
-4. 通过后，生产打新 SemVer Tag，部署到 175（生产单机）：`deploy-release.sh vTag`。
-5. 生产验收（SNI 查询回归）通过后宣布上线。staging 验证失败则修代码回到第 2 步，不发布生产。
+2. 在 staging 部署候选 ref 并用真实数据预检：`deploy-staging.sh <ref>`；项目所有者验收通过后合并 `main`。
+3. 在 staging 部署当前 `main`，执行查询回归、写测试、`sudo ./deploy/run-staging-integration-tests.sh` 和 `sudo ./deploy/run-staging-e2e-tests.sh`。两份记录的完整 SHA 必须等于 main HEAD。
+4. 将 `/var/lib/bytedepth-staging/test-history/staging-integration` 与 `staging-e2e` 用 SSH 复制到本地新建的 `mktemp -d` 目录，并以 `BYTEDEPTH_STAGING_EVIDENCE_DIR` 传给 `prepare-release.sh`；脚本检查通过后才可创建 Tag。
+5. 通过后，生产打新 SemVer Tag，部署到 175（生产单机）：`deploy-release.sh vTag`。
+6. 生产验收（SNI 查询回归）通过后宣布上线。staging 验证失败则修代码回到第 2 步，不发布生产。
 6. 失败时，仅在数据库迁移兼容的前提下，才可部署回滚基线 Tag。数据恢复遵循部署手册。
 
 staging 回滚非无风险：候选 ref 已执行 Flyway 后，直接部署旧 ref 可能不兼容当前 schema。正确回滚：停止 app → 重新灌入生产基线 → 部署目标 ref → Flyway → 验证。
