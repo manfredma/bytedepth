@@ -2,16 +2,16 @@
 FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /build
 
-# 配置阿里云 Maven 镜像加速（内嵌，不依赖外部文件）
+# 配置腾讯云 Maven 镜像加速（内嵌，不依赖外部文件）
 # mirrorOf=* 覆盖所有仓库（含 Spring repo.spring.io），避免从境外仓库下载慢
 RUN mkdir -p /root/.m2 && cat > /root/.m2/settings.xml <<'SETTINGS'
 <?xml version="1.0" encoding="UTF-8"?>
 <settings>
   <mirrors>
     <mirror>
-      <id>aliyun</id>
-      <name>Aliyun Maven Mirror</name>
-      <url>https://maven.aliyun.com/repository/public</url>
+      <id>tencent-cloud</id>
+      <name>Tencent Cloud Maven Mirror</name>
+      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>
       <mirrorOf>*</mirrorOf>
     </mirror>
   </mirrors>

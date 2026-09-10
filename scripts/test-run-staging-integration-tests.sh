@@ -4,6 +4,7 @@ set -Eeuo pipefail
 SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SOURCE_ROOT
 readonly RUNNER="$SOURCE_ROOT/deploy/run-staging-integration-tests.sh"
+readonly DOCKERFILE="$SOURCE_ROOT/Dockerfile"
 TEMP_ROOT="$(mktemp -d)"
 readonly TEMP_ROOT
 trap 'rm -rf "$TEMP_ROOT"' EXIT
@@ -12,6 +13,14 @@ if [[ ! -f "$RUNNER" ]]; then
     printf 'Expected staging integration runner at %s\n' "$RUNNER" >&2
     exit 1
 fi
+
+# Both staging Maven execution contexts use Tencent Cloud's public mirror.
+# These checks intentionally fail until the production configuration is
+# switched; they also prevent a future fallback to the former Aliyun mirror.
+! grep -Fq 'https://maven.aliyun.com/repository/public' "$DOCKERFILE"
+grep -Fqx '      <id>tencent-cloud</id>' "$DOCKERFILE"
+grep -Fqx '      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>' "$DOCKERFILE"
+grep -Fqx '      <mirrorOf>*</mirrorOf>' "$DOCKERFILE"
 
 readonly FIXTURE_ROOT="$TEMP_ROOT/fixture"
 readonly FIXTURE_SOURCE="$FIXTURE_ROOT/source"
@@ -109,6 +118,18 @@ for argument in "$@"; do
 done
 [[ -n "$env_file" && -f "$env_file" ]]
 grep -Fqx "BYTEDEPTH_IT_REDIS_PASSWORD=$STAGING_RUNNER_REDIS_SECRET" "$env_file"
+settings_file=''
+for argument in "$@"; do
+    case "$argument" in
+        *:/root/.m2/settings.xml:ro)
+            settings_file="${argument%:/root/.m2/settings.xml:ro}"
+            ;;
+    esac
+done
+[[ -n "$settings_file" && -f "$settings_file" ]]
+grep -Fqx '      <id>tencent-cloud</id>' "$settings_file"
+grep -Fqx '      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>' "$settings_file"
+grep -Fqx '      <mirrorOf>*</mirrorOf>' "$settings_file"
 if [[ -n "${STAGING_RUNNER_DOCKER_STARTED_FILE:-}" ]]; then
     printf 'started\n' >> "$STAGING_RUNNER_DOCKER_STARTED_FILE"
 fi

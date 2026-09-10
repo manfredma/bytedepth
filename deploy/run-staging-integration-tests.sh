@@ -16,6 +16,7 @@ WORK_DIR="$(mktemp -d)"
 readonly WORK_DIR
 readonly MAVEN_LOG="$WORK_DIR/maven.log"
 readonly MAVEN_ENV_FILE="$WORK_DIR/maven.env"
+readonly MAVEN_SETTINGS_FILE="$WORK_DIR/settings.xml"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 # Run the complete test/evidence transaction under the same lock as staging
@@ -110,6 +111,19 @@ fi
 mkdir -p "$WORK_DIR/source" "$WORK_DIR/m2"
 umask 077
 printf 'BYTEDEPTH_IT_REDIS_PASSWORD=%s\n' "$redis_password" > "$MAVEN_ENV_FILE"
+cat > "$MAVEN_SETTINGS_FILE" <<'SETTINGS'
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <mirrors>
+    <mirror>
+      <id>tencent-cloud</id>
+      <name>Tencent Cloud Maven Mirror</name>
+      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+</settings>
+SETTINGS
 cp -a "$SOURCE_ROOT/." "$WORK_DIR/source/"
 # The disposable Maven workspace must not receive the staging application's
 # full environment.  Only MAVEN_ENV_FILE is mounted as a narrowly scoped
@@ -122,6 +136,7 @@ if ! sudo docker run --rm --network bytedepth_default \
     --env TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal \
     -v "$WORK_DIR/source":/workspace \
     -v "$WORK_DIR/m2":/root/.m2 \
+    -v "$MAVEN_SETTINGS_FILE:/root/.m2/settings.xml:ro" \
     -v "$DOCKER_SOCKET:$DOCKER_SOCKET" \
     -w /workspace \
     maven:3.9-eclipse-temurin-25 \
