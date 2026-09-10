@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <script th:src="@{/js/theme-switcher.js}"></script>
+    <title>网络地图 - bytedepth</title>
+    <style>
+        .network-page { box-sizing: border-box; max-width: var(--bd-page-max, 1060px); margin: 40px auto; padding: 0 var(--bd-page-pad, 20px) 60px; color: var(--bd-text, #1a1a2e); font-family: var(--serif); }
+        .network-page *, .network-page *::before, .network-page *::after { box-sizing: inherit; }
+        .network-header { margin-bottom: 32px; }
+        .network-title { margin: 0 0 8px; font-size: 1.8em; }
+        .network-intro, .network-group-description, .network-card-description { margin: 0; color: var(--bd-text-muted, #555); line-height: 1.7; }
+        .network-groups { display: grid; gap: 28px; }
+        .network-group { min-width: 0; }
+        .network-group-title { margin: 0 0 6px; font-size: 1.2em; }
+        .network-group-description { margin-bottom: 14px; }
+        .network-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+        .network-card { display: block; min-width: 0; padding: 20px; border: 1px solid var(--bd-border, #e4e7eb); border-radius: 10px; background: var(--bd-surface, #fff); color: inherit; text-decoration: none; box-shadow: var(--bd-shadow, 0 2px 8px rgba(0, 0, 0, .08)); transition: transform .15s, box-shadow .15s; }
+        .network-card:hover { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(0, 0, 0, .12); }
+        .network-card:focus-visible { outline: 3px solid var(--bd-accent, #e94560); outline-offset: 3px; }
+        .network-card-name { display: block; margin-bottom: 8px; font-size: 1.05em; }
+        .network-card-url { display: block; margin-top: 12px; overflow-wrap: anywhere; color: var(--bd-accent, #e94560); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .82em; }
+        @media (min-width: 680px) { .network-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 1080px) { .network-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
+<main class="network-page">
+    <header class="network-header">
+        <h1 class="network-title">网络地图</h1>
+        <p class="network-intro">ByteDepth 网络与常用技术站点目录。</p>
+    </header>
+    <div class="network-groups">
+        <section class="network-group" th:each="group : ${groups}">
+            <h2 class="network-group-title" th:text="${group.title}">分组名称</h2>
+            <p class="network-group-description" th:text="${group.description}">分组说明</p>
+            <div class="network-cards">
+                <a class="network-card" th:each="site : ${group.sites}"
+                   th:href="${site.url}" th:attr="aria-label='在新标签页打开：' + ${site.name}"
+                   target="_blank" rel="noopener noreferrer">
+                    <strong class="network-card-name" th:text="${site.name}">站点名称</strong>
+                    <span class="network-card-description" th:text="${site.description}">站点说明</span>
+                    <span class="network-card-url" th:text="${site.url}">https://example.com</span>
+                </a>
+            </div>
+        </section>
+    </div>
+</main>
+</body>
+</html>
