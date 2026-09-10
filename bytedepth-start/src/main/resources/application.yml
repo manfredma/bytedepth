@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: classpath:network-map.yml
   servlet:
     multipart:
       max-file-size: 10MB

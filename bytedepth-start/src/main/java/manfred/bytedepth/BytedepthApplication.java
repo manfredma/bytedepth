@@ -2,9 +2,11 @@ package manfred.bytedepth;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication(scanBasePackages = "manfred.bytedepth")
+@ConfigurationPropertiesScan
 @org.springframework.scheduling.annotation.EnableScheduling
 @EnableAsync
 public class BytedepthApplication {

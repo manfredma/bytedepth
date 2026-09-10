@@ -1,0 +1,19 @@
+bytedepth:
+  network:
+    groups:
+      - id: bytedepth
+        title: ByteDepth 站点
+        description: ByteDepth 网络中的产品与工具。
+        sites:
+          - { name: ByteDepth, url: https://bytedepth.cn, description: 技术博客与知识沉淀。 }
+          - { name: Career, url: https://career.bytedepth.cn, description: 职业与履历。 }
+          - { name: Toolbox, url: https://toolbox.bytedepth.cn, description: 常用工具集合。 }
+          - { name: 工作台, url: https://workbench.bytedepth.cn, description: 个人工作台。 }
+      - id: developer-resources
+        title: 常用技术站点
+        description: 长期维护的官方技术文档入口。
+        sites:
+          - { name: Spring Framework 文档, url: https://docs.spring.io/spring-framework/reference/index.html, description: Spring Framework 官方参考文档。 }
+          - { name: Java 文档, url: https://docs.oracle.com/en/java/index.html, description: Java 官方文档。 }
+          - { name: MDN Web Docs, url: https://developer.mozilla.org/en-US/docs/MDN/index.html, description: MDN 官方 Web 文档。 }
+          - { name: GitHub Docs, url: https://docs.github.com/en, description: GitHub 官方文档。 }
