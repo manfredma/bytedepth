@@ -56,6 +56,7 @@ else
 fi
 
 printf 'Coverage base: %s\nCoverage includes: %s\n' "$COVERAGE_BASE_REF" "$coverage_includes"
+# Keep this gate profile-free: Failsafe integration tests are staging-only, while coverage is unit-only.
 run_maven clean install -DskipTests -Dsort.skip=true
 run_maven verify -Pchanged-coverage -Dcoverage.includes="$coverage_includes" \
   -Dcoverage.check.skip=true -Dsort.skip=true

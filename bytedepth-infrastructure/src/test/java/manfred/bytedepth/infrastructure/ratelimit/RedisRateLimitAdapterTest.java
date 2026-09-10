@@ -1,58 +1,60 @@
 package manfred.bytedepth.infrastructure.ratelimit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 import io.github.bucket4j.distributed.proxy.ProxyManager;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisURI;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 class RedisRateLimitAdapterTest {
 
     @Test
-    void consumesAndRejectsDistributedBuckets() {
-        RedisRateLimitAdapter adapter = new RedisRateLimitAdapter(new RateLimitRedisProperties());
-        try {
-            String rule = "test-" + UUID.randomUUID();
-            assertTrue(adapter.tryConsume(rule, 1, Duration.ofMinutes(1), "visitor").allowed());
-            assertFalse(adapter.tryConsume(rule, 1, Duration.ofMinutes(1), "visitor").allowed());
-        } finally {
-            adapter.close();
+    void constructsRedisUrisWithoutAndWithAPassword() {
+        RedisClient redisClient = mock(RedisClient.class);
+        ArgumentCaptor<RedisURI> redisUris = ArgumentCaptor.forClass(RedisURI.class);
+        try (MockedStatic<RedisClient> clients = mockStatic(RedisClient.class)) {
+            clients.when(() -> RedisClient.create(any(RedisURI.class))).thenReturn(redisClient);
+
+            RateLimitRedisProperties blank = new RateLimitRedisProperties();
+            blank.setPassword(null);
+            new RedisRateLimitAdapter(blank).close();
+
+            RateLimitRedisProperties configured = new RateLimitRedisProperties();
+            configured.setPassword("secret");
+            new RedisRateLimitAdapter(configured).close();
+
+            clients.verify(() -> RedisClient.create(redisUris.capture()), org.mockito.Mockito.times(2));
         }
-    }
 
-    @Test
-    void acceptsBlankAndConfiguredRedisPasswords() {
-        RateLimitRedisProperties blank = new RateLimitRedisProperties();
-        blank.setPassword(null);
-        RedisRateLimitAdapter blankAdapter = new RedisRateLimitAdapter(blank);
-        blankAdapter.close();
-
-        RateLimitRedisProperties configured = new RateLimitRedisProperties();
-        configured.setPassword("secret");
-        RedisRateLimitAdapter configuredAdapter = new RedisRateLimitAdapter(configured);
-        configuredAdapter.close();
+        assertThat(redisUris.getAllValues()).hasSize(2);
+        assertThat(redisUris.getAllValues().get(0).getCredentialsProvider().resolveCredentials().block().hasPassword())
+                .isFalse();
+        assertThat(redisUris.getAllValues().get(1).getCredentialsProvider().resolveCredentials().block().getPassword())
+                .containsExactly('s', 'e', 'c', 'r', 'e', 't');
     }
 
     @Test
     void managerReturnsTheInstancePublishedByAConcurrentInitializer() throws Exception {
-        RedisRateLimitAdapter adapter = new RedisRateLimitAdapter(new RateLimitRedisProperties());
+        RedisRateLimitAdapter adapter = newAdapterWithoutNetwork();
         ProxyManager<byte[]> concurrentlyInitialized = proxyManagerMock();
         AtomicReference<Thread> caller = new AtomicReference<>();
         ExecutorService executor = Executors.newSingleThreadExecutor(runnable -> {
@@ -65,7 +67,6 @@ class RedisRateLimitAdapterTest {
             synchronized (adapter) {
                 Future<ProxyManager<byte[]>> result = executor.submit(() -> managerFor(adapter));
                 awaitBlocked(caller);
-                // The caller is now blocked after its first null read; leaving the monitor lets it observe this value.
                 proxyManagerField().set(adapter, concurrentlyInitialized);
                 resultHolder.set(result);
             }
@@ -78,7 +79,7 @@ class RedisRateLimitAdapterTest {
 
     @Test
     void sha256ReportsANonRecoverableJvmDigestFailure() throws Exception {
-        RedisRateLimitAdapter adapter = new RedisRateLimitAdapter(new RateLimitRedisProperties());
+        RedisRateLimitAdapter adapter = newAdapterWithoutNetwork();
         try (MockedStatic<MessageDigest> digest = mockStatic(MessageDigest.class)) {
             digest.when(() -> MessageDigest.getInstance("SHA-256"))
                     .thenThrow(new NoSuchAlgorithmException("unavailable"));
@@ -89,6 +90,14 @@ class RedisRateLimitAdapterTest {
             assertEquals("JVM 缺少 SHA-256", exception.getCause().getMessage());
         } finally {
             adapter.close();
+        }
+    }
+
+    private static RedisRateLimitAdapter newAdapterWithoutNetwork() {
+        RedisClient redisClient = mock(RedisClient.class);
+        try (MockedStatic<RedisClient> clients = mockStatic(RedisClient.class)) {
+            clients.when(() -> RedisClient.create(any(RedisURI.class))).thenReturn(redisClient);
+            return new RedisRateLimitAdapter(new RateLimitRedisProperties());
         }
     }
 

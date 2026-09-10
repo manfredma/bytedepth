@@ -174,7 +174,33 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 
 ### 部署
 
-`deploy/deploy-staging.sh <ref>` 在 124 执行，接受 origin 上已命名的分支或 Tag（默认 `main`，不直接接受任意裸 SHA）。功能分支先部署到 staging 验收、通过后再合并 `main`。
+`deploy/deploy-staging.sh <ref>` 在 124 执行，接受 origin 上已命名的分支或 Tag（默认 `main`，不直接接受任意裸 SHA）。功能分支先部署到 staging 验收、通过后再合并 `main`。部署、集成测试和 E2E 共用 `/var/lib/bytedepth-staging/deployment-test.lock`；同一台 staging 上它们互斥运行。部署取得锁后立即删除两份旧 evidence，因此新部署绝不会继承上一版本的测试通过记录。
+
+staging 系统盘为 40GB。每次成功部署后会执行 `docker builder prune --all --force --max-used-space 5GB`：保留至多 5GB 的近期 BuildKit 缓存以加速下一次构建，并防止缓存累积耗尽系统盘。该回收不删除运行中的容器、镜像或数据卷。
+
+### 集成测试
+
+部署候选 ref 并确认 Compose 服务健康后，只能在 staging（124）的 `/opt/bytedepth` 执行以下命令：
+
+```bash
+cd /opt/bytedepth
+sudo ./deploy/run-staging-integration-tests.sh
+```
+
+该 runner 只接受 `/etc/bytedepth-deploy.conf` 中的 `BYTEDEPTH_DEPLOY_MODE=staging`。它会先取得共享锁、读取完整 checkout SHA，并核对 `/var/lib/bytedepth-staging/deploy-history` 的最近部署 SHA；二者不一致时不会开始测试。它只从 staging `.env` 提取非空的 `REDIS_PASSWORD`，不加载或输出其他变量；密码写入 runner 私有的 `0600` Docker `--env-file`，Failsafe profile 再从容器环境读取，绝不会作为 Maven 或 Docker 命令行参数出现。runner 将 checkout 复制到私有临时目录后移除其中的 `.env`，因此容器只接收上述 Redis env-file；再以一次性 Maven 25 容器加入 `bytedepth_default` 网络。Failsafe 通过 Docker 服务 DNS `redis:6379` 访问测试专用 Redis 凭据，不发布端口，也不会让 Maven 写入已部署 checkout。进入 `tee` 前 runner 会将任何出现的精确密码替换为 `[REDACTED]`。Maven 输出含任意大小写 `WARNING` 时 runner 失败；密钥不得写入命令输出、日志或聊天记录。
+
+### E2E 测试与 release evidence
+
+在同一 staging checkout、完成 `*IT` 后，以 root 运行真实浏览器测试：
+
+```bash
+cd /opt/bytedepth
+sudo ./deploy/run-staging-e2e-tests.sh
+```
+
+该 wrapper 只在 staging 模式运行，先取得共享锁，固定 `E2E_BASE_URL=https://staging.bytedepth.cn` 和 checkout 中由 Playwright 预置的 `.e2e/chrome-linux64/chrome`。批注 E2E 从 staging 的公开文章列表选择当前存在的第一篇文章，因此生产数据同步后不会依赖失效的固定 slug；它先把完整 checkout SHA 与最近 app 部署记录绑定，且在写 evidence 前再次确认 checkout 与部署记录均未变化。它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
+
+两个 runner 都会在每次 staging run 开始时先删除自己的旧记录，因而失败或 WARNING 绝不保留旧的 passed 状态；只有各自命令成功、输出零 `WARNING`、checkout 与部署 SHA 均稳定时，才将 root-owned `0600` 记录写入 root-owned `0700` 的 `/var/lib/bytedepth-staging/test-history/`：`staging-integration` 与 `staging-e2e`。每份记录严格含 `commit=<完整 SHA>`、对应 `command=`、实际 UTC `timestamp=` 与 `result=passed`，不含凭据。由于记录不可由普通 staging 登录用户读取，创建 Release Tag 前必须通过受控 `sudo cat` over SSH 将两份记录写入本机新建的临时目录，并把该目录显式传给 `prepare-release.sh`；详见 [发布流程](../docs/releases/README.md#staging-预检与生产单机发布)。
 
 ## 6. 正式版本发布
 
@@ -193,7 +219,7 @@ ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
 
 涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。流程固定为：实现并补测试 → 跑前置门禁 → 部署候选 ref（分支或 `main`）到 staging → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能进入 6.2 创建生产版本与部署生产。
 
-在 `staging.bytedepth.cn` 执行查询回归与写测试验证。staging 验证失败则修代码回到此步，不发布生产。
+在 `staging.bytedepth.cn` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。准备 Release 前需对当前 `main` 的 SHA 重新取得两份 evidence；候选分支的结果不能替代 main。staging 验证失败则修代码回到此步，不发布生产。
 
 ### 6.2 生产部署
 

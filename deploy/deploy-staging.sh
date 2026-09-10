@@ -18,10 +18,33 @@ fi
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly GIT_REMOTE_URL=git@github.com:manfredma/bytedepth.git
 readonly STATE_DIR=/var/lib/bytedepth-staging
+readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
 readonly HISTORY_FILE="$STATE_DIR/deploy-history"
+
+# A deployment changes both the checkout and the running app.  Keep that
+# transition indivisible with respect to staging test runners, otherwise a
+# runner can test one revision and write evidence for another.
+if [[ "${1:-}" != '--lock-held' ]]; then
+    install -d -o root -g root -m 0700 "$STATE_DIR"
+    exec flock -x "$LOCK_FILE" "$0" --lock-held "$@"
+fi
+shift
+
 readonly REF="${1:-main}"
 
 git_cmd() { git -c safe.directory="$SOURCE_ROOT" "$@"; }
+
+invalidate_test_evidence() {
+    rm -f "$STATE_DIR/test-history/staging-integration" \
+        "$STATE_DIR/test-history/staging-e2e"
+}
+
+bound_build_cache() {
+    # A staging node has a finite system disk. Keep recent layers for build
+    # speed, but never let accumulated BuildKit cache exhaust the node.
+    docker builder prune --all --force --max-used-space 5GB
+}
+
 cd "$SOURCE_ROOT"
 
 # 校验 origin
@@ -45,6 +68,10 @@ fi
 
 export GIT_SSH_COMMAND="ssh -i $deploy_ssh_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
 
+# Any prior result describes the previously deployed application, never this
+# deployment.  Do this while holding the same lock as both test runners.
+invalidate_test_evidence
+
 # fetch ref，解析为完整 commit SHA
 git_cmd fetch --force --no-recurse-submodules origin "$REF"
 COMMIT="$(git_cmd rev-parse FETCH_HEAD^{commit})"
@@ -61,6 +88,7 @@ fi
 
 git_cmd checkout --detach "$COMMIT"
 ./deploy/bootstrap-ops-deploy.sh
+bound_build_cache
 
 install -d -m 0700 "$STATE_DIR"
 printf 'ref=%s\ncommit=%s\ndeployed_at=%s\n---\n' \
