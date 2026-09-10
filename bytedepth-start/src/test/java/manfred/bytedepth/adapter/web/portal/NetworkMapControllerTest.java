@@ -1,7 +1,9 @@
 package manfred.bytedepth.adapter.web.portal;
 
+import manfred.bytedepth.adapter.web.EnvironmentAttributeAdvice;
 import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -9,6 +11,7 @@ import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.regex.Pattern;
@@ -22,9 +25,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-@WebMvcTest(value = NetworkMapController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class)
+@WebMvcTest(value = NetworkMapController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class,
+        properties = "bytedepth.environment=staging")
 @EnableConfigurationProperties(NetworkMapProperties.class)
-@Import(ThymeleafSecurityHandlerConfig.class)
+@Import({ThymeleafSecurityHandlerConfig.class, EnvironmentAttributeAdvice.class})
 class NetworkMapControllerTest {
 
     @Autowired
@@ -57,5 +61,29 @@ class NetworkMapControllerTest {
                                     + "\\s+target=\"_blank\"\\s+rel=\"noopener noreferrer\"")
                             .matcher(body).find());
                 });
+    }
+
+    @Test
+    void networkMapRendersStagingNoticeWithSafeProductionLink() throws Exception {
+        mockMvc.perform(get("/network"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("预发环境 · 正式网站：")))
+                .andExpect(content().string(containsString("href=\"https://bytedepth.cn\"")))
+                .andExpect(content().string(containsString("target=\"_blank\" rel=\"noopener noreferrer\"")));
+    }
+
+    @Nested
+    @TestPropertySource(properties = "bytedepth.environment=production")
+    class ProductionEnvironment {
+
+        @Autowired
+        private MockMvc productionMockMvc;
+
+        @Test
+        void networkMapDoesNotRenderStagingNotice() throws Exception {
+            productionMockMvc.perform(get("/network"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.not(containsString("预发环境 · 正式网站："))));
+        }
     }
 }
