@@ -39,6 +39,12 @@ invalidate_test_evidence() {
         "$STATE_DIR/test-history/staging-e2e"
 }
 
+bound_build_cache() {
+    # A staging node has a finite system disk. Keep recent layers for build
+    # speed, but never let accumulated BuildKit cache exhaust the node.
+    docker builder prune --all --force --max-used-space 5GB
+}
+
 cd "$SOURCE_ROOT"
 
 # 校验 origin
@@ -82,6 +88,7 @@ fi
 
 git_cmd checkout --detach "$COMMIT"
 ./deploy/bootstrap-ops-deploy.sh
+bound_build_cache
 
 install -d -m 0700 "$STATE_DIR"
 printf 'ref=%s\ncommit=%s\ndeployed_at=%s\n---\n' \
