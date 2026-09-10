@@ -11,6 +11,7 @@ readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
+readonly E2E_BASE_URL=https://staging.bytedepth.cn
 # Chromium is provisioned by Playwright in the staging checkout.  Do not use
 # Ubuntu's chromium-browser package: on 22.04 it is a slow Snap transition
 # package and is not the browser version pinned by this project's E2E suite.
@@ -53,6 +54,18 @@ invalidate_evidence() {
     rm -f "$EVIDENCE_DIR/staging-e2e"
 }
 
+discover_e2e_post_slug() {
+    local posts_page
+
+    posts_page="$(curl --fail --silent --show-error "$E2E_BASE_URL/posts")"
+    if [[ "$posts_page" =~ href=\"/posts/([a-z0-9-]+)\" ]]; then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+        return
+    fi
+    printf 'Refusing: staging public article list has no usable post slug for E2E annotation tests.\n' >&2
+    exit 1
+}
+
 write_evidence() {
     local tested_commit="$1"
     local evidence_tmp
@@ -87,7 +100,9 @@ if [[ ! -x "$CHROMIUM_EXECUTABLE" ]]; then
 fi
 
 cd "$SOURCE_ROOT"
-if ! E2E_BASE_URL='https://staging.bytedepth.cn' \
+e2e_post_slug="$(discover_e2e_post_slug)"
+export E2E_BASE_URL
+if ! E2E_POST_SLUG="$e2e_post_slug" \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE="$CHROMIUM_EXECUTABLE" \
     npm run test:e2e 2>&1 | tee "$E2E_LOG"; then
     printf 'Staging E2E tests failed.\n' >&2

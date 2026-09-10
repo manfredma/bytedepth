@@ -14,6 +14,7 @@ readonly FIXTURE_CHROMIUM="$FIXTURE_ROOT/chromium"
 readonly FAKE_BIN="$TEMP_ROOT/bin"
 readonly NPM_ARGS="$TEMP_ROOT/npm.args"
 readonly NPM_ENV="$TEMP_ROOT/npm.env"
+readonly CURL_ARGS="$TEMP_ROOT/curl.args"
 readonly GIT_LOG="$TEMP_ROOT/git.log"
 readonly FLOCK_ARGS="$TEMP_ROOT/flock.args"
 readonly INSTALL_ARGS="$TEMP_ROOT/install.args"
@@ -61,14 +62,22 @@ chmod +x "$FAKE_BIN/flock"
 cat > "$FAKE_BIN/npm" <<'SCRIPT'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "$STAGING_E2E_NPM_ARGS"
-printf 'E2E_BASE_URL=%s\nPLAYWRIGHT_CHROMIUM_EXECUTABLE=%s\n' "$E2E_BASE_URL" "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" > "$STAGING_E2E_NPM_ENV"
+printf 'E2E_BASE_URL=%s\nE2E_POST_SLUG=%s\nPLAYWRIGHT_CHROMIUM_EXECUTABLE=%s\n' "$E2E_BASE_URL" "$E2E_POST_SLUG" "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" > "$STAGING_E2E_NPM_ENV"
 [[ "$E2E_BASE_URL" == 'https://staging.bytedepth.cn' ]]
+[[ "$E2E_POST_SLUG" == 'staging-e2e-fixture' ]]
 [[ "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" == "$STAGING_E2E_CHROMIUM" ]]
 [[ -s "$STAGING_E2E_GIT_LOG" ]]
 printf '%s\n' "${STAGING_E2E_NPM_OUTPUT:-Playwright passed}"
 exit "${STAGING_E2E_NPM_EXIT:-0}"
 SCRIPT
 chmod +x "$FAKE_BIN/npm"
+
+cat > "$FAKE_BIN/curl" <<'SCRIPT'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$STAGING_E2E_CURL_ARGS"
+printf '<a href="/posts/staging-e2e-fixture">fixture</a>\n'
+SCRIPT
+chmod +x "$FAKE_BIN/curl"
 
 cat > "$FAKE_BIN/git" <<'SCRIPT'
 #!/usr/bin/env bash
@@ -117,6 +126,7 @@ run_runner() {
     PATH="$FAKE_BIN:$PATH" \
         STAGING_E2E_NPM_ARGS="$NPM_ARGS" \
         STAGING_E2E_FLOCK_ARGS="$FLOCK_ARGS" \
+        STAGING_E2E_CURL_ARGS="$CURL_ARGS" \
         STAGING_E2E_LOCK_FILE="$LOCK_FILE" \
         STAGING_E2E_NPM_ENV="$NPM_ENV" \
         STAGING_E2E_GIT_LOG="$GIT_LOG" \
@@ -145,6 +155,7 @@ grep -Fqx "$LOCK_FILE" "$FLOCK_ARGS"
 grep -Fqx 'run' "$NPM_ARGS"
 grep -Fqx 'test:e2e' "$NPM_ARGS"
 grep -Fqx 'E2E_BASE_URL=https://staging.bytedepth.cn' "$NPM_ENV"
+grep -Fqx 'E2E_POST_SLUG=staging-e2e-fixture' "$NPM_ENV"
 grep -Fqx "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM" "$NPM_ENV"
 grep -Fqx "commit=$CURRENT_SHA" "$EVIDENCE_DIR/staging-e2e"
 grep -Fqx 'command=run-staging-e2e-tests' "$EVIDENCE_DIR/staging-e2e"
