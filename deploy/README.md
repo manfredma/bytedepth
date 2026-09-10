@@ -176,6 +176,8 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 
 `deploy/deploy-staging.sh <ref>` 在 124 执行，接受 origin 上已命名的分支或 Tag（默认 `main`，不直接接受任意裸 SHA）。功能分支先部署到 staging 验收、通过后再合并 `main`。部署、集成测试和 E2E 共用 `/var/lib/bytedepth-staging/deployment-test.lock`；同一台 staging 上它们互斥运行。部署取得锁后立即删除两份旧 evidence，因此新部署绝不会继承上一版本的测试通过记录。
 
+staging 系统盘为 40GB。每次成功部署后会执行 `docker builder prune --all --force --max-used-space 5GB`：保留至多 5GB 的近期 BuildKit 缓存以加速下一次构建，并防止缓存累积耗尽系统盘。该回收不删除运行中的容器、镜像或数据卷。
+
 ### 集成测试
 
 部署候选 ref 并确认 Compose 服务健康后，只能在 staging（124）的 `/opt/bytedepth` 执行以下命令：
