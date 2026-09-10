@@ -131,18 +131,19 @@ git commit -m "build: separate unit and integration test lifecycles"
 
 - [ ] **Step 1: Write failing shell tests with mocked docker/env commands**
 
-Create a temporary tree test like `test-prepare-release.sh`. Assert the runner refuses non-staging mode, uses `docker run --rm --network bytedepth_default`, mounts `/opt/bytedepth` read-only, and invokes `mvn verify -Pstaging-integration` with `bytedepth.it.redis.host=redis`. Assert it never contains `--publish`, `localhost`, or a production host.
+Create a temporary tree test like `test-prepare-release.sh`. Assert the runner refuses non-staging mode, uses `docker run --rm --network bytedepth_default`, copies `/opt/bytedepth` before mounting it, and invokes `mvn verify -Pstaging-integration` with `bytedepth.it.redis.host=redis`, `bytedepth.it.redis.port=6379`, and a non-echoed `bytedepth.it.redis.password` sourced from `REDIS_PASSWORD`. Assert it never contains `--publish`, `localhost`, a production host, or the literal password in logs.
 
 - [ ] **Step 2: Implement minimal safe runner**
 
-Read only `BYTEDEPTH_DEPLOY_MODE` from `/etc/bytedepth-deploy.conf`; require `staging`. Source required test credentials only through root-readable `.env` without echoing them. Copy the checked-out source into a `mktemp -d` work directory owned by the runner, then mount that copy writable in a disposable container; never let Maven write target files into the deployed checkout. Capture Maven output with `tee`, reject any case-insensitive WARNING, and remove the temporary directory with a trap.
+Read only `BYTEDEPTH_DEPLOY_MODE` from `/etc/bytedepth-deploy.conf`; require `staging`. Read `REDIS_PASSWORD` from root-readable `.env` without sourcing or echoing unrelated values; require it nonblank, then pass it only as `-Dbytedepth.it.redis.password="$redis_password"`. Copy the checked-out source into a `mktemp -d` work directory owned by the runner, then mount that copy writable in a disposable container; never let Maven write target files into the deployed checkout. Capture Maven output with `tee`, reject any case-insensitive WARNING, and remove the temporary directory with a trap.
 
 ```bash
 sudo docker run --rm --network bytedepth_default \
   -v "$work_dir/source":/workspace -v "$work_dir/m2":/root/.m2 -w /workspace \
   maven:3.9-eclipse-temurin-25 \
   mvn -Pstaging-integration verify \
-    -Dbytedepth.it.redis.host=redis -Dbytedepth.it.redis.port=6379
+    -Dbytedepth.it.redis.host=redis -Dbytedepth.it.redis.port=6379 \
+    -Dbytedepth.it.redis.password="$redis_password"
 ```
 
 - [ ] **Step 3: Run shell tests and static checks**
