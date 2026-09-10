@@ -5,6 +5,14 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly TEMP_ROOT="$(mktemp -d)"
 trap 'rm -rf "$TEMP_ROOT"' EXIT
 
+# Unit tests must stay offline; integration tests are only enabled by the explicit staging profile.
+grep -Fq '<exclude>**/*IT.java</exclude>' "$SOURCE_ROOT/pom.xml"
+grep -Fq '<id>staging-integration</id>' "$SOURCE_ROOT/pom.xml"
+grep -Fq '<artifactId>maven-failsafe-plugin</artifactId>' "$SOURCE_ROOT/pom.xml"
+grep -Fq '<goal>integration-test</goal>' "$SOURCE_ROOT/pom.xml"
+grep -Fq '<goal>verify</goal>' "$SOURCE_ROOT/pom.xml"
+grep -Fq '<include>**/*IT.java</include>' "$SOURCE_ROOT/pom.xml"
+
 mkdir -p "$TEMP_ROOT/scripts" "$TEMP_ROOT/docs/releases" "$TEMP_ROOT/java/bin" "$TEMP_ROOT/bin"
 cp "$SOURCE_ROOT/scripts/prepare-release.sh" "$TEMP_ROOT/scripts/prepare-release.sh"
 printf '## [v1.2.3]\n' > "$TEMP_ROOT/docs/releases/CHANGELOG.md"

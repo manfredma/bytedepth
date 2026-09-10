@@ -164,6 +164,9 @@
                     <version>3.2.5</version>
                     <configuration>
                         <argLine>${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+                        <excludes>
+                            <exclude>**/*IT.java</exclude>
+                        </excludes>
                     </configuration>
                 </plugin>
             </plugins>
@@ -213,6 +216,35 @@
     </scm>
 
     <profiles>
+        <!--
+            跨进程依赖只能在 staging 验证；默认 Maven 生命周期保持为可离线执行的单元测试。
+        -->
+        <profile>
+            <id>staging-integration</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration>
+                            <argLine>${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+                            <includes>
+                                <include>**/*IT.java</include>
+                            </includes>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <!--
             仅在显式指定 coverage.includes 时启用。JaCoCo 会对匹配的生产类要求
             行、分支和方法均零遗漏；避免历史未覆盖代码阻断与本次改动无关的提交。
