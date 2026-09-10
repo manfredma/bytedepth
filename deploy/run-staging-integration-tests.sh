@@ -129,6 +129,14 @@ cp -a "$SOURCE_ROOT/." "$WORK_DIR/source/"
 # full environment.  Only MAVEN_ENV_FILE is mounted as a narrowly scoped
 # credential channel.
 rm -f "$WORK_DIR/source/.env"
+# The repository's .mvn/maven.config explicitly selects .mvn/settings.xml.
+# Maven gives that workspace option precedence over /root/.m2/settings.xml,
+# so replace the copied file in the disposable workspace as well.  This keeps
+# the checked-out repository and each developer's local Maven configuration
+# untouched while making Tencent Cloud's mirror effective in the test
+# container.
+install -d -m 0700 "$WORK_DIR/source/.mvn"
+install -m 0600 "$MAVEN_SETTINGS_FILE" "$WORK_DIR/source/.mvn/settings.xml"
 
 if ! sudo docker run --rm --network bytedepth_default \
     --add-host host.docker.internal:host-gateway \

@@ -42,6 +42,9 @@ readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
 mkdir -p "$FIXTURE_SOURCE" "$FAKE_BIN"
 printf 'fixture source\n' > "$FIXTURE_SOURCE/fixture-marker"
 printf 'fixture Docker socket placeholder\n' > "$DOCKER_SOCKET"
+mkdir -p "$FIXTURE_SOURCE/.mvn"
+printf '%s\n' '--settings' '.mvn/settings.xml' > "$FIXTURE_SOURCE/.mvn/maven.config"
+printf '<settings>aliyun fixture</settings>\n' > "$FIXTURE_SOURCE/.mvn/settings.xml"
 printf 'REDIS_PASSWORD=%s\nUNRELATED_SECRET=must-not-be-read\n' "$REDIS_SECRET" > "$FIXTURE_SOURCE/.env"
 printf 'ref=main\ncommit=%s\ndeployed_at=2026-09-10T10:11:12Z\n---\n' "$CURRENT_SHA" > "$DEPLOY_HISTORY"
 
@@ -82,6 +85,8 @@ chmod +x "$FAKE_BIN/flock"
 
 cat > "$FAKE_BIN/docker" <<'SCRIPT'
 #!/usr/bin/env bash
+set -Eeuo pipefail
+
 if [[ "${1:-}" == '-H' && "${3:-}" == 'info' ]]; then
     printf '%s\n' "$@" > "$STAGING_RUNNER_DOCKER_INFO_ARGS"
     [[ "$2" == "unix://$STAGING_RUNNER_DOCKER_SOCKET" ]]
@@ -130,6 +135,14 @@ done
 grep -Fqx '      <id>tencent-cloud</id>' "$settings_file"
 grep -Fqx '      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>' "$settings_file"
 grep -Fqx '      <mirrorOf>*</mirrorOf>' "$settings_file"
+# .mvn/maven.config explicitly selects this file with --settings, which
+# overrides /root/.m2/settings.xml.  The disposable workspace must therefore
+# contain Tencent's mirror too; checking only the mounted user settings would
+# leave Maven using the copied repository's former Aliyun configuration.
+grep -Fqx '.mvn/settings.xml' "$workspace/.mvn/maven.config"
+grep -Fqx '      <id>tencent-cloud</id>' "$workspace/.mvn/settings.xml"
+grep -Fqx '      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>' "$workspace/.mvn/settings.xml"
+! grep -Fq 'maven.aliyun.com' "$workspace/.mvn/settings.xml"
 if [[ -n "${STAGING_RUNNER_DOCKER_STARTED_FILE:-}" ]]; then
     printf 'started\n' >> "$STAGING_RUNNER_DOCKER_STARTED_FILE"
 fi
@@ -240,6 +253,7 @@ grep -Fqx 'verify' "$DOCKER_ARGS"
 grep -Fq '/source:/workspace' "$DOCKER_ARGS"
 ! grep -Fq "$FIXTURE_SOURCE:/workspace" "$DOCKER_ARGS"
 [[ ! -e "$FIXTURE_SOURCE/target/container-write" ]]
+grep -Fqx '<settings>aliyun fixture</settings>' "$FIXTURE_SOURCE/.mvn/settings.xml"
 ! grep -Fq "$REDIS_SECRET" "$RUNNER_OUTPUT"
 ! grep -Fq 'UNRELATED_SECRET' "$RUNNER_OUTPUT"
 grep -Fqx "commit=$CURRENT_SHA" "$EVIDENCE_DIR/staging-integration"
