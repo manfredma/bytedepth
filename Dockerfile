@@ -31,6 +31,10 @@ RUN mvn dependency:go-offline -Dsort.skip=true -q
 
 # 复制源码并打包
 COPY . .
+# .mvn/maven.config explicitly selects this workspace file, taking precedence
+# over /root/.m2/settings.xml.  Replace it only inside the build layer so the
+# image build uses the Tencent mirror without changing the source checkout.
+RUN install -m 0644 /root/.m2/settings.xml .mvn/settings.xml
 RUN mvn clean package -Dmaven.test.skip=true -Dsort.skip=true
 
 # ---- Stage 2: Run ----

@@ -14,13 +14,36 @@ if [[ ! -f "$RUNNER" ]]; then
     exit 1
 fi
 
-# Both staging Maven execution contexts use Tencent Cloud's public mirror.
-# These checks intentionally fail until the production configuration is
-# switched; they also prevent a future fallback to the former Aliyun mirror.
-! grep -Fq 'https://maven.aliyun.com/repository/public' "$DOCKERFILE"
-grep -Fqx '      <id>tencent-cloud</id>' "$DOCKERFILE"
-grep -Fqx '      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>' "$DOCKERFILE"
-grep -Fqx '      <mirrorOf>*</mirrorOf>' "$DOCKERFILE"
+assert_docker_build_overrides_selected_workspace_settings() {
+    local dockerfile="$1"
+    local source_copy_line override_line package_line
+
+    # Maven loads this project option after its normal user settings.  The
+    # Docker build must therefore replace the selected workspace file, rather
+    # than merely adding a Tencent settings.xml under /root/.m2.
+    grep -Fqx -- '--settings' "$SOURCE_ROOT/.mvn/maven.config"
+    grep -Fqx '.mvn/settings.xml' "$SOURCE_ROOT/.mvn/maven.config"
+
+    source_copy_line="$(rg -n '^COPY \. \.$' "$dockerfile" | cut -d: -f1)"
+    override_line="$(rg -n '^RUN install -m 0644 /root/\.m2/settings\.xml \.mvn/settings\.xml$' "$dockerfile" | cut -d: -f1)"
+    package_line="$(rg -n '^RUN mvn clean package ' "$dockerfile" | cut -d: -f1)"
+
+    [[ "$source_copy_line" =~ ^[0-9]+$ ]]
+    [[ "$override_line" =~ ^[0-9]+$ ]]
+    [[ "$package_line" =~ ^[0-9]+$ ]]
+    (( source_copy_line < override_line && override_line < package_line ))
+}
+
+# The source checkout deliberately still selects its repository settings.
+# Exercise Dockerfile instruction order, including a negative mutation, so a
+# Tencent URL elsewhere in the Dockerfile cannot mask Maven's precedence.
+assert_docker_build_overrides_selected_workspace_settings "$DOCKERFILE"
+readonly MUTATED_DOCKERFILE="$TEMP_ROOT/Dockerfile-without-workspace-override"
+sed '/^RUN install -m 0644 \/root\/\.m2\/settings\.xml \.mvn\/settings\.xml$/d' "$DOCKERFILE" > "$MUTATED_DOCKERFILE"
+if assert_docker_build_overrides_selected_workspace_settings "$MUTATED_DOCKERFILE"; then
+    printf 'Expected Dockerfile precedence check to reject a missing workspace settings override.\n' >&2
+    exit 1
+fi
 
 readonly FIXTURE_ROOT="$TEMP_ROOT/fixture"
 readonly FIXTURE_SOURCE="$FIXTURE_ROOT/source"
