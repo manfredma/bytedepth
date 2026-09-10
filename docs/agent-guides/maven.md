@@ -41,6 +41,12 @@ JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn test -Dsort.skip=true
 
 `*IT` 只能在 staging 主机由 `run-staging-integration-tests.sh` 运行；它在 Compose 网络中执行 `mvn -Pstaging-integration verify`。E2E 只能在同一 staging 主机由 `run-staging-e2e-tests.sh` 运行；该 wrapper 固定 `E2E_BASE_URL=https://staging.bytedepth.cn` 和 checkout 中的 `.e2e/chrome-linux64/chrome`，不能用本机浏览器替代。两个命令及其 evidence 传递流程见 [部署手册](../../deploy/README.md#集成测试)。
 
+### staging 验证的执行纪律
+
+部署、集成测试和 E2E 是有成本的串行门禁，不能把它们当成开发期试错工具。提交候选分支前，先在本机完成离线单测和 runner 的 fake/fixture 测试；首次 staging 验证前必须一次性核对 runner 的前提：部署 SHA 一致、Compose 服务健康、可用磁盘空间、固定的 Playwright 浏览器可执行，以及 E2E 所需的真实公开数据。E2E 不得依赖可能被同步清除的固定文章、用户或其他种子数据，应在运行时发现当前可用的只读数据，或由 runner 显式创建并清理测试数据。
+
+staging 上一次完整 `*IT` 目前通常需要约 3–4 分钟（Maven `verify` 与一次性测试容器），完整 E2E 通常约 1 分钟。超过这个范围时，先读取该次 run 的持久化日志和进程状态，取得第一个明确错误后再修复；不得依据路径、镜像、文章或系统包的猜测连续改动并重复部署。每次修复都先用对应的离线 runner 测试复现，再进行一次 staging 重试。
+
 不得新增 Maven 模块；如确有必要，必须先获得项目所有者的明确同意。
 
 运行 jar：
