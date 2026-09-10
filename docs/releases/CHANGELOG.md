@@ -2,7 +2,12 @@
 
 本文件记录正式发布版本；每个条目必须与一个不可变 annotated Git Tag 一一对应。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
-## Unreleased
+## [v2.14.0] - 2026-09-10
+
+**Tag**：`v2.14.0`
+**Commit**：待 `prepare-release.sh` 创建发布提交后补录。
+**部署**：待验收。
+**回滚基线**：`v2.13.0`
 
 ### Added
 
