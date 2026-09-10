@@ -77,6 +77,16 @@ require_staging_evidence() {
     fi
 }
 
+require_no_tracked_agent_artifacts() {
+    local tracked_artifacts
+
+    tracked_artifacts="$(git ls-files -- .superpowers .omc)"
+    if [[ -n "$tracked_artifacts" ]]; then
+        printf 'Release preparation refuses tracked agent tool artifacts:\n%s\n' "$tracked_artifacts" >&2
+        exit 1
+    fi
+}
+
 [[ -n "$RELEASE_VERSION" && -n "$DEVELOPMENT_VERSION" ]] || usage
 [[ "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || usage
 [[ "$DEVELOPMENT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-SNAPSHOT$ ]] || usage
@@ -96,6 +106,8 @@ if [[ -n "$(git status --porcelain)" ]]; then
     printf 'Release preparation requires a clean working tree.\n' >&2
     exit 1
 fi
+
+require_no_tracked_agent_artifacts
 
 if [[ -z "${BYTEDEPTH_STAGING_EVIDENCE_DIR:-}" ]] \
     || [[ ! -d "$BYTEDEPTH_STAGING_EVIDENCE_DIR" ]] \

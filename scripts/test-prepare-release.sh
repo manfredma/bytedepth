@@ -77,6 +77,7 @@ printf 'git %s\n' "$*" >> "$RELEASE_TEST_LOG"
 case "$1 $2" in
   'branch --show-current') printf 'main\n' ;;
   'status --porcelain') [[ "${RELEASE_TEST_DIRTY:-}" == 1 ]] && printf ' M pom.xml\n' ;;
+  'ls-files --') [[ "${RELEASE_TEST_TRACKED_TOOL_ARTIFACT:-}" == 1 ]] && printf '.superpowers/sdd/unwanted-report.md\n' ;;
   'rev-parse HEAD') printf '%s\n' "$RELEASE_TEST_SHA" ;;
   'rev-parse --verify') exit 1 ;;
   'ls-remote --exit-code') exit 2 ;;
@@ -189,6 +190,11 @@ command=run-staging-e2e-tests
 timestamp=2026-09-10T10:11:12Z
 result=passed
 EOF
+if RELEASE_TEST_TRACKED_TOOL_ARTIFACT=1 run_prepare "$TEMP_ROOT/tracked-tool-artifact.log" >/dev/null 2>&1; then
+    printf 'Expected release preparation to reject tracked agent tool artifacts.\n' >&2
+    exit 1
+fi
+[[ ! -e "$TEMP_ROOT/tracked-tool-artifact.log" ]] || ! grep -q '^mvn release_mode=1 ' "$TEMP_ROOT/tracked-tool-artifact.log"
 run_prepare "$TEMP_ROOT/release.log"
 
 grep -Fqx 'coverage' "$TEMP_ROOT/release.log"
