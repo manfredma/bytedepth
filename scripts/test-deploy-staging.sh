@@ -42,6 +42,7 @@ readonly INSTALL_MARKER="$FIXTURE_ROOT/install-called"
 readonly BOOTSTRAP_RAN="$FIXTURE_ROOT/bootstrap-ran"
 readonly FAKE_BIN="$FIXTURE_ROOT/bin"
 readonly DOCKER_PRUNE_LOG="$FIXTURE_ROOT/docker-prune.log"
+export DOCKER_PRUNE_LOG
 readonly STAGING_STATE_DIR=/var/lib/bytedepth-staging
 readonly STAGING_LOCK_FILE="$STAGING_STATE_DIR/deployment-test.lock"
 readonly STAGING_EVIDENCE_DIR="$STAGING_STATE_DIR/test-history"
@@ -69,9 +70,9 @@ exec /usr/bin/git "$@"
 SCRIPT
     chmod +x "$FAKE_BIN/git"
 
-    cat > "$FAKE_BIN/docker" <<SCRIPT
+    cat > "$FAKE_BIN/docker" <<'SCRIPT'
 #!/usr/bin/env bash
-printf '%s\\n' "\\$*" >> "$DOCKER_PRUNE_LOG"
+printf '%s\n' "$*" >> "${DOCKER_PRUNE_LOG:?}"
 SCRIPT
     chmod +x "$FAKE_BIN/docker"
 }
