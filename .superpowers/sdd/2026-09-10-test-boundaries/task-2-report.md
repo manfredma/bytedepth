@@ -29,3 +29,10 @@ No Failsafe integration, Docker, Redis, or E2E command was run locally. The matc
 ## Concern
 
 The Failsafe profile has intentionally not been executed locally. Task 3 must supply the required Redis properties and invoke `mvn verify -Pstaging-integration` from the staging Compose network.
+
+## Review Round 1
+
+- Replaced detached POM text greps with namespace-safe `xmllint` XPath assertions. They require exactly one Failsafe plugin globally and prove that it is nested only in the inactive `staging-integration` profile, uses the full expected `argLine`, includes only `**/*IT.java`, and binds exactly `integration-test` and `verify`.
+- The same structural test asserts Surefire's `**/*IT.java` exclusion and rejects any `staging-integration` reference in the unit-only coverage script.
+- A copied, deliberately malformed POM renames the staging profile; the test confirms the structural assertion rejects it. This guards against the detached-grep false positive identified in review.
+- Re-ran the permitted Java 25 build and test gates: six-module `clean install -DskipTests`, 289 offline tests, and warning scans all passed. No Failsafe, Docker, Redis, or E2E command was run locally.
