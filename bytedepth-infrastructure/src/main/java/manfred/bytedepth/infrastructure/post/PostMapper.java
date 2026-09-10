@@ -21,6 +21,22 @@ public interface PostMapper extends BaseMapper<PostDO> {
                                            @Param("limit") int limit);
 
     @Select({"<script>",
+            "SELECT p.*, COALESCE(ps.pv_count, 0) AS view_count ",
+            "FROM post p LEFT JOIN page_stats ps ON ps.path = CONCAT('/posts/', p.id) ",
+            "WHERE p.status = 'PUBLISHED'",
+            "<if test='excludedIds != null and !excludedIds.isEmpty()'>",
+            "AND p.id NOT IN",
+            "<foreach item='id' collection='excludedIds' open='(' separator=',' close=')'>",
+            "#{id}",
+            "</foreach>",
+            "</if>",
+            "ORDER BY view_count DESC, p.published_at DESC, p.id DESC LIMIT #{offset}, #{limit}",
+            "</script>"})
+    List<HotPostDO> findPublishedByHotnessExcluding(@Param("excludedIds") List<Long> excludedIds,
+                                                    @Param("offset") int offset,
+                                                    @Param("limit") int limit);
+
+    @Select({"<script>",
             "SELECT p.* FROM post p WHERE p.status = 'PUBLISHED'",
             "<if test='excludedIds != null and !excludedIds.isEmpty()'>",
             "AND p.id NOT IN",

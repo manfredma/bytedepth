@@ -34,6 +34,6 @@
 - 热度 = 文章历史总访问量，读取自定时刷入的 `page_stats` 表，有同步间隔延迟，不为首页排序额外扫描 Redis。
 - 文章统计路径统一为 `/posts/{post.id}`，须与 `RedisStatsService.flushToDB()` 落库路径一致。
 - 热门排序为 `pv_count DESC, published_at DESC, id DESC`（三级排序保证分页稳定）。
-- `sort` 参数允许值仅为 `latest` 与 `hot`，分页 URL 保留当前 `sort`。
-- 默认排序为 `hot`：`HomeController.normalizeSort` 将 `latest` 以外的值（含 null）归一为 `hot`。这是有意决策（`337709e`），非设计稿时期的 `latest` 默认；首页无 `sort` 参数时展示热门文章。
-- 热门页"最新发布"补充区块在数据库层排除（避免应用层超量读取），最多 3 篇，不参与热门分页。
+- `sort` 参数允许值为 `discover`、`latest` 与 `hot`，分页 URL 保留当前 `sort`。
+- 默认排序为 `discover`：`HomeController.normalizeSort` 将未知值（含 null）归一为 `discover`。发现流固定选取最多 2 篇最新文章，并从发现流所有热门分页中排除这批候选；仅首屏在第 4、8 篇热门文章后各插入最多一篇候选，热门不足插槽时将剩余候选追加至流末，保证跨页不重复。该策略固定可复现，不在请求时随机抽样。
+- 发现流分页只按排除候选后的热门文章计数，避免候选被首屏吸收后仍产生空白尾页；新文在流中以“新发布”标签标识。`latest` 与 `hot` 保持纯时间、纯热度排序，热门排序继续显示名次和阅读量。

@@ -47,8 +47,13 @@ public class PostRepositoryImpl implements PostRepository {
 
     @Override
     public List<HotPost> findPublishedByHotness(int page, int size) {
+        return findPublishedByHotnessExcluding(List.of(), page, size);
+    }
+
+    @Override
+    public List<HotPost> findPublishedByHotnessExcluding(List<Long> excludedIds, int page, int size) {
         int offset = (page - 1) * size;
-        return postMapper.findPublishedByHotness(offset, size).stream()
+        return postMapper.findPublishedByHotnessExcluding(excludedIds, offset, size).stream()
                 .map(row -> new HotPost(toEntity(row), row.getViewCount() == null ? 0L : row.getViewCount()))
                 .collect(Collectors.toList());
     }
