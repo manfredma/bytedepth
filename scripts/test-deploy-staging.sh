@@ -41,6 +41,7 @@ readonly CHECKOUT="$FIXTURE_ROOT/checkout"
 readonly INSTALL_MARKER="$FIXTURE_ROOT/install-called"
 readonly BOOTSTRAP_RAN="$FIXTURE_ROOT/bootstrap-ran"
 readonly FAKE_BIN="$FIXTURE_ROOT/bin"
+readonly DOCKER_PRUNE_LOG="$FIXTURE_ROOT/docker-prune.log"
 readonly STAGING_STATE_DIR=/var/lib/bytedepth-staging
 readonly STAGING_LOCK_FILE="$STAGING_STATE_DIR/deployment-test.lock"
 readonly STAGING_EVIDENCE_DIR="$STAGING_STATE_DIR/test-history"
@@ -67,6 +68,12 @@ fi
 exec /usr/bin/git "$@"
 SCRIPT
     chmod +x "$FAKE_BIN/git"
+
+    cat > "$FAKE_BIN/docker" <<SCRIPT
+#!/usr/bin/env bash
+printf '%s\\n' "\\$*" >> "$DOCKER_PRUNE_LOG"
+SCRIPT
+    chmod +x "$FAKE_BIN/docker"
 }
 
 # 构造一个 bare origin + 本地 checkout，用真实 bootstrap 提交并推到 origin/main。
@@ -138,6 +145,11 @@ fi
 if [[ ! -e "$INSTALL_MARKER" ]]; then
     printf 'Real bootstrap did not call install-host-service.sh under staging mode\n' >&2
     printf 'Socket 应在所有模式安装（含 staging，用于测试远程部署通道）\n' >&2
+    exit 1
+fi
+if ! grep -Fqx 'builder prune --all --force --max-used-space 5GB' "$DOCKER_PRUNE_LOG"; then
+    printf 'Staging deployment did not bound BuildKit cache to 5GB:\n' >&2
+    cat "$DOCKER_PRUNE_LOG" >&2 2>/dev/null || true
     exit 1
 fi
 
