@@ -124,7 +124,7 @@ test.describe('划线评论', () => {
         const popup = page.locator('.bd-annotation-popup');
         await selectArticleText(page, 0, 2);
         await expect(popup.getByRole('button', {name: '划线'})).toBeVisible();
-        await page.locator('h1').click();
+        await page.locator('.bd-annotation-reading-content > h1').click();
         await expect(popup).not.toHaveClass(/bd-annotation-popup-open/);
 
         await selectArticleText(page, 0, 2);
