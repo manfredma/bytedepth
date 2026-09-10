@@ -11,6 +11,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.regex.Pattern;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -40,5 +44,18 @@ class NetworkMapControllerTest {
                 .andExpect(model().attribute("groups", properties.getGroups()))
                 .andExpect(content().string(containsString("Career")))
                 .andExpect(content().string(containsString("常用技术站点")));
+    }
+
+    @Test
+    void networkMapRendersEightSafeExternalCards() throws Exception {
+        mockMvc.perform(get("/network"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    String body = result.getResponse().getContentAsString();
+                    assertEquals(8, Pattern.compile("class=\"network-card\"").matcher(body).results().count());
+                    assertTrue(Pattern.compile("<a\\s+class=\"network-card\"\\s+href=\"https://bytedepth\\.cn\""
+                                    + "\\s+target=\"_blank\"\\s+rel=\"noopener noreferrer\"")
+                            .matcher(body).find());
+                });
     }
 }
