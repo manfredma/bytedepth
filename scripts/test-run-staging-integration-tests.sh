@@ -34,6 +34,35 @@ assert_docker_build_overrides_selected_workspace_settings() {
     (( source_copy_line < override_line && override_line < package_line ))
 }
 
+assert_docker_generated_user_settings() {
+    local dockerfile="$1"
+    local generated_settings="$TEMP_ROOT/docker-generated-root-settings.xml"
+
+    # Extract exactly the heredoc Docker writes to /root/.m2/settings.xml.
+    # Checking a URL somewhere in Dockerfile is insufficient: the resulting
+    # Maven user settings must select Tencent Cloud for every repository.
+    awk '
+        /^RUN mkdir -p \/root\/\.m2 && cat > \/root\/\.m2\/settings\.xml <<'\''SETTINGS'\''$/ {
+            in_settings = 1
+            next
+        }
+        in_settings && /^SETTINGS$/ {
+            exit
+        }
+        in_settings {
+            print
+        }
+    ' "$dockerfile" > "$generated_settings"
+
+    # Keep these in one boolean expression.  This helper is invoked from
+    # negative `if` assertions below, where Bash deliberately suppresses
+    # errexit for commands inside the function.
+    [[ -s "$generated_settings" ]] \
+        && grep -Fqx '      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>' "$generated_settings" \
+        && grep -Fqx '      <mirrorOf>*</mirrorOf>' "$generated_settings" \
+        && ! grep -Fq 'maven.aliyun.com' "$generated_settings"
+}
+
 # The source checkout deliberately still selects its repository settings.
 # Exercise Dockerfile instruction order, including a negative mutation, so a
 # Tencent URL elsewhere in the Dockerfile cannot mask Maven's precedence.
@@ -42,6 +71,26 @@ readonly MUTATED_DOCKERFILE="$TEMP_ROOT/Dockerfile-without-workspace-override"
 sed '/^RUN install -m 0644 \/root\/\.m2\/settings\.xml \.mvn\/settings\.xml$/d' "$DOCKERFILE" > "$MUTATED_DOCKERFILE"
 if assert_docker_build_overrides_selected_workspace_settings "$MUTATED_DOCKERFILE"; then
     printf 'Expected Dockerfile precedence check to reject a missing workspace settings override.\n' >&2
+    exit 1
+fi
+
+# Also assert the literal content Docker generates for /root/.m2/settings.xml.
+# These negative mutations prevent a Tencent URL elsewhere in the Dockerfile
+# from masking an Aliyun or empty generated user-settings file.
+assert_docker_generated_user_settings "$DOCKERFILE"
+readonly ALIYUN_ROOT_SETTINGS_DOCKERFILE="$TEMP_ROOT/Dockerfile-with-aliyun-root-settings"
+sed 's#https://mirrors\.tencent\.com/nexus/repository/maven-public/#https://maven.aliyun.com/repository/public#' \
+    "$DOCKERFILE" > "$ALIYUN_ROOT_SETTINGS_DOCKERFILE"
+if assert_docker_generated_user_settings "$ALIYUN_ROOT_SETTINGS_DOCKERFILE"; then
+    printf 'Expected generated root Maven settings check to reject an Aliyun mirror.\n' >&2
+    exit 1
+fi
+
+readonly EMPTY_ROOT_SETTINGS_DOCKERFILE="$TEMP_ROOT/Dockerfile-with-empty-root-settings"
+sed '/^<?xml version="1.0" encoding="UTF-8"?>$/,/^SETTINGS$/ { /^SETTINGS$/!d; }' \
+    "$DOCKERFILE" > "$EMPTY_ROOT_SETTINGS_DOCKERFILE"
+if assert_docker_generated_user_settings "$EMPTY_ROOT_SETTINGS_DOCKERFILE"; then
+    printf 'Expected generated root Maven settings check to reject empty content.\n' >&2
     exit 1
 fi
 
