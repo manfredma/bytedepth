@@ -5,6 +5,7 @@ SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SOURCE_ROOT
 readonly RUNNER="$SOURCE_ROOT/deploy/run-staging-integration-tests.sh"
 readonly DOCKERFILE="$SOURCE_ROOT/Dockerfile"
+readonly ROOT_POM="$SOURCE_ROOT/pom.xml"
 TEMP_ROOT="$(mktemp -d)"
 readonly TEMP_ROOT
 trap 'rm -rf "$TEMP_ROOT"' EXIT
@@ -13,6 +14,23 @@ if [[ ! -f "$RUNNER" ]]; then
     printf 'Expected staging integration runner at %s\n' "$RUNNER" >&2
     exit 1
 fi
+
+assert_testcontainers_uses_docker_29_compatible_bom() {
+    local pom="$1"
+
+    # Testcontainers 1.21.4 is the first 1.x release that probes Docker API
+    # 1.44 before falling back to 1.32. Docker Engine 29 rejects the old 1.32
+    # default, so the central property and imported BOM must stay aligned.
+    grep -Fqx '        <testcontainers.version>1.21.4</testcontainers.version>' "$pom"
+    awk '
+        /<artifactId>testcontainers-bom<\/artifactId>/ { in_bom = 1; next }
+        in_bom && /<version>\$\{testcontainers.version\}<\/version>/ { found = 1; exit }
+        in_bom && /<\/dependency>/ { exit }
+        END { exit(found ? 0 : 1) }
+    ' "$pom"
+}
+
+assert_testcontainers_uses_docker_29_compatible_bom "$ROOT_POM"
 
 assert_docker_build_overrides_selected_workspace_settings() {
     local dockerfile="$1"

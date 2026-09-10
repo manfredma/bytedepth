@@ -25,7 +25,7 @@
         <cola.version>4.3.2</cola.version>
         <mybatis.plus.version>3.5.17</mybatis.plus.version>
         <sort.skip>true</sort.skip>
-        <testcontainers.version>1.20.9</testcontainers.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
         <owasp.html.sanitizer.version>20260313.1</owasp.html.sanitizer.version>
         <commonmark.version>0.30.0</commonmark.version>
         <bucket4j.version>8.19.0</bucket4j.version>
@@ -39,12 +39,12 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Testcontainers BOM 放在 Spring Boot 之前，覆盖其中的旧版本
-                 1.20.x 内置 docker-java 3.4+，兼容 Colima 29.x（Docker API >= 1.44）-->
+            <!-- Testcontainers BOM 放在 Spring Boot 之前，覆盖其中的旧版本。
+                 1.21.4 默认探测 Docker API 1.44，兼容 Docker Engine 29。-->
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
-                <version>1.20.1</version>
+                <version>${testcontainers.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
