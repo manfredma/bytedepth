@@ -5,8 +5,8 @@
 ## [v2.14.0] - 2026-09-10
 
 **Tag**：`v2.14.0`
-**Commit**：待 `prepare-release.sh` 创建发布提交后补录。
-**部署**：待验收。
+**Commit**：`13b33b0b80540194bc1a70deb1f4e740c6059957`
+**部署**：2026-09-10 10:14 CST；生产单机（175.24.197.202）已部署并验收。完整 Compose 服务正常（MySQL、Redis、MeiliSearch healthy；app、nginx、file-server Up）；发现流首页与翻页、最新、热门、文章、专栏、搜索、项目及 RSS 均返回 200，应用日志无 WARNING/ERROR。
 **回滚基线**：`v2.13.0`
 
 ### Added
