@@ -267,7 +267,7 @@ test.describe('划线评论', () => {
                 contentRight: content.right,
                 contentTop: content.top,
                 headingTop: heading.top,
-                headingBottom: heading.bottom,
+                headingHeight: heading.height,
                 sidebarLeft: sidebarRect.left,
                 sidebarTop: sidebarRect.top,
                 sidebarBottom: sidebarRect.bottom,
@@ -282,8 +282,8 @@ test.describe('划线评论', () => {
         expect(wideDesktopLayout.contentTop).toBeGreaterThanOrEqual(wideDesktopLayout.pageChromeBottom);
         expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(wideDesktopLayout.pageChromeBottom + 40);
         expect(wideDesktopLayout.headingTop).toBeGreaterThanOrEqual(0);
-        // h1 clamp(1.8rem,3vw,2.6rem) 大标题，headingBottom ≈ top(92) + 标题高
-        expect(wideDesktopLayout.headingBottom).toBeLessThan(195);
+        // h1 clamp(1.8rem,3vw,2.6rem)，行高 1.2；只约束标题自身尺寸，不耦合页面 chrome 的绝对 Y 坐标。
+        expect(wideDesktopLayout.headingHeight).toBeLessThanOrEqual(55);
         expect(wideDesktopLayout.sidebarTop).toBeGreaterThanOrEqual(0);
         expect(wideDesktopLayout.sidebarTop).toBeLessThanOrEqual(100);
         expect(wideDesktopLayout.sidebarBottom).toBeGreaterThan(0);
