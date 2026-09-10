@@ -10,10 +10,19 @@ readonly SOURCE_ROOT=/opt/bytedepth
 readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
+readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
 readonly WORK_DIR="$(mktemp -d)"
 readonly MAVEN_LOG="$WORK_DIR/maven.log"
 readonly MAVEN_ENV_FILE="$WORK_DIR/maven.env"
 trap 'rm -rf "$WORK_DIR"' EXIT
+
+# Run the complete test/evidence transaction under the same lock as staging
+# deployment.  The re-exec keeps flock alive for this process and every child.
+if [[ "${1:-}" != '--lock-held' ]]; then
+    install -d -o root -g root -m 0700 "$(dirname "$LOCK_FILE")"
+    exec flock -x "$LOCK_FILE" "$0" --lock-held "$@"
+fi
+shift
 
 read_checked_out_commit() {
     local commit
@@ -87,6 +96,10 @@ mkdir -p "$WORK_DIR/source" "$WORK_DIR/m2"
 umask 077
 printf 'BYTEDEPTH_IT_REDIS_PASSWORD=%s\n' "$redis_password" > "$MAVEN_ENV_FILE"
 cp -a "$SOURCE_ROOT/." "$WORK_DIR/source/"
+# The disposable Maven workspace must not receive the staging application's
+# full environment.  Only MAVEN_ENV_FILE is mounted as a narrowly scoped
+# credential channel.
+rm -f "$WORK_DIR/source/.env"
 
 if ! sudo docker run --rm --network bytedepth_default \
     --env-file "$MAVEN_ENV_FILE" \

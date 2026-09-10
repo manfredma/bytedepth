@@ -18,10 +18,27 @@ fi
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly GIT_REMOTE_URL=git@github.com:manfredma/bytedepth.git
 readonly STATE_DIR=/var/lib/bytedepth-staging
+readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
 readonly HISTORY_FILE="$STATE_DIR/deploy-history"
+
+# A deployment changes both the checkout and the running app.  Keep that
+# transition indivisible with respect to staging test runners, otherwise a
+# runner can test one revision and write evidence for another.
+if [[ "${1:-}" != '--lock-held' ]]; then
+    install -d -o root -g root -m 0700 "$STATE_DIR"
+    exec flock -x "$LOCK_FILE" "$0" --lock-held "$@"
+fi
+shift
+
 readonly REF="${1:-main}"
 
 git_cmd() { git -c safe.directory="$SOURCE_ROOT" "$@"; }
+
+invalidate_test_evidence() {
+    rm -f "$STATE_DIR/test-history/staging-integration" \
+        "$STATE_DIR/test-history/staging-e2e"
+}
+
 cd "$SOURCE_ROOT"
 
 # 校验 origin
@@ -44,6 +61,10 @@ if [[ -z "$deploy_ssh_key" || ! -r "$deploy_ssh_key" ]]; then
 fi
 
 export GIT_SSH_COMMAND="ssh -i $deploy_ssh_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
+
+# Any prior result describes the previously deployed application, never this
+# deployment.  Do this while holding the same lock as both test runners.
+invalidate_test_evidence
 
 # fetch ref，解析为完整 commit SHA
 git_cmd fetch --force --no-recurse-submodules origin "$REF"

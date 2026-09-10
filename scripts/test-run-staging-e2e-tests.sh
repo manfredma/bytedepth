@@ -9,11 +9,13 @@ readonly FIXTURE_SOURCE="$FIXTURE_ROOT/source"
 readonly FIXTURE_CONFIG="$FIXTURE_ROOT/bytedepth-deploy.conf"
 readonly EVIDENCE_DIR="$FIXTURE_ROOT/test-history"
 readonly DEPLOY_HISTORY="$FIXTURE_ROOT/deploy-history"
+readonly LOCK_FILE="$FIXTURE_ROOT/deployment-test.lock"
 readonly FIXTURE_CHROMIUM="$FIXTURE_ROOT/chromium"
 readonly FAKE_BIN="$TEMP_ROOT/bin"
 readonly NPM_ARGS="$TEMP_ROOT/npm.args"
 readonly NPM_ENV="$TEMP_ROOT/npm.env"
 readonly GIT_LOG="$TEMP_ROOT/git.log"
+readonly FLOCK_ARGS="$TEMP_ROOT/flock.args"
 readonly INSTALL_ARGS="$TEMP_ROOT/install.args"
 readonly RUNNER_OUTPUT="$TEMP_ROOT/runner.out"
 readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
@@ -38,10 +40,22 @@ sed \
     -e "s@^readonly CONFIG_FILE=/etc/bytedepth-deploy.conf\$@readonly CONFIG_FILE=$FIXTURE_CONFIG@" \
     -e "s@^readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history\$@readonly EVIDENCE_DIR=$EVIDENCE_DIR@" \
     -e "s@^readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history\$@readonly DEPLOY_HISTORY=$DEPLOY_HISTORY@" \
+    -e "s@^readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock\$@readonly LOCK_FILE=$LOCK_FILE@" \
     -e "s@^readonly CHROMIUM_EXECUTABLE=/usr/bin/chromium\$@readonly CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM@" \
     -e '/^if \[\[ "${EUID}" -ne 0 \]\]; then$/,/^fi$/d' \
     "$RUNNER" > "$TEMP_ROOT/runner"
 chmod +x "$TEMP_ROOT/runner"
+
+cat > "$FAKE_BIN/flock" <<'SCRIPT'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$STAGING_E2E_FLOCK_ARGS"
+[[ "$1" == '-x' ]]
+[[ "$2" == "$STAGING_E2E_LOCK_FILE" ]]
+shift 2
+[[ "$1" == *runner ]]
+exec "$@"
+SCRIPT
+chmod +x "$FAKE_BIN/flock"
 
 cat > "$FAKE_BIN/npm" <<'SCRIPT'
 #!/usr/bin/env bash
@@ -101,6 +115,8 @@ write_config() {
 run_runner() {
     PATH="$FAKE_BIN:$PATH" \
         STAGING_E2E_NPM_ARGS="$NPM_ARGS" \
+        STAGING_E2E_FLOCK_ARGS="$FLOCK_ARGS" \
+        STAGING_E2E_LOCK_FILE="$LOCK_FILE" \
         STAGING_E2E_NPM_ENV="$NPM_ENV" \
         STAGING_E2E_GIT_LOG="$GIT_LOG" \
         STAGING_E2E_GIT_COUNT="$TEMP_ROOT/git.count" \
@@ -123,6 +139,8 @@ fi
 # The wrapper fixes the staging target and installed Chromium, then records the full deployed SHA.
 write_config staging
 run_runner
+grep -Fqx -- '-x' "$FLOCK_ARGS"
+grep -Fqx "$LOCK_FILE" "$FLOCK_ARGS"
 grep -Fqx 'run' "$NPM_ARGS"
 grep -Fqx 'test:e2e' "$NPM_ARGS"
 grep -Fqx 'E2E_BASE_URL=https://staging.bytedepth.cn' "$NPM_ENV"

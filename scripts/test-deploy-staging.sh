@@ -41,6 +41,9 @@ readonly CHECKOUT="$FIXTURE_ROOT/checkout"
 readonly INSTALL_MARKER="$FIXTURE_ROOT/install-called"
 readonly BOOTSTRAP_RAN="$FIXTURE_ROOT/bootstrap-ran"
 readonly FAKE_BIN="$FIXTURE_ROOT/bin"
+readonly STAGING_STATE_DIR=/var/lib/bytedepth-staging
+readonly STAGING_LOCK_FILE="$STAGING_STATE_DIR/deployment-test.lock"
+readonly STAGING_EVIDENCE_DIR="$STAGING_STATE_DIR/test-history"
 
 DEPLOY_KEY=/tmp/bytedepth-test-deploy-key
 touch "$DEPLOY_KEY"
@@ -100,6 +103,7 @@ SCRIPT
 
 reset_state() {
     rm -rf "$ORIGIN" "$CHECKOUT" "$INSTALL_MARKER" "$BOOTSTRAP_RAN" "$FAKE_BIN"
+    rm -rf "$STAGING_STATE_DIR"
 }
 
 # --- 用例 1：配置为非 staging mode 时 deploy-staging.sh 拒绝，且不执行 bootstrap ---
@@ -136,6 +140,50 @@ if [[ ! -e "$INSTALL_MARKER" ]]; then
     printf 'Socket 应在所有模式安装（含 staging，用于测试远程部署通道）\n' >&2
     exit 1
 fi
+
+# --- 用例 2b：部署开始即使两项旧测试 evidence 失效。 ---
+
+mkdir -p "$STAGING_EVIDENCE_DIR"
+printf 'obsolete integration evidence\n' > "$STAGING_EVIDENCE_DIR/staging-integration"
+printf 'obsolete E2E evidence\n' > "$STAGING_EVIDENCE_DIR/staging-e2e"
+if ! (cd "$CHECKOUT" && PATH="$FAKE_BIN:$PATH" ./deploy/deploy-staging.sh main) >/tmp/invalidate-evidence.out 2>&1; then
+    printf 'staging deployment used to invalidate evidence failed:\n' >&2
+    cat /tmp/invalidate-evidence.out >&2
+    exit 1
+fi
+if [[ -e "$STAGING_EVIDENCE_DIR/staging-integration" || -e "$STAGING_EVIDENCE_DIR/staging-e2e" ]]; then
+    printf 'A staging deployment retained evidence for the previously deployed app\n' >&2
+    exit 1
+fi
+
+# --- 用例 2c：部署在共享锁被测试持有期间不能进入 bootstrap。 ---
+
+rm -f "$INSTALL_MARKER"
+LOCK_HELD="$FIXTURE_ROOT/lock-held"
+LOCK_RELEASE="$FIXTURE_ROOT/lock-release"
+(
+    flock -x "$STAGING_LOCK_FILE" bash -c '
+        touch "$1"
+        while [[ ! -e "$2" ]]; do sleep 0.01; done
+    ' _ "$LOCK_HELD" "$LOCK_RELEASE"
+) &
+holder_pid=$!
+for _ in {1..100}; do
+    [[ -e "$LOCK_HELD" ]] && break
+    sleep 0.01
+done
+[[ -e "$LOCK_HELD" ]]
+(cd "$CHECKOUT" && PATH="$FAKE_BIN:$PATH" ./deploy/deploy-staging.sh main) \
+    > /tmp/lock-contention.out 2>&1 &
+deploy_pid=$!
+sleep 0.1
+if [[ -e "$INSTALL_MARKER" ]]; then
+    printf 'staging deployment entered bootstrap while the shared test/deploy lock was held\n' >&2
+    exit 1
+fi
+touch "$LOCK_RELEASE"
+wait "$holder_pid"
+wait "$deploy_pid"
 
 # --- 用例 3：bootstrap 是 mode-agnostic——不读 BYTEDEPTH_DEPLOY_MODE 环境变量。
 # 直接执行 bootstrap（绕过 deploy-staging.sh），无论 mode 环境变量如何都调 install。 ---

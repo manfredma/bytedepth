@@ -10,10 +10,19 @@ readonly SOURCE_ROOT=/opt/bytedepth
 readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
+readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
 readonly CHROMIUM_EXECUTABLE=/usr/bin/chromium
 readonly WORK_DIR="$(mktemp -d)"
 readonly E2E_LOG="$WORK_DIR/playwright.log"
 trap 'rm -rf "$WORK_DIR"' EXIT
+
+# Deployment, integration tests and E2E share this lock so an evidence record
+# can only be written for a stable deployed checkout.
+if [[ "${1:-}" != '--lock-held' ]]; then
+    install -d -o root -g root -m 0700 "$(dirname "$LOCK_FILE")"
+    exec flock -x "$LOCK_FILE" "$0" --lock-held "$@"
+fi
+shift
 
 read_checked_out_commit() {
     local commit

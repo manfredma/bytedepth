@@ -16,8 +16,10 @@ readonly FIXTURE_SOURCE="$FIXTURE_ROOT/source"
 readonly FIXTURE_CONFIG="$FIXTURE_ROOT/bytedepth-deploy.conf"
 readonly EVIDENCE_DIR="$FIXTURE_ROOT/test-history"
 readonly DEPLOY_HISTORY="$FIXTURE_ROOT/deploy-history"
+readonly LOCK_FILE="$FIXTURE_ROOT/deployment-test.lock"
 readonly FAKE_BIN="$TEMP_ROOT/bin"
 readonly DOCKER_ARGS="$TEMP_ROOT/docker.args"
+readonly FLOCK_ARGS="$TEMP_ROOT/flock.args"
 readonly GIT_LOG="$TEMP_ROOT/git.log"
 readonly INSTALL_ARGS="$TEMP_ROOT/install.args"
 readonly RUNNER_OUTPUT="$TEMP_ROOT/runner.out"
@@ -34,6 +36,7 @@ sed \
     -e "s@^readonly CONFIG_FILE=/etc/bytedepth-deploy.conf\$@readonly CONFIG_FILE=$FIXTURE_CONFIG@" \
     -e "s@^readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history\$@readonly EVIDENCE_DIR=$EVIDENCE_DIR@" \
     -e "s@^readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history\$@readonly DEPLOY_HISTORY=$DEPLOY_HISTORY@" \
+    -e "s@^readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock\$@readonly LOCK_FILE=$LOCK_FILE@" \
     -e '/^if \[\[ "${EUID}" -ne 0 \]\]; then$/,/^fi$/d' \
     "$RUNNER" > "$TEMP_ROOT/runner"
 chmod +x "$TEMP_ROOT/runner"
@@ -43,6 +46,24 @@ cat > "$FAKE_BIN/sudo" <<'SCRIPT'
 exec "$@"
 SCRIPT
 chmod +x "$FAKE_BIN/sudo"
+
+cat > "$FAKE_BIN/flock" <<'SCRIPT'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$STAGING_RUNNER_FLOCK_ARGS"
+[[ "$1" == '-x' ]]
+[[ "$2" == "$STAGING_RUNNER_LOCK_FILE" ]]
+lock_dir="$2.test-lock"
+shift 2
+[[ "$1" == *runner ]]
+until mkdir "$lock_dir" 2>/dev/null; do
+    sleep 0.01
+done
+"$@"
+result=$?
+rmdir "$lock_dir"
+exit "$result"
+SCRIPT
+chmod +x "$FAKE_BIN/flock"
 
 cat > "$FAKE_BIN/docker" <<'SCRIPT'
 #!/usr/bin/env bash
@@ -59,6 +80,8 @@ done
 
 [[ -n "$workspace" && -f "$workspace/fixture-marker" ]]
 [[ "$workspace" != "$STAGING_RUNNER_SOURCE" ]]
+[[ ! -e "$workspace/.env" ]]
+! grep -R -Fq 'UNRELATED_SECRET=must-not-be-read' "$workspace"
 [[ -s "$STAGING_RUNNER_GIT_LOG" ]]
 mkdir -p "$workspace/target"
 printf 'container write\n' > "$workspace/target/container-write"
@@ -73,6 +96,14 @@ for argument in "$@"; do
 done
 [[ -n "$env_file" && -f "$env_file" ]]
 grep -Fqx "BYTEDEPTH_IT_REDIS_PASSWORD=$STAGING_RUNNER_REDIS_SECRET" "$env_file"
+if [[ -n "${STAGING_RUNNER_DOCKER_STARTED_FILE:-}" ]]; then
+    printf 'started\n' >> "$STAGING_RUNNER_DOCKER_STARTED_FILE"
+fi
+if [[ -n "${STAGING_RUNNER_DOCKER_RELEASE_FILE:-}" ]]; then
+    while [[ ! -e "$STAGING_RUNNER_DOCKER_RELEASE_FILE" ]]; do
+        sleep 0.01
+    done
+fi
 printf '%s\n' "${STAGING_RUNNER_DOCKER_OUTPUT:-Maven integration test output}"
 exit "${STAGING_RUNNER_DOCKER_EXIT:-0}"
 SCRIPT
@@ -124,6 +155,8 @@ write_config() {
 run_runner() {
     PATH="$FAKE_BIN:$PATH" \
         STAGING_RUNNER_DOCKER_ARGS="$DOCKER_ARGS" \
+        STAGING_RUNNER_FLOCK_ARGS="$FLOCK_ARGS" \
+        STAGING_RUNNER_LOCK_FILE="$LOCK_FILE" \
         STAGING_RUNNER_SOURCE="$FIXTURE_SOURCE" \
         STAGING_RUNNER_GIT_LOG="$GIT_LOG" \
         STAGING_RUNNER_GIT_COUNT="$TEMP_ROOT/git.count" \
@@ -147,6 +180,9 @@ fi
 write_config staging
 run_runner
 
+grep -Fqx -- '-x' "$FLOCK_ARGS"
+grep -Fqx "$LOCK_FILE" "$FLOCK_ARGS"
+
 grep -Fqx 'run' "$DOCKER_ARGS"
 grep -Fqx -- '--rm' "$DOCKER_ARGS"
 grep -Fqx -- '--network' "$DOCKER_ARGS"
@@ -168,6 +204,51 @@ grep -Eq '^timestamp=[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' "$
 grep -Fqx 'result=passed' "$EVIDENCE_DIR/staging-integration"
 grep -Fqx -- '-o' "$INSTALL_ARGS"
 grep -Fqx 'root' "$INSTALL_ARGS"
+
+# The second test transaction cannot reach Maven until the first transaction
+# releases the shared deployment/test lock.
+readonly FIRST_OUTPUT="$TEMP_ROOT/first-runner.out"
+readonly SECOND_OUTPUT="$TEMP_ROOT/second-runner.out"
+readonly STARTED_FILE="$TEMP_ROOT/docker-started"
+readonly RELEASE_FILE="$TEMP_ROOT/docker-release"
+rm -f "$DOCKER_ARGS" "$GIT_LOG" "$TEMP_ROOT/git.count" "$STARTED_FILE" "$RELEASE_FILE"
+PATH="$FAKE_BIN:$PATH" \
+    STAGING_RUNNER_DOCKER_ARGS="$DOCKER_ARGS" \
+    STAGING_RUNNER_FLOCK_ARGS="$FLOCK_ARGS" \
+    STAGING_RUNNER_LOCK_FILE="$LOCK_FILE" \
+    STAGING_RUNNER_SOURCE="$FIXTURE_SOURCE" \
+    STAGING_RUNNER_GIT_LOG="$GIT_LOG" \
+    STAGING_RUNNER_GIT_COUNT="$TEMP_ROOT/git.count" \
+    STAGING_RUNNER_INSTALL_ARGS="$INSTALL_ARGS" \
+    STAGING_RUNNER_SHA="$CURRENT_SHA" \
+    STAGING_RUNNER_REDIS_SECRET="$REDIS_SECRET" \
+    STAGING_RUNNER_DOCKER_STARTED_FILE="$STARTED_FILE" \
+    STAGING_RUNNER_DOCKER_RELEASE_FILE="$RELEASE_FILE" \
+    "$TEMP_ROOT/runner" > "$FIRST_OUTPUT" 2>&1 &
+first_pid=$!
+for _ in {1..100}; do
+    [[ -e "$STARTED_FILE" ]] && break
+    sleep 0.01
+done
+[[ -e "$STARTED_FILE" ]]
+PATH="$FAKE_BIN:$PATH" \
+    STAGING_RUNNER_DOCKER_ARGS="$DOCKER_ARGS" \
+    STAGING_RUNNER_FLOCK_ARGS="$FLOCK_ARGS" \
+    STAGING_RUNNER_LOCK_FILE="$LOCK_FILE" \
+    STAGING_RUNNER_SOURCE="$FIXTURE_SOURCE" \
+    STAGING_RUNNER_GIT_LOG="$GIT_LOG" \
+    STAGING_RUNNER_GIT_COUNT="$TEMP_ROOT/git.count" \
+    STAGING_RUNNER_INSTALL_ARGS="$INSTALL_ARGS" \
+    STAGING_RUNNER_SHA="$CURRENT_SHA" \
+    STAGING_RUNNER_REDIS_SECRET="$REDIS_SECRET" \
+    STAGING_RUNNER_DOCKER_STARTED_FILE="$STARTED_FILE" \
+    "$TEMP_ROOT/runner" > "$SECOND_OUTPUT" 2>&1 &
+second_pid=$!
+sleep 0.1
+[[ "$(wc -l < "$STARTED_FILE")" -eq 1 ]]
+touch "$RELEASE_FILE"
+wait "$first_pid"
+wait "$second_pid"
 
 # Even a dependency failure that includes the password must be redacted before tee writes output.
 rm -f "$DOCKER_ARGS" "$GIT_LOG" "$TEMP_ROOT/git.count"
