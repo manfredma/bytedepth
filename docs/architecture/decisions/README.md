@@ -21,3 +21,4 @@
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | [ADR-0001](0001-published-post-driven-rss.md) | 由已发布文章状态动态生成 RSS | Proposed | 2026-09-08 |
+| [ADR-0002](0002-staging-integration-test-boundary.md) | 将跨进程测试固定为 staging 集成测试 | Accepted | 2026-09-10 |
