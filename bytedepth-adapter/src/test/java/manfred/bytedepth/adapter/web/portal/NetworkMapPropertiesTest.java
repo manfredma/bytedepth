@@ -15,6 +15,15 @@ import org.springframework.core.env.StandardEnvironment;
 class NetworkMapPropertiesTest {
 
     @Test
+    void exposesConfiguredGroupsThroughJavaBeanAccessor() {
+        var groups = List.of(new NetworkMapProperties.Group("resources", "资源", "说明", List.of(
+                new NetworkMapProperties.Site("Example", URI.create("https://example.test"), "说明"))));
+        var properties = new NetworkMapProperties(groups);
+
+        assertThat(properties.getGroups()).isSameAs(groups);
+    }
+
+    @Test
     void rejectsAnHttpSiteUrl() {
         var properties = new NetworkMapProperties(List.of(
                 new NetworkMapProperties.Group("resources", "资源", "说明", List.of(
