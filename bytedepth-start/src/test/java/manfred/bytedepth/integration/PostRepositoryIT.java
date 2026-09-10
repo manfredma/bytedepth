@@ -1,5 +1,6 @@
 package manfred.bytedepth.integration;
 
+import manfred.bytedepth.BytedepthApplication;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.PostStatus;
@@ -25,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-@SpringBootTest
+@SpringBootTest(classes = BytedepthApplication.class)
 @Testcontainers
 @AutoConfigureMockMvc
 class PostRepositoryIT {
