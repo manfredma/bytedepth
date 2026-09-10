@@ -27,6 +27,9 @@ test('网络地图在各设备显示配置分组、安全外链与响应式卡�
         await expect(link).toHaveAttribute('href', url);
         await expect(cards.nth(index)).toHaveAttribute('target', '_blank');
         await expect(cards.nth(index)).toHaveAttribute('rel', 'noopener noreferrer');
+        await expect(cards.nth(index).locator('.network-card-external-icon')).toHaveCount(1);
+        await expect(cards.nth(index).locator('.network-card-external-icon')).toHaveAttribute('aria-hidden', 'true');
+        await expect(cards.nth(index).locator('.network-card-external-icon')).toHaveAttribute('focusable', 'false');
     }
 
     const firstGroupColumns = await page.locator('.network-cards').first().evaluate(element =>

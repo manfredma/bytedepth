@@ -56,10 +56,19 @@ class NetworkMapControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(result -> {
                     String body = result.getResponse().getContentAsString();
-                    assertEquals(8, Pattern.compile("class=\"network-card\"").matcher(body).results().count());
+                    var cards = Pattern.compile("(?s)<a\\s+class=\"network-card\"(?:\\s|>).*?</a>")
+                            .matcher(body)
+                            .results()
+                            .toList();
+                    assertEquals(8, cards.size());
                     assertTrue(Pattern.compile("<a\\s+class=\"network-card\"\\s+href=\"https://bytedepth\\.cn\""
                                     + "\\s+target=\"_blank\"\\s+rel=\"noopener noreferrer\"")
                             .matcher(body).find());
+                    for (var card : cards) {
+                        assertTrue(card.group().contains("<svg class=\"network-card-external-icon\""));
+                        assertTrue(card.group().contains("aria-hidden=\"true\""));
+                        assertTrue(card.group().contains("focusable=\"false\""));
+                    }
                 });
     }
 
