@@ -29,6 +29,7 @@ if [[ ! -x "$RUNNER" ]] || [[ "$(git ls-files -s "$RUNNER" | awk '{print $1}')" 
     printf 'Expected staging E2E runner to be tracked as executable.\n' >&2
     exit 1
 fi
+grep -Fqx 'readonly CHROMIUM_EXECUTABLE="$SOURCE_ROOT/.e2e/chrome-linux64/chrome"' "$RUNNER"
 
 mkdir -p "$FIXTURE_SOURCE" "$FAKE_BIN"
 touch "$FIXTURE_CHROMIUM"
@@ -41,7 +42,7 @@ sed \
     -e "s@^readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history\$@readonly EVIDENCE_DIR=$EVIDENCE_DIR@" \
     -e "s@^readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history\$@readonly DEPLOY_HISTORY=$DEPLOY_HISTORY@" \
     -e "s@^readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock\$@readonly LOCK_FILE=$LOCK_FILE@" \
-    -e "s@^readonly CHROMIUM_EXECUTABLE=/usr/bin/chromium\$@readonly CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM@" \
+    -e "s@^readonly CHROMIUM_EXECUTABLE=.*\$@readonly CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM@" \
     -e '/^if \[\[ "${EUID}" -ne 0 \]\]; then$/,/^fi$/d' \
     "$RUNNER" > "$TEMP_ROOT/runner"
 chmod +x "$TEMP_ROOT/runner"

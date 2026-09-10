@@ -11,7 +11,10 @@ readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
-readonly CHROMIUM_EXECUTABLE=/usr/bin/chromium
+# Chromium is provisioned by Playwright in the staging checkout.  Do not use
+# Ubuntu's chromium-browser package: on 22.04 it is a slow Snap transition
+# package and is not the browser version pinned by this project's E2E suite.
+readonly CHROMIUM_EXECUTABLE="$SOURCE_ROOT/.e2e/chrome-linux64/chrome"
 readonly WORK_DIR="$(mktemp -d)"
 readonly E2E_LOG="$WORK_DIR/playwright.log"
 trap 'rm -rf "$WORK_DIR"' EXIT

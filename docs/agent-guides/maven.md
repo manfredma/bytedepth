@@ -39,7 +39,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn clean install -DskipTests -Dsort.s
 JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn test -Dsort.skip=true
 ```
 
-`*IT` 只能在 staging 主机由 `run-staging-integration-tests.sh` 运行；它在 Compose 网络中执行 `mvn -Pstaging-integration verify`。E2E 只能在同一 staging 主机由 `run-staging-e2e-tests.sh` 运行；该 wrapper 固定 `E2E_BASE_URL=https://staging.bytedepth.cn` 和 `/usr/bin/chromium`，不能用本机浏览器替代。两个命令及其 evidence 传递流程见 [部署手册](../../deploy/README.md#集成测试)。
+`*IT` 只能在 staging 主机由 `run-staging-integration-tests.sh` 运行；它在 Compose 网络中执行 `mvn -Pstaging-integration verify`。E2E 只能在同一 staging 主机由 `run-staging-e2e-tests.sh` 运行；该 wrapper 固定 `E2E_BASE_URL=https://staging.bytedepth.cn` 和 checkout 中的 `.e2e/chrome-linux64/chrome`，不能用本机浏览器替代。两个命令及其 evidence 传递流程见 [部署手册](../../deploy/README.md#集成测试)。
 
 不得新增 Maven 模块；如确有必要，必须先获得项目所有者的明确同意。
 
