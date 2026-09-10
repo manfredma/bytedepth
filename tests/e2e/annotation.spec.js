@@ -259,6 +259,9 @@ test.describe('划线评论', () => {
             const heading = document.querySelector('.bd-annotation-reading-content h1').getBoundingClientRect();
             const sidebar = document.querySelector('#bd-annotation-sidebar');
             const sidebarRect = sidebar.getBoundingClientRect();
+            const navigationRect = document.querySelector('.nav-bar').getBoundingClientRect();
+            const stagingNotice = document.querySelector('.network-staging-notice');
+            const stagingNoticeRect = stagingNotice?.getBoundingClientRect();
             return {
                 contentWidth: content.width,
                 contentRight: content.right,
@@ -268,13 +271,16 @@ test.describe('划线评论', () => {
                 sidebarLeft: sidebarRect.left,
                 sidebarTop: sidebarRect.top,
                 sidebarBottom: sidebarRect.bottom,
-                sidebarPosition: getComputedStyle(sidebar).position
+                sidebarPosition: getComputedStyle(sidebar).position,
+                pageChromeBottom: Math.max(navigationRect.bottom, stagingNoticeRect?.bottom ?? 0)
             };
         });
         // 两档布局：content 是 grid 1fr = container(80vw) − sidebar(24vw) − gap ≈ 799
         expect(wideDesktopLayout.contentWidth).toBeGreaterThan(780);
         expect(wideDesktopLayout.contentRight).toBeLessThan(wideDesktopLayout.sidebarLeft + 1);
-        expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(100);
+        // 正文紧接在导航及（staging 时）预发提示条之后，保留文章自身的最大 40px 顶部间距。
+        expect(wideDesktopLayout.contentTop).toBeGreaterThanOrEqual(wideDesktopLayout.pageChromeBottom);
+        expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(wideDesktopLayout.pageChromeBottom + 40);
         expect(wideDesktopLayout.headingTop).toBeGreaterThanOrEqual(0);
         // h1 clamp(1.8rem,3vw,2.6rem) 大标题，headingBottom ≈ top(92) + 标题高
         expect(wideDesktopLayout.headingBottom).toBeLessThan(195);
