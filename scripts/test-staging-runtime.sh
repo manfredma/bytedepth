@@ -25,6 +25,7 @@ chmod +x "$SOURCE_ROOT/.e2e/chrome-linux64/chrome"
 readonly MANIFEST="$STATE_DIR/runtime/manifest"
 write_runtime_manifest "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567
 require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567
+require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" fedcba9876543210fedcba9876543210fedcba98
 
 printf 'changed lockfile\n' >> "$SOURCE_ROOT/package-lock.json"
 if require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567; then

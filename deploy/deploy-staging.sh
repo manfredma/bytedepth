@@ -20,6 +20,7 @@ readonly GIT_REMOTE_URL=git@github.com:manfredma/bytedepth.git
 readonly STATE_DIR=/var/lib/bytedepth-staging
 readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
 readonly HISTORY_FILE="$STATE_DIR/deploy-history"
+readonly TIMING_DIR="$STATE_DIR/timing"
 
 # A deployment changes both the checkout and the running app.  Keep that
 # transition indivisible with respect to staging test runners, otherwise a
@@ -46,6 +47,7 @@ bound_build_cache() {
 }
 
 cd "$SOURCE_ROOT"
+deployment_started_at="$(date -u +%s%3N)"
 
 # 校验 origin
 if [[ "$(git_cmd remote get-url origin)" != "$GIT_REMOTE_URL" ]]; then
@@ -73,6 +75,7 @@ export GIT_SSH_COMMAND="ssh -i $deploy_ssh_key -o IdentitiesOnly=yes -o BatchMod
 invalidate_test_evidence
 
 # fetch ref，解析为完整 commit SHA
+source_fetch_started_at="$(date -u +%s%3N)"
 git_cmd fetch --force --no-recurse-submodules origin "$REF"
 COMMIT="$(git_cmd rev-parse FETCH_HEAD^{commit})"
 
@@ -86,11 +89,36 @@ if [[ -z "$(git_cmd ls-remote --heads --tags origin "$REF" 2>/dev/null)" ]]; the
     exit 1
 fi
 
-git_cmd checkout --detach "$COMMIT"
-./deploy/bootstrap-ops-deploy.sh
-bound_build_cache
+source <(git show "$COMMIT:deploy/lib/timing.sh")
+readonly TIMING_FILE="$TIMING_DIR/$COMMIT"
+initialize_timing_file "$TIMING_FILE" "$COMMIT"
+record_timing_phase "$TIMING_FILE" source_fetch passed "$source_fetch_started_at" "$(timing_now_epoch_ms)"
+
+if ! record_timed_phase "$TIMING_FILE" source_checkout git_cmd checkout --detach "$COMMIT"; then
+    record_timing_phase "$TIMING_FILE" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"
+    exit 1
+fi
+
+source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
+run_runtime_preflight() {
+    require_staging_runtime "$STATE_DIR/runtime/manifest" "$SOURCE_ROOT" "$COMMIT"
+}
+if ! record_timed_phase "$TIMING_FILE" runtime_preflight run_runtime_preflight; then
+    record_timing_phase "$TIMING_FILE" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"
+    exit 1
+fi
+
+run_rollout() {
+    ./deploy/bootstrap-ops-deploy.sh
+    bound_build_cache
+}
+if ! record_timed_phase "$TIMING_FILE" docker_build_and_rollout run_rollout; then
+    record_timing_phase "$TIMING_FILE" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"
+    exit 1
+fi
 
 install -d -m 0700 "$STATE_DIR"
 printf 'ref=%s\ncommit=%s\ndeployed_at=%s\n---\n' \
     "$REF" "$COMMIT" "$(date -u +%FT%TZ)" >> "$HISTORY_FILE"
+record_timing_phase "$TIMING_FILE" deployment_total passed "$deployment_started_at" "$(timing_now_epoch_ms)"
 printf 'Deployed %s (%s)\n' "$REF" "$COMMIT"
