@@ -13,8 +13,6 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,13 +24,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @SpringBootTest
-@Testcontainers
 @AutoConfigureMockMvc
 class PostRepositoryIT {
 
-    @Container
     @ServiceConnection
     static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
+
+    static {
+        // Testcontainers 1.21.x 的 JUnit 扩展尚未适配 JUnit 6；显式启动保持
+        // Spring ServiceConnection 的真实容器边界，同时避免扩展发出兼容性 WARN。
+        mysql.start();
+    }
 
     @MockitoBean
     private RedisStatsService redisStatsService;
