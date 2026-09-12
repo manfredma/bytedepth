@@ -6,6 +6,7 @@ import manfred.bytedepth.app.analytics.PageViewRankDTO;
 import manfred.bytedepth.app.analytics.PageViewStatsPort;
 import manfred.bytedepth.app.analytics.PostViewRankDTO;
 import manfred.bytedepth.app.analytics.TrendPointDTO;
+import manfred.bytedepth.app.analytics.TrendComparisonDTO;
 import manfred.bytedepth.app.analytics.ViewLogStatsPort;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -91,7 +93,7 @@ public class AdminAnalyticsController {
 
     @GetMapping("/api/post-trend")
     @ResponseBody
-    public List<TrendPointDTO> postTrend(
+    public TrendComparisonDTO postTrend(
             @RequestParam Long postId,
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
@@ -99,19 +101,29 @@ public class AdminAnalyticsController {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end);
-        return completeTrend(viewLogStatsPort.postTrend(postId, start, end, format), start, end, format);
+        LocalDateTime previousStart = previousStart(start, end);
+        LocalDateTime previousEnd = start.minusSeconds(1);
+        return comparison(
+                viewLogStatsPort.postTrend(postId, start, end, format),
+                viewLogStatsPort.postTrend(postId, previousStart, previousEnd, format),
+                start, end, previousStart, previousEnd, format);
     }
 
     @GetMapping("/api/overview-trend")
     @ResponseBody
-    public List<TrendPointDTO> overviewTrend(
+    public TrendComparisonDTO overviewTrend(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end);
-        return completeTrend(viewLogStatsPort.overviewTrend(start, end, format), start, end, format);
+        LocalDateTime previousStart = previousStart(start, end);
+        LocalDateTime previousEnd = start.minusSeconds(1);
+        return comparison(
+                viewLogStatsPort.overviewTrend(start, end, format),
+                viewLogStatsPort.overviewTrend(previousStart, previousEnd, format),
+                start, end, previousStart, previousEnd, format);
     }
 
     // ── 页面统计 API ──────────────────────────────────────────────
@@ -163,7 +175,7 @@ public class AdminAnalyticsController {
 
     @GetMapping("/api/page-trend")
     @ResponseBody
-    public List<TrendPointDTO> pageTrend(
+    public TrendComparisonDTO pageTrend(
             @RequestParam String pagePath,
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
@@ -171,19 +183,29 @@ public class AdminAnalyticsController {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end);
-        return completeTrend(pageViewStatsPort.pageTrend(pagePath, start, end, format), start, end, format);
+        LocalDateTime previousStart = previousStart(start, end);
+        LocalDateTime previousEnd = start.minusSeconds(1);
+        return comparison(
+                pageViewStatsPort.pageTrend(pagePath, start, end, format),
+                pageViewStatsPort.pageTrend(pagePath, previousStart, previousEnd, format),
+                start, end, previousStart, previousEnd, format);
     }
 
     @GetMapping("/api/page-overview-trend")
     @ResponseBody
-    public List<TrendPointDTO> pageOverviewTrend(
+    public TrendComparisonDTO pageOverviewTrend(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end);
-        return completeTrend(pageViewStatsPort.pageOverviewTrend(start, end, format), start, end, format);
+        LocalDateTime previousStart = previousStart(start, end);
+        LocalDateTime previousEnd = start.minusSeconds(1);
+        return comparison(
+                pageViewStatsPort.pageOverviewTrend(start, end, format),
+                pageViewStatsPort.pageOverviewTrend(previousStart, previousEnd, format),
+                start, end, previousStart, previousEnd, format);
     }
 
     // ── 工具方法（package-private 供测试直接调用）─────────────────────────
@@ -256,6 +278,41 @@ public class AdminAnalyticsController {
             }
         }
         return result;
+    }
+
+    private static TrendComparisonDTO comparison(List<TrendPointDTO> currentSource,
+                                                   List<TrendPointDTO> previousSource,
+                                                   LocalDateTime start, LocalDateTime end,
+                                                   LocalDateTime previousStart, LocalDateTime previousEnd,
+                                                   String format) {
+        List<TrendPointDTO> current = completeTrend(currentSource, start, end, format);
+        List<TrendPointDTO> previousBuckets = completeTrend(previousSource, previousStart, previousEnd, format);
+
+        // SQL 桶的日期标签不同；以当前标签逐索引映射才能在同一横轴逐桶比较。
+        List<TrendPointDTO> previous = new ArrayList<>();
+        for (int index = 0; index < current.size(); index++) {
+            TrendPointDTO point = new TrendPointDTO();
+            point.setLabel(current.get(index).getLabel());
+            point.setViewCount(previousBuckets.get(index).getViewCount());
+            previous.add(point);
+        }
+
+        TrendComparisonDTO result = new TrendComparisonDTO();
+        result.setCurrent(current);
+        result.setPrevious(previous);
+        result.setCurrentPeriod(periodLabel(start, end));
+        result.setPreviousPeriod(periodLabel(previousStart, previousEnd));
+        return result;
+    }
+
+    private static LocalDateTime previousStart(LocalDateTime start, LocalDateTime end) {
+        return start.minus(Duration.between(start, end).plusSeconds(1));
+    }
+
+    private static String periodLabel(LocalDateTime start, LocalDateTime end) {
+        String startDate = start.toLocalDate().toString();
+        String endDate = end.toLocalDate().toString();
+        return startDate.equals(endDate) ? startDate : startDate + " 至 " + endDate;
     }
 
     private static void addTrendPoint(List<TrendPointDTO> result, String label, Map<String, Long> counts) {

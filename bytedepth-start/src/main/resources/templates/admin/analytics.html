@@ -386,13 +386,15 @@
         });
     }
 
-    function renderTrendChart(data, title, showClose) {
+    function renderTrendChart(comparison, title, showClose) {
         document.getElementById('trend-title').textContent =
             (showClose ? '📈 ' : '📉 ') + title;
         document.getElementById('trend-close').style.display =
             showClose ? 'inline-block' : 'none';
 
-        if (!data.length) {
+        const current = comparison.current || [];
+        const previous = comparison.previous || [];
+        if (!current.length) {
             trendChart.setOption({
                 graphic: [{ type: 'text', left: 'center', top: 'middle',
                     style: { text: '暂无数据', fill: '#bbb', fontSize: 14 } }]
@@ -402,6 +404,10 @@
 
         trendChart.setOption({
             tooltip: { trigger: 'axis' },
+            legend: {
+                data: [comparison.currentPeriod, comparison.previousPeriod],
+                bottom: 25, textStyle: { fontSize: 11 }
+            },
             toolbox: {
                 feature: {
                     dataZoom: { yAxisIndex: 'none', title: { zoom: '缩放', back: '还原' } },
@@ -414,15 +420,22 @@
             ],
             grid: { left: '3%', right: '4%', top: '10px',
                     bottom: '55px', containLabel: true },
-            xAxis: { type: 'category', data: data.map(d => d.label),
+            xAxis: { type: 'category', data: current.map(d => d.label),
                      boundaryGap: false },
             yAxis: { type: 'value', minInterval: 1 },
             series: [{
-                type: 'line', data: data.map(d => d.viewCount),
+                name: comparison.currentPeriod,
+                type: 'line', data: current.map(d => d.viewCount),
                 smooth: true, symbol: 'circle', symbolSize: 6,
                 areaStyle: { color: 'rgba(233,69,96,.10)' },
                 itemStyle: { color: '#e94560' },
                 lineStyle: { color: '#e94560', width: 2 }
+            }, {
+                name: comparison.previousPeriod,
+                type: 'line', data: previous.map(d => d.viewCount),
+                smooth: true, symbol: 'circle', symbolSize: 5,
+                itemStyle: { color: '#6c8ebf' },
+                lineStyle: { color: '#6c8ebf', width: 2, type: 'dashed' }
             }]
         }, true);
 
