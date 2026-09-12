@@ -52,7 +52,7 @@ staging timing 与既有 test evidence 共享锁。新的部署先作废旧 test
 
 bootstrap 是 root 显式维护动作，只在 `package-lock.json`、Maven 依赖描述或 Playwright 浏览器版本改变后运行。它写入 root-owned `0600` manifest，记录 commit、Node lockfile SHA、Maven 输入 SHA 和 Chromium 可执行文件/版本。部署与 runner 必须验证 manifest 输入与 checkout 相同，否则失败并提示维护者 bootstrap；不能自行修复环境。
 
-集成 runner 使用 staging 已有 Compose 网络和服务 DNS。`*IT` 连接测试专用 schema/凭据，不能使用 Testcontainers。这样 Maven runner 不挂 Docker Socket、不复制完整 Maven cache，也不启动额外 MySQL/Redis。runner 对 `WARN` 与 `WARNING` 都拒绝，避免当前仅匹配文字 `warning` 而遗漏框架日志级别的问题。
+集成 runner 使用 staging 已有 Compose 网络和服务 DNS。由于这些服务不向宿主发布端口，bootstrap 预置一个仅供测试的长期 Maven runner service；验收入口只 `exec` 它，不能临时 `docker run`、挂 Docker Socket 或创建 Testcontainers。`*IT` 连接测试专用 schema/凭据。runner 对 `WARN` 与 `WARNING` 都拒绝，避免当前仅匹配文字 `warning` 而遗漏框架日志级别的问题。
 
 ## GitHub Actions CI
 

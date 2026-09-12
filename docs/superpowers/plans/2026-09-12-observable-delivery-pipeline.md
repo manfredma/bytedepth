@@ -94,7 +94,7 @@ grep -Eq '^phase=e2e_playwright result=failed .*duration_ms=[0-9]+$' "$TIMING_FI
 ```
 
 - [ ] **Step 2: Verify RED** — Run both runner script tests; expected failure due Docker/Testcontainers and missing records.
-- [ ] **Step 3: Implement** — runner uses Java 25/Maven offline and Compose DNS test configuration; it creates no Docker/Testcontainers; runner rejects case-insensitive `warn|warning`; write pass evidence only after stable SHA checks.
+- [ ] **Step 3: Implement** — bootstrap creates a persistent Maven 25 test-runner service on the staging Compose network; the runner only `exec`s it with offline Maven and Compose DNS test configuration. It creates no Testcontainers or new data services, rejects case-insensitive `warn|warning`, and writes pass evidence only after stable SHA checks.
 - [ ] **Step 4: Verify GREEN** — Run both script tests and `JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn -pl bytedepth-start -Dtest='*Test' test`.
 - [ ] **Step 5: Commit** — `git add deploy/run-staging-* scripts/test-run-staging-* pom.xml bytedepth-start/src/test && git commit -m "feat: isolate timed staging validation"`.
 
