@@ -30,10 +30,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -201,8 +203,8 @@ class AdminAnalyticsControllerTest {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
-        verify(viewLogStatsPort).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
-        assertThat(fmtCaptor.getValue()).isEqualTo("%m-%d");
+        verify(viewLogStatsPort, times(2)).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
+        assertThat(fmtCaptor.getAllValues()).containsOnly("%m-%d");
     }
 
     @Test
@@ -217,8 +219,8 @@ class AdminAnalyticsControllerTest {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
-        verify(viewLogStatsPort).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
-        assertThat(fmtCaptor.getValue()).isEqualTo("%Y-%m");
+        verify(viewLogStatsPort, times(2)).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
+        assertThat(fmtCaptor.getAllValues()).containsOnly("%Y-%m");
     }
 
     @Test
@@ -232,9 +234,9 @@ class AdminAnalyticsControllerTest {
                         .param("from", "2026-07-01")
                         .param("to", "2026-07-03"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[1].label").value("07-02"))
-                .andExpect(jsonPath("$[1].viewCount").value(3));
+                .andExpect(jsonPath("$.current.length()").value(3))
+                .andExpect(jsonPath("$.current[1].label").value("07-02"))
+                .andExpect(jsonPath("$.current[1].viewCount").value(3));
     }
 
     @Test
@@ -247,12 +249,32 @@ class AdminAnalyticsControllerTest {
                         .param("from", "2026-07-29")
                         .param("to", "2026-07-29"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(24))
-                .andExpect(jsonPath("$[0].label").value("00:00"))
-                .andExpect(jsonPath("$[0].viewCount").value(0))
-                .andExpect(jsonPath("$[2].label").value("02:00"))
-                .andExpect(jsonPath("$[2].viewCount").value(4))
-                .andExpect(jsonPath("$[23].label").value("23:00"));
+                .andExpect(jsonPath("$.current.length()").value(24))
+                .andExpect(jsonPath("$.current[0].label").value("00:00"))
+                .andExpect(jsonPath("$.current[0].viewCount").value(0))
+                .andExpect(jsonPath("$.current[2].label").value("02:00"))
+                .andExpect(jsonPath("$.current[2].viewCount").value(4))
+                .andExpect(jsonPath("$.current[23].label").value("23:00"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void overviewTrend_returnsThePreviousEqualWindowAlignedToCurrentLabels() throws Exception {
+        AtomicInteger queryCount = new AtomicInteger();
+        when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
+                .thenAnswer(invocation -> queryCount.getAndIncrement() == 0
+                        ? List.of(trendPoint("02:00", 4))
+                        : List.of(trendPoint("02:00", 9)));
+
+        mockMvc.perform(get("/admin/analytics/api/overview-trend")
+                        .param("from", "2026-07-29")
+                        .param("to", "2026-07-29"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.current[2].label").value("02:00"))
+                .andExpect(jsonPath("$.current[2].viewCount").value(4))
+                .andExpect(jsonPath("$.previous[2].label").value("02:00"))
+                .andExpect(jsonPath("$.previous[2].viewCount").value(9))
+                .andExpect(jsonPath("$.previousPeriod").value("2026-07-28"));
     }
 
     @Test
@@ -265,12 +287,12 @@ class AdminAnalyticsControllerTest {
                         .param("from", "2026-06-30")
                         .param("to", "2026-07-06"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(7))
-                .andExpect(jsonPath("$[0].label").value("06-30"))
-                .andExpect(jsonPath("$[0].viewCount").value(0))
-                .andExpect(jsonPath("$[2].label").value("07-02"))
-                .andExpect(jsonPath("$[2].viewCount").value(3))
-                .andExpect(jsonPath("$[6].label").value("07-06"));
+                .andExpect(jsonPath("$.current.length()").value(7))
+                .andExpect(jsonPath("$.current[0].label").value("06-30"))
+                .andExpect(jsonPath("$.current[0].viewCount").value(0))
+                .andExpect(jsonPath("$.current[2].label").value("07-02"))
+                .andExpect(jsonPath("$.current[2].viewCount").value(3))
+                .andExpect(jsonPath("$.current[6].label").value("07-06"));
     }
 
     // ── top-pages：percent 回填逻辑 ────────────────────────
@@ -366,8 +388,8 @@ class AdminAnalyticsControllerTest {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
-        verify(pageViewStatsPort).pageTrend(eq("/about"), any(), any(), fmtCaptor.capture());
-        assertThat(fmtCaptor.getValue()).isEqualTo("%m-%d");
+        verify(pageViewStatsPort, times(2)).pageTrend(eq("/about"), any(), any(), fmtCaptor.capture());
+        assertThat(fmtCaptor.getAllValues()).containsOnly("%m-%d");
     }
 
     @Test
@@ -381,9 +403,9 @@ class AdminAnalyticsControllerTest {
                         .param("from", "2026-07-01")
                         .param("to", "2026-07-03"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[1].label").value("07-02"))
-                .andExpect(jsonPath("$[1].viewCount").value(3));
+                .andExpect(jsonPath("$.current.length()").value(3))
+                .andExpect(jsonPath("$.current[1].label").value("07-02"))
+                .andExpect(jsonPath("$.current[1].viewCount").value(3));
     }
 
     // ── page-overview-trend ────────────────────────────────
@@ -398,9 +420,45 @@ class AdminAnalyticsControllerTest {
                         .param("from", "2026-06-30")
                         .param("to", "2026-07-02"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[0].viewCount").value(0))
-                .andExpect(jsonPath("$[2].viewCount").value(5));
+                .andExpect(jsonPath("$.current.length()").value(3))
+                .andExpect(jsonPath("$.current[0].viewCount").value(0))
+                .andExpect(jsonPath("$.current[2].viewCount").value(5));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void pageOverviewTrend_returnsThePrecedingEqualDayRange() throws Exception {
+        AtomicInteger queryCount = new AtomicInteger();
+        when(pageViewStatsPort.pageOverviewTrend(any(), any(), eq("%m-%d")))
+                .thenAnswer(invocation -> queryCount.getAndIncrement() == 0
+                        ? List.of(trendPoint("07-02", 5))
+                        : List.of(trendPoint("06-29", 8)));
+
+        mockMvc.perform(get("/admin/analytics/api/page-overview-trend")
+                        .param("from", "2026-07-01")
+                        .param("to", "2026-07-03"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.current.length()").value(3))
+                .andExpect(jsonPath("$.previous.length()").value(3))
+                .andExpect(jsonPath("$.previous[1].label").value("07-02"))
+                .andExpect(jsonPath("$.previous[1].viewCount").value(8))
+                .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void overviewTrend_usesZeroesWhenThePreviousWindowHasNoVisits() throws Exception {
+        AtomicInteger queryCount = new AtomicInteger();
+        when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
+                .thenAnswer(invocation -> queryCount.getAndIncrement() == 0
+                        ? List.of(trendPoint("02:00", 4)) : List.of());
+
+        mockMvc.perform(get("/admin/analytics/api/overview-trend")
+                        .param("from", "2026-07-29")
+                        .param("to", "2026-07-29"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.previous[2].label").value("02:00"))
+                .andExpect(jsonPath("$.previous[2].viewCount").value(0));
     }
 
     // ── 静态工具方法单元测试 ───────────────────────────────
