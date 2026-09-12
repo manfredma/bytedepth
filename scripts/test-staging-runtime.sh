@@ -9,6 +9,10 @@ readonly BOOTSTRAP="$ROOT/deploy/bootstrap-staging-runtime.sh"
     printf 'Expected executable staging runtime bootstrap.\n' >&2
     exit 1
 }
+rg -F 'mvn clean install -DskipTests -Dsort.skip=true' "$BOOTSTRAP" >/dev/null || {
+    printf 'Bootstrap must prewarm the complete Maven reactor.\n' >&2
+    exit 1
+}
 
 source "$LIBRARY"
 

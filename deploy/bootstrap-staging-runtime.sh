@@ -32,7 +32,7 @@ bootstrap_started_at="$(timing_now_epoch_ms)"
 prepare_maven() {
     cd "$SOURCE_ROOT"
     JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
-        mvn -DskipTests -Dsort.skip=true dependency:go-offline
+        mvn clean install -DskipTests -Dsort.skip=true
 }
 
 prepare_node() {
