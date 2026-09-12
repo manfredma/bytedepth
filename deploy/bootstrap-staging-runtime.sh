@@ -38,7 +38,6 @@ prepare_maven() {
 prepare_node() {
     cd "$SOURCE_ROOT"
     npm ci
-    PLAYWRIGHT_BROWSERS_PATH="$SOURCE_ROOT/.e2e" npx playwright install chromium
 }
 
 if ! record_timed_phase "$timing_file" maven_runtime_prepare prepare_maven; then

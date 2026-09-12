@@ -13,6 +13,10 @@ rg -F 'mvn clean install -DskipTests -Dsort.skip=true' "$BOOTSTRAP" >/dev/null |
     printf 'Bootstrap must prewarm the complete Maven reactor.\n' >&2
     exit 1
 }
+if rg -q 'playwright install' "$BOOTSTRAP"; then
+    printf 'Bootstrap must reuse the staged Chromium instead of downloading a browser.\n' >&2
+    exit 1
+fi
 
 source "$LIBRARY"
 
