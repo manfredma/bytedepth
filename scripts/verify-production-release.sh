@@ -52,7 +52,6 @@ column_path="$(sed -n 's/.*href="\(\/columns\/[a-z0-9-]*\)".*/\1/p' <<< "$column
 }
 request "$post_path"
 request "$column_path"
-request "/blog${post_path}"
 
 # Application logs are checked through the project wrapper so deployment mode
 # and compose topology cannot be guessed incorrectly.

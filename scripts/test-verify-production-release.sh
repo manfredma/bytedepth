@@ -16,6 +16,10 @@ rg -F '/columns' "$SCRIPT" >/dev/null
 rg -F '/projects' "$SCRIPT" >/dev/null
 rg -F '/search' "$SCRIPT" >/dev/null
 rg -F 'WARNING' "$SCRIPT" >/dev/null
+if rg -F 'request "/blog${post_path}"' "$SCRIPT" >/dev/null; then
+    printf 'Production verification must request the discovered post path without a /blog prefix.\n' >&2
+    exit 1
+fi
 if rg -F 'docker compose' "$SCRIPT" >/dev/null; then
     printf 'Production verification must use deploy/ctl.sh rather than bare Compose.\n' >&2
     exit 1
