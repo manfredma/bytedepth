@@ -7,6 +7,7 @@ readonly CHECKLIST="$SOURCE_ROOT/scripts/check-staging-checklist.sh"
 
 [[ -x "$CHECKLIST" ]]
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-maven-runtime.sh"' "$CHECKLIST"
+grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-flyway-migration-warning-safety.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-deploy-staging.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-run-staging-integration-tests.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-run-staging-e2e-tests.sh"' "$CHECKLIST"

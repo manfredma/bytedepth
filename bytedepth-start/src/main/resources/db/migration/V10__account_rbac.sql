@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS `user_role` (
 -- 6. post 表新增 author_id 和 featured
 ALTER TABLE `post`
   ADD COLUMN `author_id` BIGINT NULL    AFTER `id`,
-  ADD COLUMN `featured`  TINYINT(1) NOT NULL DEFAULT 0 AFTER `status`;
+  ADD COLUMN `featured`  TINYINT NOT NULL DEFAULT 0 AFTER `status`;
 
 -- 7. comment 表：移除 author_email，新增 author_id
 ALTER TABLE `comment`

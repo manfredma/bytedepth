@@ -6,6 +6,7 @@ set -Eeuo pipefail
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 bash "$SOURCE_ROOT/scripts/test-maven-runtime.sh"
+bash "$SOURCE_ROOT/scripts/test-flyway-migration-warning-safety.sh"
 bash "$SOURCE_ROOT/scripts/test-deploy-staging.sh"
 bash "$SOURCE_ROOT/scripts/test-run-staging-integration-tests.sh"
 bash "$SOURCE_ROOT/scripts/test-run-staging-e2e-tests.sh"
