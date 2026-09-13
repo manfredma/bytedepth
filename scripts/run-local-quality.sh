@@ -8,8 +8,8 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 cd "$SOURCE_ROOT"
 npm ci --ignore-scripts --no-audit --no-fund
-JAVA_HOME="$(/usr/libexec/java_home -v 25)" mvn clean install -DskipTests -Dsort.skip=true
-JAVA_HOME="$(/usr/libexec/java_home -v 25)" mvn test -Dsort.skip=true
+JAVA_HOME="$(/usr/libexec/java_home -v 25)" "$SOURCE_ROOT/mvnw" clean install -DskipTests -Dsort.skip=true
+JAVA_HOME="$(/usr/libexec/java_home -v 25)" "$SOURCE_ROOT/mvnw" test -Dsort.skip=true
 npm test
 npm run lint
 bash scripts/verify-changed-coverage.sh

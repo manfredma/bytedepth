@@ -4,20 +4,21 @@ set -Eeuo pipefail
 readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly LIBRARY="$ROOT/deploy/lib/staging-runtime.sh"
 readonly BOOTSTRAP="$ROOT/deploy/bootstrap-staging-runtime.sh"
+readonly INTEGRATION_RUNNER="$ROOT/deploy/run-staging-integration-tests.sh"
 
 [[ -x "$BOOTSTRAP" ]] || {
     printf 'Expected executable staging runtime bootstrap.\n' >&2
     exit 1
 }
-rg -q 'mvn .*clean install -DskipTests -Dsort.skip=true' "$BOOTSTRAP" || {
+rg -q 'mvnw.*clean install -DskipTests -Dsort.skip=true' "$BOOTSTRAP" || {
     printf 'Bootstrap must prewarm the complete Maven reactor.\n' >&2
     exit 1
 }
-rg -q 'mvn .*verify -DskipTests -Dsort.skip=true' "$BOOTSTRAP" || {
+rg -q 'mvnw.*verify -DskipTests -Dsort.skip=true' "$BOOTSTRAP" || {
     printf 'Bootstrap must resolve verification-lifecycle plugins for offline integration tests.\n' >&2
     exit 1
 }
-rg -q 'mvn .*Pstaging-integration verify -DskipTests -Dsort.skip=true' "$BOOTSTRAP" || {
+rg -q 'mvnw.*Pstaging-integration verify -DskipTests -Dsort.skip=true' "$BOOTSTRAP" || {
     printf 'Bootstrap must prewarm integration profile dependencies before deployment.\n' >&2
     exit 1
 }
@@ -33,7 +34,7 @@ rg -q 'includePluginDependencies=true' "$BOOTSTRAP" || {
     printf 'Bootstrap must pre-resolve Maven plugin dependencies.\n' >&2
     exit 1
 }
-rg -q 'mvn .* -o .*Pstaging-integration verify' "$BOOTSTRAP" || {
+rg -q 'mvnw.*-o .*Pstaging-integration verify' "$BOOTSTRAP" || {
     printf 'Bootstrap must validate offline staging-integration command path before test execution.\n' >&2
     exit 1
 }
@@ -74,6 +75,19 @@ if rg -q '\.e2e/chrome-linux64|chromium_path|chromium_sha' "$LIBRARY"; then
 fi
 rg -F -- '-Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY"' "$BOOTSTRAP" >/dev/null
 rg -F 'flock -x 8' "$BOOTSTRAP" >/dev/null
+grep -Fqx 'readonly STAGING_MAVEN_IMAGE=maven:3.9.11-eclipse-temurin-25' "$LIBRARY"
+rg -F -- '"$SOURCE_ROOT/mvnw"' "$BOOTSTRAP" >/dev/null || {
+    printf 'Bootstrap must use the pinned Maven Wrapper.\n' >&2
+    exit 1
+}
+rg -F -- '"$STAGING_MAVEN_IMAGE"' "$INTEGRATION_RUNNER" >/dev/null || {
+    printf 'Integration runner must use the shared staging Maven container image.\n' >&2
+    exit 1
+}
+if rg -q 'JAVA_HOME=.*mvn ' "$BOOTSTRAP"; then
+    printf 'Bootstrap must not prewarm dependencies with the host Maven runtime.\n' >&2
+    exit 1
+fi
 sed 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome$@readonly SHARED_CHROMIUM_EXECUTABLE='"$FIXTURE_CHROMIUM"'@' \
     "$LIBRARY" > "$RUNTIME_LIBRARY"
 source "$RUNTIME_LIBRARY"

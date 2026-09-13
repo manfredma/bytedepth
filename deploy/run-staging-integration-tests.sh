@@ -134,7 +134,7 @@ if ! sudo docker run --rm --network bytedepth_default \
     -v "$MAVEN_SETTINGS_FILE:/root/.m2/settings.xml:ro" \
     -v "$DOCKER_SOCKET:$DOCKER_SOCKET" \
     -w /workspace \
-    maven:3.9-eclipse-temurin-25 \
+    "$STAGING_MAVEN_IMAGE" \
     mvn -o -Pstaging-integration verify \
     -Dbytedepth.it.redis.host=redis \
     -Dbytedepth.it.redis.port=6379 2>&1 | redact_redis_password | tee "$MAVEN_LOG"; then

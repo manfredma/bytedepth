@@ -7,15 +7,15 @@
 Maven 构建、测试、PMD/JaCoCo 等质量门禁的输出出现任何 `WARNING`，均不得忽略或以 `BUILD SUCCESS` 视为验收通过。必须先定位并修复告警；无法在当前范围内修复时，应停止发布或部署并报告原因。该规则同样适用于 Maven Release Plugin 与生产部署前验证。
 
 ```bash
-JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn clean test -Dsort.skip=true
-JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn clean package -DskipTests -Dsort.skip=true
+JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw clean test -Dsort.skip=true
+JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw clean package -DskipTests -Dsort.skip=true
 ```
 
 多模块项目测试前先刷新本地缓存：
 
 ```bash
-JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn clean install -DskipTests -Dsort.skip=true
-JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn test -Dsort.skip=true
+JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw clean install -DskipTests -Dsort.skip=true
+JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw test -Dsort.skip=true
 ```
 
 所有生产 Java 类必须达到行、分支、方法 100% 覆盖率。脚本会先执行完整测试、合并跨模块执行数据，再逐模块执行全量校验：
@@ -35,8 +35,8 @@ bash scripts/verify-changed-coverage.sh
 离线单元测试只使用以下 Java 25 命令；它们不激活 `staging-integration`，默认 Surefire 也会排除 `**/*IT.java`：
 
 ```bash
-JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn clean install -DskipTests -Dsort.skip=true
-JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn test -Dsort.skip=true
+JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw clean install -DskipTests -Dsort.skip=true
+JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw test -Dsort.skip=true
 ```
 
 `*IT` 只能在 staging 主机由 `run-staging-integration-tests.sh` 运行；它在 Compose 网络中执行 `mvn -Pstaging-integration verify`。E2E 只能在同一 staging 主机由 `run-staging-e2e-tests.sh` 运行；该 wrapper 固定 `E2E_BASE_URL=https://staging.bytedepth.cn` 并使用主机级共享浏览器 `/opt/shared-e2e/chrome-linux64/chrome`，不能用本机浏览器替代。两个命令及其 evidence 传递流程见 [部署手册](../../deploy/README.md#集成测试)。

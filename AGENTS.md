@@ -5,7 +5,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 ## 必须遵守
 
 - 不允许在 `main` 分支直接开发。功能、修复和文档改动必须在独立 `feat/*`、`fix/*` 或 `docs/*` 分支的 Git worktree 中完成；通过前置质量门禁后经 PR 合并。`main` 仅允许受控发布流程写入版本提交。worktree 合并到 `main` 后必须立即删除，不长期保留。详见 [Git 工作流](docs/engineering/git-workflow.md)。
-- Maven 命令必须使用 Java 25：`JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn ...`
+- Maven 运行时固定为 3.9.11：本机、CI 与发布脚本只能使用仓库的 Wrapper，命令为 `JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw ...`；Dockerfile 与容器集成 runner 只能使用 `maven:3.9.11-eclipse-temurin-25`，禁止裸 `mvn` 或浮动 Maven 镜像标签。运行 `bash scripts/test-maven-runtime.sh` 验证该约束。
 - staging 的 Maven 制品缓存必须唯一使用宿主机根管理的 `/opt/shared-maven/repository`，bootstrap 必须以全局锁预热，集成测试必须离线只读复用；不得为各项目再建 Maven 下载缓存。`node_modules` 必须继续由每个项目各自用 lockfile 安装，绝不跨项目共享；可共享的只是包下载缓存而非安装树。
   - 注意：`mvn clean install` 不会触发所有验证生命周期插件，`deploy/bootstrap-staging-runtime.sh` 必须同一锁内再执行 `mvn ... verify -DskipTests`，否则后续 `staging-integration` 在 `-o` 下会因缺插件报错（当前已通过静态脚本合同固化）。
 - 新建或切换 Git worktree 后，运行任何前端测试、lint 或 Playwright 前必须先执行 `npm ci --ignore-scripts --no-audit --no-fund`；统一本机门禁入口是 `bash scripts/run-local-quality.sh`，不得先试跑 `npm test` 再根据缺失的 `node_modules` 报错补救。
@@ -17,7 +17,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 每项代码改动必须补齐单元测试；本次改动涉及的业务逻辑分支覆盖率必须达到 100%，并在提交前提供覆盖率验证结果。
 - 执行 Maven Release Plugin 前，`git status --short` 必须为空；`*.releaseBackup` 与 `release.properties` 是本机事务残留，必须执行 `release:clean` 后忽略，绝不提交。
 - 不得新增 Maven 模块；如确有必要，必须先获得项目所有者的明确同意。
-- 多模块测试前先刷新本地缓存：`mvn clean install -DskipTests -Dsort.skip=true`，再跑 `mvn test`。
+- 多模块测试前先刷新本地缓存：`./mvnw clean install -DskipTests -Dsort.skip=true`，再跑 `./mvnw test`。
 - 部署时必须重建并启动完整 compose 服务，不能只 `up --build -d app`。
 - 每次生产部署必须是一个新的、不可变的 SemVer 发布版本：先完成版本记录并创建新 annotated Git Tag，再部署该 Tag；不得部署 `main`、裸 commit、分支或已部署过的 Tag。
 - 前端公共组件必须自隔离，组件之间除相对位置外不得互相影响。

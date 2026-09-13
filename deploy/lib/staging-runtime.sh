@@ -3,6 +3,10 @@
 readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
 readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository
 readonly SHARED_MAVEN_LOCK=/opt/shared-maven/repository.lock
+# Bootstrap and the staging integration runner must use precisely this Maven
+# runtime.  Host Maven is deliberately excluded: its Super POM may resolve a
+# different default lifecycle-plugin set than the test container.
+readonly STAGING_MAVEN_IMAGE=maven:3.9.11-eclipse-temurin-25
 
 staging_runtime_sha256() {
     shasum -a 256 "$1" | awk '{print $1}'

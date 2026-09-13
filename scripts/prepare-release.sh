@@ -93,7 +93,7 @@ require_no_tracked_agent_artifacts() {
 
 JAVA_HOME="$(/usr/libexec/java_home -v 25)"
 readonly JAVA_HOME
-readonly MAVEN_CMD="${BYTEDEPTH_RELEASE_MAVEN:-mvn}"
+readonly MAVEN_CMD="$SOURCE_ROOT/mvnw"
 
 cd "$SOURCE_ROOT"
 
