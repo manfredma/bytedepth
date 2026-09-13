@@ -57,7 +57,7 @@ request "$column_path"
 # and compose topology cannot be guessed incorrectly.
 log_file="$(mktemp)"
 trap 'rm -f "$log_file"' EXIT
-"$SOURCE_ROOT/deploy/ctl.sh" logs app --tail=300 > "$log_file" 2>&1
+"$SOURCE_ROOT/deploy/ctl.sh" logs bytedepth-app --tail=300 > "$log_file" 2>&1
 if grep -Eqi '\bWARN(ING)?\b|\bERROR\b' "$log_file"; then
     printf 'Refusing: production application logs contain WARNING or ERROR.\n' >&2
     exit 1
