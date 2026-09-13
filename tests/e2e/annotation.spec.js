@@ -348,9 +348,12 @@ test.describe('划线评论', () => {
                 spacer.style.height = '1600px';
                 document.querySelector('.bd-annotation-reading-content').append(spacer);
             });
-            await page.evaluate(() => window.scrollTo(0, 500));
-            await page.waitForTimeout(50);
-            expect(await trigger.evaluate(element => element.getBoundingClientRect().bottom)).toBeLessThan(0);
+            const scrollPastTrigger = await trigger.evaluate(element => element.getBoundingClientRect().bottom + 1);
+            await page.evaluate(offset => window.scrollBy(0, offset), scrollPastTrigger);
+            await expect.poll(
+                () => trigger.evaluate(element => element.getBoundingClientRect().bottom),
+                {message: '评注角标应随其对应的划线离开视口'}
+            ).toBeLessThan(0);
             await expect(feedItem).toBeHidden();
         } finally {
             await removeAnnotation(page, annotation.id);

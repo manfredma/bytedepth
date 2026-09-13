@@ -35,6 +35,13 @@ if rg -q '\.e2e/chrome-linux64|playwright install' "$RUNNER"; then
     printf 'Staging E2E runner must not retain a project-local Chromium contract.\n' >&2
     exit 1
 fi
+ANNOTATION_E2E="$SOURCE_ROOT/tests/e2e/annotation.spec.js"
+if rg -q 'window\.scrollTo\(0, 500\)' "$ANNOTATION_E2E"; then
+    printf 'Annotation viewport E2E must not use a layout-dependent fixed scroll distance.\n' >&2
+    exit 1
+fi
+rg -q 'window\.scrollBy' "$ANNOTATION_E2E"
+rg -q 'expect\.poll' "$ANNOTATION_E2E"
 
 mkdir -p "$FIXTURE_SOURCE" "$FAKE_BIN"
 touch "$FIXTURE_CHROMIUM"
