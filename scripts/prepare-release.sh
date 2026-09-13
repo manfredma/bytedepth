@@ -109,6 +109,10 @@ fi
 
 require_no_tracked_agent_artifacts
 
+# Never release when any staging contract has drifted.  This local check is
+# deterministic; real integration/E2E evidence is still required below.
+bash scripts/check-staging-checklist.sh
+
 if [[ -z "${BYTEDEPTH_STAGING_EVIDENCE_DIR:-}" ]] \
     || [[ ! -d "$BYTEDEPTH_STAGING_EVIDENCE_DIR" ]] \
     || [[ -L "$BYTEDEPTH_STAGING_EVIDENCE_DIR" ]]; then

@@ -228,7 +228,7 @@ Expected: Redis IT writes/denies/cleans its UUID key; every `*IT` passes; eviden
 
 ```bash
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
-  "cd /opt/bytedepth && E2E_BASE_URL=https://staging.bytedepth.cn PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/bytedepth/.e2e/chrome-linux64/chrome npm run test:e2e"
+  "cd /opt/bytedepth && E2E_BASE_URL=https://staging.bytedepth.cn PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome npm run test:e2e"
 ```
 
 Expected: all applicable tests pass; device-scoped skips only; E2E evidence records the deployed SHA.

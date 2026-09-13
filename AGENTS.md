@@ -8,8 +8,9 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - Maven 命令必须使用 Java 25：`JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn ...`
 - staging 的 Maven 制品缓存必须唯一使用宿主机根管理的 `/opt/shared-maven/repository`，bootstrap 必须以全局锁预热，集成测试必须离线只读复用；不得为各项目再建 Maven 下载缓存。`node_modules` 必须继续由每个项目各自用 lockfile 安装，绝不跨项目共享；可共享的只是包下载缓存而非安装树。
   - 注意：`mvn clean install` 不会触发所有验证生命周期插件，`deploy/bootstrap-staging-runtime.sh` 必须同一锁内再执行 `mvn ... verify -DskipTests`，否则后续 `staging-integration` 在 `-o` 下会因缺插件报错（当前已通过静态脚本合同固化）。
+- 新建或切换 Git worktree 后，运行任何前端测试、lint 或 Playwright 前必须先执行 `npm ci --ignore-scripts --no-audit --no-fund`；统一本机门禁入口是 `bash scripts/run-local-quality.sh`，不得先试跑 `npm test` 再根据缺失的 `node_modules` 报错补救。
 - 不得忽略任何构建、测试、静态分析、发布或部署验收输出中的 `WARNING`：必须在继续流程前定位并修复；无法修复时立即中止并报告，不能将含告警的结果称为成功。
-- **跨 agent 防复发（强制）**：每次发现的流程、配置、测试或部署错误，必须在结束前沉淀为项目内的明确规则（`AGENTS.md`、`docs/` 或 ADR）并补充可重复执行的自动检查/测试；不得依赖任何 agent 的会话记忆、个人经验或口头交接。自动检查必须在写入通过证据、合并或发布之前执行。对 staging runner，凭据、共享运行时和候选 SHA 必须显式注入并 fail-fast 校验，禁止隐式默认值；启用 `pipefail` 的脚本不得用会因上游 SIGPIPE 产生假阴性的 `命令 | grep -q` 作为就绪判定；涉及“当前日期/时间”的 E2E 断言必须在测试运行时计算，禁止硬编码会过期的日历预期。
+- **跨 agent 防复发（强制）**：每次发现的流程、配置、测试或部署错误，必须在结束前沉淀为项目内的明确规则（`AGENTS.md`、`docs/` 或 ADR）并补充可重复执行的自动检查/测试；不得依赖任何 agent 的会话记忆、个人经验或口头交接。自动检查必须在写入通过证据、合并或发布之前执行；发布前统一运行 `bash scripts/check-staging-checklist.sh`。对 staging runner，凭据、共享运行时和候选 SHA 必须显式注入并 fail-fast 校验，禁止隐式默认值；启用 `pipefail` 的脚本不得用会因上游 SIGPIPE 产生假阴性的 `命令 | grep -q` 作为就绪判定；涉及“当前日期/时间”的 E2E 断言必须在测试运行时计算，禁止硬编码会过期的日历预期。
 - 本机可能同 IP 部署多个工程（如 career）共用 bytedepth-nginx 与 `bytedepth_default` 网络：各工程 compose service 名必须带工程前缀（`bytedepth-app`、`career-app`），**禁止用 `app` 等通用名**（别名冲突导致 nginx 轮询路由错误）；其他工程路由通过宿主 `/opt/nginx-conf.d/*.conf` 注入（nginx.conf 已 include），**禁止 `docker cp` 到容器**（nginx 重建会丢）；详见 [部署手册](deploy/README.md) 同 IP 多站点约束与 [工程陷阱](docs/engineering/gotchas.md)。
 - 改完代码必须跑测试，不能只编译通过。
 - 不带病上线：发布前所有测试（单元、E2E、静态分析）必须全绿；既有的、非本次引入的失败同样不构成放行理由，发现必须当场修复或中止发布并报告，不得以「pre-existing」为由跳过。创建 Release Tag 前，必须有 staging integration 与 E2E 的两份 commit-bound `result=passed` 记录，且其中完整 SHA 均与当前 `main` 的 `HEAD` 一致；每次 staging run 会先作废其旧记录，只有测试、WARNING 检查与 SHA 稳定性均通过才能重写记录。
