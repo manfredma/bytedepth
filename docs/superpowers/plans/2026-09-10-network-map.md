@@ -324,7 +324,7 @@ Expected: 完整 Compose 服务重建；MySQL、Redis、MeiliSearch 健康，app
 ```bash
 cd /opt/bytedepth
 E2E_BASE_URL=https://staging.bytedepth.cn \
-PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/bytedepth/.e2e/chrome-linux64/chrome \
+PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome \
 npm run test:e2e
 ```
 

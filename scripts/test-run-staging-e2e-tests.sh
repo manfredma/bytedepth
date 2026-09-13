@@ -30,7 +30,7 @@ if [[ ! -x "$RUNNER" ]] || [[ "$(git ls-files -s "$RUNNER" | awk '{print $1}')" 
     printf 'Expected staging E2E runner to be tracked as executable.\n' >&2
     exit 1
 fi
-grep -Fqx 'readonly CHROMIUM_EXECUTABLE="$SOURCE_ROOT/.e2e/chrome-linux64/chrome"' "$RUNNER"
+grep -Fqx 'readonly CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome' "$RUNNER"
 
 mkdir -p "$FIXTURE_SOURCE" "$FAKE_BIN"
 touch "$FIXTURE_CHROMIUM"

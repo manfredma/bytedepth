@@ -6,7 +6,9 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 
 - 不允许在 `main` 分支直接开发。功能、修复和文档改动必须在独立 `feat/*`、`fix/*` 或 `docs/*` 分支的 Git worktree 中完成；通过前置质量门禁后经 PR 合并。`main` 仅允许受控发布流程写入版本提交。worktree 合并到 `main` 后必须立即删除，不长期保留。详见 [Git 工作流](docs/engineering/git-workflow.md)。
 - Maven 命令必须使用 Java 25：`JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn ...`
+- 新建或切换 Git worktree 后，运行任何前端测试、lint 或 Playwright 前必须先执行 `npm ci --ignore-scripts --no-audit --no-fund`；统一本机门禁入口是 `bash scripts/run-local-quality.sh`，不得先试跑 `npm test` 再根据缺失的 `node_modules` 报错补救。
 - 不得忽略任何构建、测试、静态分析、发布或部署验收输出中的 `WARNING`：必须在继续流程前定位并修复；无法修复时立即中止并报告，不能将含告警的结果称为成功。
+- **项目内可执行约束 + 自动检查（强制）**：凡发现流程、配置、测试或发布缺陷，必须立即在本项目内沉淀规则（`AGENTS.md`、`docs/` 或 ADR）并补齐可复现自动检查；不得依赖 AI/agent 会话记忆衔接。所有发布前必须执行 `bash scripts/check-staging-checklist.sh`；该脚本验证 staging 流程的锁、部署 SHA、共享运行时与 evidence 契约。
 - 本机可能同 IP 部署多个工程（如 career）共用 bytedepth-nginx 与 `bytedepth_default` 网络：各工程 compose service 名必须带工程前缀（`bytedepth-app`、`career-app`），**禁止用 `app` 等通用名**（别名冲突导致 nginx 轮询路由错误）；其他工程路由通过宿主 `/opt/nginx-conf.d/*.conf` 注入（nginx.conf 已 include），**禁止 `docker cp` 到容器**（nginx 重建会丢）；详见 [部署手册](deploy/README.md) 同 IP 多站点约束与 [工程陷阱](docs/engineering/gotchas.md)。
 - 改完代码必须跑测试，不能只编译通过。
 - 不带病上线：发布前所有测试（单元、E2E、静态分析）必须全绿；既有的、非本次引入的失败同样不构成放行理由，发现必须当场修复或中止发布并报告，不得以「pre-existing」为由跳过。创建 Release Tag 前，必须有 staging integration 与 E2E 的两份 commit-bound `result=passed` 记录，且其中完整 SHA 均与当前 `main` 的 `HEAD` 一致；每次 staging run 会先作废其旧记录，只有测试、WARNING 检查与 SHA 稳定性均通过才能重写记录。
