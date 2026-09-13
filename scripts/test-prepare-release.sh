@@ -20,6 +20,15 @@ assert_xpath_true() {
   [[ "$(xmllint --xpath "boolean($expression)" "$pom_file")" == true ]]
 }
 
+rewrite_fixture() {
+  local fixture_file="$1"
+  local expression="$2"
+  local rewritten_file
+  rewritten_file="$(mktemp "$TEMP_ROOT/rewrite.XXXXXX")"
+  sed "$expression" "$fixture_file" > "$rewritten_file"
+  mv "$rewritten_file" "$fixture_file"
+}
+
 assert_maven_test_boundaries() {
   local pom_file="$1"
   local profile="/*[local-name()='project']/*[local-name()='profiles']/*[local-name()='profile'][*[local-name()='id' and text()='staging-integration']]"
@@ -53,19 +62,19 @@ assert_maven_test_boundaries "$SOURCE_ROOT/pom.xml"
 mkdir -p "$TEMP_ROOT/scripts" "$TEMP_ROOT/docs/releases" "$TEMP_ROOT/java/bin" "$TEMP_ROOT/bin"
 cp "$SOURCE_ROOT/scripts/prepare-release.sh" "$TEMP_ROOT/scripts/prepare-release.sh"
 cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/invalid-pom.xml"
-sed -i '' 's/<id>staging-integration<\/id>/<id>not-staging-integration<\/id>/' "$TEMP_ROOT/invalid-pom.xml"
+rewrite_fixture "$TEMP_ROOT/invalid-pom.xml" 's/<id>staging-integration<\/id>/<id>not-staging-integration<\/id>/'
 if assert_maven_test_boundaries "$TEMP_ROOT/invalid-pom.xml"; then
     printf 'Expected structural POM assertion to reject a Failsafe profile outside staging-integration.\n' >&2
     exit 1
 fi
 cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/missing-failsafe-classes-directory.xml"
-sed -i '' '/<classesDirectory>\${project.build.outputDirectory}<\/classesDirectory>/d' "$TEMP_ROOT/missing-failsafe-classes-directory.xml"
+rewrite_fixture "$TEMP_ROOT/missing-failsafe-classes-directory.xml" '/<classesDirectory>\${project.build.outputDirectory}<\/classesDirectory>/d'
 if assert_maven_test_boundaries "$TEMP_ROOT/missing-failsafe-classes-directory.xml"; then
     printf 'Expected structural POM assertion to reject Failsafe without target/classes.\n' >&2
     exit 1
 fi
 cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml"
-sed -i '' 's#<classesDirectory>\${project.build.outputDirectory}</classesDirectory>#<classesDirectory>\${project.build.directory}/\${project.build.finalName}.jar</classesDirectory>#' "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml"
+rewrite_fixture "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml" 's#<classesDirectory>\${project.build.outputDirectory}</classesDirectory>#<classesDirectory>\${project.build.directory}/\${project.build.finalName}.jar</classesDirectory>#'
 if assert_maven_test_boundaries "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml"; then
     printf 'Expected structural POM assertion to reject Failsafe loading the repackaged fat jar.\n' >&2
     exit 1
