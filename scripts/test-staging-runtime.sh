@@ -18,17 +18,29 @@ if rg -q 'playwright install' "$BOOTSTRAP"; then
     exit 1
 fi
 
-source "$LIBRARY"
-
 readonly TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 readonly SOURCE_ROOT="$TEMP_DIR/source"
 readonly STATE_DIR="$TEMP_DIR/state"
-mkdir -p "$SOURCE_ROOT/.e2e/chrome-linux64" "$STATE_DIR/runtime"
+readonly FIXTURE_CHROMIUM="$TEMP_DIR/shared-e2e/chrome-linux64/chrome"
+readonly RUNTIME_LIBRARY="$TEMP_DIR/staging-runtime.sh"
+mkdir -p "$SOURCE_ROOT" "$(dirname "$FIXTURE_CHROMIUM")" "$STATE_DIR/runtime"
 printf 'lockfile\n' > "$SOURCE_ROOT/package-lock.json"
 printf '<project/>\n' > "$SOURCE_ROOT/pom.xml"
-printf 'chromium\n' > "$SOURCE_ROOT/.e2e/chrome-linux64/chrome"
-chmod +x "$SOURCE_ROOT/.e2e/chrome-linux64/chrome"
+cat > "$FIXTURE_CHROMIUM" <<'SCRIPT'
+#!/usr/bin/env bash
+printf 'Google Chrome for Testing 151.0.7922.34\n'
+SCRIPT
+chmod +x "$FIXTURE_CHROMIUM"
+
+grep -Fqx 'readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome' "$LIBRARY"
+if rg -q '\.e2e/chrome-linux64|chromium_path|chromium_sha' "$LIBRARY"; then
+    printf 'Staging runtime must not retain a project-local Chromium contract.\n' >&2
+    exit 1
+fi
+sed 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome$@readonly SHARED_CHROMIUM_EXECUTABLE='"$FIXTURE_CHROMIUM"'@' \
+    "$LIBRARY" > "$RUNTIME_LIBRARY"
+source "$RUNTIME_LIBRARY"
 
 readonly MANIFEST="$STATE_DIR/runtime/manifest"
 write_runtime_manifest "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567
