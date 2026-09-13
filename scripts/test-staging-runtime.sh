@@ -34,6 +34,10 @@ rg -q 'includePluginDependencies=true' "$BOOTSTRAP" || {
     printf 'Bootstrap must pre-resolve Maven plugin dependencies.\n' >&2
     exit 1
 }
+rg -q 'dependency:get -Dartifact=org.apache.maven.surefire:surefire-junit-platform:3.2.5' "$BOOTSTRAP" || {
+    printf 'Bootstrap must explicitly prefetch the dynamically selected Surefire JUnit Platform provider.\n' >&2
+    exit 1
+}
 rg -q 'mvnw.*-o .*Pstaging-integration verify' "$BOOTSTRAP" || {
     printf 'Bootstrap must validate offline staging-integration command path before test execution.\n' >&2
     exit 1
