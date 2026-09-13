@@ -17,6 +17,14 @@ if rg -q 'playwright install' "$BOOTSTRAP"; then
     printf 'Bootstrap must reuse the staged Chromium instead of downloading a browser.\n' >&2
     exit 1
 fi
+rg -F '"${1:-}" != --lock-held' "$BOOTSTRAP" >/dev/null || {
+    printf 'Bootstrap must support an inherited staging lock.\n' >&2
+    exit 1
+}
+rg -F 'exec flock -x "$LOCK_FILE" "$0" --lock-held' "$BOOTSTRAP" >/dev/null || {
+    printf 'Bootstrap must re-exec under its own staging lock when not inherited.\n' >&2
+    exit 1
+}
 
 readonly TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT

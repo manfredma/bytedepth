@@ -14,15 +14,17 @@ readonly RUNTIME_MANIFEST="$STATE_DIR/runtime/manifest"
 source "$SOURCE_ROOT/deploy/lib/timing.sh"
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 
+if [[ "${1:-}" != --lock-held ]]; then
+    install -d -o root -g root -m 0700 "$STATE_DIR"
+    exec flock -x "$LOCK_FILE" "$0" --lock-held "$@"
+fi
+shift
+
 deploy_mode="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value = $2} END {print value}' "$CONFIG_FILE" 2>/dev/null || true)"
 if [[ "$deploy_mode" != staging ]]; then
     printf 'Refusing: BYTEDEPTH_DEPLOY_MODE must be staging.\n' >&2
     exit 1
 fi
-
-install -d -o root -g root -m 0700 "$STATE_DIR"
-exec 9>"$LOCK_FILE"
-flock -x 9
 
 commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-parse HEAD)"
 timing_file="$STATE_DIR/runtime/timing/$commit"
