@@ -39,9 +39,14 @@ prepare_maven() {
         JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
             mvn -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" clean install -DskipTests -Dsort.skip=true
         JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
+            mvn -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
+                dependency:go-offline -Dsort.skip=true -DincludePlugins=true -DincludePluginDependencies=true -DskipTests
+        JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
             mvn -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" verify -DskipTests -Dsort.skip=true
         JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
             mvn -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -Pstaging-integration verify -DskipTests -Dsort.skip=true
+        JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
+            mvn -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -o -Pstaging-integration verify -DskipTests -Dsort.skip=true
     ) 8>"$SHARED_MAVEN_LOCK"
 }
 

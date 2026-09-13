@@ -21,6 +21,22 @@ rg -q 'mvn .*Pstaging-integration verify -DskipTests -Dsort.skip=true' "$BOOTSTR
     printf 'Bootstrap must prewarm integration profile dependencies before deployment.\n' >&2
     exit 1
 }
+rg -q 'dependency:go-offline' "$BOOTSTRAP" || {
+    printf 'Bootstrap must pre-resolve Maven plugins and plugin dependencies.\n' >&2
+    exit 1
+}
+rg -q 'includePlugins=true' "$BOOTSTRAP" || {
+    printf 'Bootstrap must pre-resolve Maven plugin transitive dependencies.\n' >&2
+    exit 1
+}
+rg -q 'includePluginDependencies=true' "$BOOTSTRAP" || {
+    printf 'Bootstrap must pre-resolve Maven plugin dependencies.\n' >&2
+    exit 1
+}
+rg -q 'mvn .* -o .*Pstaging-integration verify' "$BOOTSTRAP" || {
+    printf 'Bootstrap must validate offline staging-integration command path before test execution.\n' >&2
+    exit 1
+}
 if rg -q 'playwright install' "$BOOTSTRAP"; then
     printf 'Bootstrap must reuse the staged Chromium instead of downloading a browser.\n' >&2
     exit 1
@@ -68,8 +84,11 @@ require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abc
 require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" fedcba9876543210fedcba9876543210fedcba98
 
 printf 'changed lockfile\n' >> "$SOURCE_ROOT/package-lock.json"
-if require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567; then
-    printf 'Expected lockfile mismatch to be rejected.\n' >&2
+if ! require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567; then
+    # lockfile changed, manifest should be rejected
+    :
+else
+    printf 'Expected stale runtime manifest to be rejected after lockfile change.\n' >&2
     exit 1
 fi
 
