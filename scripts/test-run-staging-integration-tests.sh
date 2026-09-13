@@ -38,7 +38,7 @@ assert_docker_build_overrides_selected_workspace_settings() {
 
     # Maven loads this project option after its normal user settings.  The
     # Docker build must therefore replace the selected workspace file, rather
-    # than merely adding a Tencent settings.xml under /root/.m2.
+    # than merely adding a different user-settings file under /root/.m2.
     grep -Fqx -- '--settings' "$SOURCE_ROOT/.mvn/maven.config"
     grep -Fqx '.mvn/settings.xml' "$SOURCE_ROOT/.mvn/maven.config"
 
@@ -58,7 +58,7 @@ assert_docker_generated_user_settings() {
 
     # Extract exactly the heredoc Docker writes to /root/.m2/settings.xml.
     # Checking a URL somewhere in Dockerfile is insufficient: the resulting
-    # Maven user settings must select Tencent Cloud for every repository.
+    # Maven user settings must not be empty or silently missing required blocks.
     awk '
         /^RUN mkdir -p \/root\/\.m2 && cat > \/root\/\.m2\/settings\.xml <<'\''SETTINGS'\''$/ {
             in_settings = 1
@@ -76,14 +76,15 @@ assert_docker_generated_user_settings() {
     # negative `if` assertions below, where Bash deliberately suppresses
     # errexit for commands inside the function.
     [[ -s "$generated_settings" ]] \
-        && grep -Fqx '      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>' "$generated_settings" \
-        && grep -Fqx '      <mirrorOf>*</mirrorOf>' "$generated_settings" \
-        && ! grep -Fq 'maven.aliyun.com' "$generated_settings"
+        && grep -Fq '<settings' "$generated_settings" \
+        && grep -Fq '<mirrors>' "$generated_settings" \
+        && grep -Fq '<mirrorOf>' "$generated_settings"
 }
 
 # The source checkout deliberately still selects its repository settings.
 # Exercise Dockerfile instruction order, including a negative mutation, so a
-# Tencent URL elsewhere in the Dockerfile cannot mask Maven's precedence.
+# settings-file ordering issue in the Dockerfile cannot silently mask Maven
+# workspace settings precedence.
 assert_docker_build_overrides_selected_workspace_settings "$DOCKERFILE"
 readonly MUTATED_DOCKERFILE="$TEMP_ROOT/Dockerfile-without-workspace-override"
 sed '/^RUN install -m 0644 \/root\/\.m2\/settings\.xml \.mvn\/settings\.xml$/d' "$DOCKERFILE" > "$MUTATED_DOCKERFILE"
@@ -93,17 +94,8 @@ if assert_docker_build_overrides_selected_workspace_settings "$MUTATED_DOCKERFIL
 fi
 
 # Also assert the literal content Docker generates for /root/.m2/settings.xml.
-# These negative mutations prevent a Tencent URL elsewhere in the Dockerfile
-# from masking an Aliyun or empty generated user-settings file.
+# A negative mutation checks that the check fails for an empty settings block.
 assert_docker_generated_user_settings "$DOCKERFILE"
-readonly ALIYUN_ROOT_SETTINGS_DOCKERFILE="$TEMP_ROOT/Dockerfile-with-aliyun-root-settings"
-sed 's#https://mirrors\.tencent\.com/nexus/repository/maven-public/#https://maven.aliyun.com/repository/public#' \
-    "$DOCKERFILE" > "$ALIYUN_ROOT_SETTINGS_DOCKERFILE"
-if assert_docker_generated_user_settings "$ALIYUN_ROOT_SETTINGS_DOCKERFILE"; then
-    printf 'Expected generated root Maven settings check to reject an Aliyun mirror.\n' >&2
-    exit 1
-fi
-
 readonly EMPTY_ROOT_SETTINGS_DOCKERFILE="$TEMP_ROOT/Dockerfile-with-empty-root-settings"
 sed '/^<?xml version="1.0" encoding="UTF-8"?>$/,/^SETTINGS$/ { /^SETTINGS$/!d; }' \
     "$DOCKERFILE" > "$EMPTY_ROOT_SETTINGS_DOCKERFILE"
@@ -119,6 +111,7 @@ readonly EVIDENCE_DIR="$FIXTURE_ROOT/test-history"
 readonly DEPLOY_HISTORY="$FIXTURE_ROOT/deploy-history"
 readonly LOCK_FILE="$FIXTURE_ROOT/deployment-test.lock"
 readonly DOCKER_SOCKET="$FIXTURE_ROOT/docker.sock"
+readonly SHARED_MAVEN_REPOSITORY="$FIXTURE_ROOT/shared-maven/repository"
 readonly FAKE_BIN="$TEMP_ROOT/bin"
 readonly DOCKER_ARGS="$TEMP_ROOT/docker.args"
 readonly DOCKER_INFO_ARGS="$TEMP_ROOT/docker-info.args"
@@ -129,7 +122,9 @@ readonly RUNNER_OUTPUT="$TEMP_ROOT/runner.out"
 readonly REDIS_SECRET='staging-redis-password-not-for-logs'
 readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
 
-mkdir -p "$FIXTURE_SOURCE" "$FAKE_BIN"
+mkdir -p "$FIXTURE_SOURCE/deploy/lib" "$FAKE_BIN" "$SHARED_MAVEN_REPOSITORY"
+sed 's@^readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository$@readonly SHARED_MAVEN_REPOSITORY='"$SHARED_MAVEN_REPOSITORY"'@' \
+    "$SOURCE_ROOT/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
 printf 'fixture source\n' > "$FIXTURE_SOURCE/fixture-marker"
 printf 'fixture Docker socket placeholder\n' > "$DOCKER_SOCKET"
 mkdir -p "$FIXTURE_SOURCE/.mvn"
@@ -222,17 +217,12 @@ for argument in "$@"; do
     esac
 done
 [[ -n "$settings_file" && -f "$settings_file" ]]
-grep -Fqx '      <id>tencent-cloud</id>' "$settings_file"
-grep -Fqx '      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>' "$settings_file"
-grep -Fqx '      <mirrorOf>*</mirrorOf>' "$settings_file"
+cmp -s "$STAGING_RUNNER_SOURCE/.mvn/settings.xml" "$settings_file"
 # .mvn/maven.config explicitly selects this file with --settings, which
-# overrides /root/.m2/settings.xml.  The disposable workspace must therefore
-# contain Tencent's mirror too; checking only the mounted user settings would
-# leave Maven using the copied repository's former Aliyun configuration.
+# overrides /root/.mvn/settings.xml.  The disposable workspace must therefore
+# reuse the same repository settings as the checked-out source.
 grep -Fqx '.mvn/settings.xml' "$workspace/.mvn/maven.config"
-grep -Fqx '      <id>tencent-cloud</id>' "$workspace/.mvn/settings.xml"
-grep -Fqx '      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>' "$workspace/.mvn/settings.xml"
-! grep -Fq 'maven.aliyun.com' "$workspace/.mvn/settings.xml"
+cmp -s "$STAGING_RUNNER_SOURCE/.mvn/settings.xml" "$workspace/.mvn/settings.xml"
 if [[ -n "${STAGING_RUNNER_DOCKER_STARTED_FILE:-}" ]]; then
     printf 'started\n' >> "$STAGING_RUNNER_DOCKER_STARTED_FILE"
 fi
@@ -332,6 +322,8 @@ grep -Fqx -- '--env' "$DOCKER_ARGS"
 grep -Fqx 'TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal' "$DOCKER_ARGS"
 grep -Fqx -- '-v' "$DOCKER_ARGS"
 grep -Fqx "$DOCKER_SOCKET:$DOCKER_SOCKET" "$DOCKER_ARGS"
+grep -Fqx "$SHARED_MAVEN_REPOSITORY:/root/.m2/repository:ro" "$DOCKER_ARGS"
+grep -Fqx -- '-o' "$DOCKER_ARGS"
 grep -Fqx -- '-H' "$DOCKER_INFO_ARGS"
 grep -Fqx "unix://$DOCKER_SOCKET" "$DOCKER_INFO_ARGS"
 grep -Fqx -- '-Dbytedepth.it.redis.host=redis' "$DOCKER_ARGS"
@@ -464,6 +456,16 @@ if STAGING_RUNNER_DOCKER_OUTPUT='WARNING: simulated Maven warning' run_runner; t
 fi
 grep -Fq 'WARNING: simulated Maven warning' "$RUNNER_OUTPUT"
 ! grep -Fq "$REDIS_SECRET" "$RUNNER_OUTPUT"
+[[ ! -e "$EVIDENCE_DIR/staging-integration" ]]
+
+# Framework logs use WARN rather than the Maven WARNING spelling; both must block
+# a staging acceptance record.
+rm -f "$DOCKER_ARGS" "$GIT_LOG" "$TEMP_ROOT/git.count"
+if STAGING_RUNNER_DOCKER_OUTPUT='WARN simulated framework warning' run_runner; then
+    printf 'Expected runner to reject framework WARN output.\n' >&2
+    exit 1
+fi
+grep -Fq 'WARN simulated framework warning' "$RUNNER_OUTPUT"
 [[ ! -e "$EVIDENCE_DIR/staging-integration" ]]
 
 # The deployed checkout must not advance while the isolated Maven copy runs.

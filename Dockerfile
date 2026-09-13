@@ -1,5 +1,5 @@
 # ---- Stage 1: Build ----
-FROM maven:3.9-eclipse-temurin-25 AS build
+FROM maven:3.9.11-eclipse-temurin-25 AS build
 WORKDIR /build
 
 # 配置腾讯云 Maven 镜像加速（内嵌，不依赖外部文件）
@@ -25,8 +25,11 @@ COPY bytedepth-app/pom.xml bytedepth-app/
 COPY bytedepth-infrastructure/pom.xml bytedepth-infrastructure/
 COPY bytedepth-adapter/pom.xml bytedepth-adapter/
 COPY bytedepth-start/pom.xml bytedepth-start/
+# Maven reads this project-level Java 25 compatibility configuration before
+# dependency prewarming as well as before the final package build.
+COPY .mvn/jvm.config .mvn/jvm.config
 # 限制 Maven heap，避免 2C2G 服务器构建期间内存耗尽导致 SSH 失联
-ENV MAVEN_OPTS='-Xmx512m --enable-native-access=ALL-UNNAMED'
+ENV MAVEN_OPTS='-Xmx512m'
 RUN mvn dependency:go-offline -Dsort.skip=true -q
 
 # 复制源码并打包

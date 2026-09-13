@@ -13,7 +13,7 @@ trap cleanup EXIT
 
 run_maven() {
   : > "$LOG_FILE"
-  if ! env JAVA_HOME="$JAVA_HOME" mvn "$@" 2>&1 | tee "$LOG_FILE"; then
+  if ! env JAVA_HOME="$JAVA_HOME" "$SOURCE_ROOT/mvnw" "$@" 2>&1 | tee "$LOG_FILE"; then
     exit 1
   fi
   if rg -i '(^|[^[:alpha:]])warning([^[:alpha:]]|$)' "$LOG_FILE"; then

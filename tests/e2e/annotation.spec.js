@@ -316,7 +316,7 @@ test.describe('划线评论', () => {
         }
     });
 
-    test('桌面端：评注角标随对应划线滚出视口', async ({page}, testInfo) => {
+    test('桌面端：评注卡片在对应划线完全滚出视口后隐藏', async ({page}, testInfo) => {
         test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
         await page.setViewportSize({width: 1440, height: 1000});
         await page.goto(postPath, {waitUntil: 'commit'});
@@ -334,7 +334,9 @@ test.describe('划线评论', () => {
             await trigger.click();
             await expect(page.locator('#bd-annotation-sidebar')).toHaveClass(/bd-annotation-sidebar-open/);
             const feedItem = page.locator(`.bd-annotation-feed-item[data-id="${annotation.id}"]`);
+            const mark = page.locator(`mark[data-id="${annotation.id}"]`).first();
             await expect(feedItem).toBeVisible();
+            await expect(mark).toBeVisible();
             const attachedPosition = await page.evaluate(([triggerElement, outlineElement]) => {
                 const triggerRect = triggerElement.getBoundingClientRect();
                 const outlineRect = outlineElement.getBoundingClientRect();
@@ -348,9 +350,12 @@ test.describe('划线评论', () => {
                 spacer.style.height = '1600px';
                 document.querySelector('.bd-annotation-reading-content').append(spacer);
             });
-            await page.evaluate(() => window.scrollTo(0, 500));
-            await page.waitForTimeout(50);
-            expect(await trigger.evaluate(element => element.getBoundingClientRect().bottom)).toBeLessThan(0);
+            const scrollPastMark = await mark.evaluate(element => element.getBoundingClientRect().bottom + 1);
+            await page.evaluate(offset => window.scrollBy(0, offset), scrollPastMark);
+            await expect.poll(
+                () => mark.evaluate(element => element.getBoundingClientRect().bottom),
+                {message: '整段划线离开视口后，评注卡片应随之隐藏'}
+            ).toBeLessThan(0);
             await expect(feedItem).toBeHidden();
         } finally {
             await removeAnnotation(page, annotation.id);

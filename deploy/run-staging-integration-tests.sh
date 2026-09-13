@@ -12,6 +12,8 @@ readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
 readonly DOCKER_SOCKET=/var/run/docker.sock
+readonly MINIMUM_WORKSPACE_FREE_KIB=2097152
+source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 WORK_DIR="$(mktemp -d)"
 readonly WORK_DIR
 readonly MAVEN_LOG="$WORK_DIR/maven.log"
@@ -65,6 +67,17 @@ require_docker_socket() {
     fi
 }
 
+require_workspace_headroom() {
+    local available_kib
+
+    available_kib="$(df -Pk "$WORK_DIR" | awk 'NR == 2 {print $4}')"
+    if [[ ! "$available_kib" =~ ^[0-9]+$ || "$available_kib" -lt "$MINIMUM_WORKSPACE_FREE_KIB" ]]; then
+        printf 'Refusing: staging workspace needs at least %s KiB free, found %s KiB. Prune unused Docker cache before retrying.\n' \
+            "$MINIMUM_WORKSPACE_FREE_KIB" "${available_kib:-unknown}" >&2
+        exit 1
+    fi
+}
+
 redact_redis_password() {
     local line
 
@@ -108,34 +121,23 @@ if [[ -z "${redis_password//[[:space:]]/}" ]]; then
     exit 1
 fi
 
-mkdir -p "$WORK_DIR/source" "$WORK_DIR/m2"
+[[ -d "$SHARED_MAVEN_REPOSITORY" ]] || { printf 'Refusing: shared staging Maven repository is unavailable. Run bootstrap-staging-runtime.sh.\n' >&2; exit 1; }
+require_workspace_headroom
+mkdir -p "$WORK_DIR/source"
 umask 077
 printf 'BYTEDEPTH_IT_REDIS_PASSWORD=%s\n' "$redis_password" > "$MAVEN_ENV_FILE"
-cat > "$MAVEN_SETTINGS_FILE" <<'SETTINGS'
-<?xml version="1.0" encoding="UTF-8"?>
-<settings>
-  <mirrors>
-    <mirror>
-      <id>tencent-cloud</id>
-      <name>Tencent Cloud Maven Mirror</name>
-      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>
-      <mirrorOf>*</mirrorOf>
-    </mirror>
-  </mirrors>
-</settings>
-SETTINGS
-cp -a "$SOURCE_ROOT/." "$WORK_DIR/source/"
-# The disposable Maven workspace must not receive the staging application's
-# full environment.  Only MAVEN_ENV_FILE is mounted as a narrowly scoped
-# credential channel.
-rm -f "$WORK_DIR/source/.env"
+# Archive the exact commit rather than copying the checkout.  A checkout copy
+# brings .git, node_modules and target output into /tmp, which is neither part
+# of the tested source nor acceptable on a finite staging disk.
+git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" archive --format=tar "$tested_commit" \
+    | tar -x -C "$WORK_DIR/source"
+# git archive excludes the untracked staging .env.  MAVEN_ENV_FILE remains the
+# only credential channel mounted in the disposable test container.
 # The repository's .mvn/maven.config explicitly selects .mvn/settings.xml.
-# Maven gives that workspace option precedence over /root/.m2/settings.xml,
-# so replace the copied file in the disposable workspace as well.  This keeps
-# the checked-out repository and each developer's local Maven configuration
-# untouched while making Tencent Cloud's mirror effective in the test
-# container.
+# Preserve the checked-out repository's own Maven mirror policy in this disposable
+# workspace while avoiding any host-local Maven configuration leakage.
 install -d -m 0700 "$WORK_DIR/source/.mvn"
+install -m 0600 "$SOURCE_ROOT/.mvn/settings.xml" "$MAVEN_SETTINGS_FILE"
 install -m 0600 "$MAVEN_SETTINGS_FILE" "$WORK_DIR/source/.mvn/settings.xml"
 
 if ! sudo docker run --rm --network bytedepth_default \
@@ -143,20 +145,20 @@ if ! sudo docker run --rm --network bytedepth_default \
     --env-file "$MAVEN_ENV_FILE" \
     --env TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal \
     -v "$WORK_DIR/source":/workspace \
-    -v "$WORK_DIR/m2":/root/.m2 \
+    -v "$SHARED_MAVEN_REPOSITORY":/root/.m2/repository:ro \
     -v "$MAVEN_SETTINGS_FILE:/root/.m2/settings.xml:ro" \
     -v "$DOCKER_SOCKET:$DOCKER_SOCKET" \
     -w /workspace \
-    maven:3.9-eclipse-temurin-25 \
-    mvn -Pstaging-integration verify \
+    "$STAGING_MAVEN_IMAGE" \
+    mvn -o -Pstaging-integration verify \
     -Dbytedepth.it.redis.host=redis \
     -Dbytedepth.it.redis.port=6379 2>&1 | redact_redis_password | tee "$MAVEN_LOG"; then
     printf 'Staging integration tests failed.\n' >&2
     exit 1
 fi
 
-if grep -qi 'warning' "$MAVEN_LOG"; then
-    printf 'Refusing: Maven output contains WARNING.\n' >&2
+if grep -Eqi '\[WARN(ING)?\]|WARN(ING)?[: ]' "$MAVEN_LOG"; then
+    printf 'Refusing: Maven output contains WARN or WARNING.\n' >&2
     exit 1
 fi
 
