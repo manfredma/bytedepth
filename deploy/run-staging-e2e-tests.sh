@@ -9,11 +9,13 @@ fi
 readonly SOURCE_ROOT=/opt/bytedepth
 readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
+readonly RUNTIME_MANIFEST=/var/lib/bytedepth-staging/runtime/manifest
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
 readonly E2E_BASE_URL=https://staging.bytedepth.cn
 # Shared Chromium is provisioned at the host level by root maintenance.
 readonly CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
+source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 readonly WORK_DIR="$(mktemp -d)"
 readonly E2E_LOG="$WORK_DIR/playwright.log"
 trap 'rm -rf "$WORK_DIR"' EXIT
@@ -91,6 +93,7 @@ fi
 invalidate_evidence
 tested_commit="$(read_checked_out_commit)"
 require_deployed_commit "$tested_commit"
+require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT" "$tested_commit"
 
 if [[ ! -x "$CHROMIUM_EXECUTABLE" ]]; then
     printf 'Refusing: staging Chromium executable is unavailable at %s\n' "$CHROMIUM_EXECUTABLE" >&2

@@ -55,6 +55,7 @@ write_runtime_manifest() {
 require_staging_runtime() {
     local manifest="$1"
     local source_root="$2"
+    local expected_commit="$3"
     local expected_lock_sha
     local expected_pom_sha
     local actual_commit
@@ -66,13 +67,14 @@ require_staging_runtime() {
         printf 'Refusing: staging runtime manifest is missing. Run bootstrap-staging-runtime.sh.\n' >&2
         return 1
     fi
+    actual_commit="$(awk -F= '$1 == "commit" {print $2; exit}' "$manifest")"
     actual_lock_sha="$(awk -F= '$1 == "package_lock_sha256" {print $2; exit}' "$manifest")"
     actual_pom_sha="$(awk -F= '$1 == "pom_sha256" {print $2; exit}' "$manifest")"
     actual_chromium_version="$(awk -F= '$1 == "chromium_version" {print $2; exit}' "$manifest")"
     expected_lock_sha="$(staging_runtime_sha256 "$source_root/package-lock.json")"
     expected_pom_sha="$(staging_runtime_sha256 "$source_root/pom.xml")"
 
-    if [[ "$actual_lock_sha" != "$expected_lock_sha" || "$actual_pom_sha" != "$expected_pom_sha" ]]; then
+    if [[ "$actual_commit" != "$expected_commit" || "$actual_lock_sha" != "$expected_lock_sha" || "$actual_pom_sha" != "$expected_pom_sha" ]]; then
         printf 'Refusing: staging runtime manifest does not match this checkout. Run bootstrap-staging-runtime.sh.\n' >&2
         return 1
     fi
