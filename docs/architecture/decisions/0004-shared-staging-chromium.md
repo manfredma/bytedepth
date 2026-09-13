@@ -1,4 +1,4 @@
-# ADR-0003: 共享 staging Chromium 运行时
+# ADR-0004: 共享 staging Chromium 运行时
 
 - **状态**: Accepted
 - **日期**: 2026-09-13
