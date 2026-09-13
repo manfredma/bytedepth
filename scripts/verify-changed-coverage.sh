@@ -2,19 +2,7 @@
 set -euo pipefail
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-resolve_java_25() {
-  if [[ -x /usr/libexec/java_home ]]; then
-    /usr/libexec/java_home -v 25
-  elif [[ -n "${JAVA_HOME_25_X64:-}" && -x "$JAVA_HOME_25_X64/bin/java" ]]; then
-    printf '%s\n' "$JAVA_HOME_25_X64"
-  elif [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/java" ]] \
-      && "$JAVA_HOME/bin/java" -version 2>&1 | rg -q 'version "25[."]'; then
-    printf '%s\n' "$JAVA_HOME"
-  else
-    printf 'Java 25 is required. Set JAVA_HOME_25_X64 or JAVA_HOME.\n' >&2
-    return 1
-  fi
-}
+source "$SOURCE_ROOT/scripts/lib/java-25.sh"
 readonly JAVA_HOME="$(resolve_java_25)"
 readonly COVERAGE_BASE_REF="${COVERAGE_BASE_REF:-$(git -C "$SOURCE_ROOT" describe --tags --abbrev=0)}"
 readonly LOG_FILE="$(mktemp)"

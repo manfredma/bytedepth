@@ -5,20 +5,7 @@ set -Eeuo pipefail
 # It prepares this worktree's untracked node_modules before any frontend tool.
 # Usage: bash scripts/run-local-quality.sh
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-
-resolve_java_25() {
-    if [[ -x /usr/libexec/java_home ]]; then
-        /usr/libexec/java_home -v 25
-    elif [[ -n "${JAVA_HOME_25_X64:-}" && -x "$JAVA_HOME_25_X64/bin/java" ]]; then
-        printf '%s\n' "$JAVA_HOME_25_X64"
-    elif [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/java" ]] \
-        && "$JAVA_HOME/bin/java" -version 2>&1 | rg -q 'version "25[."]'; then
-        printf '%s\n' "$JAVA_HOME"
-    else
-        printf 'Java 25 is required. Set JAVA_HOME_25_X64 or JAVA_HOME.\n' >&2
-        return 1
-    fi
-}
+source "$SOURCE_ROOT/scripts/lib/java-25.sh"
 
 cd "$SOURCE_ROOT"
 npm ci --ignore-scripts --no-audit --no-fund

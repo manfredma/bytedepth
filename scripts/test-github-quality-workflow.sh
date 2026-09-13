@@ -15,6 +15,8 @@ rg -Fq 'actions/setup-node@v5' "$WORKFLOW"
 rg -Fq 'actions/setup-java@v5' "$WORKFLOW"
 rg -Fq "java-version: '25'" "$WORKFLOW"
 rg -Fq 'bash scripts/run-local-quality.sh' "$WORKFLOW"
+rg -Fq 'script-contracts:' "$WORKFLOW"
+rg -Fq 'bash scripts/check-staging-checklist.sh' "$WORKFLOW"
 ! rg -qi 'ssh|staging|production|deploy-staging|deploy-production' "$WORKFLOW"
 
 printf 'GitHub quality workflow constraint check passed.\n'

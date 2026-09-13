@@ -59,8 +59,9 @@ assert_maven_test_boundaries "$SOURCE_ROOT/pom.xml"
 # Coverage is unit-only by construction and must never opt into the staging Failsafe profile.
 ! rg -Fq 'staging-integration' "$SOURCE_ROOT/scripts/verify-changed-coverage.sh"
 
-mkdir -p "$TEMP_ROOT/scripts" "$TEMP_ROOT/docs/releases" "$TEMP_ROOT/java/bin" "$TEMP_ROOT/bin"
+mkdir -p "$TEMP_ROOT/scripts/lib" "$TEMP_ROOT/docs/releases" "$TEMP_ROOT/java/bin" "$TEMP_ROOT/bin"
 cp "$SOURCE_ROOT/scripts/prepare-release.sh" "$TEMP_ROOT/scripts/prepare-release.sh"
+cp "$SOURCE_ROOT/scripts/lib/java-25.sh" "$TEMP_ROOT/scripts/lib/java-25.sh"
 cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/invalid-pom.xml"
 rewrite_fixture "$TEMP_ROOT/invalid-pom.xml" 's/<id>staging-integration<\/id>/<id>not-staging-integration<\/id>/'
 if assert_maven_test_boundaries "$TEMP_ROOT/invalid-pom.xml"; then
