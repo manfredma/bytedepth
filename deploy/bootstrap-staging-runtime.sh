@@ -39,10 +39,18 @@ prepare_maven() {
         "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" clean install -DskipTests -Dsort.skip=true
         "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
             dependency:go-offline -Dsort.skip=true -DincludePlugins=true -DincludePluginDependencies=true -DskipTests
-        # Surefire selects this JUnit 5 provider dynamically at test execution time;
-        # dependency:go-offline cannot discover that selection from the lifecycle.
+        # Surefire/Failsafe select their JUnit runtime dynamically, outside the
+        # dependency graph visible to dependency:go-offline.  Resolve that exact
+        # runtime without running a test: the impossible selector and the two
+        # fail-if-no-match flags keep this a dependency probe rather than test execution.
         "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
-            dependency:get -Dartifact=org.apache.maven.surefire:surefire-junit-platform:3.2.5
+            -Pstaging-integration verify -Dtest=staging_bootstrap_dependency_probe \
+            -Dit.test=staging_bootstrap_dependency_probe -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dfailsafe.failIfNoSpecifiedTests=false -DskipTests=false -Dsort.skip=true
+        "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
+            -o -Pstaging-integration verify -Dtest=staging_bootstrap_dependency_probe \
+            -Dit.test=staging_bootstrap_dependency_probe -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dfailsafe.failIfNoSpecifiedTests=false -DskipTests=false -Dsort.skip=true
         "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" verify -DskipTests -Dsort.skip=true
         "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -Pstaging-integration verify -DskipTests -Dsort.skip=true
         "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -o -Pstaging-integration verify -DskipTests -Dsort.skip=true

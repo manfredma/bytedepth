@@ -187,7 +187,7 @@ cd /opt/bytedepth
 sudo ./deploy/run-staging-integration-tests.sh
 ```
 
-该 runner 只接受 `/etc/bytedepth-deploy.conf` 中的 `BYTEDEPTH_DEPLOY_MODE=staging`。它会先取得共享锁、读取完整 checkout SHA，并核对 `/var/lib/bytedepth-staging/deploy-history` 的最近部署 SHA；二者不一致时不会开始测试。它只从 staging `.env` 提取非空的 `REDIS_PASSWORD`，不加载或输出其他变量；密码写入 runner 私有的 `0600` Docker `--env-file`，Failsafe profile 再从容器环境读取，绝不会作为 Maven 或 Docker 命令行参数出现。runner 将 checkout 复制到私有临时目录后移除其中的 `.env`，因此容器只接收上述 Redis env-file；再以一次性 Maven 25 容器加入 `bytedepth_default` 网络。bootstrap 与该容器共享同一只读 Maven repository；对于 Surefire 动态选择、`go-offline` 无法从生命周期推断的 JUnit Platform provider，bootstrap 以显式 `dependency:get` 预取其固定坐标，容器测试仍严格离线执行且不改变 Surefire 的运行时类路径。Failsafe 通过 Docker 服务 DNS `redis:6379` 访问测试专用 Redis 凭据，不发布端口，也不会让 Maven 写入已部署 checkout。进入 `tee` 前 runner 会将任何出现的精确密码替换为 `[REDACTED]`。Maven 输出含任意大小写 `WARNING` 时 runner 失败；密钥不得写入命令输出、日志或聊天记录。
+该 runner 只接受 `/etc/bytedepth-deploy.conf` 中的 `BYTEDEPTH_DEPLOY_MODE=staging`。它会先取得共享锁、读取完整 checkout SHA，并核对 `/var/lib/bytedepth-staging/deploy-history` 的最近部署 SHA；二者不一致时不会开始测试。它只从 staging `.env` 提取非空的 `REDIS_PASSWORD`，不加载或输出其他变量；密码写入 runner 私有的 `0600` Docker `--env-file`，Failsafe profile 再从容器环境读取，绝不会作为 Maven 或 Docker 命令行参数出现。runner 将 checkout 复制到私有临时目录后移除其中的 `.env`，因此容器只接收上述 Redis env-file；再以一次性 Maven 25 容器加入 `bytedepth_default` 网络。bootstrap 与该容器共享同一只读 Maven repository；它还用与 runner 一致的 profile 执行两次零测试解析探针（在线解析、再严格离线重验）：指定一个不存在的 Surefire/Failsafe 测试名且显式允许未匹配，因而解析所有动态测试运行时依赖但不执行真实单测或集成测试。Failsafe 通过 Docker 服务 DNS `redis:6379` 访问测试专用 Redis 凭据，不发布端口，也不会让 Maven 写入已部署 checkout。进入 `tee` 前 runner 会将任何出现的精确密码替换为 `[REDACTED]`。Maven 输出含任意大小写 `WARNING` 时 runner 失败；密钥不得写入命令输出、日志或聊天记录。
 
 ### E2E 测试与 release evidence
 
