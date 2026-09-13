@@ -17,6 +17,10 @@ rg -q 'mvn .*verify -DskipTests -Dsort.skip=true' "$BOOTSTRAP" || {
     printf 'Bootstrap must resolve verification-lifecycle plugins for offline integration tests.\n' >&2
     exit 1
 }
+rg -q 'mvn .*Pstaging-integration verify -DskipTests -Dsort.skip=true' "$BOOTSTRAP" || {
+    printf 'Bootstrap must prewarm integration profile dependencies before deployment.\n' >&2
+    exit 1
+}
 if rg -q 'playwright install' "$BOOTSTRAP"; then
     printf 'Bootstrap must reuse the staged Chromium instead of downloading a browser.\n' >&2
     exit 1

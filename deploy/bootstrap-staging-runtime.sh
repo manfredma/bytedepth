@@ -37,9 +37,11 @@ prepare_maven() {
         flock -x 8
         cd "$SOURCE_ROOT"
         JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
-            mvn -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" clean install -DskipTests -Dsort.skip=true
+            mvn -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" clean install -DskipTests -Dsort.skip=true
         JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
-            mvn -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" verify -DskipTests -Dsort.skip=true
+            mvn -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" verify -DskipTests -Dsort.skip=true
+        JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
+            mvn -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -Pstaging-integration verify -DskipTests -Dsort.skip=true
     ) 8>"$SHARED_MAVEN_LOCK"
 }
 

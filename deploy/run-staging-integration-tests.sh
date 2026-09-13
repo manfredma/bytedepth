@@ -113,31 +113,16 @@ fi
 mkdir -p "$WORK_DIR/source"
 umask 077
 printf 'BYTEDEPTH_IT_REDIS_PASSWORD=%s\n' "$redis_password" > "$MAVEN_ENV_FILE"
-cat > "$MAVEN_SETTINGS_FILE" <<'SETTINGS'
-<?xml version="1.0" encoding="UTF-8"?>
-<settings>
-  <mirrors>
-    <mirror>
-      <id>tencent-cloud</id>
-      <name>Tencent Cloud Maven Mirror</name>
-      <url>https://mirrors.tencent.com/nexus/repository/maven-public/</url>
-      <mirrorOf>*</mirrorOf>
-    </mirror>
-  </mirrors>
-</settings>
-SETTINGS
 cp -a "$SOURCE_ROOT/." "$WORK_DIR/source/"
 # The disposable Maven workspace must not receive the staging application's
 # full environment.  Only MAVEN_ENV_FILE is mounted as a narrowly scoped
 # credential channel.
 rm -f "$WORK_DIR/source/.env"
 # The repository's .mvn/maven.config explicitly selects .mvn/settings.xml.
-# Maven gives that workspace option precedence over /root/.m2/settings.xml,
-# so replace the copied file in the disposable workspace as well.  This keeps
-# the checked-out repository and each developer's local Maven configuration
-# untouched while making Tencent Cloud's mirror effective in the test
-# container.
+# Preserve the checked-out repository's own Maven mirror policy in this disposable
+# workspace while avoiding any host-local Maven configuration leakage.
 install -d -m 0700 "$WORK_DIR/source/.mvn"
+install -m 0600 "$SOURCE_ROOT/.mvn/settings.xml" "$MAVEN_SETTINGS_FILE"
 install -m 0600 "$MAVEN_SETTINGS_FILE" "$WORK_DIR/source/.mvn/settings.xml"
 
 if ! sudo docker run --rm --network bytedepth_default \
