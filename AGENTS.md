@@ -5,9 +5,9 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 ## 必须遵守
 
 - 不允许在 `main` 分支直接开发。功能、修复和文档改动必须在独立 `feat/*`、`fix/*` 或 `docs/*` 分支的 Git worktree 中完成；通过前置质量门禁后经 PR 合并。`main` 仅允许受控发布流程写入版本提交。worktree 合并到 `main` 后必须立即删除，不长期保留。详见 [Git 工作流](docs/engineering/git-workflow.md)。
-- Maven 运行时固定为 3.9.11：本机、CI 与发布脚本只能使用仓库的 Wrapper，命令为 `JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw ...`；Java 25 兼容参数只能由提交的 `.mvn/jvm.config` 提供，禁止依赖人工 `MAVEN_OPTS`；Dockerfile 与容器集成 runner 只能使用 `maven:3.9.11-eclipse-temurin-25`，禁止裸 `mvn` 或浮动 Maven 镜像标签。运行 `bash scripts/test-maven-runtime.sh` 验证该自动合同。
+- Maven 运行时固定为 3.9.11：本机、CI 与发布脚本只能使用仓库的 Wrapper，命令为 `JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw ...`；Java 25 兼容参数只能由提交的 `.mvn/jvm.config` 提供，禁止依赖人工 `MAVEN_OPTS`；Dockerfile 与容器集成 runner 只能使用 `maven:3.9.11-eclipse-temurin-25`，禁止裸 `mvn` 或浮动 Maven 镜像标签。运行 `bash scripts/test-maven-runtime.sh` 验证该自动化约束。
 - staging 的 Maven 制品缓存必须唯一使用宿主机根管理的 `/opt/shared-maven/repository`，bootstrap 必须以全局锁预热，集成测试必须离线只读复用；不得为各项目再建 Maven 下载缓存。`node_modules` 必须继续由每个项目各自用 lockfile 安装，绝不跨项目共享；可共享的只是包下载缓存而非安装树。
-  - 注意：`mvn clean install` 不会触发所有验证生命周期插件，`deploy/bootstrap-staging-runtime.sh` 必须同一锁内再执行 `mvn ... verify -DskipTests`，否则后续 `staging-integration` 在 `-o` 下会因缺插件报错（当前已通过静态脚本合同固化）。
+  - 注意：`mvn clean install` 不会触发所有验证生命周期插件，`deploy/bootstrap-staging-runtime.sh` 必须同一锁内再执行 `mvn ... verify -DskipTests`，否则后续 `staging-integration` 在 `-o` 下会因缺插件报错（当前已通过静态脚本约束固化）。
 - 新建或切换 Git worktree 后，运行任何前端测试、lint 或 Playwright 前必须先执行 `npm ci --ignore-scripts --no-audit --no-fund`；统一本机门禁入口是 `bash scripts/run-local-quality.sh`，不得先试跑 `npm test` 再根据缺失的 `node_modules` 报错补救。
 - 不得忽略任何构建、测试、静态分析、发布或部署验收输出中的 `WARNING`：必须在继续流程前定位并修复；无法修复时立即中止并报告，不能将含告警的结果称为成功。
 - **跨 agent 防复发（强制）**：每次发现的流程、配置、测试或部署错误，必须在结束前沉淀为项目内的明确规则（`AGENTS.md`、`docs/` 或 ADR）并补充可重复执行的自动检查/测试；不得依赖任何 agent 的会话记忆、个人经验或口头交接。自动检查必须在写入通过证据、合并或发布之前执行；发布前统一运行 `bash scripts/check-staging-checklist.sh`。对 staging runner，凭据、共享运行时和候选 SHA 必须显式注入并 fail-fast 校验，禁止隐式默认值；启用 `pipefail` 的脚本不得用会因上游 SIGPIPE 产生假阴性的 `命令 | grep -q` 作为就绪判定；涉及“当前日期/时间”的 E2E 断言必须在测试运行时计算，禁止硬编码会过期的日历预期。

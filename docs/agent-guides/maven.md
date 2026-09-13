@@ -2,7 +2,7 @@
 
 系统默认 Java 8，所有 `mvn` 命令必须加 `JAVA_HOME` 前缀。
 仓库的 `.mvn/jvm.config` 固定 Java 25 的兼容参数；不得改为依赖调用者手工设置
-`MAVEN_OPTS`，运行 `bash scripts/test-maven-runtime.sh` 会验证该自动合同。
+`MAVEN_OPTS`，运行 `bash scripts/test-maven-runtime.sh` 会验证该自动化约束。
 
 ## 告警零容忍
 
