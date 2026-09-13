@@ -101,7 +101,7 @@ fi
 
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 run_runtime_preflight() {
-    require_staging_runtime "$STATE_DIR/runtime/manifest" "$SOURCE_ROOT" "$COMMIT"
+    require_staging_runtime_prerequisites
 }
 if ! record_timed_phase "$TIMING_FILE" runtime_preflight run_runtime_preflight; then
     record_timing_phase "$TIMING_FILE" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"

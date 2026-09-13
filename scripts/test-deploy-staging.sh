@@ -21,7 +21,12 @@ require_line 'record_timed_phase "$TIMING_FILE" runtime_preflight'
 require_line 'record_timed_phase "$TIMING_FILE" docker_build_and_rollout'
 require_line 'record_timing_phase "$TIMING_FILE" deployment_total passed'
 require_line 'record_timing_phase "$TIMING_FILE" deployment_total failed'
-require_line 'require_staging_runtime'
+require_line 'require_staging_runtime_prerequisites'
+
+if rg -q 'require_staging_runtime "\$STATE_DIR/runtime/manifest"' "$SCRIPT"; then
+    printf 'Deployment must not require a checkout-bound manifest before bootstrap can create it.\n' >&2
+    exit 1
+fi
 
 if rg -q 'bootstrap-staging-runtime\.sh|npm ci|playwright install|docker run' "$SCRIPT"; then
     printf 'Staging deployment must consume, not repair, runtime or create test containers.\n' >&2

@@ -12,6 +12,16 @@ staging_runtime_sha256() {
     shasum -a 256 "$1" | awk '{print $1}'
 }
 
+# Deployment must be able to move to a new checkout before bootstrap writes its
+# checkout-bound manifest.  Keep this preflight limited to immutable shared
+# infrastructure; require_staging_runtime remains the stricter runner gate.
+require_staging_runtime_prerequisites() {
+    if [[ ! -x "$SHARED_CHROMIUM_EXECUTABLE" ]]; then
+        printf 'Refusing: staging Chromium executable is unavailable.\n' >&2
+        return 1
+    fi
+}
+
 write_runtime_manifest() {
     local manifest="$1"
     local source_root="$2"
