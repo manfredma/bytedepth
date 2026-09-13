@@ -2,6 +2,22 @@
 
 本文件记录正式发布版本；每个条目必须与一个不可变 annotated Git Tag 一一对应。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
+## [v2.15.1] - 2026-09-14
+
+**Tag**：由受控 Maven Release 流程创建。
+**Commit**：发布提交由受控 Maven Release 流程创建。
+**部署**：待发布。
+**回滚基线**：`v2.15.0`
+
+### Changed
+
+- 统一 ByteDepth、Career 与 Toolbox 的 Java 25 Maven Wrapper、staging 运行时预热、共享 Maven 仓库与共享 Chromium 使用方式。
+- 发布流程新增 Linux 脚本契约门禁、commit-bound staging integration/E2E evidence 和阶段耗时记录，避免跨平台脚本问题延迟到完整质量门禁后才暴露。
+
+### Compatibility
+
+- 无数据库迁移或 API 破坏性变更。
+
 ## [v2.15.0] - 2026-09-10
 
 **Tag**：`v2.15.0`
