@@ -100,6 +100,18 @@ rg -F -- '"$STAGING_MAVEN_IMAGE"' "$INTEGRATION_RUNNER" >/dev/null || {
     printf 'Integration runner must use the shared staging Maven container image.\n' >&2
     exit 1
 }
+rg -F 'git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" archive --format=tar "$tested_commit"' "$INTEGRATION_RUNNER" >/dev/null || {
+    printf 'Integration runner must archive the tested commit instead of copying Git metadata and caches.\n' >&2
+    exit 1
+}
+if rg -Fq 'cp -a "$SOURCE_ROOT/." "$WORK_DIR/source/"' "$INTEGRATION_RUNNER"; then
+    printf 'Integration runner must not copy .git, node_modules, or build output into its disposable workspace.\n' >&2
+    exit 1
+fi
+rg -q 'MINIMUM_WORKSPACE_FREE_KIB=2097152' "$INTEGRATION_RUNNER" || {
+    printf 'Integration runner must fail before workspace creation when staging disk headroom is unsafe.\n' >&2
+    exit 1
+}
 if rg -q 'JAVA_HOME=.*mvn ' "$BOOTSTRAP"; then
     printf 'Bootstrap must not prewarm dependencies with the host Maven runtime.\n' >&2
     exit 1

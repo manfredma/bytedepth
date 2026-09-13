@@ -12,6 +12,7 @@ readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
 readonly DOCKER_SOCKET=/var/run/docker.sock
+readonly MINIMUM_WORKSPACE_FREE_KIB=2097152
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 WORK_DIR="$(mktemp -d)"
 readonly WORK_DIR
@@ -66,6 +67,17 @@ require_docker_socket() {
     fi
 }
 
+require_workspace_headroom() {
+    local available_kib
+
+    available_kib="$(df -Pk "$WORK_DIR" | awk 'NR == 2 {print $4}')"
+    if [[ ! "$available_kib" =~ ^[0-9]+$ || "$available_kib" -lt "$MINIMUM_WORKSPACE_FREE_KIB" ]]; then
+        printf 'Refusing: staging workspace needs at least %s KiB free, found %s KiB. Prune unused Docker cache before retrying.\n' \
+            "$MINIMUM_WORKSPACE_FREE_KIB" "${available_kib:-unknown}" >&2
+        exit 1
+    fi
+}
+
 redact_redis_password() {
     local line
 
@@ -110,14 +122,17 @@ if [[ -z "${redis_password//[[:space:]]/}" ]]; then
 fi
 
 [[ -d "$SHARED_MAVEN_REPOSITORY" ]] || { printf 'Refusing: shared staging Maven repository is unavailable. Run bootstrap-staging-runtime.sh.\n' >&2; exit 1; }
+require_workspace_headroom
 mkdir -p "$WORK_DIR/source"
 umask 077
 printf 'BYTEDEPTH_IT_REDIS_PASSWORD=%s\n' "$redis_password" > "$MAVEN_ENV_FILE"
-cp -a "$SOURCE_ROOT/." "$WORK_DIR/source/"
-# The disposable Maven workspace must not receive the staging application's
-# full environment.  Only MAVEN_ENV_FILE is mounted as a narrowly scoped
-# credential channel.
-rm -f "$WORK_DIR/source/.env"
+# Archive the exact commit rather than copying the checkout.  A checkout copy
+# brings .git, node_modules and target output into /tmp, which is neither part
+# of the tested source nor acceptable on a finite staging disk.
+git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" archive --format=tar "$tested_commit" \
+    | tar -x -C "$WORK_DIR/source"
+# git archive excludes the untracked staging .env.  MAVEN_ENV_FILE remains the
+# only credential channel mounted in the disposable test container.
 # The repository's .mvn/maven.config explicitly selects .mvn/settings.xml.
 # Preserve the checked-out repository's own Maven mirror policy in this disposable
 # workspace while avoiding any host-local Maven configuration leakage.
