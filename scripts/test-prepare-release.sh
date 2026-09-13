@@ -113,6 +113,12 @@ printf 'mvn release_mode=%s %s\n' "${BYTEDEPTH_RELEASE_MODE:-0}" "$*" >> "$RELEA
 EOF
 chmod +x "$TEMP_ROOT/java/bin/mvn"
 
+cat > "$TEMP_ROOT/java/bin/java" <<'EOF'
+#!/usr/bin/env bash
+printf 'openjdk version "25.0.0"\n' >&2
+EOF
+chmod +x "$TEMP_ROOT/java/bin/java"
+
 cat > "$TEMP_ROOT/mvnw" <<'EOF'
 #!/usr/bin/env bash
 exec "$BYTEDEPTH_RELEASE_MAVEN" "$@"
@@ -120,7 +126,7 @@ EOF
 chmod +x "$TEMP_ROOT/mvnw"
 
 run_prepare() {
-    RELEASE_TEST_LOG="$1" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
+    RELEASE_TEST_LOG="$1" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME_25_X64="$TEMP_ROOT/java" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
         RELEASE_TEST_SHA="$CURRENT_SHA" BYTEDEPTH_STAGING_EVIDENCE_DIR="$EVIDENCE_DIR" \
         "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT
 }
@@ -230,13 +236,13 @@ grep -Fqx 'mvn release_mode=1 -B release:prepare -DskipTests -Darguments=-DskipT
 grep -Fqx 'git push origin main --follow-tags' "$TEMP_ROOT/release.log"
 grep -Fqx 'mvn release_mode=0 -B release:clean -Dsort.skip=true' "$TEMP_ROOT/release.log"
 
-if RELEASE_TEST_LOG="$TEMP_ROOT/invalid.log" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
+if RELEASE_TEST_LOG="$TEMP_ROOT/invalid.log" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME_25_X64="$TEMP_ROOT/java" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
     "$TEMP_ROOT/scripts/prepare-release.sh" >/dev/null 2>&1; then
     printf 'Expected missing-version validation to fail.\n' >&2
     exit 1
 fi
 
-if RELEASE_TEST_DIRTY=1 RELEASE_TEST_LOG="$TEMP_ROOT/dirty.log" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
+if RELEASE_TEST_DIRTY=1 RELEASE_TEST_LOG="$TEMP_ROOT/dirty.log" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME_25_X64="$TEMP_ROOT/java" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
     "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT >/dev/null 2>&1; then
     printf 'Expected dirty-worktree validation to fail.\n' >&2
     exit 1

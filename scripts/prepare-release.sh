@@ -11,6 +11,20 @@ usage() {
     exit 2
 }
 
+resolve_java_25() {
+    if [[ -x /usr/libexec/java_home ]]; then
+        /usr/libexec/java_home -v 25
+    elif [[ -n "${JAVA_HOME_25_X64:-}" && -x "$JAVA_HOME_25_X64/bin/java" ]]; then
+        printf '%s\n' "$JAVA_HOME_25_X64"
+    elif [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/java" ]] \
+        && "$JAVA_HOME/bin/java" -version 2>&1 | rg -q 'version "25[."]'; then
+        printf '%s\n' "$JAVA_HOME"
+    else
+        printf 'Java 25 is required. Set JAVA_HOME_25_X64 or JAVA_HOME.\n' >&2
+        return 1
+    fi
+}
+
 cleanup_release_state() {
     mvn_cmd -B release:clean -Dsort.skip=true >/dev/null || true
 }
@@ -91,7 +105,7 @@ require_no_tracked_agent_artifacts() {
 [[ "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || usage
 [[ "$DEVELOPMENT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-SNAPSHOT$ ]] || usage
 
-JAVA_HOME="$(/usr/libexec/java_home -v 25)"
+JAVA_HOME="$(resolve_java_25)"
 readonly JAVA_HOME
 readonly MAVEN_CMD="$SOURCE_ROOT/mvnw"
 
