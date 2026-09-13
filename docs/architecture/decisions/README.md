@@ -25,3 +25,4 @@
 | [ADR-0003](0003-observable-isolated-delivery-pipeline.md) | 可观测且隔离的交付流水线 | Accepted | 2026-09-12 |
 | [ADR-0004](0004-shared-staging-chromium.md) | 共享 staging Chromium 运行时 | Accepted | 2026-09-13 |
 | [ADR-0005](0005-pinned-maven-runtime.md) | 固定跨环境 Maven 运行时 | Accepted | 2026-09-13 |
+| [ADR-0006](0006-unified-release-pipeline.md) | 统一三项目发布流水线 | Accepted | 2026-09-13 |

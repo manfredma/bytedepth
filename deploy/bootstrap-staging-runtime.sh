@@ -20,6 +20,19 @@ if [[ "${1:-}" != --lock-held ]]; then
 fi
 shift
 
+case "${1:-}" in
+    '')
+        bootstrap_mode=refresh
+        ;;
+    --ensure)
+        bootstrap_mode=ensure
+        ;;
+    *)
+        printf 'Usage: sudo ./deploy/bootstrap-staging-runtime.sh [--ensure]\n' >&2
+        exit 1
+        ;;
+esac
+
 deploy_mode="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value = $2} END {print value}' "$CONFIG_FILE" 2>/dev/null || true)"
 if [[ "$deploy_mode" != staging ]]; then
     printf 'Refusing: BYTEDEPTH_DEPLOY_MODE must be staging.\n' >&2
@@ -27,6 +40,11 @@ if [[ "$deploy_mode" != staging ]]; then
 fi
 
 commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-parse HEAD)"
+if [[ "$bootstrap_mode" == ensure && -d "$SHARED_MAVEN_REPOSITORY" ]] \
+    && require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT" "$commit" >/dev/null 2>&1; then
+    printf 'Staging runtime already satisfies %s.\n' "$commit"
+    exit 0
+fi
 timing_file="$STATE_DIR/runtime/timing/$commit"
 initialize_timing_file "$timing_file" "$commit"
 bootstrap_started_at="$(timing_now_epoch_ms)"
@@ -59,7 +77,7 @@ prepare_maven() {
 
 prepare_node() {
     cd "$SOURCE_ROOT"
-    npm ci
+    npm ci --ignore-scripts --no-audit --no-fund
 }
 
 if ! record_timed_phase "$timing_file" maven_runtime_prepare prepare_maven; then

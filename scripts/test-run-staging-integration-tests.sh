@@ -108,6 +108,7 @@ readonly FIXTURE_ROOT="$TEMP_ROOT/fixture"
 readonly FIXTURE_SOURCE="$FIXTURE_ROOT/source"
 readonly FIXTURE_CONFIG="$FIXTURE_ROOT/bytedepth-deploy.conf"
 readonly EVIDENCE_DIR="$FIXTURE_ROOT/test-history"
+readonly RUNTIME_MANIFEST="$FIXTURE_ROOT/runtime/manifest"
 readonly DEPLOY_HISTORY="$FIXTURE_ROOT/deploy-history"
 readonly LOCK_FILE="$FIXTURE_ROOT/deployment-test.lock"
 readonly DOCKER_SOCKET="$FIXTURE_ROOT/docker.sock"
@@ -121,9 +122,18 @@ readonly INSTALL_ARGS="$TEMP_ROOT/install.args"
 readonly RUNNER_OUTPUT="$TEMP_ROOT/runner.out"
 readonly REDIS_SECRET='staging-redis-password-not-for-logs'
 readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
+readonly FIXTURE_CHROMIUM="$FIXTURE_ROOT/shared-e2e/chrome-linux64/chrome"
 
-mkdir -p "$FIXTURE_SOURCE/deploy/lib" "$FAKE_BIN" "$SHARED_MAVEN_REPOSITORY"
-sed 's@^readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository$@readonly SHARED_MAVEN_REPOSITORY='"$SHARED_MAVEN_REPOSITORY"'@' \
+mkdir -p "$FIXTURE_SOURCE/deploy/lib" "$FAKE_BIN" "$SHARED_MAVEN_REPOSITORY" "$(dirname "$FIXTURE_CHROMIUM")" "$(dirname "$RUNTIME_MANIFEST")"
+printf 'lockfile\n' > "$FIXTURE_SOURCE/package-lock.json"
+printf '<project/>\n' > "$FIXTURE_SOURCE/pom.xml"
+cat > "$FIXTURE_CHROMIUM" <<'SCRIPT'
+#!/usr/bin/env bash
+printf 'Google Chrome for Testing 151.0.7922.34\n'
+SCRIPT
+chmod +x "$FIXTURE_CHROMIUM"
+sed -e 's@^readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository$@readonly SHARED_MAVEN_REPOSITORY='"$SHARED_MAVEN_REPOSITORY"'@' \
+    -e 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome$@readonly SHARED_CHROMIUM_EXECUTABLE='"$FIXTURE_CHROMIUM"'@' \
     "$SOURCE_ROOT/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
 printf 'fixture source\n' > "$FIXTURE_SOURCE/fixture-marker"
 printf 'fixture Docker socket placeholder\n' > "$DOCKER_SOCKET"
@@ -137,12 +147,15 @@ sed \
     -e "s@^readonly SOURCE_ROOT=/opt/bytedepth\$@readonly SOURCE_ROOT=$FIXTURE_SOURCE@" \
     -e "s@^readonly CONFIG_FILE=/etc/bytedepth-deploy.conf\$@readonly CONFIG_FILE=$FIXTURE_CONFIG@" \
     -e "s@^readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history\$@readonly EVIDENCE_DIR=$EVIDENCE_DIR@" \
+    -e "s@^readonly RUNTIME_MANIFEST=/var/lib/bytedepth-staging/runtime/manifest\$@readonly RUNTIME_MANIFEST=$RUNTIME_MANIFEST@" \
     -e "s@^readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history\$@readonly DEPLOY_HISTORY=$DEPLOY_HISTORY@" \
     -e "s@^readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock\$@readonly LOCK_FILE=$LOCK_FILE@" \
     -e "s@^readonly DOCKER_SOCKET=/var/run/docker.sock\$@readonly DOCKER_SOCKET=$DOCKER_SOCKET@" \
     -e '/^if \[\[ "${EUID}" -ne 0 \]\]; then$/,/^fi$/d' \
     "$RUNNER" > "$TEMP_ROOT/runner"
 chmod +x "$TEMP_ROOT/runner"
+bash -c 'source "$1"; write_runtime_manifest "$2" "$3" "$4"' -- \
+    "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh" "$RUNTIME_MANIFEST" "$FIXTURE_SOURCE" "$CURRENT_SHA"
 
 cat > "$FAKE_BIN/sudo" <<'SCRIPT'
 #!/usr/bin/env bash
@@ -250,6 +263,13 @@ if [[ "$*" == *'rev-parse HEAD'* ]]; then
     else
         printf '%s\n' "${STAGING_RUNNER_SHA_AFTER:-$STAGING_RUNNER_SHA}"
     fi
+    exit 0
+fi
+if [[ "$*" == *'archive --format=tar'* ]]; then
+    # The runner archives its exact checkout instead of copying it.  Keep the
+    # fixture on that real boundary: a fake that only supports rev-parse would
+    # make every successful staging transaction fail before Docker is reached.
+    tar -C "$STAGING_RUNNER_SOURCE" --exclude=.env -cf - .
     exit 0
 fi
 exit 1

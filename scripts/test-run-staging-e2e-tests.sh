@@ -8,6 +8,7 @@ readonly FIXTURE_ROOT="$TEMP_ROOT/fixture"
 readonly FIXTURE_SOURCE="$FIXTURE_ROOT/source"
 readonly FIXTURE_CONFIG="$FIXTURE_ROOT/bytedepth-deploy.conf"
 readonly EVIDENCE_DIR="$FIXTURE_ROOT/test-history"
+readonly RUNTIME_MANIFEST="$FIXTURE_ROOT/runtime/manifest"
 readonly DEPLOY_HISTORY="$FIXTURE_ROOT/deploy-history"
 readonly LOCK_FILE="$FIXTURE_ROOT/deployment-test.lock"
 readonly FIXTURE_CHROMIUM="$FIXTURE_ROOT/chromium"
@@ -43,21 +44,31 @@ fi
 rg -q 'window\.scrollBy' "$ANNOTATION_E2E"
 rg -q 'expect\.poll' "$ANNOTATION_E2E"
 
-mkdir -p "$FIXTURE_SOURCE" "$FAKE_BIN"
-touch "$FIXTURE_CHROMIUM"
+mkdir -p "$FIXTURE_SOURCE/deploy/lib" "$FAKE_BIN" "$(dirname "$RUNTIME_MANIFEST")"
+printf 'lockfile\n' > "$FIXTURE_SOURCE/package-lock.json"
+printf '<project/>\n' > "$FIXTURE_SOURCE/pom.xml"
+cat > "$FIXTURE_CHROMIUM" <<'SCRIPT'
+#!/usr/bin/env bash
+printf 'Google Chrome for Testing 151.0.7922.34\n'
+SCRIPT
 chmod +x "$FIXTURE_CHROMIUM"
+sed 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome$@readonly SHARED_CHROMIUM_EXECUTABLE='"$FIXTURE_CHROMIUM"'@' \
+    "$SOURCE_ROOT/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
 printf 'ref=main\ncommit=%s\ndeployed_at=2026-09-10T10:11:12Z\n---\n' "$CURRENT_SHA" > "$DEPLOY_HISTORY"
 
 sed \
     -e "s@^readonly SOURCE_ROOT=/opt/bytedepth\$@readonly SOURCE_ROOT=$FIXTURE_SOURCE@" \
     -e "s@^readonly CONFIG_FILE=/etc/bytedepth-deploy.conf\$@readonly CONFIG_FILE=$FIXTURE_CONFIG@" \
     -e "s@^readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history\$@readonly EVIDENCE_DIR=$EVIDENCE_DIR@" \
+    -e "s@^readonly RUNTIME_MANIFEST=/var/lib/bytedepth-staging/runtime/manifest\$@readonly RUNTIME_MANIFEST=$RUNTIME_MANIFEST@" \
     -e "s@^readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history\$@readonly DEPLOY_HISTORY=$DEPLOY_HISTORY@" \
     -e "s@^readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock\$@readonly LOCK_FILE=$LOCK_FILE@" \
     -e "s@^readonly CHROMIUM_EXECUTABLE=.*\$@readonly CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM@" \
     -e '/^if \[\[ "${EUID}" -ne 0 \]\]; then$/,/^fi$/d' \
     "$RUNNER" > "$TEMP_ROOT/runner"
 chmod +x "$TEMP_ROOT/runner"
+bash -c 'source "$1"; write_runtime_manifest "$2" "$3" "$4"' -- \
+    "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh" "$RUNTIME_MANIFEST" "$FIXTURE_SOURCE" "$CURRENT_SHA"
 
 cat > "$FAKE_BIN/flock" <<'SCRIPT'
 #!/usr/bin/env bash

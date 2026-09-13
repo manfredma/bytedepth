@@ -2,7 +2,8 @@
 set -euo pipefail
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-readonly JAVA_HOME="$(/usr/libexec/java_home -v 25)"
+source "$SOURCE_ROOT/scripts/lib/java-25.sh"
+readonly JAVA_HOME="$(resolve_java_25)"
 readonly COVERAGE_BASE_REF="${COVERAGE_BASE_REF:-$(git -C "$SOURCE_ROOT" describe --tags --abbrev=0)}"
 readonly LOG_FILE="$(mktemp)"
 

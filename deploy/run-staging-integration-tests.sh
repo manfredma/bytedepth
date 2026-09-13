@@ -9,6 +9,7 @@ fi
 readonly SOURCE_ROOT=/opt/bytedepth
 readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
+readonly RUNTIME_MANIFEST=/var/lib/bytedepth-staging/runtime/manifest
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
 readonly DOCKER_SOCKET=/var/run/docker.sock
@@ -113,6 +114,7 @@ fi
 invalidate_evidence
 tested_commit="$(read_checked_out_commit)"
 require_deployed_commit "$tested_commit"
+require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT" "$tested_commit"
 require_docker_socket
 
 redis_password="$(awk '$0 ~ /^REDIS_PASSWORD=/ {value = substr($0, index($0, "=") + 1)} END {print value}' "$SOURCE_ROOT/.env" 2>/dev/null || true)"

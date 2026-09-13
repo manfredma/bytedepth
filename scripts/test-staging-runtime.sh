@@ -66,6 +66,14 @@ rg -F 'exec flock -x "$LOCK_FILE" "$0" --lock-held' "$BOOTSTRAP" >/dev/null || {
     printf 'Bootstrap must re-exec under its own staging lock when not inherited.\n' >&2
     exit 1
 }
+rg -F -- '--ensure' "$BOOTSTRAP" >/dev/null || {
+    printf 'Bootstrap must support validation-only runtime ensure mode.\n' >&2
+    exit 1
+}
+rg -F 'npm ci --ignore-scripts --no-audit --no-fund' "$BOOTSTRAP" >/dev/null || {
+    printf 'Bootstrap must install project dependencies without downloading a project-local browser.\n' >&2
+    exit 1
+}
 
 readonly TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
@@ -123,7 +131,10 @@ source "$RUNTIME_LIBRARY"
 readonly MANIFEST="$STATE_DIR/runtime/manifest"
 write_runtime_manifest "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567
 require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567
-require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" fedcba9876543210fedcba9876543210fedcba98
+if require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" fedcba9876543210fedcba9876543210fedcba98; then
+    printf 'Expected runtime manifest to be rejected for a different checkout commit.\n' >&2
+    exit 1
+fi
 
 printf 'changed lockfile\n' >> "$SOURCE_ROOT/package-lock.json"
 if ! require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567; then

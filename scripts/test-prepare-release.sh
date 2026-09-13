@@ -5,12 +5,28 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly TEMP_ROOT="$(mktemp -d)"
 readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
 readonly EVIDENCE_DIR="$TEMP_ROOT/staging-evidence"
-trap 'rm -rf "$TEMP_ROOT"' EXIT
+cleanup_fixture() {
+    if [[ "${KEEP_RELEASE_TEST_FIXTURE:-0}" == 1 ]]; then
+        printf 'Retained release test fixture: %s\n' "$TEMP_ROOT" >&2
+    else
+        rm -rf "$TEMP_ROOT"
+    fi
+}
+trap cleanup_fixture EXIT
 
 assert_xpath_true() {
   local pom_file="$1"
   local expression="$2"
   [[ "$(xmllint --xpath "boolean($expression)" "$pom_file")" == true ]]
+}
+
+rewrite_fixture() {
+  local fixture_file="$1"
+  local expression="$2"
+  local rewritten_file
+  rewritten_file="$(mktemp "$TEMP_ROOT/rewrite.XXXXXX")"
+  sed "$expression" "$fixture_file" > "$rewritten_file"
+  mv "$rewritten_file" "$fixture_file"
 }
 
 assert_maven_test_boundaries() {
@@ -43,22 +59,23 @@ assert_maven_test_boundaries "$SOURCE_ROOT/pom.xml"
 # Coverage is unit-only by construction and must never opt into the staging Failsafe profile.
 ! rg -Fq 'staging-integration' "$SOURCE_ROOT/scripts/verify-changed-coverage.sh"
 
-mkdir -p "$TEMP_ROOT/scripts" "$TEMP_ROOT/docs/releases" "$TEMP_ROOT/java/bin" "$TEMP_ROOT/bin"
+mkdir -p "$TEMP_ROOT/scripts/lib" "$TEMP_ROOT/docs/releases" "$TEMP_ROOT/java/bin" "$TEMP_ROOT/bin"
 cp "$SOURCE_ROOT/scripts/prepare-release.sh" "$TEMP_ROOT/scripts/prepare-release.sh"
+cp "$SOURCE_ROOT/scripts/lib/java-25.sh" "$TEMP_ROOT/scripts/lib/java-25.sh"
 cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/invalid-pom.xml"
-sed -i '' 's/<id>staging-integration<\/id>/<id>not-staging-integration<\/id>/' "$TEMP_ROOT/invalid-pom.xml"
+rewrite_fixture "$TEMP_ROOT/invalid-pom.xml" 's/<id>staging-integration<\/id>/<id>not-staging-integration<\/id>/'
 if assert_maven_test_boundaries "$TEMP_ROOT/invalid-pom.xml"; then
     printf 'Expected structural POM assertion to reject a Failsafe profile outside staging-integration.\n' >&2
     exit 1
 fi
 cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/missing-failsafe-classes-directory.xml"
-sed -i '' '/<classesDirectory>\${project.build.outputDirectory}<\/classesDirectory>/d' "$TEMP_ROOT/missing-failsafe-classes-directory.xml"
+rewrite_fixture "$TEMP_ROOT/missing-failsafe-classes-directory.xml" '/<classesDirectory>\${project.build.outputDirectory}<\/classesDirectory>/d'
 if assert_maven_test_boundaries "$TEMP_ROOT/missing-failsafe-classes-directory.xml"; then
     printf 'Expected structural POM assertion to reject Failsafe without target/classes.\n' >&2
     exit 1
 fi
 cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml"
-sed -i '' 's#<classesDirectory>\${project.build.outputDirectory}</classesDirectory>#<classesDirectory>\${project.build.directory}/\${project.build.finalName}.jar</classesDirectory>#' "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml"
+rewrite_fixture "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml" 's#<classesDirectory>\${project.build.outputDirectory}</classesDirectory>#<classesDirectory>\${project.build.directory}/\${project.build.finalName}.jar</classesDirectory>#'
 if assert_maven_test_boundaries "$TEMP_ROOT/fat-jar-failsafe-classes-directory.xml"; then
     printf 'Expected structural POM assertion to reject Failsafe loading the repackaged fat jar.\n' >&2
     exit 1
@@ -71,13 +88,19 @@ printf 'coverage\n' >> "$RELEASE_TEST_LOG"
 EOF
 chmod +x "$TEMP_ROOT/scripts/verify-changed-coverage.sh"
 
+cat > "$TEMP_ROOT/scripts/check-staging-checklist.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'checklist\n' >> "$RELEASE_TEST_LOG"
+EOF
+chmod +x "$TEMP_ROOT/scripts/check-staging-checklist.sh"
+
 cat > "$TEMP_ROOT/bin/git" <<'EOF'
 #!/usr/bin/env bash
 printf 'git %s\n' "$*" >> "$RELEASE_TEST_LOG"
 case "$1 $2" in
   'branch --show-current') printf 'main\n' ;;
-  'status --porcelain') [[ "${RELEASE_TEST_DIRTY:-}" == 1 ]] && printf ' M pom.xml\n' ;;
-  'ls-files --') [[ "${RELEASE_TEST_TRACKED_TOOL_ARTIFACT:-}" == 1 ]] && printf '.superpowers/sdd/unwanted-report.md\n' ;;
+  'status --porcelain') [[ "${RELEASE_TEST_DIRTY:-}" == 1 ]] && printf ' M pom.xml\n' || true ;;
+  'ls-files --') [[ "${RELEASE_TEST_TRACKED_TOOL_ARTIFACT:-}" == 1 ]] && printf '.superpowers/sdd/unwanted-report.md\n' || true ;;
   'rev-parse HEAD') printf '%s\n' "$RELEASE_TEST_SHA" ;;
   'rev-parse --verify') exit 1 ;;
   'ls-remote --exit-code') exit 2 ;;
@@ -91,8 +114,20 @@ printf 'mvn release_mode=%s %s\n' "${BYTEDEPTH_RELEASE_MODE:-0}" "$*" >> "$RELEA
 EOF
 chmod +x "$TEMP_ROOT/java/bin/mvn"
 
+cat > "$TEMP_ROOT/java/bin/java" <<'EOF'
+#!/usr/bin/env bash
+printf 'openjdk version "25.0.0"\n' >&2
+EOF
+chmod +x "$TEMP_ROOT/java/bin/java"
+
+cat > "$TEMP_ROOT/mvnw" <<'EOF'
+#!/usr/bin/env bash
+exec "$BYTEDEPTH_RELEASE_MAVEN" "$@"
+EOF
+chmod +x "$TEMP_ROOT/mvnw"
+
 run_prepare() {
-    RELEASE_TEST_LOG="$1" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
+    RELEASE_TEST_LOG="$1" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME_25_X64="$TEMP_ROOT/java" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
         RELEASE_TEST_SHA="$CURRENT_SHA" BYTEDEPTH_STAGING_EVIDENCE_DIR="$EVIDENCE_DIR" \
         "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT
 }
@@ -202,13 +237,13 @@ grep -Fqx 'mvn release_mode=1 -B release:prepare -DskipTests -Darguments=-DskipT
 grep -Fqx 'git push origin main --follow-tags' "$TEMP_ROOT/release.log"
 grep -Fqx 'mvn release_mode=0 -B release:clean -Dsort.skip=true' "$TEMP_ROOT/release.log"
 
-if RELEASE_TEST_LOG="$TEMP_ROOT/invalid.log" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
+if RELEASE_TEST_LOG="$TEMP_ROOT/invalid.log" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME_25_X64="$TEMP_ROOT/java" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
     "$TEMP_ROOT/scripts/prepare-release.sh" >/dev/null 2>&1; then
     printf 'Expected missing-version validation to fail.\n' >&2
     exit 1
 fi
 
-if RELEASE_TEST_DIRTY=1 RELEASE_TEST_LOG="$TEMP_ROOT/dirty.log" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
+if RELEASE_TEST_DIRTY=1 RELEASE_TEST_LOG="$TEMP_ROOT/dirty.log" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME_25_X64="$TEMP_ROOT/java" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
     "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT >/dev/null 2>&1; then
     printf 'Expected dirty-worktree validation to fail.\n' >&2
     exit 1

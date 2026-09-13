@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$SOURCE_ROOT/scripts/lib/java-25.sh"
 readonly RELEASE_VERSION="${1:-}"
 readonly DEVELOPMENT_VERSION="${2:-}"
 readonly TAG="v${RELEASE_VERSION}"
@@ -91,7 +92,7 @@ require_no_tracked_agent_artifacts() {
 [[ "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || usage
 [[ "$DEVELOPMENT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-SNAPSHOT$ ]] || usage
 
-JAVA_HOME="$(/usr/libexec/java_home -v 25)"
+JAVA_HOME="$(resolve_java_25)"
 readonly JAVA_HOME
 readonly MAVEN_CMD="$SOURCE_ROOT/mvnw"
 

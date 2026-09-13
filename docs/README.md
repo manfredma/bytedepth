@@ -21,6 +21,7 @@
 - 批注与划线写操作的权限管理：读 [批注写操作权限管理](security/annotation-write-permissions.md)。
 - 构建、测试、覆盖率：读 [Maven 指南](agent-guides/maven.md)。
 - 创建 worktree、分支、PR 与受控发布：读 [Git 工作流](engineering/git-workflow.md)。
+- 新项目接入与执行共同质量、staging、Tag 和生产流程：读 [统一发布流程](engineering/unified-release-pipeline.md)。
 - 同步 Obsidian 笔记：读 [同步指南](agent-guides/obsidian-sync.md)。
 - 部署、回滚和生产与 staging 验收：只读 [部署手册](../deploy/README.md)。
 - 创建版本、记录变更、发布与回滚：读 [发布管理](releases/README.md)。
