@@ -11,6 +11,7 @@ grep -Fqx -- '--enable-native-access=ALL-UNNAMED' "$ROOT/.mvn/jvm.config"
 grep -Fqx -- '--sun-misc-unsafe-memory-access=allow' "$ROOT/.mvn/jvm.config"
 grep -Fqx -- '-Xshare:off' "$ROOT/.mvn/jvm.config"
 grep -Fqx "FROM ${IMAGE} AS build" "$ROOT/Dockerfile"
+grep -Fqx 'COPY .mvn/jvm.config .mvn/jvm.config' "$ROOT/Dockerfile"
 grep -Fqx "ENV MAVEN_OPTS='-Xmx512m'" "$ROOT/Dockerfile"
 grep -Fqx "readonly STAGING_MAVEN_IMAGE=${IMAGE}" "$ROOT/deploy/lib/staging-runtime.sh"
 rg -F -- '"$SOURCE_ROOT/mvnw"' "$ROOT/deploy/bootstrap-staging-runtime.sh" >/dev/null
