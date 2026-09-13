@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # staging 部署：接受 origin 上的命名分支或 Tag（默认 main）。
-# 在 124 上执行。与生产 deploy-release.sh 的区别：
+# 在 124 上执行。与生产 deploy-production.sh 的区别：
 # - 接受任意命名分支或 Tag（不限 SemVer Tag，不限 main），用于预发验收尚未合并 main 的功能分支
 # - 不做重复部署校验（staging 可重复部署同一 ref）
 # - 不做 POM-Tag 一致性校验

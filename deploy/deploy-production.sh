@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 if [[ "${EUID}" -ne 0 ]]; then
-    printf 'Run this script with sudo: sudo ./deploy/deploy-release.sh vX.Y.Z\n' >&2
+    printf 'Run this script with sudo: sudo ./deploy/deploy-production.sh vX.Y.Z\n' >&2
     exit 1
 fi
 

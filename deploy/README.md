@@ -230,12 +230,12 @@ staging 验证通过后，生产打新 Tag 并部署到 175（当前单机）：
 TAG='v1.2.3'
 
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@175.24.197.202 \
-  "cd /opt/bytedepth && sudo ./deploy/deploy-release.sh $TAG"
+  "cd /opt/bytedepth && sudo ./deploy/deploy-production.sh $TAG"
 ```
 
-多台生产服务器时，对每台执行同一 `deploy-release.sh $TAG`。
+多台生产服务器时，对每台执行同一 `deploy-production.sh $TAG`。
 
-`deploy-release.sh` 必须验证 Tag、记录版本与完整 SHA，并调用完整 Compose 部署。尚未具备该工具的环境禁止按旧的 `git pull main` 方式发布；应先完成发布工具升级。
+`deploy-production.sh` 必须验证 Tag、记录版本与完整 SHA，并调用完整 Compose 部署；部署后必须执行 `scripts/verify-production-release.sh <tag>`。尚未具备该工具的环境禁止按旧的 `git pull main` 方式发布；应先完成发布工具升级。
 
 ### 6.3 发布后验收
 
@@ -312,7 +312,7 @@ curl -fsS -o /dev/null -w 'article image: %{http_code}\n' "$BASE_URL$IMAGE_PATH"
 3. 确认 Docker、Compose、Git、证书与内网连通性。
 4. 验证 Git SSH：ssh -T git@github.com；确认 origin 为 git@github.com:manfredma/bytedepth.git。
 5. external-services：确认 mountpoint -q /mnt/bytedepth-images。
-6. 初始化时按节点模式执行 `sudo ./deploy/bootstrap-ops-deploy.sh`；后续发布按第 6 节先 staging 预检（`deploy-staging.sh`），再生产部署（`deploy-release.sh "$TAG"`）。多台生产服务器时依次部署各台。
+6. 初始化时按节点模式执行 `sudo ./deploy/bootstrap-ops-deploy.sh`；后续发布按第 6 节先 staging 预检（`deploy-staging.sh`），再生产部署（`deploy-production.sh "$TAG"`）并执行生产验证。多台生产服务器时依次部署各台。
 7. 一律通过 `sudo ./deploy/ctl.sh` 操作 Compose（`ps`、`logs`、`config` 等）；禁止裸跑 `docker compose`，否则会误读非当前部署模式的 Compose 文件。
 8. 验证 systemd socket=active、compose 服务状态、HTTPS=200、图片 HTTPS=200。
 9. 对每个承载流量的节点执行第 6 节“部署后查询功能回归”：首页最新/热门及翻页、文章列表与详情、旧 ID 跳转、专栏、搜索、项目和文章图片均返回预期状态；不得以首页 `200` 代替回归。
