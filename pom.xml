@@ -113,6 +113,16 @@
         </dependencies>
     </dependencyManagement>
 
+    <dependencies>
+        <!-- JUnit 6 no longer brings the launcher transitively. Surefire resolves it
+             while discovering tests, so declare it in every module's inherited test runtime. -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
     <build>
         <pluginManagement>
             <plugins>

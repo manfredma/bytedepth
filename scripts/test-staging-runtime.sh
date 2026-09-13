@@ -46,6 +46,10 @@ rg -q 'failsafe.failIfNoSpecifiedTests=false' "$BOOTSTRAP" || {
     printf 'Bootstrap dependency probe must not execute matched integration tests.\n' >&2
     exit 1
 }
+rg -Uq '(?s)<dependencies>.*?<groupId>org\.junit\.platform</groupId>\s*<artifactId>junit-platform-launcher</artifactId>\s*<scope>test</scope>' "$ROOT/pom.xml" || {
+    printf 'The inherited test runtime must explicitly declare JUnit Platform Launcher.\n' >&2
+    exit 1
+}
 rg -q 'mvnw.*-o .*Pstaging-integration verify' "$BOOTSTRAP" || {
     printf 'Bootstrap must validate offline staging-integration command path before test execution.\n' >&2
     exit 1
