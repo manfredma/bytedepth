@@ -26,7 +26,7 @@ COPY bytedepth-infrastructure/pom.xml bytedepth-infrastructure/
 COPY bytedepth-adapter/pom.xml bytedepth-adapter/
 COPY bytedepth-start/pom.xml bytedepth-start/
 # 限制 Maven heap，避免 2C2G 服务器构建期间内存耗尽导致 SSH 失联
-ENV MAVEN_OPTS='-Xmx512m --enable-native-access=ALL-UNNAMED'
+ENV MAVEN_OPTS='-Xmx512m --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow'
 RUN mvn dependency:go-offline -Dsort.skip=true -q
 
 # 复制源码并打包
