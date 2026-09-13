@@ -119,6 +119,7 @@ readonly EVIDENCE_DIR="$FIXTURE_ROOT/test-history"
 readonly DEPLOY_HISTORY="$FIXTURE_ROOT/deploy-history"
 readonly LOCK_FILE="$FIXTURE_ROOT/deployment-test.lock"
 readonly DOCKER_SOCKET="$FIXTURE_ROOT/docker.sock"
+readonly SHARED_MAVEN_REPOSITORY="$FIXTURE_ROOT/shared-maven/repository"
 readonly FAKE_BIN="$TEMP_ROOT/bin"
 readonly DOCKER_ARGS="$TEMP_ROOT/docker.args"
 readonly DOCKER_INFO_ARGS="$TEMP_ROOT/docker-info.args"
@@ -129,7 +130,9 @@ readonly RUNNER_OUTPUT="$TEMP_ROOT/runner.out"
 readonly REDIS_SECRET='staging-redis-password-not-for-logs'
 readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
 
-mkdir -p "$FIXTURE_SOURCE" "$FAKE_BIN"
+mkdir -p "$FIXTURE_SOURCE/deploy/lib" "$FAKE_BIN" "$SHARED_MAVEN_REPOSITORY"
+sed 's@^readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository$@readonly SHARED_MAVEN_REPOSITORY='"$SHARED_MAVEN_REPOSITORY"'@' \
+    "$SOURCE_ROOT/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
 printf 'fixture source\n' > "$FIXTURE_SOURCE/fixture-marker"
 printf 'fixture Docker socket placeholder\n' > "$DOCKER_SOCKET"
 mkdir -p "$FIXTURE_SOURCE/.mvn"
@@ -332,6 +335,8 @@ grep -Fqx -- '--env' "$DOCKER_ARGS"
 grep -Fqx 'TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal' "$DOCKER_ARGS"
 grep -Fqx -- '-v' "$DOCKER_ARGS"
 grep -Fqx "$DOCKER_SOCKET:$DOCKER_SOCKET" "$DOCKER_ARGS"
+grep -Fqx "$SHARED_MAVEN_REPOSITORY:/root/.m2/repository:ro" "$DOCKER_ARGS"
+grep -Fqx -- '-o' "$DOCKER_ARGS"
 grep -Fqx -- '-H' "$DOCKER_INFO_ARGS"
 grep -Fqx "unix://$DOCKER_SOCKET" "$DOCKER_INFO_ARGS"
 grep -Fqx -- '-Dbytedepth.it.redis.host=redis' "$DOCKER_ARGS"
@@ -464,6 +469,16 @@ if STAGING_RUNNER_DOCKER_OUTPUT='WARNING: simulated Maven warning' run_runner; t
 fi
 grep -Fq 'WARNING: simulated Maven warning' "$RUNNER_OUTPUT"
 ! grep -Fq "$REDIS_SECRET" "$RUNNER_OUTPUT"
+[[ ! -e "$EVIDENCE_DIR/staging-integration" ]]
+
+# Framework logs use WARN rather than the Maven WARNING spelling; both must block
+# a staging acceptance record.
+rm -f "$DOCKER_ARGS" "$GIT_LOG" "$TEMP_ROOT/git.count"
+if STAGING_RUNNER_DOCKER_OUTPUT='WARN simulated framework warning' run_runner; then
+    printf 'Expected runner to reject framework WARN output.\n' >&2
+    exit 1
+fi
+grep -Fq 'WARN simulated framework warning' "$RUNNER_OUTPUT"
 [[ ! -e "$EVIDENCE_DIR/staging-integration" ]]
 
 # The deployed checkout must not advance while the isolated Maven copy runs.

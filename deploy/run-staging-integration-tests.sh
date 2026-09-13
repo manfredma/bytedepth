@@ -12,6 +12,7 @@ readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
 readonly DOCKER_SOCKET=/var/run/docker.sock
+source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 WORK_DIR="$(mktemp -d)"
 readonly WORK_DIR
 readonly MAVEN_LOG="$WORK_DIR/maven.log"
@@ -108,7 +109,8 @@ if [[ -z "${redis_password//[[:space:]]/}" ]]; then
     exit 1
 fi
 
-mkdir -p "$WORK_DIR/source" "$WORK_DIR/m2"
+[[ -d "$SHARED_MAVEN_REPOSITORY" ]] || { printf 'Refusing: shared staging Maven repository is unavailable. Run bootstrap-staging-runtime.sh.\n' >&2; exit 1; }
+mkdir -p "$WORK_DIR/source"
 umask 077
 printf 'BYTEDEPTH_IT_REDIS_PASSWORD=%s\n' "$redis_password" > "$MAVEN_ENV_FILE"
 cat > "$MAVEN_SETTINGS_FILE" <<'SETTINGS'
@@ -143,20 +145,20 @@ if ! sudo docker run --rm --network bytedepth_default \
     --env-file "$MAVEN_ENV_FILE" \
     --env TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal \
     -v "$WORK_DIR/source":/workspace \
-    -v "$WORK_DIR/m2":/root/.m2 \
+    -v "$SHARED_MAVEN_REPOSITORY":/root/.m2/repository:ro \
     -v "$MAVEN_SETTINGS_FILE:/root/.m2/settings.xml:ro" \
     -v "$DOCKER_SOCKET:$DOCKER_SOCKET" \
     -w /workspace \
     maven:3.9-eclipse-temurin-25 \
-    mvn -Pstaging-integration verify \
+    mvn -o -Pstaging-integration verify \
     -Dbytedepth.it.redis.host=redis \
     -Dbytedepth.it.redis.port=6379 2>&1 | redact_redis_password | tee "$MAVEN_LOG"; then
     printf 'Staging integration tests failed.\n' >&2
     exit 1
 fi
 
-if grep -qi 'warning' "$MAVEN_LOG"; then
-    printf 'Refusing: Maven output contains WARNING.\n' >&2
+if grep -Eqi '\[WARN(ING)?\]|WARN(ING)?[: ]' "$MAVEN_LOG"; then
+    printf 'Refusing: Maven output contains WARN or WARNING.\n' >&2
     exit 1
 fi
 

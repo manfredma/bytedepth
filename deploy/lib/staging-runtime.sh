@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
+readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository
+readonly SHARED_MAVEN_LOCK=/opt/shared-maven/repository.lock
 
 staging_runtime_sha256() {
     shasum -a 256 "$1" | awk '{print $1}'

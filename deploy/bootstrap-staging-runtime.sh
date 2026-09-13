@@ -32,9 +32,13 @@ initialize_timing_file "$timing_file" "$commit"
 bootstrap_started_at="$(timing_now_epoch_ms)"
 
 prepare_maven() {
-    cd "$SOURCE_ROOT"
-    JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
-        mvn clean install -DskipTests -Dsort.skip=true
+    install -d -o root -g root -m 0755 "$SHARED_MAVEN_REPOSITORY"
+    (
+        flock -x 8
+        cd "$SOURCE_ROOT"
+        JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")" \
+            mvn -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" clean install -DskipTests -Dsort.skip=true
+    ) 8>"$SHARED_MAVEN_LOCK"
 }
 
 prepare_node() {

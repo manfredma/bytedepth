@@ -9,7 +9,7 @@ readonly BOOTSTRAP="$ROOT/deploy/bootstrap-staging-runtime.sh"
     printf 'Expected executable staging runtime bootstrap.\n' >&2
     exit 1
 }
-rg -F 'mvn clean install -DskipTests -Dsort.skip=true' "$BOOTSTRAP" >/dev/null || {
+rg -q 'mvn .*clean install -DskipTests -Dsort.skip=true' "$BOOTSTRAP" || {
     printf 'Bootstrap must prewarm the complete Maven reactor.\n' >&2
     exit 1
 }
@@ -42,10 +42,14 @@ SCRIPT
 chmod +x "$FIXTURE_CHROMIUM"
 
 grep -Fqx 'readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome' "$LIBRARY"
+grep -Fqx 'readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository' "$LIBRARY"
+grep -Fqx 'readonly SHARED_MAVEN_LOCK=/opt/shared-maven/repository.lock' "$LIBRARY"
 if rg -q '\.e2e/chrome-linux64|chromium_path|chromium_sha' "$LIBRARY"; then
     printf 'Staging runtime must not retain a project-local Chromium contract.\n' >&2
     exit 1
 fi
+rg -F -- '-Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY"' "$BOOTSTRAP" >/dev/null
+rg -F 'flock -x 8' "$BOOTSTRAP" >/dev/null
 sed 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome$@readonly SHARED_CHROMIUM_EXECUTABLE='"$FIXTURE_CHROMIUM"'@' \
     "$LIBRARY" > "$RUNTIME_LIBRARY"
 source "$RUNTIME_LIBRARY"
