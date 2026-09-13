@@ -13,3 +13,5 @@ JAVA_HOME="$(/usr/libexec/java_home -v 25)" "$SOURCE_ROOT/mvnw" test -Dsort.skip
 npm test
 npm run lint
 bash scripts/verify-changed-coverage.sh
+bash scripts/check-staging-checklist.sh
+git diff --check

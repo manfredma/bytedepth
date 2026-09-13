@@ -252,6 +252,13 @@ if [[ "$*" == *'rev-parse HEAD'* ]]; then
     fi
     exit 0
 fi
+if [[ "$*" == *'archive --format=tar'* ]]; then
+    # The runner archives its exact checkout instead of copying it.  Keep the
+    # fixture on that real boundary: a fake that only supports rev-parse would
+    # make every successful staging transaction fail before Docker is reached.
+    tar -C "$STAGING_RUNNER_SOURCE" --exclude=.env -cf - .
+    exit 0
+fi
 exit 1
 SCRIPT
 chmod +x "$FAKE_BIN/git"

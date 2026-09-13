@@ -5,7 +5,14 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly TEMP_ROOT="$(mktemp -d)"
 readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
 readonly EVIDENCE_DIR="$TEMP_ROOT/staging-evidence"
-trap 'rm -rf "$TEMP_ROOT"' EXIT
+cleanup_fixture() {
+    if [[ "${KEEP_RELEASE_TEST_FIXTURE:-0}" == 1 ]]; then
+        printf 'Retained release test fixture: %s\n' "$TEMP_ROOT" >&2
+    else
+        rm -rf "$TEMP_ROOT"
+    fi
+}
+trap cleanup_fixture EXIT
 
 assert_xpath_true() {
   local pom_file="$1"
@@ -71,13 +78,19 @@ printf 'coverage\n' >> "$RELEASE_TEST_LOG"
 EOF
 chmod +x "$TEMP_ROOT/scripts/verify-changed-coverage.sh"
 
+cat > "$TEMP_ROOT/scripts/check-staging-checklist.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'checklist\n' >> "$RELEASE_TEST_LOG"
+EOF
+chmod +x "$TEMP_ROOT/scripts/check-staging-checklist.sh"
+
 cat > "$TEMP_ROOT/bin/git" <<'EOF'
 #!/usr/bin/env bash
 printf 'git %s\n' "$*" >> "$RELEASE_TEST_LOG"
 case "$1 $2" in
   'branch --show-current') printf 'main\n' ;;
-  'status --porcelain') [[ "${RELEASE_TEST_DIRTY:-}" == 1 ]] && printf ' M pom.xml\n' ;;
-  'ls-files --') [[ "${RELEASE_TEST_TRACKED_TOOL_ARTIFACT:-}" == 1 ]] && printf '.superpowers/sdd/unwanted-report.md\n' ;;
+  'status --porcelain') [[ "${RELEASE_TEST_DIRTY:-}" == 1 ]] && printf ' M pom.xml\n' || true ;;
+  'ls-files --') [[ "${RELEASE_TEST_TRACKED_TOOL_ARTIFACT:-}" == 1 ]] && printf '.superpowers/sdd/unwanted-report.md\n' || true ;;
   'rev-parse HEAD') printf '%s\n' "$RELEASE_TEST_SHA" ;;
   'rev-parse --verify') exit 1 ;;
   'ls-remote --exit-code') exit 2 ;;
@@ -90,6 +103,12 @@ cat > "$TEMP_ROOT/java/bin/mvn" <<'EOF'
 printf 'mvn release_mode=%s %s\n' "${BYTEDEPTH_RELEASE_MODE:-0}" "$*" >> "$RELEASE_TEST_LOG"
 EOF
 chmod +x "$TEMP_ROOT/java/bin/mvn"
+
+cat > "$TEMP_ROOT/mvnw" <<'EOF'
+#!/usr/bin/env bash
+exec "$BYTEDEPTH_RELEASE_MAVEN" "$@"
+EOF
+chmod +x "$TEMP_ROOT/mvnw"
 
 run_prepare() {
     RELEASE_TEST_LOG="$1" PATH="$TEMP_ROOT/bin:$PATH" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
