@@ -15,5 +15,5 @@ for attempt in $(seq 1 120); do
   sleep 15
 done
 [[ "$status" == completed && "$conclusion" == success ]] || { echo "quality workflow failed for $REPO $SHA (status=$status conclusion=$conclusion)" >&2; exit 1; }
-git merge-base --is-ancestor "$SHA" origin/main || { echo "ref is not fast-forwardable to main" >&2; exit 1; }
+git merge-base --is-ancestor origin/main "$SHA" || { echo "ref is not fast-forwardable to main" >&2; exit 1; }
 git push origin "refs/remotes/origin/$REF:refs/heads/main"
