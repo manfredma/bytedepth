@@ -6,6 +6,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 
 - 不允许在 `main` 分支直接开发。功能、修复和文档改动必须在独立 `feat/*`、`fix/*` 或 `docs/*` 分支的 Git worktree 中完成；通过前置质量门禁后经 PR 合并。`main` 仅允许受控发布流程写入版本提交。worktree 合并到 `main` 后必须立即删除，不长期保留。详见 [Git 工作流](docs/engineering/git-workflow.md)。
 - Maven 运行时固定为 3.9.11：本机、CI 与发布脚本只能使用仓库的 Wrapper。macOS 可用 `JAVA_HOME=$(/usr/libexec/java_home -v 25)`；Linux CI 使用 `JAVA_HOME_25_X64` 或已有 Java 25 `JAVA_HOME`，统一由质量脚本的 `resolve_java_25` 解析，禁止将 macOS 专用路径作为跨环境前提。Java 25 兼容参数只能由提交的 `.mvn/jvm.config` 提供，禁止依赖人工 `MAVEN_OPTS`；Dockerfile 与容器集成 runner 只能使用 `maven:3.9.11-eclipse-temurin-25`，禁止裸 `mvn` 或浮动 Maven 镜像标签。运行 `bash scripts/test-maven-runtime.sh` 验证该自动化约束。
+- 生产 Docker 构建前必须按目标 Tag 预热生产宿主的 `/opt/shared-maven/repository`：`deploy/deploy-production.sh` 调用 `deploy/prewarm-production-maven-cache.sh`，使用固定的 Java 25 Maven 镜像执行在线 `clean install` 并拒绝 WARNING；Dockerfile 的离线 `clean package` 是最终校验。不得假设 staging 或其他主机的缓存已覆盖生产依赖，也不得恢复脆弱的 `dependency:go-offline` Docker 预检。
 - staging 的 Maven 制品缓存必须唯一使用宿主机根管理的 `/opt/shared-maven/repository`，bootstrap 必须以全局锁预热，集成测试必须离线只读复用；不得为各项目再建 Maven 下载缓存。`node_modules` 必须继续由每个项目各自用 lockfile 安装，绝不跨项目共享；可共享的只是包下载缓存而非安装树。
   - 注意：`mvn clean install` 不会触发所有验证生命周期插件，`deploy/bootstrap-staging-runtime.sh` 必须同一锁内再执行 `mvn ... verify -DskipTests`，否则后续 `staging-integration` 在 `-o` 下会因缺插件报错（当前已通过静态脚本约束固化）。
   - runtime manifest 只描述可复用的依赖输入（`package-lock.json`、`pom.xml`、共享 Chromium 版本），**不得绑定 checkout SHA**；代码提交变化但这些输入未变化时，runner 必须复用既有运行时。测试结果与部署对应提交的绑定由 integration/E2E evidence 单独负责，二者不得混用。

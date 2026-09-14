@@ -237,6 +237,8 @@ ssh -i ~/.ssh/ubuntu_2.pem ubuntu@175.24.197.202 \
 
 `deploy-production.sh` 必须验证 Tag、记录版本与完整 SHA，并调用完整 Compose 部署；部署后必须执行 `scripts/verify-production-release.sh <tag>`。尚未具备该工具的环境禁止按旧的 `git pull main` 方式发布；应先完成发布工具升级。
 
+生产部署在 Docker Compose 构建前自动执行 `deploy/prewarm-production-maven-cache.sh`，用固定 Java 25 Maven 容器按目标 Tag 预热 `/opt/shared-maven/repository`。历史上 staging 缓存完整但生产主机缺少目标版本依赖，导致 Docker 离线构建失败；两个主机的缓存不能互相假设。预热输出出现 WARNING 或失败都会阻断发布；Dockerfile 的实际离线 `clean package` 是最终校验，禁止恢复 `dependency:go-offline` 预检。
+
 ### 6.3 发布后验收
 
 每次发布后，确认对应 Compose 服务状态，并确认应用日志中没有 Flyway、MySQL、Redis 或 MeiliSearch 连接错误。再从本机或可信监控节点执行域名 SNI 验收，不能只请求裸 IP：
