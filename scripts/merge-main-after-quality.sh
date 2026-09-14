@@ -6,7 +6,7 @@ REPO="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\\.git$##')"
 SHA="$(git rev-parse "origin/$REF")"
 command -v gh >/dev/null || { echo 'gh is required' >&2; exit 1; }
 for attempt in $(seq 1 120); do
-  run="$(gh run list --repo "$REPO" --workflow quality.yml --commit "$SHA" --limit 1 --json status,conclusion --jq '.[0] // {}')"
+  run="$(gh run list --repo "$REPO" --workflow quality --commit "$SHA" --limit 1 --json status,conclusion --jq '.[0] // {}')"
   status="$(jq -r '.status // "missing"' <<<"$run")"
   conclusion="$(jq -r '.conclusion // ""' <<<"$run")"
   [[ "$status" == completed ]] && break
