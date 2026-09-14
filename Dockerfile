@@ -12,6 +12,7 @@ COPY bytedepth-start/pom.xml bytedepth-start/
 # Maven reads this project-level Java 25 compatibility configuration before
 # dependency prewarming as well as before the final package build.
 COPY .mvn/jvm.config .mvn/jvm.config
+COPY .mvn/settings.xml .mvn/settings.xml
 # 限制 Maven heap，避免 2C2G 服务器构建期间内存耗尽导致 SSH 失联
 ENV MAVEN_OPTS='-Xmx512m'
 RUN --mount=type=bind,from=maven-cache,target=/root/.m2/repository,readonly \
