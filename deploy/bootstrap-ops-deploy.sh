@@ -21,6 +21,8 @@ require_ssh_origin() {
 cd "$SOURCE_ROOT"
 git_cmd() { git -c safe.directory="$SOURCE_ROOT" "$@"; }
 require_ssh_origin
+export BYTEDEPTH_COMMIT_ID="$(git_cmd rev-parse HEAD)"
+export BYTEDEPTH_BUILT_AT="$(date -u +%FT%TZ)"
 
 # 安装部署 Socket（远程触发部署的 systemd 通道）。所有模式都安装：
 # 生产用于远程触发 Tag 部署；staging 作为测试环境同样安装，以便验证该通道。
