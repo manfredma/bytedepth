@@ -7,6 +7,9 @@ services:
     command: ["mysqld", "--innodb-buffer-pool-size=128M"]
 
   bytedepth-app:
+    build:
+      additional_contexts:
+        maven-cache: /opt/shared-maven/repository
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bytedepth?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root

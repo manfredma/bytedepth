@@ -30,7 +30,8 @@ COPY bytedepth-start/pom.xml bytedepth-start/
 COPY .mvn/jvm.config .mvn/jvm.config
 # 限制 Maven heap，避免 2C2G 服务器构建期间内存耗尽导致 SSH 失联
 ENV MAVEN_OPTS='-Xmx512m'
-RUN mvn dependency:go-offline -Dsort.skip=true -q
+RUN --mount=type=bind,from=maven-cache,target=/root/.m2/repository,readonly \
+    mvn -o dependency:go-offline -Dsort.skip=true -q
 
 # 复制源码并打包
 COPY . .
@@ -38,7 +39,8 @@ COPY . .
 # over /root/.m2/settings.xml.  Replace it only inside the build layer so the
 # image build uses the Tencent mirror without changing the source checkout.
 RUN install -m 0644 /root/.m2/settings.xml .mvn/settings.xml
-RUN mvn clean package -Dmaven.test.skip=true -Dsort.skip=true
+RUN --mount=type=bind,from=maven-cache,target=/root/.m2/repository,readonly \
+    mvn -o clean package -Dmaven.test.skip=true -Dsort.skip=true
 
 # ---- Stage 2: Run ----
 FROM eclipse-temurin:25-jre-alpine
