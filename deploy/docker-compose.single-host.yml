@@ -49,6 +49,9 @@ services:
   bytedepth-app:
     build:
       context: ..
+      args:
+        BYTEDEPTH_COMMIT_ID: ${BYTEDEPTH_COMMIT_ID:-unknown}
+        BYTEDEPTH_BUILT_AT: ${BYTEDEPTH_BUILT_AT:-unknown}
     restart: unless-stopped
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bytedepth?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true

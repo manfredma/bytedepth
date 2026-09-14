@@ -81,6 +81,8 @@ invalidate_test_evidence
 source_fetch_started_at="$(date -u +%s%3N)"
 git_cmd fetch --force --no-recurse-submodules origin "$REF"
 COMMIT="$(git_cmd rev-parse FETCH_HEAD^{commit})"
+export BYTEDEPTH_COMMIT_ID="$COMMIT"
+export BYTEDEPTH_BUILT_AT="$(date -u +%FT%TZ)"
 
 # 安全限制：只接受 origin 上已命名的分支或 Tag，拒绝裸 SHA。
 # 原因：bootstrap-ops-deploy.sh 由 root 执行并构建带主机挂载的容器。

@@ -21,6 +21,9 @@ RUN --mount=type=bind,from=maven-cache,target=/root/.m2/repository,readonly \
 
 # 复制源码并打包
 COPY . .
+ARG BYTEDEPTH_COMMIT_ID=unknown
+ARG BYTEDEPTH_BUILT_AT=unknown
+RUN printf 'version=%s\ncommitId=%s\nbuiltAt=%s\n' "$(sed -n 's/.*<version>\([^<]*\)<\/version>.*/\1/p' pom.xml | head -1)" "$BYTEDEPTH_COMMIT_ID" "$BYTEDEPTH_BUILT_AT" > bytedepth-start/src/main/resources/bytedepth-build.properties
 # .mvn/maven.config explicitly selects this workspace file, taking precedence
 # over /root/.m2/settings.xml.  Replace it only inside the build layer so the
 # image build uses the Tencent mirror without changing the source checkout.
