@@ -11,8 +11,12 @@ import java.util.Properties;
 public class VersionController {
     @GetMapping("/version")
     public BuildMetadata version() {
+        return load(getClass().getClassLoader().getResourceAsStream("bytedepth-build.properties"));
+    }
+
+    static BuildMetadata load(InputStream input) {
         Properties properties = new Properties();
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream("bytedepth-build.properties")) {
+        try (input) {
             if (input != null) properties.load(input);
         } catch (IOException ignored) {
             // Return unknown metadata rather than breaking health diagnostics.
