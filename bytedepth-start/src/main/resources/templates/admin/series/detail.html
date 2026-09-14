@@ -30,20 +30,20 @@
         form { display: inline; margin: 0 2px; }
         .search-form { display: flex; gap: 8px; margin-bottom: 14px; }
         .search-input { flex: 1; padding: 7px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; }
-        .search-input:focus { border-color: #e94560; outline: none; }
-        .btn-search { padding: 7px 16px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.88em; }
-        .btn-search:hover { background: #c73652; }
-        .btn-join { padding: 4px 12px; background: #e94560; color: white; border: none; border-radius: 4px; font-size: 0.82em; cursor: pointer; }
-        .btn-join:hover { background: #c73652; }
+        .search-input:focus { border-color: var(--admin-accent); outline: none; }
+        .btn-search { padding: 7px 16px; background: var(--admin-accent); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.88em; }
+        .btn-search:hover { background: var(--admin-accent-hover); }
+        .btn-join { padding: 4px 12px; background: var(--admin-accent); color: white; border: none; border-radius: 4px; font-size: 0.82em; cursor: pointer; }
+        .btn-join:hover { background: var(--admin-accent-hover); }
         .empty { color: #888; text-align: center; padding: 30px; }
-        .back-link { color: #e94560; text-decoration: none; font-size: 0.88em; }
+        .back-link { color: var(--admin-accent); text-decoration: none; font-size: 0.88em; }
         /* 分页样式 */
         .pagination-wrap { margin-top: 14px; }
         .page-info-top { text-align: center; font-size: 0.82em; color: #aaa; margin-bottom: 6px; }
         .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; }
         .page-btn { padding: 5px 10px; border-radius: 4px; font-size: 0.82em; text-decoration: none; background: white; border: 1px solid #ddd; color: #333; }
         .page-btn:hover { background: #f0f0f0; }
-        .page-btn.current { background: #e94560; color: white; border-color: #e94560; font-weight: 600; }
+        .page-btn.current { background: var(--admin-accent); color: white; border-color: var(--admin-accent); font-weight: 600; }
         .page-btn.disabled { color: #bbb; cursor: default; pointer-events: none; }
     </style>
 </head>

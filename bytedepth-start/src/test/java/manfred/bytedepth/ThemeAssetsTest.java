@@ -290,13 +290,29 @@ class ThemeAssetsTest {
         String css = classpathText("/static/css/admin-layout.css");
         String theme = classpathText("/static/css/theme.css");
         String sidebar = classpathText("/templates/fragments/admin-sidebar.html");
+        String dashboard = classpathText("/templates/admin/dashboard.html");
+        String postEditor = classpathText("/static/css/post-editor.css");
+        String analytics = classpathText("/templates/admin/analytics.html");
 
         assertThat(sidebar).contains("data-env=${environment}");
         assertThat(css)
+                .contains(".admin-shell:has(.admin-sidebar[data-env=\"staging\"])")
                 .contains(".admin-sidebar[data-env=\"staging\"]")
                 .contains("--admin-accent: #7c3aed")
+                .contains(".aq-primary")
+                .contains("background: var(--admin-accent)")
+                .contains(".admin-stat-card .stat-num")
+                .contains("color: var(--admin-accent)")
                 .contains(".admin-sidebar[data-env=\"staging\"]::before")
                 .contains("content: \"staging\"");
+        assertThat(dashboard).doesNotContain("#e94560");
+        assertThat(postEditor)
+                .contains("color: var(--admin-accent)")
+                .contains("background: var(--admin-accent)");
+        assertThat(analytics)
+                .contains("function adminAccent()")
+                .contains("color: adminAccent()")
+                .doesNotContain("#e94560");
         assertThat(theme).contains(".nav-bar[data-env=\"staging\"]");
     }
 

@@ -9,15 +9,26 @@ html {
 }
 
 .admin-shell {
+    --admin-accent: #e94560;
+    --admin-accent-hover: #c73652;
+    --admin-accent-soft: #fdf0f2;
+    --admin-accent-rgb: 233 69 96;
+    --admin-main-bg: #f0f2f5;
     display: flex;
     min-height: calc(100vh - 48px);
 }
 
+/* data-env 位于侧栏自身；由 shell 承载变量，确保整个后台而非单个侧栏区分预发。 */
+.admin-shell:has(.admin-sidebar[data-env="staging"]) {
+    --admin-accent: #7c3aed;
+    --admin-accent-hover: #6d28d9;
+    --admin-accent-soft: #f3e8ff;
+    --admin-accent-rgb: 124 58 237;
+    --admin-main-bg: #f6f1ff;
+}
+
 /* ─── Sidebar ────────────────────────────────────────────────── */
 .admin-sidebar {
-    --admin-accent: #e94560;
-    --admin-accent-hover: #c73652;
-    --admin-accent-soft: #fdf0f2;
     width: 200px;
     min-width: 200px;
     flex-shrink: 0;
@@ -32,9 +43,6 @@ html {
 
 /* staging 的环境属性位于侧栏自身：使用直接选择器，避免误显示为生产配色。 */
 .admin-sidebar[data-env="staging"] {
-    --admin-accent: #7c3aed;
-    --admin-accent-hover: #6d28d9;
-    --admin-accent-soft: #f3e8ff;
     border-top: 4px solid var(--admin-accent);
 }
 
@@ -101,7 +109,7 @@ html {
 .admin-main {
     flex: 1;
     min-width: 0;
-    background: #f0f2f5;
+    background: var(--admin-main-bg);
     padding: 28px 32px;
 }
 
@@ -126,11 +134,11 @@ html {
 }
 
 .aq-primary {
-    background: #e94560;
+    background: var(--admin-accent);
     color: #fff;
 }
 .aq-primary:hover {
-    background: #c73652;
+    background: var(--admin-accent-hover);
     color: #fff;
 }
 
@@ -140,8 +148,8 @@ html {
     border: 1px solid #ddd;
 }
 .aq-outline:hover {
-    border-color: #e94560;
-    color: #e94560;
+    border-color: var(--admin-accent);
+    color: var(--admin-accent);
 }
 
 /* ─── Stats cards (dashboard) ────────────────────────────────── */
@@ -169,7 +177,7 @@ html {
 .admin-stat-card .stat-num {
     font-size: 2.2em;
     font-weight: 700;
-    color: #e94560;
+    color: var(--admin-accent);
     line-height: 1;
 }
 .admin-stat-card .stat-label {
@@ -224,8 +232,8 @@ html {
     }
 
     body.admin-menu-open .admin-sidebar-toggle {
-        border-color: #e94560;
-        background: #e94560;
+        border-color: var(--admin-accent);
+        background: var(--admin-accent);
         color: #fff;
     }
 
