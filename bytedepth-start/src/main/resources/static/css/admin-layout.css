@@ -15,6 +15,9 @@ html {
 
 /* ─── Sidebar ────────────────────────────────────────────────── */
 .admin-sidebar {
+    --admin-accent: #e94560;
+    --admin-accent-hover: #c73652;
+    --admin-accent-soft: #fdf0f2;
     width: 200px;
     min-width: 200px;
     flex-shrink: 0;
@@ -25,6 +28,25 @@ html {
     height: calc(100vh - 48px);
     overflow-y: auto;
     scrollbar-width: thin;
+}
+
+/* staging 的环境属性位于侧栏自身：使用直接选择器，避免误显示为生产配色。 */
+.admin-sidebar[data-env="staging"] {
+    --admin-accent: #7c3aed;
+    --admin-accent-hover: #6d28d9;
+    --admin-accent-soft: #f3e8ff;
+    border-top: 4px solid var(--admin-accent);
+}
+
+.admin-sidebar[data-env="staging"]::before {
+    content: "staging";
+    display: block;
+    padding: 4px;
+    background: #f59e0b;
+    color: #1a1a2e;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
 }
 
 .admin-sidebar-section {
@@ -51,15 +73,15 @@ html {
 }
 
 .admin-sidebar-item:hover {
-    background: #fdf0f2;
-    color: #e94560;
+    background: var(--admin-accent-soft);
+    color: var(--admin-accent);
 }
 
 .admin-sidebar-item.active {
-    background: #fdf0f2;
-    color: #e94560;
+    background: var(--admin-accent-soft);
+    color: var(--admin-accent);
     font-weight: 600;
-    border-right-color: #e94560;
+    border-right-color: var(--admin-accent);
 }
 
 .admin-sidebar-item .si-icon {

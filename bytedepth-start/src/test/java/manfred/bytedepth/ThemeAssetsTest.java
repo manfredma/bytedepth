@@ -278,6 +278,29 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void networkMapUsesTheSharedPublicPageBackgroundAndMarginReset() throws Exception {
+        String networkMap = classpathText("/templates/public/network.html");
+
+        assertThat(networkMap)
+                .contains("body { font-family: var(--serif); margin: 0; background: var(--bd-bg, #f0f2f5);");
+    }
+
+    @Test
+    void adminLayoutUsesAVisibleStagingPaletteOnTheEnvironmentBearingShell() throws Exception {
+        String css = classpathText("/static/css/admin-layout.css");
+        String theme = classpathText("/static/css/theme.css");
+        String sidebar = classpathText("/templates/fragments/admin-sidebar.html");
+
+        assertThat(sidebar).contains("data-env=${environment}");
+        assertThat(css)
+                .contains(".admin-sidebar[data-env=\"staging\"]")
+                .contains("--admin-accent: #7c3aed")
+                .contains(".admin-sidebar[data-env=\"staging\"]::before")
+                .contains("content: \"staging\"");
+        assertThat(theme).contains(".nav-bar[data-env=\"staging\"]");
+    }
+
+    @Test
     void publicHeadDeclaresRssAutodiscovery() throws Exception {
         assertThat(classpathText("/templates/fragments/pwa-head.html"))
                 .contains("rel=\"alternate\" type=\"application/rss+xml\"")

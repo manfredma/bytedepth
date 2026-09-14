@@ -249,15 +249,15 @@ html[data-theme="rose"] {
 .theme-swatch.midnight { background: linear-gradient(135deg, #111827 50%, #38bdf8 50%); }
 .theme-swatch.rose { background: linear-gradient(135deg, #fff5f6 50%, #d94662 50%); }
 
-/* staging 环境视觉区分：主色调偏移为紫色，与生产红区分。由 <element data-env="staging"> 触发。 */
-[data-env="staging"] {
+/* staging 环境视觉区分：导航自身携带 data-env，不能使用后代选择器。 */
+.nav-bar[data-env="staging"] {
     --bd-accent: #7c3aed;
     --bd-accent-hover: #6d28d9;
     --bd-nav-bg: #2d1b4e;
     --bd-nav-accent: #a78bfa;
 }
 
-[data-env="staging"] .nav-bar::before {
+.nav-bar[data-env="staging"]::before {
     content: "staging";
     position: fixed;
     top: 0;
@@ -270,15 +270,4 @@ html[data-theme="rose"] {
     padding: 2px 12px;
     border-radius: 0 0 0 6px;
     pointer-events: none;
-}
-
-[data-env="staging"] .admin-sidebar::before {
-    content: "staging";
-    display: block;
-    background: #f59e0b;
-    color: #1a1a2e;
-    font-size: 12px;
-    font-weight: 700;
-    text-align: center;
-    padding: 4px;
 }
