@@ -2,6 +2,22 @@
 
 本文件记录正式发布版本；每个条目必须与一个不可变 annotated Git Tag 一一对应。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
+## [v2.15.4] - 2026-09-14
+
+**Tag**：由受控 Maven Release 流程创建。
+**Commit**：发布提交由受控 Maven Release 流程创建。
+**部署**：待发布。
+**回滚基线**：`v2.15.3`
+
+### Fixed
+
+- 增加 `/version` 构建元数据端点，统一 staging 与生产版本核验。
+- staging Docker 构建统一复用共享 Maven 仓库并支持离线构建。
+
+### Compatibility
+
+- 无数据库迁移或业务 API 语义变更。
+
 ## [v2.15.3] - 2026-09-14
 
 **Tag**：由受控 Maven Release 流程创建。
