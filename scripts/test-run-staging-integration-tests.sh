@@ -154,8 +154,8 @@ sed \
     -e '/^if \[\[ "${EUID}" -ne 0 \]\]; then$/,/^fi$/d' \
     "$RUNNER" > "$TEMP_ROOT/runner"
 chmod +x "$TEMP_ROOT/runner"
-bash -c 'source "$1"; write_runtime_manifest "$2" "$3" "$4"' -- \
-    "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh" "$RUNTIME_MANIFEST" "$FIXTURE_SOURCE" "$CURRENT_SHA"
+bash -c 'source "$1"; write_runtime_manifest "$2" "$3"' -- \
+    "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh" "$RUNTIME_MANIFEST" "$FIXTURE_SOURCE"
 
 cat > "$FAKE_BIN/sudo" <<'SCRIPT'
 #!/usr/bin/env bash

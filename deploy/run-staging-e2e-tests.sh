@@ -93,7 +93,7 @@ fi
 invalidate_evidence
 tested_commit="$(read_checked_out_commit)"
 require_deployed_commit "$tested_commit"
-require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT" "$tested_commit"
+require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
 
 if [[ ! -x "$CHROMIUM_EXECUTABLE" ]]; then
     printf 'Refusing: staging Chromium executable is unavailable at %s\n' "$CHROMIUM_EXECUTABLE" >&2

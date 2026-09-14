@@ -198,7 +198,7 @@ cd /opt/bytedepth
 sudo ./deploy/run-staging-e2e-tests.sh
 ```
 
-该 wrapper 只在 staging 模式运行，先取得共享锁，固定 `E2E_BASE_URL=https://staging.bytedepth.cn`，并使用 root 管理的共享 Chromium `/opt/shared-e2e/chrome-linux64/chrome`。运行时 manifest 保存其 `--version` 输出；浏览器缺失或版本与 manifest 不一致时，必须先运行 bootstrap，不能由项目自行下载浏览器。批注 E2E 从 staging 的公开文章列表选择当前存在的第一篇文章，因此生产数据同步后不会依赖失效的固定 slug；它先把完整 checkout SHA 与最近 app 部署记录绑定，且在写 evidence 前再次确认 checkout 与部署记录均未变化。它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
+该 wrapper 只在 staging 模式运行，先取得共享锁，固定 `E2E_BASE_URL=https://staging.bytedepth.cn`，并使用 root 管理的共享 Chromium `/opt/shared-e2e/chrome-linux64/chrome`。运行时 manifest 保存 Chromium 的 `--version` 输出以及 `package-lock.json`、`pom.xml` 的摘要；它刻意不保存 checkout SHA：代码变化但依赖输入未变化时应直接复用预热环境，依赖或浏览器变化时才必须先运行 bootstrap，且项目不得自行下载浏览器。批注 E2E 从 staging 的公开文章列表选择当前存在的第一篇文章，因此生产数据同步后不会依赖失效的固定 slug；它先把完整 checkout SHA 与最近 app 部署记录绑定，且在写 evidence 前再次确认 checkout 与部署记录均未变化。它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
 
 两个 runner 都会在每次 staging run 开始时先删除自己的旧记录，因而失败或 WARNING 绝不保留旧的 passed 状态；只有各自命令成功、输出零 `WARNING`、checkout 与部署 SHA 均稳定时，才将 root-owned `0600` 记录写入 root-owned `0700` 的 `/var/lib/bytedepth-staging/test-history/`：`staging-integration` 与 `staging-e2e`。每份记录严格含 `commit=<完整 SHA>`、对应 `command=`、实际 UTC `timestamp=` 与 `result=passed`，不含凭据。由于记录不可由普通 staging 登录用户读取，创建 Release Tag 前必须通过受控 `sudo cat` over SSH 将两份记录写入本机新建的临时目录，并把该目录显式传给 `prepare-release.sh`；详见 [发布流程](../docs/releases/README.md#staging-预检与生产单机发布)。
 

@@ -13,8 +13,8 @@ staging_runtime_sha256() {
 }
 
 # Deployment must be able to move to a new checkout before bootstrap writes its
-# checkout-bound manifest.  Keep this preflight limited to immutable shared
-# infrastructure; require_staging_runtime remains the stricter runner gate.
+# dependency-bound manifest. Keep this preflight limited to immutable shared
+# infrastructure; require_staging_runtime verifies the prepared dependencies.
 require_staging_runtime_prerequisites() {
     if [[ ! -x "$SHARED_CHROMIUM_EXECUTABLE" ]]; then
         printf 'Refusing: staging Chromium executable is unavailable.\n' >&2
@@ -25,7 +25,6 @@ require_staging_runtime_prerequisites() {
 write_runtime_manifest() {
     local manifest="$1"
     local source_root="$2"
-    local commit="$3"
     local runtime_directory
     local temporary_file
     local lockfile_sha
@@ -43,8 +42,8 @@ write_runtime_manifest() {
 
     install -d -m 0700 "$runtime_directory"
     temporary_file="$(mktemp "$runtime_directory/.manifest.XXXXXX")"
-    printf 'commit=%s\npackage_lock_sha256=%s\npom_sha256=%s\nchromium_version=%s\n' \
-        "$commit" "$lockfile_sha" "$pom_sha" "$chromium_version" > "$temporary_file"
+    printf 'package_lock_sha256=%s\npom_sha256=%s\nchromium_version=%s\n' \
+        "$lockfile_sha" "$pom_sha" "$chromium_version" > "$temporary_file"
     if [[ "${EUID}" -eq 0 ]]; then
         chown root:root "$runtime_directory" "$temporary_file"
     fi
@@ -55,10 +54,8 @@ write_runtime_manifest() {
 require_staging_runtime() {
     local manifest="$1"
     local source_root="$2"
-    local expected_commit="$3"
     local expected_lock_sha
     local expected_pom_sha
-    local actual_commit
     local actual_lock_sha
     local actual_pom_sha
     local actual_chromium_version
@@ -67,15 +64,14 @@ require_staging_runtime() {
         printf 'Refusing: staging runtime manifest is missing. Run bootstrap-staging-runtime.sh.\n' >&2
         return 1
     fi
-    actual_commit="$(awk -F= '$1 == "commit" {print $2; exit}' "$manifest")"
     actual_lock_sha="$(awk -F= '$1 == "package_lock_sha256" {print $2; exit}' "$manifest")"
     actual_pom_sha="$(awk -F= '$1 == "pom_sha256" {print $2; exit}' "$manifest")"
     actual_chromium_version="$(awk -F= '$1 == "chromium_version" {print $2; exit}' "$manifest")"
     expected_lock_sha="$(staging_runtime_sha256 "$source_root/package-lock.json")"
     expected_pom_sha="$(staging_runtime_sha256 "$source_root/pom.xml")"
 
-    if [[ "$actual_commit" != "$expected_commit" || "$actual_lock_sha" != "$expected_lock_sha" || "$actual_pom_sha" != "$expected_pom_sha" ]]; then
-        printf 'Refusing: staging runtime manifest does not match this checkout. Run bootstrap-staging-runtime.sh.\n' >&2
+    if [[ "$actual_lock_sha" != "$expected_lock_sha" || "$actual_pom_sha" != "$expected_pom_sha" ]]; then
+        printf 'Refusing: staging runtime manifest does not match dependency inputs. Run bootstrap-staging-runtime.sh.\n' >&2
         return 1
     fi
     if [[ ! -x "$SHARED_CHROMIUM_EXECUTABLE" || "$actual_chromium_version" != "$("$SHARED_CHROMIUM_EXECUTABLE" --version)" ]]; then

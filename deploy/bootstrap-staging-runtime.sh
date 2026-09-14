@@ -41,8 +41,8 @@ fi
 
 commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-parse HEAD)"
 if [[ "$bootstrap_mode" == ensure && -d "$SHARED_MAVEN_REPOSITORY" ]] \
-    && require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT" "$commit" >/dev/null 2>&1; then
-    printf 'Staging runtime already satisfies %s.\n' "$commit"
+    && require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT" >/dev/null 2>&1; then
+    printf 'Staging runtime already satisfies the current dependency inputs.\n'
     exit 0
 fi
 timing_file="$STATE_DIR/runtime/timing/$commit"
@@ -88,6 +88,6 @@ if ! record_timed_phase "$timing_file" node_runtime_prepare prepare_node; then
     record_timing_phase "$timing_file" bootstrap_total failed "$(timing_now_epoch_ms)" "$(timing_now_epoch_ms)"
     exit 1
 fi
-write_runtime_manifest "$RUNTIME_MANIFEST" "$SOURCE_ROOT" "$commit"
+write_runtime_manifest "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
 record_timing_phase "$timing_file" bootstrap_total passed "$bootstrap_started_at" "$(timing_now_epoch_ms)"
 printf 'Staging runtime bootstrap completed for %s.\n' "$commit"

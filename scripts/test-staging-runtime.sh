@@ -129,15 +129,20 @@ sed 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrom
 source "$RUNTIME_LIBRARY"
 
 readonly MANIFEST="$STATE_DIR/runtime/manifest"
-write_runtime_manifest "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567
-require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567
-if require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" fedcba9876543210fedcba9876543210fedcba98; then
-    printf 'Expected runtime manifest to be rejected for a different checkout commit.\n' >&2
+write_runtime_manifest "$MANIFEST" "$SOURCE_ROOT"
+require_staging_runtime "$MANIFEST" "$SOURCE_ROOT"
+if rg -q '^commit=' "$MANIFEST"; then
+    printf 'Runtime manifest must describe reusable dependency inputs, not a source checkout.\n' >&2
+    exit 1
+fi
+printf 'source-only change\n' > "$SOURCE_ROOT/network.css"
+if ! require_staging_runtime "$MANIFEST" "$SOURCE_ROOT"; then
+    printf 'Expected runtime manifest to be reusable for a source-only checkout change.\n' >&2
     exit 1
 fi
 
 printf 'changed lockfile\n' >> "$SOURCE_ROOT/package-lock.json"
-if ! require_staging_runtime "$MANIFEST" "$SOURCE_ROOT" 0123456789abcdef0123456789abcdef01234567; then
+if ! require_staging_runtime "$MANIFEST" "$SOURCE_ROOT"; then
     # lockfile changed, manifest should be rejected
     :
 else
