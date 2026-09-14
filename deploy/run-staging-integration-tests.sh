@@ -152,7 +152,7 @@ if ! sudo docker run --rm --network bytedepth_default \
     -v "$DOCKER_SOCKET:$DOCKER_SOCKET" \
     -w /workspace \
     "$STAGING_MAVEN_IMAGE" \
-    mvn -o -Pstaging-integration verify \
+    mvn -o -Pstaging-integration test-compile failsafe:integration-test failsafe:verify \
     -Dbytedepth.it.redis.host=redis \
     -Dbytedepth.it.redis.port=6379 2>&1 | redact_redis_password | tee "$MAVEN_LOG"; then
     printf 'Staging integration tests failed.\n' >&2
