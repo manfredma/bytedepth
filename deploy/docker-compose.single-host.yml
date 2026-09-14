@@ -49,6 +49,8 @@ services:
   bytedepth-app:
     build:
       context: ..
+      additional_contexts:
+        maven-cache: /opt/shared-maven/repository
       args:
         BYTEDEPTH_COMMIT_ID: ${BYTEDEPTH_COMMIT_ID:-unknown}
         BYTEDEPTH_BUILT_AT: ${BYTEDEPTH_BUILT_AT:-unknown}

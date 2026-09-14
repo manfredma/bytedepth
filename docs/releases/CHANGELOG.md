@@ -2,6 +2,17 @@
 
 本文件记录正式发布版本；每个条目必须与一个不可变 annotated Git Tag 一一对应。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
+## [v2.15.5] - 2026-09-14
+
+**Tag**：由受控 Maven Release 流程创建。
+**Commit**：发布提交由受控 Maven Release 流程创建。
+**部署**：待发布。
+**回滚基线**：`v2.15.4`
+
+### Fixed
+
+- 生产 Compose 声明共享 Maven 构建上下文，避免将 `maven-cache` 误解析为镜像。
+
 ## [v2.15.4] - 2026-09-14
 
 **Tag**：由受控 Maven Release 流程创建。
