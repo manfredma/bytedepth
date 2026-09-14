@@ -7,12 +7,15 @@
 # - 安全限制：只接受 origin 上已命名的分支或 Tag，拒绝裸 SHA
 #   （bootstrap-ops-deploy.sh 由 root 执行并构建带主机挂载的容器，
 #    命名 ref 经 deploy key 推送，可追溯；裸 SHA 不可追溯，禁止）
-# 用法：sudo ./deploy/deploy-staging.sh <ref>   # ref 默认 main，可为分支名或 Tag
+# 用法：./deploy/deploy-staging.sh <ref>   # 本机编排，远程 sudo 执行
 set -Eeuo pipefail
 
 if [[ "${EUID}" -ne 0 ]]; then
-    printf 'Run with sudo: sudo ./deploy/deploy-staging.sh <ref>\n' >&2
-    exit 1
+    STAGING_HOST="${BYTEDEPTH_STAGING_HOST:-124.221.143.25}"
+    SSH_KEY="${BYTEDEPTH_SSH_KEY:-$HOME/.ssh/ubuntu_2.pem}"
+    exec ssh -i "$SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+        "ubuntu@$STAGING_HOST" \
+        "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh ${1:-main}"
 fi
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"

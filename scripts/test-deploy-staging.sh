@@ -22,6 +22,8 @@ require_line 'record_timed_phase "$TIMING_FILE" docker_build_and_rollout'
 require_line 'record_timing_phase "$TIMING_FILE" deployment_total passed'
 require_line 'record_timing_phase "$TIMING_FILE" deployment_total failed'
 require_line 'require_staging_runtime_prerequisites'
+require_line 'BYTEDEPTH_STAGING_HOST:-124.221.143.25'
+require_line 'sudo ./deploy/deploy-staging.sh ${1:-main}'
 
 if rg -q 'require_staging_runtime "\$STATE_DIR/runtime/manifest"' "$SCRIPT"; then
     printf 'Deployment must not require a checkout-bound manifest before bootstrap can create it.\n' >&2
