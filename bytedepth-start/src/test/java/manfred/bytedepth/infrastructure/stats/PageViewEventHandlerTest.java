@@ -1,5 +1,7 @@
 package manfred.bytedepth.infrastructure.stats;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import manfred.bytedepth.domain.stats.PageViewedEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -7,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 
@@ -61,11 +64,18 @@ class PageViewEventHandlerTest {
     }
 
     @Test
-    void onPageViewed_geoResolutionFails_logsErrorAndDoesNotThrow() {
+    void onPageViewed_geoResolutionFails_doesNotPersistOrPolluteSuccessfulTestOutput() {
         var event = new PageViewedEvent("/projects", null, "bad-ip", null, null, LocalDateTime.now());
         when(geoIpService.resolve("bad-ip")).thenThrow(new RuntimeException("GeoIP unavailable"));
 
-        handler.onPageViewed(event);
+        Logger logger = (Logger) LoggerFactory.getLogger(PageViewEventHandler.class);
+        Level originalLevel = logger.getLevel();
+        logger.setLevel(Level.OFF);
+        try {
+            handler.onPageViewed(event);
+        } finally {
+            logger.setLevel(originalLevel);
+        }
 
         verify(pageViewLogMapper, never()).insertLog(any());
     }
