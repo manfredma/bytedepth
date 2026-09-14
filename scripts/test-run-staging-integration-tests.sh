@@ -44,7 +44,7 @@ assert_docker_build_overrides_selected_workspace_settings() {
 
     source_copy_line="$(rg -n '^COPY \. \.$' "$dockerfile" | cut -d: -f1)"
     override_line="$(rg -n '^RUN install -m 0644 /root/\.m2/settings\.xml \.mvn/settings\.xml$' "$dockerfile" | cut -d: -f1)"
-    package_line="$(rg -n '^RUN mvn clean package ' "$dockerfile" | cut -d: -f1)"
+    package_line="$(rg -n 'mvn -o clean package ' "$dockerfile" | cut -d: -f1)"
 
     [[ "$source_copy_line" =~ ^[0-9]+$ ]]
     [[ "$override_line" =~ ^[0-9]+$ ]]
