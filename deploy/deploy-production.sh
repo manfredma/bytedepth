@@ -56,6 +56,7 @@ if grep -Fqx "version=$TAG" "$HISTORY_FILE"; then
 fi
 
 git_cmd checkout --detach "$commit"
+./deploy/prewarm-production-maven-cache.sh "$SOURCE_ROOT"
 ./deploy/bootstrap-ops-deploy.sh
 
 printf 'version=%s\ncommit=%s\ndeployed_at=%s\n---\n' \
