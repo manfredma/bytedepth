@@ -16,7 +16,7 @@ staging 是唯一跨进程集成与 E2E 环境；生产操作只在受控主机�
 4. `deploy/bootstrap-staging-runtime.sh --ensure` 确认共享运行时，只有失配才预热。
 5. 运行 staging 集成与 E2E；两份 evidence 必须绑定候选完整 SHA。
 6. 所有者完成 staging 验收；纯交付基础设施改动审阅 PR 与自动证据即可。
-7. 合并 `main` 后，重复步骤 3–5，但 ref 为 `main`；候选分支 evidence 不可复用。
+7. 合并 `main` 后先比较完整 SHA：若采用 Fast-forward 且 `main` HEAD 与候选验收 SHA 完全一致，直接复用候选 evidence，跳过重复 staging 部署、集成和 E2E；若 SHA 发生变化，必须按步骤 3–5 为 `main` 重新部署并验收。
 8. `scripts/prepare-release.sh <release> <next-snapshot>` 校验 main evidence、工作区、Changelog、覆盖率及 Tag 唯一性，创建 annotated Tag。
 9. `deploy/deploy-production.sh <tag>` 部署该新 Tag。
 10. `scripts/verify-production-release.sh <tag>` 完成 HTTPS、版本、项目查询链路和日志回归；所有者记录生产验收与回滚基线。

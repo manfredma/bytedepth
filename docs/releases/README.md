@@ -83,7 +83,7 @@ BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1
 
 1. 记录当前已验收发布的 Tag，作为回滚基线。
 2. 在 staging 部署候选 ref 并用真实数据预检：`deploy-staging.sh <ref>`；项目所有者验收通过后合并 `main`。
-3. 在 staging 部署当前 `main`，执行查询回归、写测试、`sudo ./deploy/run-staging-integration-tests.sh` 和 `sudo ./deploy/run-staging-e2e-tests.sh`。两份记录的完整 SHA 必须等于 main HEAD。
+3. 合并后先比较完整 SHA：Fast-forward 且 `main` HEAD 与已验收候选 SHA 完全一致时，候选 staging 部署和两份 evidence 可直接复用；只有 SHA 变化时，才在 staging 部署当前 `main` 并重新执行查询回归、写测试、集成和 E2E。两份记录的完整 SHA 始终必须等于 `main` HEAD。
 4. 使用 SSH 上受控的 `sudo cat` 读取 root-owned `0700` `/var/lib/bytedepth-staging/test-history/` 内的 `staging-integration` 与 `staging-e2e`，写入本地新建的 `mktemp -d` 目录；不得用普通用户 `scp` 不可读路径。以 `BYTEDEPTH_STAGING_EVIDENCE_DIR` 传给 `prepare-release.sh`；脚本检查通过后才可创建 Tag。
 5. 通过后，生产打新 SemVer Tag，部署到 175（生产单机）：`deploy/deploy-production.sh vTag`；随后运行 `scripts/verify-production-release.sh vTag`。
 6. 生产验收（SNI 查询回归）通过后宣布上线。staging 验证失败则修代码回到第 2 步，不发布生产。
