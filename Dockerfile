@@ -2,6 +2,11 @@
 FROM maven:3.9.11-eclipse-temurin-25 AS build
 WORKDIR /build
 
+RUN mkdir -p /root/.m2 && cat > /root/.m2/settings.xml <<'SETTINGS'
+<?xml version="1.0" encoding="UTF-8"?>
+<settings><mirrors><mirror><id>aliyun</id><url>https://maven.aliyun.com/repository/public</url><mirrorOf>*</mirrorOf></mirror></mirrors></settings>
+SETTINGS
+
 # 先复制 pom 文件，利用 Docker layer 缓存加速依赖下载
 COPY pom.xml .
 COPY bytedepth-domain/pom.xml bytedepth-domain/
@@ -21,6 +26,7 @@ RUN --mount=type=bind,from=maven-cache,target=/root/.m2/repository,readonly \
 
 # 复制源码并打包
 COPY . .
+RUN install -m 0644 /root/.m2/settings.xml .mvn/settings.xml
 ARG BYTEDEPTH_COMMIT_ID=unknown
 ARG BYTEDEPTH_BUILT_AT=unknown
 RUN printf 'version=%s\ncommitId=%s\nbuiltAt=%s\n' "$(sed -n 's/.*<version>\([^<]*\)<\/version>.*/\1/p' pom.xml | head -1)" "$BYTEDEPTH_COMMIT_ID" "$BYTEDEPTH_BUILT_AT" > bytedepth-start/src/main/resources/bytedepth-build.properties
