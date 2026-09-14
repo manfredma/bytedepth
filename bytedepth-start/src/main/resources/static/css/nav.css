@@ -12,6 +12,31 @@
     font-size:16px;
 }
 
+/* The navigation is rendered on both public and admin routes.  Its staging
+ * palette therefore belongs to this required component asset, rather than an
+ * optional page-theme stylesheet. */
+.nav-bar[data-env="staging"] {
+    --bd-accent: #7c3aed;
+    --bd-accent-hover: #6d28d9;
+    --bd-nav-bg: #2d1b4e;
+    --bd-nav-accent: #a78bfa;
+}
+
+.nav-bar[data-env="staging"]::before {
+    content: "staging";
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 1000;
+    background: #f59e0b;
+    color: #1a1a2e;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 12px;
+    border-radius: 0 0 0 6px;
+    pointer-events: none;
+}
+
 .nav-bar *,
 .nav-bar *::before,
 .nav-bar *::after {

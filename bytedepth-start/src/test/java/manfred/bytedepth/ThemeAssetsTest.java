@@ -62,6 +62,9 @@ class ThemeAssetsTest {
                 .contains("max-width:var(--bd-page-max, 1060px)")
                 .contains("padding:0 var(--bd-page-pad, 20px)")
                 .contains("background:var(--bd-nav-bg")
+                .contains(".nav-bar[data-env=\"staging\"]")
+                .contains("--bd-nav-bg: #2d1b4e")
+                .contains(".nav-bar[data-env=\"staging\"]::before")
                 .contains(".nav-theme-placeholder")
                 .contains("visibility:hidden")
                 .contains("flex:0 0 36px")
@@ -313,7 +316,7 @@ class ThemeAssetsTest {
                 .contains("function adminAccent()")
                 .contains("color: adminAccent()")
                 .doesNotContain("#e94560");
-        assertThat(theme).contains(".nav-bar[data-env=\"staging\"]");
+        assertThat(theme).doesNotContain(".nav-bar[data-env=\"staging\"]");
     }
 
     @Test
