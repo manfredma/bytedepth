@@ -24,6 +24,14 @@ require_line 'record_timing_phase "$TIMING_FILE" deployment_total failed'
 require_line 'require_staging_runtime_prerequisites'
 require_line 'BYTEDEPTH_STAGING_HOST:-124.221.143.25'
 require_line 'sudo ./deploy/deploy-staging.sh ${1:-main}'
+require_line 'git_cmd fetch --force --no-recurse-submodules origin "$REF" main'
+require_line 'bash scripts/check-release-readiness.sh --target "$COMMIT" --base origin/main --mode candidate'
+
+readiness_line="$(rg -nF 'bash scripts/check-release-readiness.sh --target "$COMMIT" --base origin/main --mode candidate' "$SCRIPT" | cut -d: -f1)"
+preflight_line="$(rg -nF 'record_timed_phase "$TIMING_FILE" runtime_preflight' "$SCRIPT" | cut -d: -f1)"
+rollout_line="$(rg -nF './deploy/bootstrap-ops-deploy.sh' "$SCRIPT" | cut -d: -f1)"
+[[ "$readiness_line" -lt "$preflight_line" ]]
+[[ "$readiness_line" -lt "$rollout_line" ]]
 
 if rg -q 'require_staging_runtime "\$STATE_DIR/runtime/manifest"' "$SCRIPT"; then
     printf 'Deployment must not require a checkout-bound manifest before bootstrap can create it.\n' >&2

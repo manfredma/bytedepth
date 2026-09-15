@@ -73,13 +73,9 @@ fi
 
 export GIT_SSH_COMMAND="ssh -i $deploy_ssh_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
 
-# Any prior result describes the previously deployed application, never this
-# deployment.  Do this while holding the same lock as both test runners.
-invalidate_test_evidence
-
 # fetch ref，解析为完整 commit SHA
 source_fetch_started_at="$(date -u +%s%3N)"
-git_cmd fetch --force --no-recurse-submodules origin "$REF"
+git_cmd fetch --force --no-recurse-submodules origin "$REF" main
 COMMIT="$(git_cmd rev-parse FETCH_HEAD^{commit})"
 export BYTEDEPTH_COMMIT_ID="$COMMIT"
 export BYTEDEPTH_BUILT_AT="$(date -u +%FT%TZ)"
@@ -103,6 +99,13 @@ if ! record_timed_phase "$TIMING_FILE" source_checkout git_cmd checkout --detach
     record_timing_phase "$TIMING_FILE" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"
     exit 1
 fi
+
+bash scripts/check-release-readiness.sh --target "$COMMIT" --base origin/main --mode candidate
+
+# Any prior result describes the previously deployed application, never this
+# deployment.  Do this only after candidate readiness passes, while holding
+# the same lock as both test runners.
+invalidate_test_evidence
 
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 run_runtime_preflight() {
