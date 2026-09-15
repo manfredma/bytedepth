@@ -8,6 +8,7 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$SOURCE_ROOT/scripts/lib/java-25.sh"
 
 cd "$SOURCE_ROOT"
+bash scripts/check-release-readiness.sh
 npm ci --ignore-scripts --no-audit --no-fund
 readonly JAVA_25_HOME="$(resolve_java_25)"
 JAVA_HOME="$JAVA_25_HOME" "$SOURCE_ROOT/mvnw" clean install -DskipTests -Dsort.skip=true
