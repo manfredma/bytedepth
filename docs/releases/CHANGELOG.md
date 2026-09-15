@@ -2,7 +2,12 @@
 
 本文件同时记录开发中的 `## Unreleased` 和正式发布版本。任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前写入非空且分类明确的 `Unreleased` 条目；正式版本条目必须与一个不可变 annotated Git Tag 一一对应。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
-## Unreleased
+## [v2.15.7] - 2026-09-15
+
+**Tag**：待创建。
+**Commit**：待创建。
+**部署**：待 staging 验收。
+**回滚基线**：`v2.15.6`
 
 ### Changed
 
