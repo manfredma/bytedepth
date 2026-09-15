@@ -5,255 +5,83 @@
     <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
     <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
     <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <link rel="stylesheet" th:href="@{/css/home.css}">
     <script th:src="@{/js/theme-switcher.js}"></script>
+    <style>body { font-family: var(--serif); }</style>
     <title>bytedepth - 字节深处</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: var(--serif); margin: 0; background: var(--bd-bg, #f0f2f5); color: var(--bd-text, #1a1a2e); }
-        .container { max-width: var(--bd-page-max, 1060px); margin: 32px auto 40px; padding: 0 var(--bd-page-pad, 20px); }
-        .hero { background: var(--bd-nav-bg, #1a1a2e); color: var(--bd-nav-text, white); padding: 34px 24px 30px; text-align: center; margin-bottom: 32px; }
-        .hero-carousel { position: relative; height: 54px; overflow: hidden; max-width: var(--bd-page-max, 1060px); margin: 0 auto; }
-        .hero-slogan { text-align: center; opacity: 0; transition: opacity .6s ease, transform .6s ease; transform: translateY(8px); position: absolute; width: 100%; }
-        .hero-slogan.active { opacity: 1; transform: translateY(0); }
-        .hero-slogan .quote { color: var(--bd-nav-text, #ddd); font-size: 1.05em; font-style: italic; line-height: 1.5; margin: 0; }
-        .hero-slogan .author { color: var(--bd-nav-accent, #e94560); font-size: 0.82em; margin-top: 6px; letter-spacing: 1px; }
-        .post-card { background: var(--bd-surface, white); padding: 24px; margin: 16px 0; border-radius: 8px; box-shadow: var(--bd-shadow, 0 2px 8px rgba(0,0,0,.08)); transition: transform .2s; }
-        .post-card:hover { transform: translateY(-2px); }
-        .post-card h2 { margin: 0 0 8px; font-size: 1.3em; }
-        .post-card h2 a { color: var(--bd-text, #1a1a2e); text-decoration: none; }
-        .post-card h2 a:hover { color: var(--bd-accent, #e94560); }
-        .meta { color: var(--bd-text-subtle, #999); font-size: 0.88em; }
-        .more-link { display: inline-block; margin-top: 16px; color: var(--bd-accent, #e94560); text-decoration: none; font-weight: 500; }
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 24px; }
-        .page-btn { padding: 7px 18px; border-radius: 6px; font-size: 0.88em; font-weight: 600;
-            text-decoration: none; border: 1px solid var(--bd-border, #ddd); background: var(--bd-surface, white); color: var(--bd-text-muted, #555); transition: all .15s; }
-        .page-btn:hover { background: var(--bd-accent, #e94560); color: var(--bd-accent-text, white); border-color: var(--bd-accent, #e94560); }
-        .page-info { color: var(--bd-text-subtle, #999); font-size: 0.85em; }
-        .page-info-top { text-align: center; font-size: 0.82em; color: var(--bd-text-subtle, #aaa); margin-bottom: 8px; }
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
-        .empty { color: var(--bd-text-subtle, #999); text-align: center; padding: 40px; }
-        /* 分类区 */
-        .cat-section { background: var(--bd-surface, white); padding: 28px 24px; border-radius: 10px; box-shadow: var(--bd-shadow, 0 2px 8px rgba(0,0,0,.07)); margin-bottom: 32px; }
-        .cat-section h2 { margin: 0 0 18px; font-size: 1em; color: var(--bd-text-subtle, #999); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
-        .cat-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-        .cat-pill { padding: 7px 18px; border-radius: 20px; background: var(--bd-surface-muted, #f4f6f8); color: var(--bd-text-muted, #444); text-decoration: none; font-size: 0.9em; font-weight: 500; transition: all .15s; border: 1px solid var(--bd-border, #e8eaed); }
-        .cat-pill:hover { background: var(--bd-nav-bg, #1a1a2e); color: var(--bd-nav-text, white); border-color: var(--bd-nav-bg, #1a1a2e); }
-        .home-post-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 32px; }
-        .home-post-heading h2 { margin: 0; }
-        .home-sort-tabs { display: flex; gap: 8px; }
-        .home-sort-tab { padding: 6px 12px; border: 1px solid var(--bd-border, #ddd); border-radius: 16px; color: var(--bd-text-muted, #555); font-size: .85em; text-decoration: none; }
-        .home-sort-tab:hover, .home-sort-tab.active { background: var(--bd-accent, #e94560); border-color: var(--bd-accent, #e94560); color: var(--bd-accent-text, white); }
-        .home-feed-list { display: grid; gap: 12px; }
-        .home-feed-card { position: relative; margin: 0; padding: 20px 22px; }
-        .home-hot-card { position: relative; display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 14px; padding: 20px 22px; margin: 0; }
-        .home-hot-rank { color: var(--bd-accent, #e94560); font-family: var(--mono, monospace); font-size: 1.2em; font-weight: 700; line-height: 1.45; }
-        .home-hot-title { display: inline-block; color: var(--bd-text, #1a1a2e); font-size: 1.2em; font-weight: 700; text-decoration: none; }
-        .home-hot-excerpt { display: -webkit-box; overflow: hidden; margin: 8px 0 12px; color: var(--bd-text-muted, #666); font-size: .9em; line-height: 1.65; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-        .home-hot-meta { display: flex; gap: 12px; color: var(--bd-text-subtle, #999); font-size: .82em; }
-        .home-discovery-badge { display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 10px; background: var(--bd-surface-muted, #f4f6f8); color: var(--bd-accent, #e94560); font-size: .72em; font-weight: 700; vertical-align: middle; }
-        @media (max-width: 640px) { .home-feed-card, .home-hot-card { padding: 18px; } .home-hot-card { grid-template-columns: 32px minmax(0, 1fr); } }
-    </style>
 </head>
-<body>
+<body class="bd-home-page">
 <nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
-<div class="hero">
-    <div class="hero-carousel">
-        <div class="hero-slogan active" id="slogan-display">
-            <p class="quote" id="slogan-quote"></p>
-            <p class="author" id="slogan-author"></p>
+<main class="bd-home-shell">
+    <section class="bd-home-hero" aria-labelledby="home-title">
+        <div class="bd-home-hero-copy">
+            <p class="bd-eyebrow">ENGINEERING FIELD NOTES</p>
+            <h1 id="home-title">在复杂系统里，<br><em>保持清醒。</em></h1>
+            <p class="bd-home-lede">关于软件、架构与长期主义的记录。每一次向下，都是一次更好的理解。</p>
+            <a class="bd-home-cta" href="#field-notes">开始阅读 <span aria-hidden="true">↓</span></a>
         </div>
-    </div>
-    <script>
-    (function() {
-        var slogans = [
-            { quote: "Talk is cheap. Show me the code.", author: "— Linus Torvalds" },
-            { quote: "任何傻瓜都能写出计算机能理解的代码，优秀的程序员写出人类能理解的代码。", author: "— Martin Fowler" },
-            { quote: "过早的优化是万恶之源。", author: "— Donald Knuth" },
-            { quote: "Make it work, make it right, make it fast.", author: "— Kent Beck" },
-            { quote: "深入字节与比特，探索性能与优雅的边界。", author: "— bytedepth" },
-            { quote: "Programs must be written for people to read, and only incidentally for machines to execute.", author: "— Harold Abelson" },
-            { quote: "Simplicity is the soul of efficiency.", author: "— Austin Freeman" },
-            { quote: "First, solve the problem. Then, write the code.", author: "— John Johnson" },
-            { quote: "简单是可靠性的前提。", author: "— Edsger W. Dijkstra" },
-            { quote: "The best code is no code at all.", author: "— Jeff Atwood" },
-            { quote: "Debugging is twice as hard as writing the code in the first place.", author: "— Brian W. Kernighan" },
-            { quote: "好的架构让正确的事情变得容易，让错误的事情变得困难。", author: "— 软件工程智慧" },
-            { quote: "Don't Repeat Yourself.", author: "— Andy Hunt & Dave Thomas" },
-            { quote: "一千行可以工作的代码，胜过一万行无法维护的代码。", author: "— bytedepth" },
-            { quote: "测量，而不是猜测。", author: "— 性能优化原则" },
-            { quote: "You ain't gonna need it.", author: "— YAGNI Principle" },
-            { quote: "代码是写给人读的，机器执行只是副产品。", author: "— 程序员箴言" },
-            { quote: "每一次重构，都是对未来自己的一封善意的信。", author: "— bytedepth" },
-            { quote: "Architecture is about the important stuff, whatever that is.", author: "— Ralph Johnson" },
-            { quote: "每一行代码背后，都是一个值得深思的决策。", author: "— bytedepth" },
-            { quote: "单一职责：一个类，一个理由去改变。", author: "— SOLID 原则" },
-            { quote: "开闭原则：对扩展开放，对修改关闭。", author: "— Bertrand Meyer" },
-            { quote: "接口隔离：胖接口是万恶之源。", author: "— SOLID 原则" },
-            { quote: "依赖反转：依赖抽象，而非具体实现。", author: "— Robert C. Martin" },
-            { quote: "里氏替换：子类应能替换父类而不改变正确性。", author: "— Barbara Liskov" },
-            { quote: "KISS：Keep It Simple, Stupid.", author: "— 设计格言" },
-            { quote: "高内聚、低耦合，模块化的永恒追求。", author: "— 软件设计原则" },
-            { quote: "关注点分离：每个模块只关心一件事。", author: "— Edsger W. Dijkstra" },
-            { quote: "约定优于配置，减少决策疲劳。", author: "— 框架设计原则" },
-            { quote: "Fail fast：让错误尽早暴露，而不是沉默地蔓延。", author: "— 系统设计原则" },
-            { quote: "防御性编程：信任不信任，校验一切。", author: "— 安全编程原则" },
-            { quote: "Command Query Separation：改不返回，查不修改。", author: "— Bertrand Meyer" },
-            { quote: "Tell, Don't Ask：告诉对象做什么，别问它要数据。", author: "— 面向对象原则" },
-            { quote: "Law of Demeter：只跟你的直接朋友说话。", author: "— 最小知识原则" },
-            { quote: "Composition over Inheritance：组合优于继承。", author: "— GoF 设计模式" },
-            { quote: "Program to an interface, not an implementation.", author: "— GoF 设计模式" },
-            { quote: "分层架构：每一层都是它下面的抽象。", author: "— 架构原则" },
-            { quote: "依赖方向：从外向内，依赖倒置。", author: "— 整洁架构" },
-            { quote: "边界：架构的核心是划定边界。", author: "— Robert C. Martin" },
-            { quote: "测试金字塔：多单元，少集成，偶 E2E。", author: "— 测试策略" },
-            { quote: "写测试不是为了证明代码正确，而是为了敢于修改。", author: "— 测试驱动开发" },
-            { quote: "Red, Green, Refactor — TDD 的铁三角。", author: "— Kent Beck" },
-            { quote: "凡是不变的，就提取出来；凡是会变的，就封装起来。", author: "— 设计原则" },
-            { quote: "Single source of truth：每一条数据只有一个权威来源。", author: "— 数据架构原则" },
-            { quote: "最终一致性不是"不一致"，而是"暂未一致"。", author: "— 分布式系统格言" },
-            { quote: "分布式系统第一谬误：网络是可靠的。", author: "— Peter Deutsch" },
-            { quote: "缓存是计算机科学中唯一真正困难的两件事之一。", author: "— Phil Karlton" },
-            { quote: "命名是计算机科学中最困难的两件事之一。", author: "— Phil Karlton" },
-            { quote: "没有银弹：没有一种技术能十倍提升软件生产率。", author: "— Fred Brooks" },
-            { quote: "八二定律：80% 的时间花在 20% 的代码上。", author: "— 软件工程经验" },
-            { quote: "Brooks 法则：给一个延期的项目加人，只会让它更延期。", author: "— Fred Brooks" },
-            { quote: "康威定律：系统的架构拷贝组织的沟通结构。", author: "— Melvin Conway" },
-            { quote: "好名字不需要注释。", author: "— 代码整洁之道" },
-            { quote: "函数应该只做一件事，并且做好。", author: "— Robert C. Martin" },
-            { quote: "删除代码是比添加代码更难掌握的技能。", author: "— 软件工程智慧" },
-            { quote: "能用枚举解决的问题，不要用字符串。", author: "— 类型安全原则" },
-            { quote: "不可变对象永不让你失望。", author: "— 并发编程格言" },
-            { quote: "乐观锁解决冲突，悲观锁预防冲突。", author: "— 并发控制原则" },
-            { quote: "幂等性是分布式系统安全的基石。", author: "— 系统设计原则" },
-            { quote: "限流让系统有尊严地过载，而不是崩溃。", author: "— 服务治理原则" },
-            { quote: "熔断是给系统一个优雅恢复的机会。", author: "— 容错设计原则" },
-            { quote: "拓扑隔离：一个模块的错误不应扩散到另一个。", author: "— 容错架构原则" },
-            { quote: "异步解耦：不同步，就不阻塞。", author: "— 架构设计原则" },
-            { quote: "Observability 不是监控，是回答任意问题的能力。", author: "— 可观测性格言" },
-            { quote: "日志要能回答事发时发生了什么，而不是事发后你希望知道什么。", author: "— 运维格言" },
-            { quote: "优雅降级胜过粗暴报错。", author: "— 用户体验原则" },
-            { quote: "一致性是用户能感知的正确性，不是系统的内部协议。", author: "— 用户体验原则" },
-            { quote: "渐近式增强：从可用到好用，一步步来。", author: "— Web 设计原则" },
-            { quote: "响应式设计不是适配屏幕，是适配场景。", author: "— 前端设计原则" },
-            { quote: "无障碍不是功能，是权利。", author: "— Web 可访问性原则" },
-            { quote: "安全是设计出来的，不是测试出来的。", author: "— 安全设计原则" },
-            { quote: "最小权限原则：只给刚刚好的权限。", author: "— 安全架构原则" },
-            { quote: "防御深度：没有单一道防线是可靠的。", author: "— 安全架构原则" },
-            { quote: "不信任用户输入，不信任上游服务，不信任自己。", author: "— 零信任格言" },
-            { quote: "加密不是可选项，是默认项。", author: "— 安全默认原则" },
-            { quote: "schema 是契约，API 是承诺。", author: "— API 设计原则" },
-            { quote: "向后兼容不是美德，是底线。", author: "— API 版本化原则" },
-            { quote: "POST 不是 GET 的安全替代品。", author: "— REST 设计原则" },
-            { quote: "优雅的 API 让调用者感到被尊重。", author: "— API 设计美学" },
-            { quote: "数据库设计先于代码设计，模式先于逻辑。", author: "— 数据建模原则" },
-            { quote: "索引不是银弹，全表扫描也不是魔鬼。", author: "— 数据库优化格言" },
-            { quote: "范式化减少冗余，反范式化提升性能，权衡是艺术。", author: "— 数据库设计原则" },
-            { quote: "事务是边界，不是万能药。", author: "— 数据库事务格言" },
-            { quote: "选择合适的数据结构，比优化算法更有用。", author: "— 数据结构格言" },
-            { quote: "抽象泄漏定律：所有非平凡的抽象都有泄漏。", author: "— Joel Spolsky" },
-            { quote: "技术债务像经济债务：少量能加速，多了会破产。", author: "— Ward Cunningham" },
-            { quote: "好的文档让人不需要问问题。", author: "— 文档原则" },
-            { quote: "Code review 是知识的传递，不是找茬。", author: "— 团队协作格言" },
-            { quote: "Pair programming 的键盘只有一把，但脑子有两颗。", author: "— 极限编程格言" },
-            { quote: "自动化一切可以自动化的事情。", author: "— DevOps 格言" },
-            { quote: "基础设施即代码，环境即版本。", author: "— 运维自动化原则" },
-            { quote: "用数据说话，用指标决策。", author: "— 数据驱动格言" },
-            { quote: "Commit 小，频繁，可回溯。", author: "— Git 提交原则" },
-            { quote: "分支策略是协作的契约，不是约束。", author: "— Git 分支原则" },
-            { quote: "CI 通过是 merge 的门票，不是选配。", author: "— CI/CD 原则" },
-            { quote: "测试环境应尽可能接近生产环境。", author: "— 环境管理原则" },
-            { quote: "Premature abstraction is the root of all evil.", author: "— 软件工程箴言" },
-            { quote: "A complex system that works is invariably found to have evolved from a simple system that worked.", author: "— John Gall" },
-            { quote: "Perfection is achieved not when there is nothing more to add, but when there is nothing left to take away.", author: "— Antoine de Saint-Exupery" },
-            { quote: "Always design things by considering them in their larger context.", author: "— Eliel Saarinen" },
-            { quote: "The purpose of abstraction is not to be vague, but to create a new semantic level.", author: "— Edsger W. Dijkstra" },
-            { quote: "细节不会决定成败，但架构会。", author: "— 架构箴言" },
-            { quote: "好的架构是妥协的艺术：在约束中寻找最优解。", author: "— bytedepth" },
-            { quote: "一个系统你不敢改的，就是坏架构。", author: "— 架构评估格言" }
-        ];
-        var lastIdx = -1;
-        function randomIdx() {
-            var idx;
-            do { idx = Math.floor(Math.random() * slogans.length); } while (idx === lastIdx);
-            lastIdx = idx;
-            return idx;
-        }
-        function showSlogan(idx) {
-            var el = document.getElementById('slogan-display');
-            el.classList.remove('active');
-            setTimeout(function() {
-                document.getElementById('slogan-quote').textContent = slogans[idx].quote;
-                document.getElementById('slogan-author').textContent = slogans[idx].author;
-                el.classList.add('active');
-            }, 600);
-        }
-        var idx = randomIdx();
-        document.getElementById('slogan-quote').textContent = slogans[idx].quote;
-        document.getElementById('slogan-author').textContent = slogans[idx].author;
-        document.getElementById('slogan-display').classList.add('active');
-        setInterval(function() { showSlogan(randomIdx()); }, 6000);
-    })();
-    </script>
-</div>
-<div class="container">
-
-    <!-- 分类导航 -->
-    <div class="cat-section" th:if="${not #lists.isEmpty(allCategories)}">
-        <h2>按分类浏览</h2>
-        <div class="cat-grid">
-            <a th:each="cat : ${allCategories}"
-               th:if="${cat.depth == 0}"
-               th:href="@{/posts(category=${cat.slug})}"
-               th:text="${cat.name}"
-               class="cat-pill">分类</a>
+        <div class="bd-home-motif" aria-hidden="true">
+            <span class="bd-motif-orbit bd-motif-orbit-one"></span>
+            <span class="bd-motif-orbit bd-motif-orbit-two"></span>
+            <span class="bd-motif-core"></span>
+            <img th:src="@{/icons/logo.svg}" alt="">
         </div>
-    </div>
+    </section>
 
-    <div class="home-post-heading">
-        <h2 th:text="${sort == 'discover' ? '发现文章' : (sort == 'hot' ? '热门文章' : '最新文章')}">发现文章</h2>
-        <div class="home-sort-tabs">
-            <a th:href="@{/}" class="home-sort-tab" th:classappend="${sort == 'discover' ? ' active' : ''}">发现</a>
-            <a th:href="@{/(sort=latest)}" class="home-sort-tab" th:classappend="${sort == 'latest' ? ' active' : ''}">最新</a>
-            <a th:href="@{/(sort=hot)}" class="home-sort-tab" th:classappend="${sort == 'hot' ? ' active' : ''}">热门</a>
-        </div>
-    </div>
-
-    <div th:if="${#lists.isEmpty(posts)}" class="empty">暂无发布的文章，<a th:href="@{/posts/new}" style="color:var(--bd-accent, #e94560);">写第一篇</a>？</div>
-    <div class="home-feed-list">
-        <article th:each="post, stat : ${posts}" class="post-card home-feed-card" th:classappend="${sort == 'hot' ? ' home-hot-card' : ''}">
-            <span th:if="${sort == 'hot'}" class="home-hot-rank" th:text="|${#numbers.formatInteger((currentPage - 1) * pageSize + stat.count, 2)}|">01</span>
-            <div>
-                <a class="home-hot-title" th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a><span th:if="${sort == 'discover' and #lists.contains(discoveryNewPostIds, post.id)}" class="home-discovery-badge">新发布</span>
-                <p class="home-hot-excerpt" th:text="${@markdownExcerpt.excerpt(post.content, 150)}">文章摘要</p>
-                <div class="home-hot-meta">
-                    <span th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">发布时间</span>
-                    <span th:if="${sort == 'hot'}" th:text="|👁 ${post.viewCount} 次阅读|">👁 0 次阅读</span>
+    <section class="bd-home-content" id="field-notes">
+        <div class="bd-home-main-column">
+            <div class="bd-section-heading">
+                <div>
+                    <p class="bd-eyebrow">THE NOTEBOOK</p>
+                    <h2 th:text="${sort == 'discover' ? '发现文章 · 值得慢下来读的文章' : (sort == 'hot' ? '正在被阅读的文章' : '最近写下的文章')}">发现文章 · 值得慢下来读的文章</h2>
+                </div>
+                <div class="bd-sort-tabs" aria-label="文章排序">
+                    <a th:href="@{/}" th:classappend="${sort == 'discover' ? ' active' : ''}">发现</a>
+                    <a th:href="@{/(sort=latest)}" th:classappend="${sort == 'latest' ? ' active' : ''}">最新</a>
+                    <a th:href="@{/(sort=hot)}" th:classappend="${sort == 'hot' ? ' active' : ''}">热门</a>
                 </div>
             </div>
-        </article>
-    </div>
 
-    <div th:if="${totalPages > 1}">
-        <div th:replace="~{fragments/pagination :: pagination(
-            ${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${paginationBaseUrl})}"></div>
-    </div>
+            <div th:if="${#lists.isEmpty(posts)}" class="bd-empty">暂无发布的文章，<a th:href="@{/posts/new}">写第一篇？</a></div>
+            <div class="bd-article-list">
+                <article th:each="post, stat : ${posts}" class="bd-article-row">
+                    <div class="bd-article-index" th:text="|${#numbers.formatInteger((currentPage - 1) * pageSize + stat.count, 2)}|">01</div>
+                    <div class="bd-article-body">
+                        <div class="bd-article-meta">
+                            <span th:if="${post.categoryName != null}" th:text="${post.categoryName}">ARCHITECTURE</span>
+                            <span th:text="${#temporals.format(post.publishedAt, 'yyyy-MM-dd')}">2026-09-15</span>
+                            <span th:if="${sort == 'hot'}" th:text="|${post.viewCount} 次阅读|">0 次阅读</span>
+                            <span th:if="${sort == 'discover' and #lists.contains(discoveryNewPostIds, post.id)}" class="bd-new-badge">NEW</span>
+                        </div>
+                        <h3><a th:href="@{/posts/{slug}(slug=${post.slug})}" th:text="${post.title}">文章标题</a></h3>
+                        <p th:text="${@markdownExcerpt.excerpt(post.content, 150)}">文章摘要</p>
+                        <a class="bd-read-link" th:href="@{/posts/{slug}(slug=${post.slug})}">进入阅读 <span aria-hidden="true">↗</span></a>
+                    </div>
+                </article>
+            </div>
+            <div th:if="${totalPages > 1}" th:replace="~{fragments/pagination :: pagination(${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${paginationBaseUrl})}"></div>
+        </div>
 
-    <div th:if="${not #lists.isEmpty(projects)}">
-        <h2 style="margin-top:40px;">项目</h2>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:16px;">
-            <div th:each="p : ${projects}" class="post-card">
-                <h2 th:text="${p.name}" style="font-size:1.1em;">项目名</h2>
-                <p th:text="${p.description}" style="color:var(--bd-text-subtle, #888);font-size:0.9em;margin:6px 0 10px;"></p>
-                <div style="display:flex;gap:8px;">
-                    <a th:if="${p.githubUrl}" th:href="${p.githubUrl}" target="_blank"
-                       style="font-size:0.85em;color:var(--bd-accent, #e94560);text-decoration:none;">GitHub →</a>
-                    <a th:if="${p.demoUrl}" th:href="${p.demoUrl}" target="_blank"
-                       style="font-size:0.85em;color:var(--bd-text-subtle, #888);text-decoration:none;">演示 →</a>
+        <aside class="bd-home-explorer">
+            <div class="bd-explorer-block" th:if="${not #lists.isEmpty(allCategories)}">
+                <p class="bd-eyebrow">EXPLORE TOPICS</p>
+                <h2>从一个主题开始</h2>
+                <div class="bd-topic-list">
+                    <a th:each="cat : ${allCategories}" th:if="${cat.depth == 0}" th:href="@{/posts(category=${cat.slug})}"><span th:text="${cat.name}">架构</span><span aria-hidden="true">↗</span></a>
                 </div>
             </div>
-        </div>
-        <a th:href="@{/projects}" class="more-link">全部项目 →</a>
-    </div>
-</div>
+            <div class="bd-explorer-block bd-lab-block" th:if="${not #lists.isEmpty(projects)}">
+                <p class="bd-eyebrow">THE LAB</p>
+                <h2>正在实验</h2>
+                <div th:each="p : ${projects}" class="bd-project-item">
+                    <h3 th:text="${p.name}">项目名</h3>
+                    <p th:text="${p.description}">项目描述</p>
+                    <a th:if="${p.githubUrl}" th:href="${p.githubUrl}" target="_blank" rel="noopener">GitHub ↗</a>
+                </div>
+                <a class="bd-read-link" th:href="@{/projects}">查看全部项目 <span aria-hidden="true">↗</span></a>
+            </div>
+        </aside>
+    </section>
+</main>
 </body>
 </html>

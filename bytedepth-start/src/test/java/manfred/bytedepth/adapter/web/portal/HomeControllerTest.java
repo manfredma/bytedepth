@@ -86,6 +86,20 @@ class HomeControllerTest {
     }
 
     @Test
+    void home_rendersStableEditorialHeroAndDoesNotLeadWithCategoryWall() throws Exception {
+        stubEmptyDiscoveryFeed();
+        when(listPostsQryExe.countPublished()).thenReturn(0L);
+        when(listProjectsQryExe.execute()).thenReturn(List.of());
+        when(listCategoriesQryExe.execute()).thenReturn(List.of());
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("在复杂系统里，")))
+                .andExpect(content().string(containsString("保持清醒")))
+                .andExpect(content().string(not(containsString("按分类浏览"))));
+    }
+
+    @Test
     void home_withPosts_exposesThemInModel() throws Exception {
         PostDTO post = new PostDTO();
         post.setId(1L);
