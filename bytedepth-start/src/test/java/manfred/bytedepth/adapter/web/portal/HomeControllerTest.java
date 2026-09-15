@@ -96,7 +96,7 @@ class HomeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("在复杂系统里，")))
                 .andExpect(content().string(containsString("保持清醒")))
-                .andExpect(content().string(not(containsString("按分类浏览"))));
+                .andExpect(content().string(not(containsString("class=\"cat-section\""))));
     }
 
     @Test

@@ -27,6 +27,12 @@
             <img th:src="@{/icons/logo.svg}" alt="">
         </div>
     </section>
+    <section class="bd-legacy-slogan" aria-label="工程箴言">
+        <p class="bd-eyebrow">A THOUGHT FOR THE DAY</p>
+        <p id="legacy-slogan-quote">Talk is cheap. Show me the code.</p>
+        <span id="legacy-slogan-author">— Linus Torvalds</span>
+    </section>
+    <script th:src="@{/js/home-slogans.js}"></script>
 
     <section class="bd-home-content" id="field-notes">
         <div class="bd-home-main-column">
@@ -65,7 +71,7 @@
         <aside class="bd-home-explorer">
             <div class="bd-explorer-block" th:if="${not #lists.isEmpty(allCategories)}">
                 <p class="bd-eyebrow">EXPLORE TOPICS</p>
-                <h2>从一个主题开始</h2>
+                <h2>按分类浏览</h2>
                 <div class="bd-topic-list">
                     <a th:each="cat : ${allCategories}" th:if="${cat.depth == 0}" th:href="@{/posts(category=${cat.slug})}"><span th:text="${cat.name}">架构</span><span aria-hidden="true">↗</span></a>
                 </div>
@@ -77,6 +83,7 @@
                     <h3 th:text="${p.name}">项目名</h3>
                     <p th:text="${p.description}">项目描述</p>
                     <a th:if="${p.githubUrl}" th:href="${p.githubUrl}" target="_blank" rel="noopener">GitHub ↗</a>
+                    <a th:if="${p.demoUrl}" th:href="${p.demoUrl}" target="_blank" rel="noopener">演示 ↗</a>
                 </div>
                 <a class="bd-read-link" th:href="@{/projects}">查看全部项目 <span aria-hidden="true">↗</span></a>
             </div>
