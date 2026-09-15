@@ -110,6 +110,8 @@ fi
 
 require_no_tracked_agent_artifacts
 
+bash scripts/check-release-readiness.sh --target HEAD --base origin/main --mode release
+
 # Never release when any staging contract has drifted.  This local check is
 # deterministic; real integration/E2E evidence is still required below.
 bash scripts/check-staging-checklist.sh

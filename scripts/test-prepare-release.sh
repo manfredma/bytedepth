@@ -5,6 +5,12 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly TEMP_ROOT="$(mktemp -d)"
 readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
 readonly EVIDENCE_DIR="$TEMP_ROOT/staging-evidence"
+readonly RELEASE_SCRIPT="$SOURCE_ROOT/scripts/prepare-release.sh"
+
+grep -Fq 'bash scripts/check-release-readiness.sh --target HEAD --base origin/main --mode release' "$RELEASE_SCRIPT"
+readiness_line="$(rg -nF 'bash scripts/check-release-readiness.sh --target HEAD --base origin/main --mode release' "$RELEASE_SCRIPT" | cut -d: -f1)"
+release_prepare_line="$(rg -nF 'release:prepare' "$RELEASE_SCRIPT" | tail -n 1 | cut -d: -f1)"
+[[ "$readiness_line" -lt "$release_prepare_line" ]]
 cleanup_fixture() {
     if [[ "${KEEP_RELEASE_TEST_FIXTURE:-0}" == 1 ]]; then
         printf 'Retained release test fixture: %s\n' "$TEMP_ROOT" >&2
@@ -62,6 +68,11 @@ assert_maven_test_boundaries "$SOURCE_ROOT/pom.xml"
 mkdir -p "$TEMP_ROOT/scripts/lib" "$TEMP_ROOT/docs/releases" "$TEMP_ROOT/java/bin" "$TEMP_ROOT/bin"
 cp "$SOURCE_ROOT/scripts/prepare-release.sh" "$TEMP_ROOT/scripts/prepare-release.sh"
 cp "$SOURCE_ROOT/scripts/lib/java-25.sh" "$TEMP_ROOT/scripts/lib/java-25.sh"
+cat > "$TEMP_ROOT/scripts/check-release-readiness.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'readiness\n' >> "$RELEASE_TEST_LOG"
+EOF
+chmod +x "$TEMP_ROOT/scripts/check-release-readiness.sh"
 cp "$SOURCE_ROOT/pom.xml" "$TEMP_ROOT/invalid-pom.xml"
 rewrite_fixture "$TEMP_ROOT/invalid-pom.xml" 's/<id>staging-integration<\/id>/<id>not-staging-integration<\/id>/'
 if assert_maven_test_boundaries "$TEMP_ROOT/invalid-pom.xml"; then
@@ -233,6 +244,7 @@ fi
 run_prepare "$TEMP_ROOT/release.log"
 
 grep -Fqx 'coverage' "$TEMP_ROOT/release.log"
+grep -Fqx 'readiness' "$TEMP_ROOT/release.log"
 grep -Fqx 'mvn release_mode=1 -B release:prepare -DskipTests -Darguments=-DskipTests -DreleaseVersion=1.2.3 -DdevelopmentVersion=1.2.4-SNAPSHOT' "$TEMP_ROOT/release.log"
 grep -Fqx 'git push origin main --follow-tags' "$TEMP_ROOT/release.log"
 grep -Fqx 'mvn release_mode=0 -B release:clean -Dsort.skip=true' "$TEMP_ROOT/release.log"
