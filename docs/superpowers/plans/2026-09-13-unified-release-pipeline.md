@@ -14,7 +14,7 @@
 
 - Merge accepted PR #97 before this work; do not implement against the older main.
 - All stages reject WARNING; integration/E2E run only in staging.
-- Workflow triggers are `pull_request` and `push` to `main`, and it has no staging/production credentials.
+- Workflow triggers are `pull_request` and `push` to `main`, `feat/**`, `fix/**`, and `docs/**`; it has no staging/production credentials.
 - Production accepts only a new annotated SemVer tag created by `scripts/prepare-release.sh`.
 
 ---
@@ -37,7 +37,7 @@
 - Create: `scripts/test-github-quality-workflow.sh`
 - Modify: `scripts/check-staging-checklist.sh`, `scripts/test-staging-checklist.sh`
 
-- [ ] Write `test-github-quality-workflow.sh` to require `pull_request`, `push` restricted to `main`, checkout, Node setup, Temurin Java 25, `bash scripts/run-local-quality.sh`, and forbid SSH host/key, staging domains and production domains.
+- [ ] Write `test-github-quality-workflow.sh` to require `pull_request`, `push` restricted to `main`, `feat/**`, `fix/**`, and `docs/**`, checkout, Node setup, Temurin Java 25, `bash scripts/run-local-quality.sh`, and forbid SSH host/key, staging domains and production domains.
 - [ ] Run the test and confirm it fails because the workflow is absent.
 - [ ] Create `quality.yml` with exactly one `quality` job that checks out code, installs ripgrep, configures Node and Temurin 25, then invokes only `bash scripts/run-local-quality.sh`.
 - [ ] Add the static test to the checklist; run it plus `bash scripts/check-staging-checklist.sh`.

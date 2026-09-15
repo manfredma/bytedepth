@@ -4,7 +4,7 @@
 
 ## 为什么分为 workflow 与受控主机脚本
 
-GitHub `quality` workflow 只运行无凭据、无外部进程的质量门禁：Java 25、Maven Wrapper、项目 lockfile 安装、单元测试、前端测试/lint、覆盖率和静态自动化约束。它在 PR 与 `main` push 运行，不能访问 SSH、staging/生产环境文件、数据库、Docker、共享浏览器或部署锁。
+GitHub `quality` workflow 只运行无凭据、无外部进程的质量门禁：Java 25、Maven Wrapper、项目 lockfile 安装、单元测试、前端测试/lint、覆盖率和静态自动化约束。它在 PR、`main` push，以及 `feat/**`、`fix/**`、`docs/**` 开发分支 push 时运行；开发分支 push 是合并前检查的正常触发路径，不能访问 SSH、staging/生产环境文件、数据库、Docker、共享浏览器或部署锁。
 
 staging 是唯一跨进程集成与 E2E 环境；生产操作只在受控主机执行。两类操作分离，避免把生产权限交给普通 CI runner。
 

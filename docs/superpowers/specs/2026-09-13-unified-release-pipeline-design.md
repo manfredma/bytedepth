@@ -33,7 +33,7 @@ bytedepth、Career、Toolbox 对齐相同发布顺序、入口名称、证据格
 |---|---|
 | `scripts/run-local-quality.sh` | Node 安装、Java 单测、前端测试/lint、覆盖率与静态检查；不访问外部进程。 |
 | `scripts/check-staging-checklist.sh` | 测试所有 staging/发布脚本的静态自动化约束；由质量与发版流程调用。 |
-| `.github/workflows/quality.yml` | PR 与 main push 的无凭据质量 workflow，只调用本机质量和静态约束。 |
+| `.github/workflows/quality.yml` | PR、main push 与 feat/fix/docs 开发分支 push 的无凭据质量 workflow，只调用本机质量和静态约束。 |
 | `deploy/deploy-staging.sh` | 部署命名分支或 main，锁定转换并作废 evidence。 |
 | `deploy/bootstrap-staging-runtime.sh --ensure` | 在共享锁下验证 manifest；缺失或失配才预热 Maven、项目 node_modules 和共享浏览器。 |
 | `deploy/run-staging-integration-tests.sh` | 仅 staging 的跨进程集成测试。 |
@@ -43,4 +43,4 @@ bytedepth、Career、Toolbox 对齐相同发布顺序、入口名称、证据格
 
 ## 验证
 
-每个项目为上述入口增加静态测试；`check-staging-checklist.sh` 必须覆盖所有入口。三个 `quality.yml` 使用相同触发条件（`pull_request` 与 `push` 到 `main`）、相同 Java 25、Maven Wrapper、Node 安装约束和零 WARNING 规则。实现完成后，分别走完整 16 步，证据 SHA、Tag 和生产状态必须逐项一致。
+每个项目为上述入口增加静态测试；`check-staging-checklist.sh` 必须覆盖所有入口。三个 `quality.yml` 使用相同触发条件（`pull_request` 与 `push` 到 `main`、`feat/**`、`fix/**`、`docs/**`）、相同 Java 25、Maven Wrapper、Node 安装约束和零 WARNING 规则。实现完成后，分别走完整 16 步，证据 SHA、Tag 和生产状态必须逐项一致。
