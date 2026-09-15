@@ -244,7 +244,7 @@ public class AdminAnalyticsController {
             return LocalDate.parse(to).atTime(23, 59, 59);
         }
         if ("today".equals(period)) {
-            return LocalDateTime.now();
+            return today.atTime(23, 59, 59);
         }
         return switch (period) {
             case "week" -> today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)).atTime(23, 59, 59);

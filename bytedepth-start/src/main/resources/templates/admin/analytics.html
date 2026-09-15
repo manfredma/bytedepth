@@ -28,15 +28,34 @@
         .period-tab:hover { border-color: var(--admin-accent); color: var(--admin-accent); }
         .period-tab.active { background: var(--admin-accent); color: white;
                              border-color: var(--admin-accent); font-weight: 600; }
-        .date-range-picker { display: flex; flex-wrap: wrap; align-items: center;
+        .date-range-picker { position: relative; display: flex; flex-wrap: wrap; align-items: center;
                              gap: 8px; margin-bottom: 14px; }
         .date-range-picker label { color: #666; font-size: .85em; }
-        .date-range-picker input { border: 1px solid #ddd; border-radius: 6px;
-                                   background: white; padding: 6px 8px; color: #555; }
-        .date-range-button { padding: 6px 14px; border: 1px solid var(--admin-accent);
-                             border-radius: 6px; background: var(--admin-accent);
-                             color: white; cursor: pointer; font-size: .85em; }
-        .date-range-button.secondary { background: white; color: #666; border-color: #ddd; }
+        .date-range-trigger { display: inline-flex; align-items: center; gap: 9px; min-width: 245px;
+                              padding: 8px 12px; border: 1px solid #d7e0eb; border-radius: 10px;
+                              background: #fbfcfe; color: #26364d; cursor: pointer; font-size: .88em;
+                              transition: border-color .15s, box-shadow .15s, background .15s; }
+        .date-range-trigger:hover, .date-range-trigger[aria-expanded="true"] { border-color: var(--admin-accent); background: white; box-shadow: 0 0 0 3px rgba(47,128,237,.10); }
+        .date-range-trigger svg { color: var(--admin-accent); flex: 0 0 auto; }
+        .date-range-popover { position: absolute; z-index: 20; display: none; width: 320px; padding: 14px;
+                              border: 1px solid #d7e0eb; border-radius: 12px; background: white;
+                              box-shadow: 0 14px 32px rgba(36,55,80,.16); }
+        .date-range-popover.open { display: block; }
+        .date-range-popover-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .date-range-popover-head button { border: 0; background: transparent; color: #64748b; cursor: pointer; font-size: 18px; }
+        .date-range-month { font-weight: 600; color: #26364d; }
+        .date-range-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+        .date-range-weekday { padding-bottom: 4px; color: #7b8aa0; font-size: 11px; }
+        .date-range-day { height: 30px; border: 0; border-radius: 6px; background: transparent; color: #26364d; cursor: pointer; }
+        .date-range-day:hover { background: #eaf3ff; color: var(--admin-accent); }
+        .date-range-day.muted { color: #b8c1cc; }
+        .date-range-day.range { background: #eaf3ff; color: #245b9f; border-radius: 0; }
+        .date-range-day.start, .date-range-day.end { background: var(--admin-accent); color: white; }
+        .date-range-day.start { border-radius: 6px 0 0 6px; }
+        .date-range-day.end { border-radius: 0 6px 6px 0; }
+        .date-range-popover-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px;
+                                   padding-top: 9px; border-top: 1px solid #edf1f5; color: #64748b; font-size: 11px; }
+        .date-range-clear { border: 0; background: transparent; color: var(--admin-accent); cursor: pointer; }
 
         /* 面包屑 */
         .breadcrumb { font-size: .85em; color: #888; margin-bottom: 14px;
@@ -98,13 +117,18 @@
         <button class="period-tab" data-period="year">本年</button>
         <button class="period-tab" data-period="all">全部</button>
     </div>
-    <div class="date-range-picker" aria-label="自定义日期范围">
-        <label for="analytics-from">自定义范围：</label>
-        <input id="analytics-from" type="date" aria-label="开始日期">
-        <span aria-hidden="true">至</span>
-        <input id="analytics-to" type="date" aria-label="结束日期">
-        <button class="date-range-button" id="apply-date-range" type="button">应用</button>
-        <button class="date-range-button secondary" id="clear-date-range" type="button">清除</button>
+    <div class="date-range-picker" id="analytics-date-range" aria-label="日期范围选择">
+        <span class="date-range-label">时间范围</span>
+        <button class="date-range-trigger" id="date-range-trigger" type="button" aria-haspopup="dialog" aria-expanded="false">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.25" y="3.25" width="11.5" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 2.5v2M11 2.5v2M2.5 6h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <span id="date-range-label">日期范围</span>
+        </button>
+        <input id="analytics-from" type="hidden"><input id="analytics-to" type="hidden">
+        <div class="date-range-popover" id="date-range-popover" role="dialog" aria-label="选择日期范围">
+            <div class="date-range-popover-head"><button type="button" id="date-range-prev" aria-label="上个月">‹</button><span class="date-range-month" id="date-range-month"></span><button type="button" id="date-range-next" aria-label="下个月">›</button></div>
+            <div class="date-range-grid" id="date-range-grid"></div>
+            <div class="date-range-popover-foot"><span id="date-range-selection">请选择开始日期</span><button class="date-range-clear" id="clear-date-range" type="button">清除</button></div>
+        </div>
     </div>
 
     <!-- 面包屑（下钻路径，无下钻时为空） -->
@@ -132,15 +156,17 @@
     </div>
 
 </div>
+<script th:src="@{/js/analytics-date-range.js}"></script>
 <script>
     // ─── 状态 ────────────────────────────────────────────────────
+    const initialRange = AnalyticsDateRange.rangeForPeriod('week', new Date());
     const state = {
         period:    'week',
         country:   null,
         postId:    null,
         postTitle: '',
-        from:      null,
-        to:        null,
+        from:      initialRange.from,
+        to:        initialRange.to,
         granularity: null,
         dimension: 'post'
     };
@@ -158,11 +184,15 @@
 
     // ─── ECharts 实例 ────────────────────────────────────────────
     let barChart, pieChart, trendChart;
+    let pickerMonth = new Date();
+    let selecting = 'from';
 
     document.addEventListener('DOMContentLoaded', () => {
         barChart   = echarts.init(document.getElementById('bar-chart'));
         pieChart   = echarts.init(document.getElementById('pie-chart'));
         trendChart = echarts.init(document.getElementById('trend-chart'));
+        renderDateRangeLabel();
+        renderCalendar();
         window.addEventListener('resize', () => {
             barChart.resize(); pieChart.resize(); trendChart.resize();
         });
@@ -171,13 +201,7 @@
         document.querySelectorAll('.period-tab').forEach(tab => {
             if (tab.dataset.period) {
                 tab.addEventListener('click', () => {
-                    state.period = tab.dataset.period;
-                    state.from = null; state.to = null; state.granularity = null; state.postId = null;
-                    document.getElementById('analytics-from').value = '';
-                    document.getElementById('analytics-to').value = '';
-                    document.querySelectorAll('.period-tab')
-                            .forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
+                    applyPeriod(tab.dataset.period);
                     loadAll();
                 });
             }
@@ -187,50 +211,53 @@
         document.querySelectorAll('[data-dim]').forEach(tab => {
             tab.addEventListener('click', () => {
                 state.dimension = tab.dataset.dim;
-                state.country = null; state.postId = null; state.from = null; state.to = null;
+                state.country = null; state.postId = null;
                 state.granularity = null;
-                document.getElementById('analytics-from').value = '';
-                document.getElementById('analytics-to').value = '';
                 document.querySelectorAll('[data-dim]')
                         .forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                document.querySelectorAll('.period-tab').forEach(t => {
-                    t.classList.toggle('active', t.dataset.period === state.period);
-                });
                 loadAll();
             });
         });
 
-        document.getElementById('apply-date-range').addEventListener('click', applyDateRange);
-        document.getElementById('clear-date-range').addEventListener('click', () => {
-            state.from = null; state.to = null; state.granularity = null;
-            document.getElementById('analytics-from').value = '';
-            document.getElementById('analytics-to').value = '';
-            document.querySelectorAll('.period-tab').forEach(t => {
-                t.classList.toggle('active', t.dataset.period === state.period);
-            });
-            loadAll();
-        });
+        document.getElementById('date-range-trigger').addEventListener('click', toggleDatePicker);
+        document.getElementById('date-range-prev').addEventListener('click', () => { pickerMonth.setMonth(pickerMonth.getMonth() - 1); renderCalendar(); });
+        document.getElementById('date-range-next').addEventListener('click', () => { pickerMonth.setMonth(pickerMonth.getMonth() + 1); renderCalendar(); });
+        document.getElementById('clear-date-range').addEventListener('click', () => { state.from = null; state.to = null; state.period = 'custom'; closeDatePicker(); renderDateRangeLabel(); loadAll(); });
 
         loadAll();
     });
 
-    function applyDateRange() {
-        const from = document.getElementById('analytics-from').value;
-        const to = document.getElementById('analytics-to').value;
-        if (!from || !to) {
-            alert('请选择开始日期和结束日期');
-            return;
+    function applyPeriod(period) {
+        state.period = period;
+        const range = AnalyticsDateRange.rangeForPeriod(period, new Date());
+        state.from = range.from; state.to = range.to; state.granularity = 'auto'; state.postId = null; state.country = null;
+        document.querySelectorAll('.period-tab').forEach(t => t.classList.toggle('active', t.dataset.period === period));
+        renderDateRangeLabel();
+        renderCalendar();
+    }
+
+    function renderDateRangeLabel() { document.getElementById('date-range-label').textContent = state.from && state.to ? `${state.from} 至 ${state.to}` : '全部数据'; }
+    function toggleDatePicker() { const popover = document.getElementById('date-range-popover'); const open = popover.classList.toggle('open'); document.getElementById('date-range-trigger').setAttribute('aria-expanded', String(open)); if (open) { selecting = 'from'; pickerMonth = state.from ? new Date(`${state.from}T00:00:00`) : new Date(); renderCalendar(); positionDatePicker(); } }
+    function closeDatePicker() { document.getElementById('date-range-popover').classList.remove('open'); document.getElementById('date-range-trigger').setAttribute('aria-expanded', 'false'); }
+    function positionDatePicker() { const picker = document.getElementById('analytics-date-range'); const trigger = document.getElementById('date-range-trigger'); const popover = document.getElementById('date-range-popover'); popover.style.left = `${trigger.offsetLeft}px`; popover.style.top = `${trigger.offsetTop + trigger.offsetHeight + 8}px`; }
+    function renderCalendar() {
+        const month = pickerMonth.getMonth(); const year = pickerMonth.getFullYear();
+        document.getElementById('date-range-month').textContent = `${year}年${month + 1}月`;
+        const grid = document.getElementById('date-range-grid'); grid.innerHTML = ['日','一','二','三','四','五','六'].map(day => `<span class="date-range-weekday">${day}</span>`).join('');
+        const first = new Date(year, month, 1); const offset = first.getDay(); const days = new Date(year, month + 1, 0).getDate();
+        for (let i = 0; i < offset; i++) grid.insertAdjacentHTML('beforeend', '<span></span>');
+        for (let day = 1; day <= days; day++) {
+            const value = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const classes = ['date-range-day']; if (state.from && value > state.from && state.to && value < state.to) classes.push('range'); if (value === state.from) classes.push('start'); if (value === state.to) classes.push('end');
+            const button = document.createElement('button'); button.type = 'button'; button.className = classes.join(' '); button.textContent = day; button.dataset.date = value; button.addEventListener('click', () => selectCalendarDate(value)); grid.appendChild(button);
         }
-        if (from > to) {
-            alert('开始日期不能晚于结束日期');
-            return;
-        }
-        state.period = 'custom';
-        state.from = from; state.to = to; state.granularity = 'auto';
-        state.country = null; state.postId = null;
-        document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
-        loadAll();
+        document.getElementById('date-range-selection').textContent = selecting === 'from' ? '请选择开始日期' : `开始：${state.from}，请选择结束日期`;
+    }
+    function selectCalendarDate(value) {
+        if (selecting === 'from') { state.from = value; state.to = null; selecting = 'to'; state.period = 'custom'; document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active')); renderCalendar(); renderDateRangeLabel(); return; }
+        if (value < state.from) [state.from, state.to] = [value, state.from]; else state.to = value;
+        state.period = 'custom'; state.granularity = 'auto'; state.postId = null; state.country = null; renderDateRangeLabel(); closeDatePicker(); loadAll();
     }
 
     // ─── URL 构造 ────────────────────────────────────────────────

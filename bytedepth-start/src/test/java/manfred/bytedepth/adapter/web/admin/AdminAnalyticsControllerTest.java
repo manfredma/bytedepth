@@ -538,10 +538,11 @@ class AdminAnalyticsControllerTest {
     }
 
     @Test
-    void toEndTime_usesExplicitEndOfDayAndCurrentTimeForTodayOrOtherPeriods() {
+    void toEndTime_usesExplicitEndOfDayAndWholeNaturalDayForToday() {
         assertThat(AdminAnalyticsController.toEndTime("week", "2026-06-30"))
                 .isEqualTo(LocalDateTime.of(2026, 6, 30, 23, 59, 59));
-        assertThat(AdminAnalyticsController.toEndTime("today", null)).isBeforeOrEqualTo(LocalDateTime.now());
+        assertThat(AdminAnalyticsController.toEndTime("today", null))
+                .isEqualTo(LocalDate.now().atTime(23, 59, 59));
         assertThat(AdminAnalyticsController.toEndTime("week", null))
                 .isEqualTo(LocalDate.now().with(java.time.temporal.TemporalAdjusters.nextOrSame(
                         java.time.DayOfWeek.SUNDAY)).atTime(23, 59, 59));

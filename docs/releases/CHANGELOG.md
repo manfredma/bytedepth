@@ -2,6 +2,16 @@
 
 本文件同时记录开发中的 `## Unreleased` 和正式发布版本。任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前写入非空且分类明确的 `Unreleased` 条目；正式版本条目必须与一个不可变 annotated Git Tag 一一对应。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
+## Unreleased
+
+### Changed
+
+- 访问统计快捷时间统一转换为显式日期范围，并将自定义范围选择改为联动的日历弹层。
+
+### Fixed
+
+- “今天”统计范围覆盖当天 00:00:00 至 23:59:59，不再截止到当前时刻。
+
 ## [v2.15.6] - 2026-09-15
 
 **Tag**：由受控 Maven Release 流程创建。
