@@ -22,6 +22,7 @@ require_line 'record_timed_phase "$TIMING_FILE" docker_build_and_rollout'
 require_line 'record_timing_phase "$TIMING_FILE" deployment_total passed'
 require_line 'record_timing_phase "$TIMING_FILE" deployment_total failed'
 require_line 'require_staging_runtime_prerequisites'
+require_line './deploy/bootstrap-staging-runtime.sh --lock-held --ensure'
 require_line 'BYTEDEPTH_STAGING_HOST:-124.221.143.25'
 require_line 'sudo ./deploy/deploy-staging.sh ${1:-main}'
 require_line 'git_cmd fetch --force --no-recurse-submodules origin "$REF" main'
@@ -30,7 +31,9 @@ require_line 'bash scripts/check-release-readiness.sh --target "$COMMIT" --base 
 readiness_line="$(rg -nF 'bash scripts/check-release-readiness.sh --target "$COMMIT" --base origin/main --mode candidate' "$SCRIPT" | cut -d: -f1)"
 preflight_line="$(rg -nF 'record_timed_phase "$TIMING_FILE" runtime_preflight' "$SCRIPT" | cut -d: -f1)"
 rollout_line="$(rg -nF './deploy/bootstrap-ops-deploy.sh' "$SCRIPT" | cut -d: -f1)"
+runtime_bootstrap_line="$(rg -nF './deploy/bootstrap-staging-runtime.sh --lock-held --ensure' "$SCRIPT" | cut -d: -f1)"
 [[ "$readiness_line" -lt "$preflight_line" ]]
+[[ "$readiness_line" -lt "$runtime_bootstrap_line" ]]
 [[ "$readiness_line" -lt "$rollout_line" ]]
 
 if rg -q 'require_staging_runtime "\$STATE_DIR/runtime/manifest"' "$SCRIPT"; then
@@ -38,8 +41,8 @@ if rg -q 'require_staging_runtime "\$STATE_DIR/runtime/manifest"' "$SCRIPT"; the
     exit 1
 fi
 
-if rg -q 'bootstrap-staging-runtime\.sh|npm ci|playwright install|docker run' "$SCRIPT"; then
-    printf 'Staging deployment must consume, not repair, runtime or create test containers.\n' >&2
+if rg -q 'npm ci|playwright install|docker run' "$SCRIPT"; then
+    printf 'Staging deployment must not create test runtimes or containers directly.\n' >&2
     exit 1
 fi
 

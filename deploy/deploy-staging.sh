@@ -109,6 +109,9 @@ invalidate_test_evidence
 
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 run_runtime_preflight() {
+    # Keep dependency inputs and the deployed checkout in sync before rollout;
+    # test runners must never discover a missing manifest after deployment.
+    ./deploy/bootstrap-staging-runtime.sh --lock-held --ensure
     require_staging_runtime_prerequisites
 }
 if ! record_timed_phase "$TIMING_FILE" runtime_preflight run_runtime_preflight; then
