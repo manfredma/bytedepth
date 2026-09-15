@@ -247,7 +247,8 @@ class AdminAnalyticsControllerTest {
 
         mockMvc.perform(get("/admin/analytics/api/overview-trend")
                         .param("from", "2026-07-29")
-                        .param("to", "2026-07-29"))
+                        .param("to", "2026-07-29")
+                        .param("granularity", "hour"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.current.length()").value(24))
                 .andExpect(jsonPath("$.current[0].label").value("00:00"))
@@ -268,7 +269,8 @@ class AdminAnalyticsControllerTest {
 
         mockMvc.perform(get("/admin/analytics/api/overview-trend")
                         .param("from", "2026-07-29")
-                        .param("to", "2026-07-29"))
+                        .param("to", "2026-07-29")
+                        .param("granularity", "hour"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.current[2].label").value("02:00"))
                 .andExpect(jsonPath("$.current[2].viewCount").value(4))
@@ -455,7 +457,8 @@ class AdminAnalyticsControllerTest {
 
         mockMvc.perform(get("/admin/analytics/api/overview-trend")
                         .param("from", "2026-07-29")
-                        .param("to", "2026-07-29"))
+                        .param("to", "2026-07-29")
+                        .param("granularity", "hour"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.previous[2].label").value("02:00"))
                 .andExpect(jsonPath("$.previous[2].viewCount").value(0));
@@ -475,6 +478,26 @@ class AdminAnalyticsControllerTest {
     }
 
     @Test
+    void selectedWeek_usesWholeNaturalWeek() {
+        LocalDate selectedDate = LocalDate.of(2026, 9, 16); // Wednesday
+
+        assertThat(AdminAnalyticsController.toStartTime("week", null, selectedDate))
+                .isEqualTo(LocalDateTime.of(2026, 9, 14, 0, 0));
+        assertThat(AdminAnalyticsController.toEndTime("week", null, selectedDate))
+                .isEqualTo(LocalDateTime.of(2026, 9, 20, 23, 59, 59));
+    }
+
+    @Test
+    void selectedMonthAndYear_useWholeNaturalPeriod() {
+        LocalDate selectedDate = LocalDate.of(2026, 2, 15);
+
+        assertThat(AdminAnalyticsController.toEndTime("month", null, selectedDate))
+                .isEqualTo(LocalDateTime.of(2026, 2, 28, 23, 59, 59));
+        assertThat(AdminAnalyticsController.toEndTime("year", null, selectedDate))
+                .isEqualTo(LocalDateTime.of(2026, 12, 31, 23, 59, 59));
+    }
+
+    @Test
     void toStartTime_customFrom_parsesDate() {
         LocalDateTime result = AdminAnalyticsController.toStartTime("week", "2026-06-01");
         assertThat(result).isEqualTo(LocalDateTime.of(2026, 6, 1, 0, 0, 0));
@@ -485,7 +508,8 @@ class AdminAnalyticsControllerTest {
         assertThat(AdminAnalyticsController.toStartTime("all", " "))
                 .isEqualTo(LocalDateTime.of(2000, 1, 1, 0, 0));
         assertThat(AdminAnalyticsController.toEndTime("week", " "))
-                .isBeforeOrEqualTo(LocalDateTime.now());
+                .isEqualTo(LocalDate.now().with(java.time.temporal.TemporalAdjusters.nextOrSame(
+                        java.time.DayOfWeek.SUNDAY)).atTime(23, 59, 59));
     }
 
     @Test
@@ -518,7 +542,38 @@ class AdminAnalyticsControllerTest {
         assertThat(AdminAnalyticsController.toEndTime("week", "2026-06-30"))
                 .isEqualTo(LocalDateTime.of(2026, 6, 30, 23, 59, 59));
         assertThat(AdminAnalyticsController.toEndTime("today", null)).isBeforeOrEqualTo(LocalDateTime.now());
-        assertThat(AdminAnalyticsController.toEndTime("week", null)).isBeforeOrEqualTo(LocalDateTime.now());
+        assertThat(AdminAnalyticsController.toEndTime("week", null))
+                .isEqualTo(LocalDate.now().with(java.time.temporal.TemporalAdjusters.nextOrSame(
+                        java.time.DayOfWeek.SUNDAY)).atTime(23, 59, 59));
+        assertThat(AdminAnalyticsController.toEndTime("all", null)).isBeforeOrEqualTo(LocalDateTime.now());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void trend_withOnlyOneExplicitDate_stillUsesCustomRangeDetection() throws Exception {
+        when(viewLogStatsPort.postTrend(any(), any(), any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/analytics/api/post-trend")
+                        .param("postId", "42")
+                        .param("from", "2026-06-01"))
+                .andExpect(status().isOk());
+
+        verify(viewLogStatsPort, times(2)).postTrend(eq(42L), any(), any(), any());
+
+        mockMvc.perform(get("/admin/analytics/api/post-trend")
+                        .param("postId", "42")
+                        .param("to", "2026-06-30"))
+                .andExpect(status().isOk());
+
+        verify(viewLogStatsPort, times(4)).postTrend(eq(42L), any(), any(), any());
+
+        mockMvc.perform(get("/admin/analytics/api/post-trend")
+                        .param("postId", "42")
+                        .param("from", " ")
+                        .param("to", " "))
+                .andExpect(status().isOk());
+
+        verify(viewLogStatsPort, times(6)).postTrend(eq(42L), any(), any(), any());
     }
 
     @Test
@@ -540,9 +595,49 @@ class AdminAnalyticsControllerTest {
 
     @Test
     void toDateFormat_30Days_returnsDayFormat() {
-        LocalDateTime start = LocalDateTime.now().minusDays(30);
-        assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.now()))
+        LocalDateTime start = LocalDateTime.of(2026, 1, 1, 0, 0);
+        assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.of(2026, 1, 31, 23, 59, 59)))
                 .isEqualTo("%m-%d");
+    }
+
+    @Test
+    void toDateFormat_exactOneCalendarMonth_returnsDayFormat() {
+        assertThat(AdminAnalyticsController.toDateFormat(
+                LocalDateTime.of(2026, 1, 15, 0, 0),
+                LocalDateTime.of(2026, 2, 15, 23, 59, 59)))
+                .isEqualTo("%m-%d");
+    }
+
+    @Test
+    void toDateFormat_dayGranularity_returnsDayFormat() {
+        assertThat(AdminAnalyticsController.toDateFormat(
+                LocalDateTime.of(2026, 1, 15, 0, 0),
+                LocalDateTime.of(2026, 1, 15, 23, 59, 59), false, "day"))
+                .isEqualTo("%m-%d");
+    }
+
+    @Test
+    void customOneDayRange_defaultsToDayFormat() {
+        assertThat(AdminAnalyticsController.toDateFormat(
+                LocalDateTime.of(2026, 7, 29, 0, 0),
+                LocalDateTime.of(2026, 7, 29, 23, 59, 59), true, "auto"))
+                .isEqualTo("%m-%d");
+    }
+
+    @Test
+    void drilledDayRange_canRequestHourFormat() {
+        assertThat(AdminAnalyticsController.toDateFormat(
+                LocalDateTime.of(2026, 7, 29, 0, 0),
+                LocalDateTime.of(2026, 7, 29, 23, 59, 59), true, "hour"))
+                .isEqualTo("%H:00");
+    }
+
+    @Test
+    void toDateFormat_longerThanOneCalendarMonth_returnsMonthFormat() {
+        assertThat(AdminAnalyticsController.toDateFormat(
+                LocalDateTime.of(2026, 1, 15, 0, 0),
+                LocalDateTime.of(2026, 2, 16, 23, 59, 59)))
+                .isEqualTo("%Y-%m");
     }
 
     @Test

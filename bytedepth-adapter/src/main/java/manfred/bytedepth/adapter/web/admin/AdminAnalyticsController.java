@@ -97,10 +97,11 @@ public class AdminAnalyticsController {
             @RequestParam Long postId,
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to) {
+            @RequestParam(required = false) String to,
+            @RequestParam(defaultValue = "auto") String granularity) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
-        String format = toDateFormat(start, end);
+        String format = toDateFormat(start, end, hasExplicitRange(from, to), granularity);
         LocalDateTime previousStart = previousStart(start, end);
         LocalDateTime previousEnd = start.minusSeconds(1);
         return comparison(
@@ -114,10 +115,11 @@ public class AdminAnalyticsController {
     public TrendComparisonDTO overviewTrend(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to) {
+            @RequestParam(required = false) String to,
+            @RequestParam(defaultValue = "auto") String granularity) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
-        String format = toDateFormat(start, end);
+        String format = toDateFormat(start, end, hasExplicitRange(from, to), granularity);
         LocalDateTime previousStart = previousStart(start, end);
         LocalDateTime previousEnd = start.minusSeconds(1);
         return comparison(
@@ -179,10 +181,11 @@ public class AdminAnalyticsController {
             @RequestParam String pagePath,
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to) {
+            @RequestParam(required = false) String to,
+            @RequestParam(defaultValue = "auto") String granularity) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
-        String format = toDateFormat(start, end);
+        String format = toDateFormat(start, end, hasExplicitRange(from, to), granularity);
         LocalDateTime previousStart = previousStart(start, end);
         LocalDateTime previousEnd = start.minusSeconds(1);
         return comparison(
@@ -196,10 +199,11 @@ public class AdminAnalyticsController {
     public TrendComparisonDTO pageOverviewTrend(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to) {
+            @RequestParam(required = false) String to,
+            @RequestParam(defaultValue = "auto") String granularity) {
         LocalDateTime start = toStartTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
-        String format = toDateFormat(start, end);
+        String format = toDateFormat(start, end, hasExplicitRange(from, to), granularity);
         LocalDateTime previousStart = previousStart(start, end);
         LocalDateTime previousEnd = start.minusSeconds(1);
         return comparison(
@@ -211,10 +215,13 @@ public class AdminAnalyticsController {
     // ── 工具方法（package-private 供测试直接调用）─────────────────────────
 
     static LocalDateTime toStartTime(String period, String from) {
+        return toStartTime(period, from, LocalDate.now());
+    }
+
+    static LocalDateTime toStartTime(String period, String from, LocalDate today) {
         if (from != null && !from.isBlank()) {
             return LocalDate.parse(from).atStartOfDay();
         }
-        LocalDate today = LocalDate.now();
         return switch (period) {
             case "today" -> today.atStartOfDay();
             // 本月：自然月边界（本月 1 日 00:00），而非"过去 30 天"
@@ -229,21 +236,41 @@ public class AdminAnalyticsController {
     }
 
     static LocalDateTime toEndTime(String period, String to) {
+        return toEndTime(period, to, LocalDate.now());
+    }
+
+    static LocalDateTime toEndTime(String period, String to, LocalDate today) {
         if (to != null && !to.isBlank()) {
             return LocalDate.parse(to).atTime(23, 59, 59);
         }
         if ("today".equals(period)) {
             return LocalDateTime.now();
         }
-        return LocalDateTime.now();
+        return switch (period) {
+            case "week" -> today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)).atTime(23, 59, 59);
+            case "month" -> today.with(TemporalAdjusters.lastDayOfMonth()).atTime(23, 59, 59);
+            case "year" -> today.with(TemporalAdjusters.lastDayOfYear()).atTime(23, 59, 59);
+            default -> LocalDateTime.now();
+        };
     }
 
     /** 按时间跨度自动选择 DATE_FORMAT 格式字符串。跨天时绝不按小时聚合，避免相同小时被合并。 */
     static String toDateFormat(LocalDateTime start, LocalDateTime end) {
-        if (start.toLocalDate().equals(end.toLocalDate())) return "%H:00";
-        long days = ChronoUnit.DAYS.between(start.toLocalDate(), end.toLocalDate());
-        if (days <= 60) return "%m-%d";
-        return "%Y-%m";
+        return toDateFormat(start, end, false, "auto");
+    }
+
+    static String toDateFormat(LocalDateTime start, LocalDateTime end,
+                               boolean explicitRange, String granularity) {
+        if ("hour".equals(granularity)) return "%H:00";
+        if ("day".equals(granularity)) return "%m-%d";
+        if (start.toLocalDate().equals(end.toLocalDate())) {
+            return explicitRange ? "%m-%d" : "%H:00";
+        }
+        return end.toLocalDate().isAfter(start.toLocalDate().plusMonths(1)) ? "%Y-%m" : "%m-%d";
+    }
+
+    private static boolean hasExplicitRange(String from, String to) {
+        return (from != null && !from.isBlank()) || (to != null && !to.isBlank());
     }
 
     /**
