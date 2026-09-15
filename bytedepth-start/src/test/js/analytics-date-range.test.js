@@ -45,6 +45,8 @@ describe('analytics date range', () => {
   test('analytics template uses one custom range trigger instead of native date inputs', () => {
     expect(template).toContain('id="date-range-trigger"');
     expect(template).toContain('id="date-range-popover"');
+    expect(template).toContain('class="time-controls"');
+    expect(template).not.toContain('date-range-label">时间范围');
     expect(template).toContain('positionDatePicker');
     expect(template).not.toContain('type="date"');
   });

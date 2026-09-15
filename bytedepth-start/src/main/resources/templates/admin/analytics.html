@@ -28,9 +28,9 @@
         .period-tab:hover { border-color: var(--admin-accent); color: var(--admin-accent); }
         .period-tab.active { background: var(--admin-accent); color: white;
                              border-color: var(--admin-accent); font-weight: 600; }
-        .date-range-picker { position: relative; display: flex; flex-wrap: wrap; align-items: center;
-                             gap: 8px; margin-bottom: 14px; }
-        .date-range-picker label { color: #666; font-size: .85em; }
+        .time-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .time-controls .period-tabs { margin-bottom: 0; }
+        .date-range-picker { position: relative; display: flex; align-items: center; }
         .date-range-trigger { display: inline-flex; align-items: center; gap: 9px; min-width: 245px;
                               padding: 8px 12px; border: 1px solid #d7e0eb; border-radius: 10px;
                               background: #fbfcfe; color: #26364d; cursor: pointer; font-size: .88em;
@@ -110,15 +110,15 @@
     </div>
 
     <!-- 时间维度 Tab -->
-    <div class="period-tabs">
-        <button class="period-tab" data-period="today">今天</button>
-        <button class="period-tab active" data-period="week">本周</button>
-        <button class="period-tab" data-period="month">本月</button>
-        <button class="period-tab" data-period="year">本年</button>
-        <button class="period-tab" data-period="all">全部</button>
-    </div>
-    <div class="date-range-picker" id="analytics-date-range" aria-label="日期范围选择">
-        <span class="date-range-label">时间范围</span>
+    <div class="time-controls">
+      <div class="period-tabs">
+          <button class="period-tab" data-period="today">今天</button>
+          <button class="period-tab active" data-period="week">本周</button>
+          <button class="period-tab" data-period="month">本月</button>
+          <button class="period-tab" data-period="year">本年</button>
+          <button class="period-tab" data-period="all">全部</button>
+      </div>
+      <div class="date-range-picker" id="analytics-date-range" aria-label="日期范围选择">
         <button class="date-range-trigger" id="date-range-trigger" type="button" aria-haspopup="dialog" aria-expanded="false">
             <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.25" y="3.25" width="11.5" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 2.5v2M11 2.5v2M2.5 6h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
             <span id="date-range-label">日期范围</span>
@@ -129,6 +129,7 @@
             <div class="date-range-grid" id="date-range-grid"></div>
             <div class="date-range-popover-foot"><span id="date-range-selection">请选择开始日期</span><button class="date-range-clear" id="clear-date-range" type="button">清除</button></div>
         </div>
+      </div>
     </div>
 
     <!-- 面包屑（下钻路径，无下钻时为空） -->
@@ -585,10 +586,6 @@
     // ─── 面包屑 ──────────────────────────────────────────────────
     function updateBreadcrumb() {
         const crumbs = [];
-        if (state.from) {
-            crumbs.push(`<span class="bc-link" onclick="resetTimeRange()">`
-                       + `📅 ${state.from} ~ ${state.to}</span>`);
-        }
         if (state.country) {
             crumbs.push(`<span class="bc-link" onclick="resetToCountry()">`
                        + `🌍 ${state.country}</span>`);
@@ -615,8 +612,6 @@
 
     function resetTimeRange() {
         state.from = null; state.to = null; state.granularity = null;
-        document.getElementById('analytics-from').value = '';
-        document.getElementById('analytics-to').value = '';
         document.querySelectorAll('.period-tab').forEach(t => {
             t.classList.toggle('active', t.dataset.period === state.period);
         });
