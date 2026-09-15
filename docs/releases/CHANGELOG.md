@@ -2,6 +2,16 @@
 
 本文件记录正式发布版本；每个条目必须与一个不可变 annotated Git Tag 一一对应。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
+## Unreleased
+
+### Added
+
+- 重构后台访问统计的周、月、年自然周期展示，补充自定义日期范围选择，并支持按日、月、小时下钻。
+
+### Compatibility
+
+- 无数据库迁移或业务 API 语义变更。
+
 ## [v2.15.5] - 2026-09-14
 
 **Tag**：由受控 Maven Release 流程创建。
