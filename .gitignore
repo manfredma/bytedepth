@@ -53,6 +53,7 @@ settings.xml
 .DS_Store
 
 # Tools
+.worktrees/
 .omc/
 .omx/
 .claude/
