@@ -1,6 +1,6 @@
 # 发布管理
 
-本文件是版本、Tag、发布记录和回滚的唯一规则说明。部署拓扑与机器操作仍以 [部署手册](../../deploy/README.md) 为准。
+本文件是版本、Tag、发布记录和回滚的唯一规则说明。`CHANGELOG.md` 同时记录 `## Unreleased` 与正式版本：任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前拥有非空且分类明确的 `Unreleased` 条目；正式版本条目必须与不可变 annotated Tag 一一对应。部署拓扑与机器操作仍以 [部署手册](../../deploy/README.md) 为准。
 
 ## 不可变规则
 
@@ -8,7 +8,7 @@
 2. 发布版本使用稳定 SemVer：`vMAJOR.MINOR.PATCH`，例如 `v1.2.3`。预发布仅可使用 `vMAJOR.MINOR.PATCH-rc.N`，不得进入生产。
 3. Tag 必须是 annotated tag，并受仓库 `v*` 保护；Tag 一经推送不得移动、删除或复用。
 4. Tag 所指提交中的 Maven 版本必须与 Tag 一致：`v1.2.3` 对应 `1.2.3`；发布后 `main` 必须推进到下一个 `-SNAPSHOT` 版本。
-5. 每个版本必须在 [CHANGELOG.md](CHANGELOG.md) 中记录用户可见变更、风险或迁移说明；无变更记录不允许打 Tag。
+5. 每个版本必须在 [CHANGELOG.md](CHANGELOG.md) 中记录用户可见变更、风险或迁移说明；无变更记录不允许打 Tag。运行时代码进入 staging 前必须先通过 `Unreleased` 门禁。
 6. 部署结果必须记录版本、完整 commit SHA、目标节点、时间、验收结论和回滚基线。机器上的运行状态用于实时查询；变更内容以 Git Tag 和 Changelog 为准。
 
 ## 标准开发到发布流程

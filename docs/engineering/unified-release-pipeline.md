@@ -1,6 +1,6 @@
 # 统一发布流程
 
-本流程是 bytedepth、Career 与 Toolbox 的共同发布约束，也是在新 Java 项目初始化时必须复制的发布基线。它不是可选建议：任何 WARNING、失败、证据缺失或 SHA 漂移都会停止后续步骤。
+本流程是 bytedepth、Career 与 Toolbox 的共同发布约束，也是在新 Java 项目初始化时必须复制的发布基线。它不是可选建议：任何 WARNING、失败、证据缺失或 SHA 漂移都会停止后续步骤。任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前拥有 `CHANGELOG.md` 中非空且分类明确的 `## Unreleased` 条目。
 
 ## 为什么分为 workflow 与受控主机脚本
 
@@ -10,7 +10,7 @@ staging 是唯一跨进程集成与 E2E 环境；生产操作只在受控主机�
 
 ## 固定顺序
 
-1. 功能分支运行 `scripts/run-local-quality.sh`。
+1. 功能分支先完成 `CHANGELOG.md` 的 `Unreleased` 条目，再运行 `scripts/run-local-quality.sh`；缺少条目时门禁失败。
 2. PR 的 `.github/workflows/quality.yml` 通过。
 3. 部署候选：`deploy/deploy-staging.sh <branch>`。
 4. `deploy/bootstrap-staging-runtime.sh --ensure` 确认共享运行时，只有失配才预热。

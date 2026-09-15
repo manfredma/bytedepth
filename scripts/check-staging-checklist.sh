@@ -5,6 +5,7 @@ set -Eeuo pipefail
 # Usage: bash scripts/check-staging-checklist.sh
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
+bash "$SOURCE_ROOT/scripts/test-check-release-readiness.sh"
 bash "$SOURCE_ROOT/scripts/test-run-local-quality.sh"
 bash "$SOURCE_ROOT/scripts/test-github-quality-workflow.sh"
 bash "$SOURCE_ROOT/scripts/test-maven-runtime.sh"

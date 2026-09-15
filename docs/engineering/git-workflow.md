@@ -10,7 +10,7 @@
 
 1. **开分支与 worktree**：从最新 `origin/main` 创建独立分支与 worktree（`feat/<topic>` / `fix/<topic>` / `docs/<topic>`）。
 2. **实现并补测试**：写代码 + 单元测试，业务分支覆盖 100%。TDD：先写失败测试，再最小实现。
-3. **跑前置门禁**：`bash scripts/verify-changed-coverage.sh`（Java 变更覆盖率 + 拒绝 Maven WARNING）、前端 `npm test` 与 `npm run lint`、部署脚本 `bash scripts/test-deploy-staging.sh`。零 WARNING，全绿才继续。
+3. **跑前置门禁**：先确认所有用户可见、运行时、部署或配置变更已写入 `CHANGELOG.md` 的非空分类 `## Unreleased`（必须在首次 staging 部署前完成），再运行 `bash scripts/run-local-quality.sh`。该入口包含 Java 变更覆盖率、前端测试/lint、部署脚本契约和零 WARNING 检查。全绿才继续。
 4. **staging 预发验收**（界面/视觉/布局改动必须，后端改动建议）：
    - 推送工作分支到 `origin`。
    - 在 124 执行 `deploy-staging.sh <分支>` 部署该分支（staging 是测试环境，接受任意命名分支用于验收）。
