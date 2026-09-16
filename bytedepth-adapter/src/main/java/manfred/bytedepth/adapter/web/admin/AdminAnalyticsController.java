@@ -254,7 +254,7 @@ public class AdminAnalyticsController {
         };
     }
 
-    /** 按时间跨度自动选择 DATE_FORMAT 格式字符串。跨天时绝不按小时聚合，避免相同小时被合并。 */
+    /** 按时间跨度自动选择 DATE_FORMAT 格式字符串。单日按小时展示，跨天时按日或月展示。 */
     static String toDateFormat(LocalDateTime start, LocalDateTime end) {
         return toDateFormat(start, end, false, "auto");
     }
@@ -264,7 +264,7 @@ public class AdminAnalyticsController {
         if ("hour".equals(granularity)) return "%H:00";
         if ("day".equals(granularity)) return "%m-%d";
         if (start.toLocalDate().equals(end.toLocalDate())) {
-            return explicitRange ? "%m-%d" : "%H:00";
+            return "%H:00";
         }
         return end.toLocalDate().isAfter(start.toLocalDate().plusMonths(1)) ? "%Y-%m" : "%m-%d";
     }

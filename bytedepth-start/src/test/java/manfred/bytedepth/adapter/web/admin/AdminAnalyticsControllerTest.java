@@ -618,11 +618,11 @@ class AdminAnalyticsControllerTest {
     }
 
     @Test
-    void customOneDayRange_defaultsToDayFormat() {
+    void customOneDayRange_defaultsToHourFormat() {
         assertThat(AdminAnalyticsController.toDateFormat(
                 LocalDateTime.of(2026, 7, 29, 0, 0),
                 LocalDateTime.of(2026, 7, 29, 23, 59, 59), true, "auto"))
-                .isEqualTo("%m-%d");
+                .isEqualTo("%H:00");
     }
 
     @Test

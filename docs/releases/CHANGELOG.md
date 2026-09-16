@@ -2,6 +2,13 @@
 
 本文件同时记录开发中的 `## Unreleased` 和正式发布版本。任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前写入非空且分类明确的 `Unreleased` 条目；正式版本条目必须与一个不可变 annotated Git Tag 一一对应。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
+## Unreleased
+
+### Fixed
+
+- 修复首页 slogan 脚本解析错误导致文案不显示的问题。
+- 访问统计选择单日范围时改为按小时展示趋势。
+
 ## [v2.15.7] - 2026-09-15
 
 **Tag**：`v2.15.7`
