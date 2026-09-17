@@ -5,7 +5,7 @@ readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SCRIPT="$ROOT/deploy/deploy-staging.sh"
 
 require_line() {
-    rg -F "$1" "$SCRIPT" >/dev/null || {
+    rg -F -- "$1" "$SCRIPT" >/dev/null || {
         printf 'Missing staging deployment contract: %s\n' "$1" >&2
         exit 1
     }
@@ -26,6 +26,8 @@ require_line 'staging-bytedepth.bytedepth.cn'
 require_line 'BYTEDEPTH_SITE_URL'
 require_line 'staging TLS certificate'
 require_line 'require_staging_host_configuration'
+require_line '-ext subjectAltName'
+require_line 'DNS:$EXPECTED_STAGING_DOMAIN'
 require_line './deploy/bootstrap-staging-runtime.sh --lock-held --ensure'
 require_line 'BYTEDEPTH_STAGING_HOST:-124.221.143.25'
 require_line 'sudo ./deploy/deploy-staging.sh ${1:-main}'

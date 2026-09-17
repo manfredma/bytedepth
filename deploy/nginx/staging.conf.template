@@ -22,6 +22,12 @@ server {
     listen 443 ssl;
     server_name ${BYTEDEPTH_DOMAIN};
 
+    # If this file is selected as a shared-listener fallback, never proxy an
+    # unknown Host or direct-IP request into the staging application.
+    if ($host != ${BYTEDEPTH_DOMAIN}) {
+        return 444;
+    }
+
     ssl_certificate /etc/letsencrypt/live/${BYTEDEPTH_DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${BYTEDEPTH_DOMAIN}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;

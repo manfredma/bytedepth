@@ -46,7 +46,7 @@ invalidate_test_evidence() {
 }
 
 require_staging_host_configuration() {
-    local configured_domain configured_site_url certificate_dir certificate_names
+    local configured_domain configured_site_url certificate_dir certificate_san_names
 
     configured_domain="$(awk -F= '$1 == "BYTEDEPTH_DOMAIN" {value = substr($0, index($0, "=") + 1)} END {print value}' .env 2>/dev/null || true)"
     if [[ "$configured_domain" != "$EXPECTED_STAGING_DOMAIN" ]]; then
@@ -67,8 +67,11 @@ require_staging_host_configuration() {
         printf 'Refusing: staging TLS certificate is missing for %s\n' "$EXPECTED_STAGING_DOMAIN" >&2
         exit 1
     fi
-    certificate_names="$(openssl x509 -in "$certificate_dir/fullchain.pem" -noout -text 2>/dev/null || true)"
-    if [[ "$certificate_names" != *"DNS:$EXPECTED_STAGING_DOMAIN"* ]]; then
+    certificate_san_names="$(openssl x509 -in "$certificate_dir/fullchain.pem" -noout -ext subjectAltName 2>/dev/null || true)"
+    if ! printf '%s\n' "$certificate_san_names" \
+        | tr ',' '\n' \
+        | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+        | grep -Fx "DNS:$EXPECTED_STAGING_DOMAIN" >/dev/null; then
         printf 'Refusing: staging TLS certificate does not cover %s\n' "$EXPECTED_STAGING_DOMAIN" >&2
         exit 1
     fi
