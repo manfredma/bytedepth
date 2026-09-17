@@ -8,10 +8,10 @@ server {
     listen 80;
     server_name ${BYTEDEPTH_DOMAIN};
     if ($arg_preview = false) {
-        return 302 https://bytedepth.cn$request_uri;
+        return 302 https://bytedepth.cn$uri$staging_redirect_args;
     }
     if ($staging_preview_enabled = 0) {
-        return 301 https://bytedepth.cn$request_uri;
+        return 301 https://bytedepth.cn$uri$staging_redirect_args;
     }
     return 301 https://$host$request_uri;
 }
@@ -38,10 +38,10 @@ server {
     add_header Set-Cookie $staging_preview_cookie_header always;
 
     if ($arg_preview = false) {
-        return 302 https://bytedepth.cn$request_uri;
+        return 302 https://bytedepth.cn$uri$staging_redirect_args;
     }
     if ($staging_preview_enabled = 0) {
-        return 301 https://bytedepth.cn$request_uri;
+        return 301 https://bytedepth.cn$uri$staging_redirect_args;
     }
 
     location / {
