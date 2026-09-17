@@ -36,7 +36,7 @@ if sudo -n grep -Fqx 'version=$TAG' '$RELEASE_HISTORY' 2>/dev/null; then
     printf 'DEPLOYED\\n'
     exit 20
 fi
-if sudo -n awk -F= '$1 == \"state\" {state=$2} $1 == \"version\" {version=$2} END {if (state == \"RUNNING\" && version == \"$TAG\") exit 0; exit 1}' '$DEPLOY_STATUS' 2>/dev/null; then
+if sudo -n awk -F= '\$1 == \"state\" {state=\$2} \$1 == \"version\" {version=\$2} END {if (state == \"RUNNING\" && version == \"$TAG\") exit 0; exit 1}' '$DEPLOY_STATUS' 2>/dev/null; then
     printf 'BUSY\\n'
     exit 21
 fi

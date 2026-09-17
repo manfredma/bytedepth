@@ -179,7 +179,7 @@ Extend `scripts/test-prepare-release.sh` so mocked release preparation fails whe
 
 - [ ] **Step 2: Implement commit-bound evidence checks**
 
-Make staging runner and a new staging-host E2E wrapper write root-owned evidence files under `/var/lib/bytedepth-staging/test-history/` containing `commit=<full SHA>`, command name, UTC timestamp and `result=passed`. The E2E wrapper fixes `E2E_BASE_URL=https://staging.bytedepth.cn` and the installed Chromium path, then records evidence only after Playwright succeeds. Before release, the operator copies both records over SSH into a local `mktemp -d` directory and passes that directory through the explicit `BYTEDEPTH_STAGING_EVIDENCE_DIR` environment variable. Make `prepare-release.sh` require both records to match `HEAD`; reject absent, malformed or mismatched SHA before Release Plugin invocation. Never accept a bare “green” string or an E2E run against another ref.
+Make staging runner and a new staging-host E2E wrapper write root-owned evidence files under `/var/lib/bytedepth-staging/test-history/` containing `commit=<full SHA>`, command name, UTC timestamp and `result=passed`. The E2E wrapper fixes `E2E_BASE_URL=https://staging.bytedepth.cn`, first opens `E2E_PREVIEW_BOOTSTRAP_URL=https://staging.bytedepth.cn/?preview=true` to establish preview state, and fixes the installed Chromium path, then records evidence only after Playwright succeeds. Before release, the operator copies both records over SSH into a local `mktemp -d` directory and passes that directory through the explicit `BYTEDEPTH_STAGING_EVIDENCE_DIR` environment variable. Make `prepare-release.sh` require both records to match `HEAD`; reject absent, malformed or mismatched SHA before Release Plugin invocation. Never accept a bare “green” string or an E2E run against another ref.
 
 - [ ] **Step 3: Update the authoritative documentation**
 
@@ -228,7 +228,7 @@ Expected: Redis IT writes/denies/cleans its UUID key; every `*IT` passes; eviden
 
 ```bash
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
-  "cd /opt/bytedepth && E2E_BASE_URL=https://staging.bytedepth.cn PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome npm run test:e2e"
+  "cd /opt/bytedepth && E2E_BASE_URL=https://staging.bytedepth.cn E2E_PREVIEW_BOOTSTRAP_URL='https://staging.bytedepth.cn/?preview=true' PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome npm run test:e2e"
 ```
 
 Expected: all applicable tests pass; device-scoped skips only; E2E evidence records the deployed SHA.

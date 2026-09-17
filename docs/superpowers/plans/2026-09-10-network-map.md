@@ -324,6 +324,7 @@ Expected: 完整 Compose 服务重建；MySQL、Redis、MeiliSearch 健康，app
 ```bash
 cd /opt/bytedepth
 E2E_BASE_URL=https://staging.bytedepth.cn \
+E2E_PREVIEW_BOOTSTRAP_URL='https://staging.bytedepth.cn/?preview=true' \
 PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome \
 npm run test:e2e
 ```
@@ -333,10 +334,10 @@ Expected: 网络地图桌面与移动端用例通过；不得在开发机启动 
 - [ ] **Step 4: 在 staging 执行查询集成验收**
 
 ```bash
-curl -kfsS -o /dev/null -w 'network: %{http_code}\n' https://staging.bytedepth.cn/network
-curl -kfsS https://staging.bytedepth.cn/network | grep -F 'https://workbench.bytedepth.cn'
-curl -kfsS https://staging.bytedepth.cn/network | grep -F 'https://docs.spring.io/spring-framework/reference/index.html'
-curl -kfsS https://staging.bytedepth.cn/network | grep -F '预发环境'
+curl -kfsS -o /dev/null -w 'network: %{http_code}\n' 'https://staging.bytedepth.cn/network?preview=true'
+curl -kfsS 'https://staging.bytedepth.cn/network?preview=true' | grep -F 'https://workbench.bytedepth.cn'
+curl -kfsS 'https://staging.bytedepth.cn/network?preview=true' | grep -F 'https://docs.spring.io/spring-framework/reference/index.html'
+curl -kfsS 'https://staging.bytedepth.cn/network?preview=true' | grep -F '预发环境'
 ```
 
 Expected: 所有命令成功，网络地图渲染固定链接与预发提示。

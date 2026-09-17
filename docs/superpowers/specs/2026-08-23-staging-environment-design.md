@@ -31,7 +31,7 @@ DNS 已就绪：`@` → 175、`staging` → 124，无通配符。
 1. 124 跑完全独立的一套 single-host 数据栈，不连 175 数据服务。
 2. 数据同步：周期性覆盖（drop + 重建），175 → 124。
 3. staging 用于版本发布预检与测试，**包含写数据**；写操作是临时的，下次同步会被覆盖。
-4. 全量同步、不脱敏；staging 公网开放，项目所有者接受安全风险。
+4. 全量同步、不脱敏；staging 主机保留公网 80/443 以支持预览，但普通公网流量默认转到生产，项目所有者接受预览入口不提供强认证的安全风险。
 5. staging 版本来源：任意 Git ref（分支/commit/Tag）。
 6. 同步与部署解耦：同步只管数据，部署只换代码。
 7. 操作方式：SSH 脚本为主；同步每周自动一次，也可手动触发。
@@ -243,15 +243,15 @@ codex 指出"175 上有 `ubuntu_2.pem`"是未验证假设。现有部署脚本�
 项目所有者已接受：
 
 - staging 全量镜像生产数据（含用户密码哈希、邮箱、访问日志、**Spring Session**），不脱敏。
-- staging 公网开放。
+- staging 主机的 80/443 仍需公网可达，但普通公网请求默认 301 到生产；只有带 `https://staging.bytedepth.cn/?preview=true` 的预览请求进入 staging。该参数不是安全认证。
 - staging 部署来自 `main` 或 Tag 的代码（不直接接受任意裸 SHA）。
 
-**爆炸半径**：staging 被攻破 = 生产用户数据泄露。Redis 含生产会话，复制后可在 staging 重放生产 session（可选缓解见 5.2）。TLS 强制、staging admin 密码不得为默认值、与生产同等主机加固。建议但未强制：HTTP Basic Auth 前置、禁止搜索引擎收录（`robots.txt` disallow + `X-Robots-Tag`）、访问告警。
+**爆炸半径**：staging 被攻破 = 生产用户数据泄露。Redis 含生产会话，复制后可在 staging 重放生产 session（可选缓解见 5.2）。TLS 强制、staging admin 密码不得为默认值、与生产同等主机加固。当前方案不增加 HTTP Basic Auth、IP 白名单或 VPN；已启用 `robots.txt`/`X-Robots-Tag` 禁止收录，但预览入口仍不是安全边界。
 
 ## 十、验收标准
 
 - [ ] 124 staging 五服务启动（mysql/redis/meili healthcheck `healthy`，app/nginx `Up`）。
-- [ ] `https://staging.bytedepth.cn` 返回 200，TLS 有效（SNI 验证）。
+- [ ] `https://staging.bytedepth.cn/?preview=true` 返回 200，TLS 有效（SNI 验证）；不带预览标记的公网请求 301 到生产。
 - [ ] MySQL 同步后行数/校验和与生产一致。
 - [ ] MeiliSearch 文档数与生产一致。
 - [ ] Redis 以 RDB 干净启动，无旧 AOF 残留。

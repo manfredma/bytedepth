@@ -7,6 +7,12 @@
 server {
     listen 80;
     server_name ${BYTEDEPTH_DOMAIN};
+    if ($arg_preview = false) {
+        return 302 https://bytedepth.cn$request_uri;
+    }
+    if ($staging_preview_enabled = 0) {
+        return 301 https://bytedepth.cn$request_uri;
+    }
     return 301 https://$host$request_uri;
 }
 
@@ -14,17 +20,7 @@ server {
 server {
     listen 80 default_server;
     server_name _;
-
-    client_max_body_size 10m;
-
-    location / {
-        set $app_upstream bytedepth-app:8080;
-        proxy_pass http://$app_upstream;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    return 444;
 }
 
 # HTTPS
@@ -38,6 +34,15 @@ server {
     ssl_ciphers HIGH:!aNULL:!MD5;
 
     client_max_body_size 10m;
+    add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+    add_header Set-Cookie $staging_preview_cookie_header always;
+
+    if ($arg_preview = false) {
+        return 302 https://bytedepth.cn$request_uri;
+    }
+    if ($staging_preview_enabled = 0) {
+        return 301 https://bytedepth.cn$request_uri;
+    }
 
     location / {
         set $app_upstream bytedepth-app:8080;
@@ -46,5 +51,10 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /robots.txt {
+        default_type text/plain;
+        return 200 "User-agent: *\nDisallow: /\n";
     }
 }

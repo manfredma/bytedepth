@@ -37,8 +37,7 @@ Nginx 在 `staging.bytedepth.cn` 的 HTTPS server 中按 Cookie/查询参数决�
 
 带 ?preview=true
     → 写入 staging_preview=1 Cookie
-    → 清理地址中的 preview 参数
-    → 继续代理 staging 应用
+    → 继续代理 staging 应用；地址保留明确的 `?preview=true` 入口
 
 有 staging_preview=1 Cookie
     → 继续代理 staging 应用

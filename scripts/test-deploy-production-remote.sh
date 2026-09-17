@@ -26,4 +26,33 @@ if grep -Fq 'Run this script with sudo: sudo ./deploy/deploy-production.sh' "$HO
     exit 1
 fi
 
+fixture_root="$(mktemp -d)"
+trap 'rm -rf "$fixture_root"' EXIT
+touch "$fixture_root/production-key"
+cat > "$fixture_root/ssh" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+remote_command="${@: -1}"
+case "$remote_command" in
+    *"printf 'READY\\n'"*)
+        printf 'READY\n'
+        ;;
+    *"tail -n 80"*)
+        printf 'Deployed v9.9.9 (fixture)\n'
+        ;;
+    *"grep -Fqx 'version=v9.9.9'"*)
+        ;;
+    *"verify-production-release.sh 'v9.9.9'"*)
+        ;;
+    *)
+        ;;
+esac
+EOF
+chmod +x "$fixture_root/ssh"
+fixture_output="$fixture_root/output.log"
+PATH="$fixture_root:$PATH" BYTEDEPTH_PRODUCTION_SSH_KEY="$fixture_root/production-key" \
+    "$SCRIPT" v9.9.9 > "$fixture_output"
+grep -Fq 'Production deployment and verification passed for v9.9.9' "$fixture_output"
+
 printf 'Local production deployment contract passed.\n'

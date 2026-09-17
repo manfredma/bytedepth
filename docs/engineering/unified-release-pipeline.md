@@ -8,6 +8,8 @@ GitHub `quality` workflow 只运行无凭据、无外部进程的质量门禁：
 
 staging 是唯一跨进程集成与 E2E 环境；生产操作只在受控主机执行。两类操作分离，避免把生产权限交给普通 CI runner。
 
+访问 staging 页面必须使用 `https://staging.bytedepth.cn/?preview=true` 建立预览状态；不带 `?preview=true` 的公网请求会 301 到 `https://bytedepth.cn`。该参数只是流量路由标记，不是安全认证。E2E runner 的 `E2E_BASE_URL` 保持 staging origin，另由 `E2E_PREVIEW_BOOTSTRAP_URL` 固定写成上述完整预览地址。
+
 ## 固定顺序
 
 1. 功能分支先完成 `CHANGELOG.md` 的 `Unreleased` 条目，再运行 `scripts/run-local-quality.sh`；缺少条目时门禁失败。

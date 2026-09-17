@@ -2,6 +2,8 @@
 
 本文件是版本、Tag、发布记录和回滚的唯一规则说明。`CHANGELOG.md` 同时记录 `## Unreleased` 与正式版本：任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前拥有非空且分类明确的 `Unreleased` 条目；正式版本条目必须与不可变 annotated Tag 一一对应。部署拓扑与机器操作仍以 [部署手册](../../deploy/README.md) 为准。
 
+访问 staging 页面必须使用 `https://staging.bytedepth.cn/?preview=true` 建立预览状态；不带 `?preview=true` 的公网请求会 301 到 `https://bytedepth.cn`。该参数只是流量路由标记，不是安全认证。
+
 ## 不可变规则
 
 1. 每次生产部署都必须对应一个**新的**发布版本；重复部署已有 Tag、部署 `main`、裸 commit 或其他分支都不合规。

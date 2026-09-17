@@ -15,6 +15,7 @@ grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-flyway-migration-warning-safety.sh"' 
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-deploy-staging.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-run-staging-integration-tests.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-run-staging-e2e-tests.sh"' "$CHECKLIST"
+grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-staging-preview-route.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-prepare-release.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-deploy-production.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-deploy-production-remote.sh"' "$CHECKLIST"

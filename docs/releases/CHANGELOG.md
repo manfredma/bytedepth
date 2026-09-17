@@ -20,6 +20,11 @@
 
 ## Unreleased
 
+### Changed
+
+- 统一本机生产部署入口为远程编排脚本，避免误执行生产主机内部脚本。
+- staging 公网请求默认重定向到生产；团队验收、同步检查和 E2E 必须通过 `https://staging.bytedepth.cn/?preview=true` 建立预览状态。
+
 ## [v2.15.7] - 2026-09-15
 
 **Tag**：`v2.15.7`

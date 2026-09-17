@@ -462,7 +462,7 @@ ssh "$STAGING_HOST" "cd /opt/bytedepth && sudo ./deploy/ctl.sh up -d app"
 # --- 验证 ---
 log "验证 staging..."
 sleep 10
-HTTP=$(ssh "$STAGING_HOST" "curl -ksS -o /dev/null -w '%{http_code}' https://staging.bytedepth.cn/")
+HTTP=$(ssh "$STAGING_HOST" "curl -ksS -o /dev/null -w '%{http_code}' 'https://staging.bytedepth.cn/?preview=true'")
 if [ "$HTTP" != "200" ]; then
     log "ERROR: staging 返回 $HTTP，同步可能失败"
     exit 1
