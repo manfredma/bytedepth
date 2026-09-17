@@ -7,7 +7,7 @@
 - 代码目录固定为 `/opt/bytedepth`。
 - `.env` 是机器私有密钥文件，绝不提交、复制到日志或聊天记录。
 - 不使用 `docker restart`，也不只执行 `up --build -d app`；必须重建完整 Compose 定义。
-- 生产部署只能使用新的、受保护的 annotated Git Tag；不得部署 `main`、分支、裸 commit 或已部署过的 Tag。版本与记录规则见 [`docs/releases/README.md`](../docs/releases/README.md)。
+- 生产部署只能使用新的、受保护的 annotated Git Tag；不得部署 `main`、分支、裸 commit 或已部署过的 Tag。版本与记录规则见 [`docs/releases/README.md`](../docs/releases/README.md)。本机操作员只能使用 `deploy/deploy-production-remote.sh`；`deploy/deploy-production.sh` 仅能在 175 生产主机的 `/opt/bytedepth` 中执行。
 - 网页部署只能请求经过验证的发布版本，不能传入任意 ref、分支或命令。
 - Git remote 固定为 `git@github.com:manfredma/bytedepth.git`；部署脚本拒绝 HTTPS remote，避免服务器出网策略变化导致发布卡住。
 - 数据库、Redis、MeiliSearch 只应在内网/VPN 可达，不能暴露到公网。
@@ -219,7 +219,7 @@ ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
 
 涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。流程固定为：实现并补测试 → 跑前置门禁 → 部署候选 ref（分支或 `main`）到 staging → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能进入 6.2 创建生产版本与部署生产。
 
-在 `staging.bytedepth.cn` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。准备 Release 前需对当前 `main` 的 SHA 重新取得两份 evidence；候选分支的结果不能替代 main。staging 验证失败则修代码回到此步，不发布生产。
+在 `staging.bytedepth.cn/?preview=true` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。准备 Release 前需对当前 `main` 的 SHA 重新取得两份 evidence；候选分支的结果不能替代 main。staging 验证失败则修代码回到此步，不发布生产。
 
 ### 6.2 生产部署
 
@@ -228,12 +228,11 @@ staging 验证通过后，生产打新 Tag 并部署到 175（当前单机）：
 ```bash
 # TAG 必须是刚创建、尚未部署过的正式版本，例如 v1.2.3。
 TAG='v1.2.3'
-
-ssh -i ~/.ssh/ubuntu_2.pem ubuntu@175.24.197.202 \
-  "cd /opt/bytedepth && sudo ./deploy/deploy-production.sh $TAG"
+BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" \
+  ./deploy/deploy-production-remote.sh "$TAG"
 ```
 
-多台生产服务器时，对每台执行同一 `deploy-production.sh $TAG`。
+上述本地入口会 SSH 到 175，在远端后台执行 `cd /opt/bytedepth && sudo ./deploy/deploy-production.sh "$TAG"`，轮询任务日志并调用远端 `sudo ./scripts/verify-production-release.sh "$TAG"`。不得在本机直接执行远端脚本；多台生产服务器时，应为每台提供对应的受控远程入口，不得复制本机 sudo 命令。
 
 `deploy-production.sh` 必须验证 Tag、记录版本与完整 SHA，并调用完整 Compose 部署；部署后必须执行 `scripts/verify-production-release.sh <tag>`。尚未具备该工具的环境禁止按旧的 `git pull main` 方式发布；应先完成发布工具升级。
 
@@ -314,7 +313,7 @@ curl -fsS -o /dev/null -w 'article image: %{http_code}\n' "$BASE_URL$IMAGE_PATH"
 3. 确认 Docker、Compose、Git、证书与内网连通性。
 4. 验证 Git SSH：ssh -T git@github.com；确认 origin 为 git@github.com:manfredma/bytedepth.git。
 5. external-services：确认 mountpoint -q /mnt/bytedepth-images。
-6. 初始化时按节点模式执行 `sudo ./deploy/bootstrap-ops-deploy.sh`；后续发布按第 6 节先 staging 预检（`deploy-staging.sh`），再生产部署（`deploy-production.sh "$TAG"`）并执行生产验证。多台生产服务器时依次部署各台。
+6. 初始化时按节点模式执行 `sudo ./deploy/bootstrap-ops-deploy.sh`；后续发布按第 6 节先 staging 预检（`deploy-staging.sh`），再从本机执行 `deploy/deploy-production-remote.sh "$TAG"`，由其在生产主机运行 `deploy-production.sh` 并执行生产验证。多台生产服务器时依次部署各台。
 7. 一律通过 `sudo ./deploy/ctl.sh` 操作 Compose（`ps`、`logs`、`config` 等）；禁止裸跑 `docker compose`，否则会误读非当前部署模式的 Compose 文件。
 8. 验证 systemd socket=active、compose 服务状态、HTTPS=200、图片 HTTPS=200。
 9. 对每个承载流量的节点执行第 6 节“部署后查询功能回归”：首页最新/热门及翻页、文章列表与详情、旧 ID 跳转、专栏、搜索、项目和文章图片均返回预期状态；不得以首页 `200` 代替回归。

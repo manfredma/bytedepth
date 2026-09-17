@@ -21,7 +21,7 @@ bytedepth、Career、Toolbox 对齐相同发布顺序、入口名称、证据格
 11. 再执行 staging 集成测试。
 12. 再执行 staging E2E。
 13. `scripts/prepare-release.sh <release> <next-snapshot>` 校验 main SHA evidence、覆盖率、Changelog、工作区和 Tag 唯一性，创建 annotated Tag。
-14. `deploy/deploy-production.sh <tag>` 部署该 Tag；拒绝分支、裸 SHA、轻量 Tag 和已部署版本。
+14. 本机执行 `deploy/deploy-production-remote.sh <tag>`；它在 175 远端调用 host-only 的 `deploy/deploy-production.sh <tag>`，并拒绝分支、裸 SHA、轻量 Tag 和已部署版本。
 15. `scripts/verify-production-release.sh <tag>` 执行项目特有的 HTTPS、版本、查询链路和日志回归。
 16. 项目所有者完成生产验收；记录版本、完整 SHA、时间、验收结论和回滚基线。
 
@@ -39,7 +39,7 @@ bytedepth、Career、Toolbox 对齐相同发布顺序、入口名称、证据格
 | `deploy/run-staging-integration-tests.sh` | 仅 staging 的跨进程集成测试。 |
 | `deploy/run-staging-e2e-tests.sh` | 仅 staging、使用共享 Chromium 的 E2E。 |
 | `scripts/prepare-release.sh` | 仅干净 main；校验两份 main-SHA evidence 后创建 Tag。 |
-| `deploy/deploy-production.sh` 与 `scripts/verify-production-release.sh` | 部署不可变 Tag，并以统一入口执行项目特有生产回归。 |
+| `deploy/deploy-production-remote.sh`、远端 `deploy/deploy-production.sh` 与 `scripts/verify-production-release.sh` | 从本机部署不可变 Tag，并以统一入口执行项目特有生产回归。 |
 
 ## 验证
 
