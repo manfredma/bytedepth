@@ -2,6 +2,8 @@
 
 本文件是版本、Tag、发布记录和回滚的唯一规则说明。`CHANGELOG.md` 同时记录 `## Unreleased` 与正式版本：任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前拥有非空且分类明确的 `Unreleased` 条目；正式版本条目必须与不可变 annotated Tag 一一对应。部署拓扑与机器操作仍以 [部署手册](../../deploy/README.md) 为准。
 
+访问 staging 页面必须使用 `https://staging-bytedepth.bytedepth.cn/`。staging 按 `BYTEDEPTH_ENVIRONMENT=staging` 关闭 RSS、sitemap 和 RSS 自动发现，并返回 noindex；生产环境保持这些入口。新域名只是环境入口，不是安全认证。
+
 ## 不可变规则
 
 1. 每次生产部署都必须对应一个**新的**发布版本；重复部署已有 Tag、部署 `main`、裸 commit 或其他分支都不合规。
@@ -41,7 +43,7 @@ ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
   'sudo cat -- /var/lib/bytedepth-staging/test-history/staging-e2e' \
   > "$evidence_dir/staging-e2e"
-BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
+    BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT
 rm -rf "$evidence_dir"
 ```
 
@@ -85,7 +87,7 @@ BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1
 2. 在 staging 部署候选 ref 并用真实数据预检：`deploy-staging.sh <ref>`；项目所有者验收通过后合并 `main`。
 3. 合并后先比较完整 SHA：Fast-forward 且 `main` HEAD 与已验收候选 SHA 完全一致时，候选 staging 部署和两份 evidence 可直接复用；只有 SHA 变化时，才在 staging 部署当前 `main` 并重新执行查询回归、写测试、集成和 E2E。两份记录的完整 SHA 始终必须等于 `main` HEAD。
 4. 使用 SSH 上受控的 `sudo cat` 读取 root-owned `0700` `/var/lib/bytedepth-staging/test-history/` 内的 `staging-integration` 与 `staging-e2e`，写入本地新建的 `mktemp -d` 目录；不得用普通用户 `scp` 不可读路径。以 `BYTEDEPTH_STAGING_EVIDENCE_DIR` 传给 `prepare-release.sh`；脚本检查通过后才可创建 Tag。
-5. 通过后，生产打新 SemVer Tag，部署到 175（生产单机）：`deploy/deploy-production.sh vTag`；随后运行 `scripts/verify-production-release.sh vTag`。
+5. 通过后，生产打新 SemVer Tag，从本机使用 `BYTEDEPTH_PRODUCTION_SSH_KEY=\"$HOME/.ssh/ubuntu_2.pem\" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS=\"$HOME/.ssh/known_hosts\" ./deploy/deploy-production-remote.sh vTag` 部署到 175；该入口会在远端运行 `deploy/deploy-production.sh vTag` 并随后执行 `scripts/verify-production-release.sh vTag`。发布 SSH 必须使用已存在的 known_hosts，禁止首次连接自动接受主机密钥。
 6. 生产验收（SNI 查询回归）通过后宣布上线。staging 验证失败则修代码回到第 2 步，不发布生产。
 7. 失败时，仅在数据库迁移兼容的前提下，才可部署回滚基线 Tag。数据恢复遵循部署手册。
 

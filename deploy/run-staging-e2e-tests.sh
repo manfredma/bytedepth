@@ -12,7 +12,7 @@ readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly RUNTIME_MANIFEST=/var/lib/bytedepth-staging/runtime/manifest
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
-readonly E2E_BASE_URL=https://staging.bytedepth.cn
+readonly E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn
 # Shared Chromium is provisioned at the host level by root maintenance.
 readonly CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"

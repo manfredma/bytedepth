@@ -85,7 +85,7 @@ cat > "$FAKE_BIN/npm" <<'SCRIPT'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "$STAGING_E2E_NPM_ARGS"
 printf 'E2E_BASE_URL=%s\nE2E_POST_SLUG=%s\nPLAYWRIGHT_CHROMIUM_EXECUTABLE=%s\n' "$E2E_BASE_URL" "$E2E_POST_SLUG" "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" > "$STAGING_E2E_NPM_ENV"
-[[ "$E2E_BASE_URL" == 'https://staging.bytedepth.cn' ]]
+[[ "$E2E_BASE_URL" == 'https://staging-bytedepth.bytedepth.cn' ]]
 [[ "$E2E_POST_SLUG" == 'staging-e2e-fixture' ]]
 [[ "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" == "$STAGING_E2E_CHROMIUM" ]]
 [[ -s "$STAGING_E2E_GIT_LOG" ]]
@@ -176,7 +176,7 @@ grep -Fqx -- '-x' "$FLOCK_ARGS"
 grep -Fqx "$LOCK_FILE" "$FLOCK_ARGS"
 grep -Fqx 'run' "$NPM_ARGS"
 grep -Fqx 'test:e2e' "$NPM_ARGS"
-grep -Fqx 'E2E_BASE_URL=https://staging.bytedepth.cn' "$NPM_ENV"
+grep -Fqx 'E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn' "$NPM_ENV"
 grep -Fqx 'E2E_POST_SLUG=staging-e2e-fixture' "$NPM_ENV"
 grep -Fqx "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM" "$NPM_ENV"
 grep -Fqx "commit=$CURRENT_SHA" "$EVIDENCE_DIR/staging-e2e"

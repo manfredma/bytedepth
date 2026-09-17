@@ -8,6 +8,8 @@ GitHub `quality` workflow 只运行无凭据、无外部进程的质量门禁：
 
 staging 是唯一跨进程集成与 E2E 环境；生产操作只在受控主机执行。两类操作分离，避免把生产权限交给普通 CI runner。
 
+访问 staging 页面必须使用 `https://staging-bytedepth.bytedepth.cn/`。staging 由 `BYTEDEPTH_ENVIRONMENT=staging` 判断环境，关闭 RSS、sitemap 和 RSS 自动发现并返回 noindex；生产环境保持这些入口。新域名只是环境入口，不是安全认证。
+
 ## 固定顺序
 
 1. 功能分支先完成 `CHANGELOG.md` 的 `Unreleased` 条目，再运行 `scripts/run-local-quality.sh`；缺少条目时门禁失败。
@@ -18,7 +20,7 @@ staging 是唯一跨进程集成与 E2E 环境；生产操作只在受控主机�
 6. 所有者完成 staging 验收；纯交付基础设施改动审阅 PR 与自动证据即可。
 7. 合并 `main` 后先比较完整 SHA：若采用 Fast-forward 且 `main` HEAD 与候选验收 SHA 完全一致，直接复用候选 evidence，跳过重复 staging 部署、集成和 E2E；若 SHA 发生变化，必须按步骤 3–5 为 `main` 重新部署并验收。
 8. `scripts/prepare-release.sh <release> <next-snapshot>` 校验 main evidence、工作区、Changelog、覆盖率及 Tag 唯一性，创建 annotated Tag。
-9. `deploy/deploy-production.sh <tag>` 部署该新 Tag。
+9. 从本机执行 `BYTEDEPTH_PRODUCTION_SSH_KEY=\"$HOME/.ssh/ubuntu_2.pem\" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS=\"$HOME/.ssh/known_hosts\" ./deploy/deploy-production-remote.sh <tag>`；该入口在 175 远端执行 host-only 的 `deploy/deploy-production.sh <tag>`，并使用预置 known_hosts 校验主机身份。
 10. `scripts/verify-production-release.sh <tag>` 完成 HTTPS、版本、项目查询链路和日志回归；所有者记录生产验收与回滚基线。
 
 ## 标准入口
@@ -33,7 +35,8 @@ staging 是唯一跨进程集成与 E2E 环境；生产操作只在受控主机�
 - `deploy/run-staging-integration-tests.sh`
 - `deploy/run-staging-e2e-tests.sh`
 - `scripts/prepare-release.sh`
-- `deploy/deploy-production.sh`
+- `deploy/deploy-production-remote.sh`（本机唯一生产部署入口）
+- `deploy/deploy-production.sh`（175 生产主机内部实现）
 - `scripts/verify-production-release.sh`
 
 项目可以在生产回归脚本中验证不同的业务查询，但不能改名、跳过入口或把集成/E2E 移回本机。新项目创建时还必须把这份流程、ADR 和各入口的静态检查一并纳入仓库；不要依赖任何 agent 的个人记忆。

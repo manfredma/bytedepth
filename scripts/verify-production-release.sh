@@ -12,6 +12,16 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly HISTORY_FILE=/var/lib/bytedepth-deploy/release-history
 readonly BASE_URL=https://bytedepth.cn
 readonly TAG="${1:-}"
+readonly CURL_OPTIONS=(
+    --fail
+    --silent
+    --show-error
+    --retry 12
+    --retry-delay 5
+    --retry-connrefused
+    --retry-max-time 120
+    --connect-timeout 10
+)
 
 [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || {
     printf 'Usage: sudo ./scripts/verify-production-release.sh vX.Y.Z\n' >&2
@@ -34,14 +44,18 @@ actual_commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-pars
 }
 
 request() {
-    curl --fail --silent --show-error --retry 2 --connect-timeout 10 "$BASE_URL$1" >/dev/null
+    curl "${CURL_OPTIONS[@]}" "$BASE_URL$1" >/dev/null
+}
+
+fetch_page() {
+    curl "${CURL_OPTIONS[@]}" "$BASE_URL$1"
 }
 
 # Verify stable public read paths. Discover content-specific paths from the
 # live lists, so this check remains valid as editorial content changes.
 request /
-posts_html="$(curl --fail --silent --show-error "$BASE_URL/posts")"
-columns_html="$(curl --fail --silent --show-error "$BASE_URL/columns")"
+posts_html="$(fetch_page /posts)"
+columns_html="$(fetch_page /columns)"
 request /search
 request /projects
 post_path="$(sed -n 's/.*href="\(\/posts\/[a-z0-9-]*\)".*/\1/p' <<< "$posts_html" | head -n 1)"

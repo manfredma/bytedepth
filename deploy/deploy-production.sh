@@ -2,7 +2,8 @@
 set -Eeuo pipefail
 
 if [[ "${EUID}" -ne 0 ]]; then
-    printf 'Run this script with sudo: sudo ./deploy/deploy-production.sh vX.Y.Z\n' >&2
+    printf 'This is a production-host-only script. From the local checkout run:\n' >&2
+    printf 'BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" ./deploy/deploy-production-remote.sh vX.Y.Z\n' >&2
     exit 1
 fi
 

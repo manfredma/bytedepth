@@ -14,8 +14,12 @@ bash "$SOURCE_ROOT/scripts/test-flyway-migration-warning-safety.sh"
 bash "$SOURCE_ROOT/scripts/test-deploy-staging.sh"
 bash "$SOURCE_ROOT/scripts/test-run-staging-integration-tests.sh"
 bash "$SOURCE_ROOT/scripts/test-run-staging-e2e-tests.sh"
+bash "$SOURCE_ROOT/scripts/test-staging-preview-route.sh"
+bash "$SOURCE_ROOT/scripts/test-staging-search-isolation.sh"
+bash "$SOURCE_ROOT/scripts/test-sync-staging-certificate.sh"
 bash "$SOURCE_ROOT/scripts/test-prepare-release.sh"
 bash "$SOURCE_ROOT/scripts/test-deploy-production.sh"
+bash "$SOURCE_ROOT/scripts/test-deploy-production-remote.sh"
 bash "$SOURCE_ROOT/scripts/test-verify-production-release.sh"
 
 printf 'Staging checklist passed.\n'

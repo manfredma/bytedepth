@@ -6,6 +6,8 @@
 
 bytedepth、Career、Toolbox 对齐相同发布顺序、入口名称、证据格式和失败规则。GitHub Actions 只验证可在无凭据 runner 中运行的质量门禁；它绝不连接 staging、生产、Docker、数据库或共享浏览器。staging 是唯一集成与 E2E 环境，生产只接受 `main` 上受控脚本创建的新 annotated SemVer Tag。
 
+访问 staging 页面必须使用 `https://staging-bytedepth.bytedepth.cn/`。staging 按 `BYTEDEPTH_ENVIRONMENT=staging` 关闭 RSS、sitemap 和 RSS 自动发现，并返回 noindex；生产环境保持这些入口。新域名只是环境入口，不是安全认证。
+
 ## 统一的 16 步顺序
 
 1. 在功能分支执行 `scripts/run-local-quality.sh`。
@@ -21,7 +23,7 @@ bytedepth、Career、Toolbox 对齐相同发布顺序、入口名称、证据格
 11. 再执行 staging 集成测试。
 12. 再执行 staging E2E。
 13. `scripts/prepare-release.sh <release> <next-snapshot>` 校验 main SHA evidence、覆盖率、Changelog、工作区和 Tag 唯一性，创建 annotated Tag。
-14. `deploy/deploy-production.sh <tag>` 部署该 Tag；拒绝分支、裸 SHA、轻量 Tag 和已部署版本。
+14. 本机执行 `deploy/deploy-production-remote.sh <tag>`；它在 175 远端调用 host-only 的 `deploy/deploy-production.sh <tag>`，并拒绝分支、裸 SHA、轻量 Tag 和已部署版本。
 15. `scripts/verify-production-release.sh <tag>` 执行项目特有的 HTTPS、版本、查询链路和日志回归。
 16. 项目所有者完成生产验收；记录版本、完整 SHA、时间、验收结论和回滚基线。
 
@@ -39,7 +41,7 @@ bytedepth、Career、Toolbox 对齐相同发布顺序、入口名称、证据格
 | `deploy/run-staging-integration-tests.sh` | 仅 staging 的跨进程集成测试。 |
 | `deploy/run-staging-e2e-tests.sh` | 仅 staging、使用共享 Chromium 的 E2E。 |
 | `scripts/prepare-release.sh` | 仅干净 main；校验两份 main-SHA evidence 后创建 Tag。 |
-| `deploy/deploy-production.sh` 与 `scripts/verify-production-release.sh` | 部署不可变 Tag，并以统一入口执行项目特有生产回归。 |
+| `deploy/deploy-production-remote.sh`、远端 `deploy/deploy-production.sh` 与 `scripts/verify-production-release.sh` | 从本机部署不可变 Tag，并以统一入口执行项目特有生产回归。 |
 
 ## 验证
 

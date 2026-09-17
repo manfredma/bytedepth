@@ -78,7 +78,7 @@
 门禁后将 `feat/rss-navigation` 部署到 staging。验收时：
 
 1. 在桌面与窄屏公共页面确认 RSS 图标可见、可键盘聚焦、点击至 `/feed.xml`，且不影响搜索和账户操作。
-2. 用 RSS 阅读器或浏览器阅读器扩展粘贴 `https://staging.bytedepth.cn/feed.xml`，确认可订阅；检查页面自动发现。
+2. 生产环境用 RSS 阅读器或浏览器阅读器扩展粘贴 `https://bytedepth.cn/feed.xml`，确认可订阅；staging `https://staging-bytedepth.bytedepth.cn/feed.xml` 必须返回 404，且 staging 页面不输出 RSS 自动发现。
 3. 新发布一篇 staging 测试文章，再更新一篇已有已发布文章，确认两者均由 feed 自动反映，且不执行额外 RSS 操作。
 
 项目所有者明确完成 staging 验收前，不创建 PR 或合并 `main`。

@@ -462,7 +462,7 @@ ssh "$STAGING_HOST" "cd /opt/bytedepth && sudo ./deploy/ctl.sh up -d app"
 # --- 验证 ---
 log "验证 staging..."
 sleep 10
-HTTP=$(ssh "$STAGING_HOST" "curl -ksS -o /dev/null -w '%{http_code}' https://staging.bytedepth.cn/")
+HTTP=$(ssh "$STAGING_HOST" "curl -ksS -o /dev/null -w '%{http_code}' 'https://staging-bytedepth.bytedepth.cn/'")
 if [ "$HTTP" != "200" ]; then
     log "ERROR: staging 返回 $HTTP，同步可能失败"
     exit 1
@@ -638,7 +638,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 | 角色 | 公网 / 内网地址 | 部署模式 | 职责 |
 | --- | --- | --- | --- |
 | 生产 | `175.24.197.202` / `10.0.4.15` | `data-access` | MySQL、Redis、MeiliSearch、图片，以及一套应用和 Nginx，服务 bytedepth.cn |
-| 预发 | `124.221.143.25` / `10.0.0.5` | `staging` | 独立 single-host 数据栈，服务 staging.bytedepth.cn；数据每周由生产覆盖 |
+| 预发 | `124.221.143.25` / `10.0.0.5` | `staging` | 独立 single-host 数据栈，服务 staging-bytedepth.bytedepth.cn；数据每周由生产覆盖 |
 
 生产应用层为单机（175）。staging 完全独立，与生产物理隔离，数据由 175 周期覆盖（见 staging 同步章节）。
 ```
@@ -710,7 +710,7 @@ git branch -d feat/staging-environment
 以下在服务器上执行，不在 worktree：
 
 1. **124 拆除 prod**：`ctl.sh down -v` → umount NFS → 删 fstab → 删 docker drop-in `bytedepth-images.conf` → 改 deploy mode 为 staging
-2. **124 申请证书**：`certbot certonly --standalone -d staging.bytedepth.cn`
+2. **124 申请证书**：`certbot certonly --standalone -d staging-bytedepth.bytedepth.cn`
 3. **124 配置 .env**：staging 专用密钥 + `BYTEDEPTH_DOMAIN`/`BYTEDEPTH_ENVIRONMENT`/`JAVA_TOOL_OPTIONS`
 4. **124 首次同步**：先 `ctl.sh up -d mysql redis meilisearch`，再在 175 跑 `sync-prod-to-staging.sh`，再 `ctl.sh up -d`
 5. **175 收敛**：删 NFS export 条目 + 删安全组规则

@@ -27,3 +27,4 @@
 | [ADR-0005](0005-pinned-maven-runtime.md) | 固定跨环境 Maven 运行时 | Accepted | 2026-09-13 |
 | [ADR-0006](0006-unified-release-pipeline.md) | 统一三项目发布流水线 | Accepted | 2026-09-13 |
 | [ADR-0007](0007-release-readiness-metadata-gate.md) | 将发布变更记录前置为 staging 硬门禁 | Proposed | 2026-09-15 |
+| [ADR-0008](0008-production-entry-and-staging-preview-route.md) | 统一生产远程部署入口与 staging 预览路由 | Proposed | 2026-09-16 |

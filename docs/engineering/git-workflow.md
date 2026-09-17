@@ -14,7 +14,7 @@
 4. **staging 预发验收**（界面/视觉/布局改动必须，后端改动建议）：
    - 推送工作分支到 `origin`。
    - 在 124 执行 `deploy-staging.sh <分支>` 部署该分支（staging 是测试环境，接受任意命名分支用于验收）。
-   - 项目所有者在 `staging.bytedepth.cn` 验收。**未收到明确「staging 验收通过」不得合并 `main`。**
+   - 项目所有者通过 `https://staging-bytedepth.bytedepth.cn/` 验收。**未收到明确「staging 验收通过」不得合并 `main`。** staging 的 RSS、sitemap 和 RSS 自动发现按环境关闭；新域名不是安全认证。
 5. **PR 合并 `main`**：验收通过后创建 PR，全部必需检查通过后合并。合并后立即删除 worktree 与分支。
 6. **创建生产版本**：从干净 `main` 运行 `scripts/prepare-release.sh` 创建新 SemVer annotated Tag。
 7. **生产部署**：部署该 Tag（不接受 `main`、分支、裸 commit 或已部署 Tag）。
@@ -44,7 +44,7 @@ git push -u origin feat/<topic>
 # 界面/视觉改动：先部署 staging 验收
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
   "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh feat/<topic>"
-# 项目所有者在 staging.bytedepth.cn 验收通过后，再创建并合并 PR
+# 项目所有者在 https://staging-bytedepth.bytedepth.cn/ 验收通过后，再创建并合并 PR
 ```
 
 首次克隆或切换工作站后执行一次：

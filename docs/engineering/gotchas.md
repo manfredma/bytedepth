@@ -22,7 +22,7 @@
 - 生产为单机（175），staging 预发独立部署（124）。**staging 是测试环境**，用于验证尚未合并 `main` 的功能分支；发布流程：staging 部署候选 ref 验收 → 合并 `main` → 生产打 Tag 单机部署。完整流程、回滚与只读回归见 [部署手册](../../deploy/README.md)。
 - staging 数据每周由生产覆盖（drop+重建），会清空 staging 的写测试数据。staging 回滚需重新灌入生产基线再部署，非无风险。
 - 不要修改已执行的 Flyway 迁移或手工修正 schema history；应通过新的迁移演进数据库。
-- 应用节点（`124.221.143.25`）出网到 `github.com:22` 超时，但 `ssh.github.com:443` 可达；数据节点 22 端口正常。在该节点执行 `deploy-production.sh` 或 `deploy-staging.sh` 前，确认 root 的 `~/.ssh/config` 已将 `github.com` 指向 `ssh.github.com:443`（这两个脚本以 sudo 运行，root 无用户级 ssh config 会卡在 22 端口超时）。
+- 应用节点（`124.221.143.25`）出网到 `github.com:22` 超时，但 `ssh.github.com:443` 可达；数据节点 22 端口正常。生产发布从本机使用 `deploy/deploy-production-remote.sh`；只有该 wrapper 连接到 175 后，才由远端 root 执行 `deploy-production.sh`。staging 主机执行 `deploy-staging.sh` 前，确认 root 的 `~/.ssh/config` 已将 `github.com` 指向 `ssh.github.com:443`（脚本以 sudo 运行，root 无用户级 ssh config 会卡在 22 端口超时）。
 - 运维脚本（部署、同步、发布）必须在非生产环境或 dry-run 模式先完整跑通，再用于生产。staging 的 `sync-prod-to-staging.sh` 首次运行暴露 7 个问题（SSH sudo 读不到用户级 config、目标端密码用错、MeiliSearch v1.7 API 响应格式与文档不符、import entrypoint 错、`--import-snapshot` 导入后不退出、rsync 对 root 目录无写权限、Redis 7 `appendonly yes` 启动忽略 RDB），每个都需临时修+重新部署。根因是未先验证就上生产。同步验收必须比较图片文件数；数据库中已有图片记录而 staging 图片卷不完整时，内容页会出现 `/images/*` 500，不能以首页 200 放行。
 - 涉及 sudo/cron 的脚本用显式绝对路径和显式参数，不依赖用户级 `~/.ssh/config`、`$HOME` 或 `$PATH`——sudo 后 HOME 变 `/root`，用户级配置读不到。
 - 对外部服务（MySQL/Redis/MeiliSearch）的 API 调用，先用 `curl`/`redis-cli` 手动确认实际响应格式再写进脚本，不凭文档假设。MeiliSearch v1.7 的 `/snapshots` 只支持 POST（创建），不支持 GET（列出下载）；snapshot 文件写磁盘而非 API 返回。
