@@ -14,6 +14,14 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly DEPLOY_HOOK_SOURCE="$SOURCE_ROOT/deploy/nginx/reload-nginx-deploy-hook.sh"
 readonly DEPLOY_HOOK=/etc/letsencrypt/renewal-hooks/deploy/reload-bytedepth-nginx.sh
 
+if docker container inspect "$NGINX_CONTAINER" >/dev/null 2>&1; then
+    readonly CERTBOT_PRE_HOOK="docker stop $NGINX_CONTAINER || true"
+    readonly CERTBOT_POST_HOOK="docker start $NGINX_CONTAINER"
+else
+    readonly CERTBOT_PRE_HOOK=true
+    readonly CERTBOT_POST_HOOK=true
+fi
+
 if [[ ! -r "$DEPLOY_HOOK_SOURCE" ]]; then
     printf 'Missing versioned Certbot deploy hook: %s\n' "$DEPLOY_HOOK_SOURCE" >&2
     exit 1
@@ -27,8 +35,8 @@ certbot certonly \
     --register-unsafely-without-email \
     --keep-until-expiring \
     --cert-name "$CERT_NAME" \
-    --pre-hook "docker stop $NGINX_CONTAINER || true" \
-    --post-hook "docker start $NGINX_CONTAINER" \
+    --pre-hook "$CERTBOT_PRE_HOOK" \
+    --post-hook "$CERTBOT_POST_HOOK" \
     -d "$CERT_NAME"
 
 install -d -o root -g root -m 0755 "$(dirname "$DEPLOY_HOOK")"
@@ -56,6 +64,12 @@ if [[ -z "$certificate_public_key" || "$certificate_public_key" != "$private_key
     exit 1
 fi
 
-docker exec "$NGINX_CONTAINER" nginx -t
-docker exec "$NGINX_CONTAINER" nginx -s reload
+if docker container inspect "$NGINX_CONTAINER" >/dev/null 2>&1 \
+    && [[ "$(docker inspect --format '{{.State.Running}}' "$NGINX_CONTAINER")" == 'true' ]]; then
+    docker exec "$NGINX_CONTAINER" nginx -t
+    docker exec "$NGINX_CONTAINER" nginx -s reload
+else
+    printf 'Provisioned %s certificate; Nginx reload will run after the container is created.\n' "$CERT_NAME"
+    exit 0
+fi
 printf 'Provisioned %s certificate and renewal hook.\n' "$CERT_NAME"

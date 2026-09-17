@@ -30,6 +30,10 @@ for contract in \
     'sudo -n cat' \
     'StrictHostKeyChecking=yes' \
     'UserKnownHostsFile=' \
+    'LEGACY_CERT_DIR' \
+    'readlink -f' \
+    'mktemp' \
+    'mv -f' \
     'checkend 2592000' \
     'openssl pkey' \
     'sha256sum' \
@@ -49,6 +53,7 @@ for contract in \
     '--pre-hook' \
     '--post-hook' \
     'renewal-hooks/deploy' \
+    'docker container inspect' \
     'checkend 2592000' \
     'openssl pkey' \
     'nginx -t' \
