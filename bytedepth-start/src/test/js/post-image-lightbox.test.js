@@ -28,6 +28,33 @@ test('lightbox CSS preserves single-finger panning while reserving pinch zoom fo
   expect(lightboxCss).toMatch(/\.bd-image-lightbox__frame\s*\{[^}]*touch-action:\s*pan-x pan-y;/s);
 });
 
+test('lightbox keeps a stable near-viewport stage for images with extreme aspect ratios', () => {
+  expect(lightboxCss).toMatch(/\.bd-image-lightbox\s*\{[^}]*width:\s*min\(1200px,\s*calc\(100vw\s*-\s*32px\)\);/s);
+  expect(lightboxCss).toMatch(/\.bd-image-lightbox\s*\{[^}]*height:\s*min\(900px,\s*calc\(100dvh\s*-\s*32px\)\);/s);
+  expect(lightboxCss).toMatch(/\.bd-image-lightbox__frame\s*\{[^}]*overflow:\s*hidden;/s);
+});
+
+test('zoomed preview exposes grab and grabbing cursor states', async () => {
+  document.body.innerHTML = '<article id="post-article"><div class="content"><img src="/images/example.png" alt="示例图"></div></article>';
+  await loadLightbox();
+  document.querySelector('.content img').click();
+
+  const dialog = document.querySelector('.bd-image-lightbox');
+  const preview = dialog.querySelector('.bd-image-lightbox__image');
+  expect(lightboxCss).toMatch(/\.bd-image-lightbox--zoomed\s+\.bd-image-lightbox__image\s*\{[^}]*cursor:\s*grab;/s);
+  expect(lightboxCss).toMatch(/\.bd-image-lightbox--zoomed\.bd-image-lightbox--dragging\s+\.bd-image-lightbox__image\s*\{[^}]*cursor:\s*grabbing;/s);
+
+  dialog.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -70 }));
+  expect(dialog.classList.contains('bd-image-lightbox--zoomed')).toBe(true);
+
+  const down = new Event('pointerdown', { bubbles: true, cancelable: true });
+  Object.defineProperties(down, { clientX: { value: 100 }, clientY: { value: 100 }, pointerId: { value: 1 } });
+  preview.dispatchEvent(down);
+  expect(dialog.classList.contains('bd-image-lightbox--dragging')).toBe(true);
+  window.dispatchEvent(new Event('pointerup', { bubbles: true, cancelable: true }));
+  expect(dialog.classList.contains('bd-image-lightbox--dragging')).toBe(false);
+});
+
 test('pages without article content do not create a lightbox', async () => {
   document.body.innerHTML = '<main>普通页面</main>';
   await loadLightbox();
@@ -319,4 +346,32 @@ test('setPointerCapture is invoked when available', async () => {
   preview.dispatchEvent(down);
 
   expect(capture).toHaveBeenCalledWith(7);
+});
+
+test('dragging a zoomed preview is clamped to the visible stage bounds', async () => {
+  document.body.innerHTML = '<article id="post-article"><div class="content"><img src="/images/example.png" alt="示例图"></div></article>';
+  await loadLightbox();
+  document.querySelector('.content img').click();
+  const dialog = document.querySelector('.bd-image-lightbox');
+  const frame = dialog.querySelector('.bd-image-lightbox__frame');
+  const preview = dialog.querySelector('.bd-image-lightbox__image');
+  Object.defineProperties(frame, {
+    clientWidth: { value: 300 },
+    clientHeight: { value: 200 }
+  });
+  Object.defineProperties(preview, {
+    offsetWidth: { value: 600 },
+    offsetHeight: { value: 400 }
+  });
+
+  dialog.dispatchEvent(gestureEvent('gesturestart'));
+  dialog.dispatchEvent(gestureEvent('gesturechange', 2));
+  const down = new Event('pointerdown', { bubbles: true, cancelable: true });
+  Object.defineProperties(down, { clientX: { value: 100 }, clientY: { value: 100 }, pointerId: { value: 1 } });
+  preview.dispatchEvent(down);
+  const move = new Event('pointermove', { bubbles: true, cancelable: true });
+  Object.defineProperties(move, { clientX: { value: 1100 }, clientY: { value: 1100 } });
+  window.dispatchEvent(move);
+
+  expect(preview.style.transform).toContain('translate(450px, 300px)');
 });

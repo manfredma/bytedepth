@@ -63,6 +63,16 @@ class PostReadingAssetsTest {
     }
 
     @Test
+    void seriesPanelKeepsItsHeadingVisibleAndScrollsOnlyItsArticleList() throws IOException {
+        String template = classpathText("/templates/public/posts/detail.html");
+
+        assertThat(template)
+                .contains("<div class=\"series-panel-list\">")
+                .containsPattern("(?s)\\.series-panel\\s*\\{.*?display: flex;.*?overflow: hidden;")
+                .containsPattern("(?s)\\.series-panel-list\\s*\\{.*?overflow-y: auto;.*?overscroll-behavior-y: contain;.*?-webkit-overflow-scrolling: touch;");
+    }
+
+    @Test
     void annotationComposerUsesAnUpwardSemanticTypePicker() throws IOException {
         String template = classpathText("/templates/public/posts/detail.html");
         String css = classpathText("/static/css/annotation.css");

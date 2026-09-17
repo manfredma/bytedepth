@@ -27,7 +27,39 @@
     let pointerStartPanY = 0;
     let pointerActive = false;
 
+    const panBounds = () => {
+        const frameWidth = frame.clientWidth || frame.getBoundingClientRect().width;
+        const frameHeight = frame.clientHeight || frame.getBoundingClientRect().height;
+        const imageWidth = preview.offsetWidth || preview.getBoundingClientRect().width;
+        const imageHeight = preview.offsetHeight || preview.getBoundingClientRect().height;
+        // happy-dom/jsdom 没有布局引擎；没有可用尺寸时保留测试和无布局环境中的平移行为。
+        if (!frameWidth || !frameHeight || !imageWidth || !imageHeight) {
+            return { x: Number.POSITIVE_INFINITY, y: Number.POSITIVE_INFINITY };
+        }
+        return {
+            x: Math.max(0, (imageWidth * scale - frameWidth) / 2),
+            y: Math.max(0, (imageHeight * scale - frameHeight) / 2)
+        };
+    };
+    const constrainPan = () => {
+        const bounds = panBounds();
+        if (Number.isFinite(bounds.x)) {
+            panX = Math.min(bounds.x, Math.max(-bounds.x, panX));
+        }
+        if (Number.isFinite(bounds.y)) {
+            panY = Math.min(bounds.y, Math.max(-bounds.y, panY));
+        }
+    };
+    const updateInteractionState = () => {
+        const zoomed = scale > MIN_SCALE;
+        dialog.classList.toggle('bd-image-lightbox--zoomed', zoomed);
+        if (!zoomed) {
+            dialog.classList.remove('bd-image-lightbox--dragging');
+        }
+    };
     const applyTransform = () => {
+        constrainPan();
+        updateInteractionState();
         preview.style.transform = `translate(${panX}px, ${panY}px) scale(${Number(scale.toFixed(3))})`;
     };
     const applyScale = requestedScale => {
@@ -124,6 +156,8 @@
         pointerStartPanX = panX;
         pointerStartPanY = panY;
         pointerActive = true;
+        event.preventDefault();
+        dialog.classList.add('bd-image-lightbox--dragging');
         if (typeof preview.setPointerCapture === 'function') {
             preview.setPointerCapture(event.pointerId);
         }
@@ -139,9 +173,11 @@
     }, { passive: false });
     window.addEventListener('pointerup', () => {
         pointerActive = false;
+        dialog.classList.remove('bd-image-lightbox--dragging');
     });
     window.addEventListener('pointercancel', () => {
         pointerActive = false;
+        dialog.classList.remove('bd-image-lightbox--dragging');
     });
 
     const isSvgImage = image => {
