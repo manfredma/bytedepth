@@ -7,7 +7,7 @@
 - 代码目录固定为 `/opt/bytedepth`。
 - `.env` 是机器私有密钥文件，绝不提交、复制到日志或聊天记录。
 - 不使用 `docker restart`，也不只执行 `up --build -d app`；必须重建完整 Compose 定义。
-- 生产部署只能使用新的、受保护的 annotated Git Tag；不得部署 `main`、分支、裸 commit 或已部署过的 Tag。版本与记录规则见 [`docs/releases/README.md`](../docs/releases/README.md)。
+- 生产部署只能使用新的、受保护的 annotated Git Tag；不得部署 `main`、分支、裸 commit 或已部署过的 Tag。版本与记录规则见 [`docs/releases/README.md`](../docs/releases/README.md)。本机操作员只能使用 `deploy/deploy-production-remote.sh`；`deploy/deploy-production.sh` 仅能在 175 生产主机的 `/opt/bytedepth` 中执行。
 - 网页部署只能请求经过验证的发布版本，不能传入任意 ref、分支或命令。
 - Git remote 固定为 `git@github.com:manfredma/bytedepth.git`；部署脚本拒绝 HTTPS remote，避免服务器出网策略变化导致发布卡住。
 - 数据库、Redis、MeiliSearch 只应在内网/VPN 可达，不能暴露到公网。
@@ -35,9 +35,9 @@
 | 角色 | 公网 / 内网地址 | 部署模式 | 职责 |
 | --- | --- | --- | --- |
 | 生产 | `175.24.197.202` / `10.0.4.15` | `data-access` | MySQL、Redis、MeiliSearch、图片，以及一套应用和 Nginx，服务 `bytedepth.cn` |
-| 预发 | `124.221.143.25` / `10.0.0.5` | `staging` | 独立 single-host 数据栈（自带 MySQL/Redis/MeiliSearch），服务 `staging.bytedepth.cn`；数据每周由生产覆盖 |
+| 预发 | `124.221.143.25` / `10.0.0.5` | `staging` | 独立 single-host 数据栈（自带 MySQL/Redis/MeiliSearch），服务 `staging-bytedepth.bytedepth.cn`；数据每周由生产覆盖 |
 
-生产应用层为单机（175）。staging 完全独立，与生产物理隔离，数据由 175 周期覆盖。DNS 已配置：`bytedepth.cn` → 175、`staging.bytedepth.cn` → 124，无通配符。
+生产应用层为单机（175）。staging 完全独立，与生产物理隔离，数据由 175 周期覆盖。DNS 应配置：`bytedepth.cn` → 175、`staging-bytedepth.bytedepth.cn` → 124，无通配符；原 `staging.bytedepth.cn` 不作为 staging 内容入口。
 
 ## 2. 所有机器的前置条件
 
@@ -156,10 +156,14 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 ### 初始化
 
 1. 124 固定为 staging 模式：`sudo sh -c 'printf "BYTEDEPTH_DEPLOY_MODE=staging\n" > /etc/bytedepth-deploy.conf'`
-2. `.env` 用 `deploy/.env.example` 生成，填 staging 专用新密钥（不复用生产），追加 `BYTEDEPTH_DOMAIN=staging.bytedepth.cn`、`BYTEDEPTH_ENVIRONMENT=staging`、`JAVA_TOOL_OPTIONS=...-Xmx256m`。
-3. 申请 TLS 证书：`sudo certbot certonly --standalone -d staging.bytedepth.cn`
+2. `.env` 用 `deploy/.env.example` 生成，填 staging 专用新密钥（不复用生产），追加 `BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn`、`BYTEDEPTH_ENVIRONMENT=staging`、`BYTEDEPTH_SITE_URL=https://bytedepth.cn`、`JAVA_TOOL_OPTIONS=...-Xmx256m`。
+3. 申请或更新 TLS 证书：`sudo ./deploy/provision-staging-certificate.sh`（首次启动前后均可执行；容器已存在时脚本会处理 standalone challenge 的 stop/start，容器尚不存在时先签发证书，首次启动后再由脚本验收并 reload；同时安装续期后的 Nginx reload hook）。
 4. 首次启动：先 `ctl.sh up -d mysql redis meilisearch`，执行首次数据同步（见下），再 `ctl.sh up -d`。
 5. staging 同样安装部署 Socket（`bootstrap-ops-deploy.sh` 无条件安装，所有模式一致）：Socket 是远程触发部署的通道，staging 作为测试环境也装以便验证该通道。`deploy-staging.sh` 仍校验 `BYTEDEPTH_DEPLOY_MODE=staging` 防止误在生产机运行。
+
+部署脚本会在拉取候选 ref 前 fail-closed 校验 `.env` 的 `BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn`、`BYTEDEPTH_SITE_URL=https://bytedepth.cn`（如配置）以及该精确域名的 TLS SAN；证书或域名不匹配时不会改动运行中的 staging。Nginx 对未知 Host/IP 也不会代理到 staging 应用。
+
+如果证书监控同时探测生产边缘 175 和 staging 主机 124，新域名的证书签发只在 DNS 指向的 124 上执行；首次或证书缺失时在 124 运行 `sudo ./deploy/provision-staging-certificate.sh`，它会配置 standalone challenge 的 stop/start hook 和续期后的 Nginx reload hook；然后在 175 运行 `sudo ./deploy/sync-staging-certificate-to-production.sh`。该脚本只同步新域名的精确 SAN 证书，并在 175 安装一个不代理内容、握手后返回 `444` 的精确 Host 路由。旧域名 `staging.bytedepth.cn` 仍解析到 175，首次或证书缺失时在 175 运行 `sudo ./deploy/provision-production-edge-staging-certificate.sh`；它使用 standalone HTTP-01 为旧域名签发精确证书，同时安装旧域名到 `https://bytedepth.cn` 的生产入口跳转。生产→staging 数据同步脚本开始时会调用一次新域名同步脚本，证书续期后也必须重新同步；不得在 175 为新域名直接使用 HTTP-01，因为其 DNS 验证请求会到达 124。
 
 ### 数据同步（生产→staging）
 
@@ -170,7 +174,7 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 - **MeiliSearch**：snapshot 磁盘拷贝 → `--import-snapshot` 导入（timeout 限时）
 - **图片**：`rsync --delete --rsync-path=sudo rsync`
 
-配置文件 `/etc/bytedepth-sync.conf`（root 0600）含 `SYNC_SSH_KEY` 和 `STAGING_IP=10.0.0.5`。同步用专用 key（175→124 内网）。cron 每周日 03:00 自动执行；也可手动 `sudo ./deploy/sync-prod-to-staging.sh`。
+配置文件 `/etc/bytedepth-sync.conf`（root 0600）含 `SYNC_SSH_KEY` 和 `STAGING_IP=10.0.0.5`；175 还必须维护 root 可读的 `/root/.ssh/known_hosts`，同步脚本使用严格主机密钥校验，禁止自动接受新主机。同步用专用 key（175→124 内网）。cron 每周日 03:00 自动执行；也可手动 `sudo ./deploy/sync-prod-to-staging.sh`。
 
 ### 部署
 
@@ -198,7 +202,7 @@ cd /opt/bytedepth
 sudo ./deploy/run-staging-e2e-tests.sh
 ```
 
-该 wrapper 只在 staging 模式运行，先取得共享锁，固定 `E2E_BASE_URL=https://staging.bytedepth.cn`，并使用 root 管理的共享 Chromium `/opt/shared-e2e/chrome-linux64/chrome`。运行时 manifest 保存 Chromium 的 `--version` 输出以及 `package-lock.json`、`pom.xml` 的摘要；它刻意不保存 checkout SHA：代码变化但依赖输入未变化时应直接复用预热环境，依赖或浏览器变化时才必须先运行 bootstrap，且项目不得自行下载浏览器。批注 E2E 从 staging 的公开文章列表选择当前存在的第一篇文章，因此生产数据同步后不会依赖失效的固定 slug；它先把完整 checkout SHA 与最近 app 部署记录绑定，且在写 evidence 前再次确认 checkout 与部署记录均未变化。它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
+该 wrapper 只在 staging 模式运行，先取得共享锁，固定 `E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn`，再使用 root 管理的共享 Chromium `/opt/shared-e2e/chrome-linux64/chrome`。运行时 manifest 保存 Chromium 的 `--version` 输出以及 `package-lock.json`、`pom.xml` 的摘要；它刻意不保存 checkout SHA：代码变化但依赖输入未变化时应直接复用预热环境，依赖或浏览器变化时才必须先运行 bootstrap，且项目不得自行下载浏览器。批注 E2E 从 staging 的公开文章列表选择当前存在的第一篇文章，因此生产数据同步后不会依赖失效的固定 slug；它先把完整 checkout SHA 与最近 app 部署记录绑定，且在写 evidence 前再次确认 checkout 与部署记录均未变化。它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
 
 两个 runner 都会在每次 staging run 开始时先删除自己的旧记录，因而失败或 WARNING 绝不保留旧的 passed 状态；只有各自命令成功、输出零 `WARNING`、checkout 与部署 SHA 均稳定时，才将 root-owned `0600` 记录写入 root-owned `0700` 的 `/var/lib/bytedepth-staging/test-history/`：`staging-integration` 与 `staging-e2e`。每份记录严格含 `commit=<完整 SHA>`、对应 `command=`、实际 UTC `timestamp=` 与 `result=passed`，不含凭据。由于记录不可由普通 staging 登录用户读取，创建 Release Tag 前必须通过受控 `sudo cat` over SSH 将两份记录写入本机新建的临时目录，并把该目录显式传给 `prepare-release.sh`；详见 [发布流程](../docs/releases/README.md#staging-预检与生产单机发布)。
 
@@ -219,7 +223,7 @@ ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
 
 涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。流程固定为：实现并补测试 → 跑前置门禁 → 部署候选 ref（分支或 `main`）到 staging → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能进入 6.2 创建生产版本与部署生产。
 
-在 `staging.bytedepth.cn` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。准备 Release 前需对当前 `main` 的 SHA 重新取得两份 evidence；候选分支的结果不能替代 main。staging 验证失败则修代码回到此步，不发布生产。
+在 `staging-bytedepth.bytedepth.cn` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。staging 不提供 `/feed.xml`、`/sitemap.xml`，也不渲染 RSS 自动发现；生产环境仍保留这些入口。准备 Release 前需对当前 `main` 的 SHA 重新取得两份 evidence；候选分支的结果不能替代 main。staging 验证失败则修代码回到此步，不发布生产。
 
 ### 6.2 生产部署
 
@@ -228,12 +232,12 @@ staging 验证通过后，生产打新 Tag 并部署到 175（当前单机）：
 ```bash
 # TAG 必须是刚创建、尚未部署过的正式版本，例如 v1.2.3。
 TAG='v1.2.3'
-
-ssh -i ~/.ssh/ubuntu_2.pem ubuntu@175.24.197.202 \
-  "cd /opt/bytedepth && sudo ./deploy/deploy-production.sh $TAG"
+BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" \
+BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" \
+./deploy/deploy-production-remote.sh "$TAG"
 ```
 
-多台生产服务器时，对每台执行同一 `deploy-production.sh $TAG`。
+上述本地入口会 SSH 到 175，在远端后台执行 `cd /opt/bytedepth && sudo ./deploy/deploy-production.sh "$TAG"`，轮询任务日志并调用远端 `sudo ./scripts/verify-production-release.sh "$TAG"`。不得在本机直接执行远端脚本；多台生产服务器时，应为每台提供对应的受控远程入口，不得复制本机 sudo 命令。
 
 `deploy-production.sh` 必须验证 Tag、记录版本与完整 SHA，并调用完整 Compose 部署；部署后必须执行 `scripts/verify-production-release.sh <tag>`。尚未具备该工具的环境禁止按旧的 `git pull main` 方式发布；应先完成发布工具升级。
 
@@ -314,7 +318,7 @@ curl -fsS -o /dev/null -w 'article image: %{http_code}\n' "$BASE_URL$IMAGE_PATH"
 3. 确认 Docker、Compose、Git、证书与内网连通性。
 4. 验证 Git SSH：ssh -T git@github.com；确认 origin 为 git@github.com:manfredma/bytedepth.git。
 5. external-services：确认 mountpoint -q /mnt/bytedepth-images。
-6. 初始化时按节点模式执行 `sudo ./deploy/bootstrap-ops-deploy.sh`；后续发布按第 6 节先 staging 预检（`deploy-staging.sh`），再生产部署（`deploy-production.sh "$TAG"`）并执行生产验证。多台生产服务器时依次部署各台。
+6. 初始化时按节点模式执行 `sudo ./deploy/bootstrap-ops-deploy.sh`；后续发布按第 6 节先 staging 预检（`deploy-staging.sh`），再从本机执行 `deploy/deploy-production-remote.sh "$TAG"`，由其在生产主机运行 `deploy-production.sh` 并执行生产验证。多台生产服务器时依次部署各台。
 7. 一律通过 `sudo ./deploy/ctl.sh` 操作 Compose（`ps`、`logs`、`config` 等）；禁止裸跑 `docker compose`，否则会误读非当前部署模式的 Compose 文件。
 8. 验证 systemd socket=active、compose 服务状态、HTTPS=200、图片 HTTPS=200。
 9. 对每个承载流量的节点执行第 6 节“部署后查询功能回归”：首页最新/热门及翻页、文章列表与详情、旧 ID 跳转、专栏、搜索、项目和文章图片均返回预期状态；不得以首页 `200` 代替回归。

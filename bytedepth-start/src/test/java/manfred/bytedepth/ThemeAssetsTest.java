@@ -47,6 +47,20 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void rssDiscoveryIsHiddenOnlyInStaging() throws Exception {
+        String nav = classpathText("/templates/fragments/nav.html");
+        String pwaHead = classpathText("/templates/fragments/pwa-head.html");
+
+        assertThat(nav)
+                .contains("th:if=\"${environment != 'staging'}\"")
+                .contains("th:href=\"@{/feed.xml}\"");
+        assertThat(pwaHead)
+                .contains("th:if=\"${environment != 'staging'}\"")
+                .contains("th:if=\"${environment == 'staging'}\" name=\"robots\"")
+                .contains("noindex, nofollow, noarchive");
+    }
+
+    @Test
     void navStaticAssetDefinesIsolatedComponentContract() throws Exception {
         String css = classpathText("/static/css/nav.css");
 

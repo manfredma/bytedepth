@@ -24,6 +24,8 @@ readonly STATE_DIR=/var/lib/bytedepth-staging
 readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
 readonly HISTORY_FILE="$STATE_DIR/deploy-history"
 readonly TIMING_DIR="$STATE_DIR/timing"
+readonly EXPECTED_STAGING_DOMAIN=staging-bytedepth.bytedepth.cn
+readonly EXPECTED_STAGING_SITE_URL=https://bytedepth.cn
 
 # A deployment changes both the checkout and the running app.  Keep that
 # transition indivisible with respect to staging test runners, otherwise a
@@ -41,6 +43,38 @@ git_cmd() { git -c safe.directory="$SOURCE_ROOT" "$@"; }
 invalidate_test_evidence() {
     rm -f "$STATE_DIR/test-history/staging-integration" \
         "$STATE_DIR/test-history/staging-e2e"
+}
+
+require_staging_host_configuration() {
+    local configured_domain configured_site_url certificate_dir certificate_san_names
+
+    configured_domain="$(awk -F= '$1 == "BYTEDEPTH_DOMAIN" {value = substr($0, index($0, "=") + 1)} END {print value}' .env 2>/dev/null || true)"
+    if [[ "$configured_domain" != "$EXPECTED_STAGING_DOMAIN" ]]; then
+        printf 'Refusing: staging BYTEDEPTH_DOMAIN must be %s, got %s\n' \
+            "$EXPECTED_STAGING_DOMAIN" "${configured_domain:-unset}" >&2
+        exit 1
+    fi
+
+    configured_site_url="$(awk -F= '$1 == "BYTEDEPTH_SITE_URL" {value = substr($0, index($0, "=") + 1)} END {print value}' .env 2>/dev/null || true)"
+    if [[ -n "$configured_site_url" && "$configured_site_url" != "$EXPECTED_STAGING_SITE_URL" ]]; then
+        printf 'Refusing: staging BYTEDEPTH_SITE_URL must remain %s, got %s\n' \
+            "$EXPECTED_STAGING_SITE_URL" "$configured_site_url" >&2
+        exit 1
+    fi
+
+    certificate_dir="/etc/letsencrypt/live/$EXPECTED_STAGING_DOMAIN"
+    if [[ ! -r "$certificate_dir/fullchain.pem" || ! -r "$certificate_dir/privkey.pem" ]]; then
+        printf 'Refusing: staging TLS certificate is missing for %s\n' "$EXPECTED_STAGING_DOMAIN" >&2
+        exit 1
+    fi
+    certificate_san_names="$(openssl x509 -in "$certificate_dir/fullchain.pem" -noout -ext subjectAltName 2>/dev/null || true)"
+    if ! printf '%s\n' "$certificate_san_names" \
+        | tr ',' '\n' \
+        | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+        | grep -Fx "DNS:$EXPECTED_STAGING_DOMAIN" >/dev/null; then
+        printf 'Refusing: staging TLS certificate does not cover %s\n' "$EXPECTED_STAGING_DOMAIN" >&2
+        exit 1
+    fi
 }
 
 bound_build_cache() {
@@ -65,6 +99,7 @@ if [[ "$deploy_mode" != "staging" ]]; then
     printf 'Refusing: BYTEDEPTH_DEPLOY_MODE must be staging, got %s\n' "${deploy_mode:-unset}" >&2
     exit 1
 fi
+require_staging_host_configuration
 deploy_ssh_key="$(awk -F= '$1=="BYTEDEPTH_DEPLOY_SSH_KEY"{print $2}' "$CONFIG_FILE" 2>/dev/null || true)"
 if [[ -z "$deploy_ssh_key" || ! -r "$deploy_ssh_key" ]]; then
     printf 'Refusing: BYTEDEPTH_DEPLOY_SSH_KEY missing or unreadable\n' >&2

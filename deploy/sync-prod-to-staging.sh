@@ -6,6 +6,7 @@
 # 配置文件 /etc/bytedepth-sync.conf（root 0600）需包含：
 #   SYNC_SSH_KEY=/home/ubuntu/.ssh/bytedepth_sync
 #   STAGING_IP=10.0.0.5
+# 175 还需预置 /root/.ssh/known_hosts；脚本拒绝自动接受未知主机。
 # MySQL/Redis/MeiliSearch 的源端凭据来自 175 的 .env；
 # 目标端（124）的凭据由 124 本地 .env 提供（导入时在 124 上 source）。
 set -Eeuo pipefail
@@ -21,18 +22,32 @@ readonly ENV_FILE="$SOURCE_ROOT/.env"
 readonly SYNC_CONF=/etc/bytedepth-sync.conf
 readonly LOG=/var/log/bytedepth/sync-prod-to-staging.log
 readonly LOCK_FILE=/var/lock/bytedepth-sync.lock
+readonly SSH_KNOWN_HOSTS=/root/.ssh/known_hosts
 
 # 读同步配置（SSH key 与 staging IP）
 if [[ ! -r "$SYNC_CONF" ]]; then
     printf 'Missing %s. Create it with SYNC_SSH_KEY and STAGING_IP.\n' "$SYNC_CONF" >&2
     exit 1
 fi
+if [[ ! -f "$SYNC_CONF" || "$(stat -c '%U:%G:%a' "$SYNC_CONF")" != 'root:root:600' ]]; then
+    printf 'Refusing: %s must be a root-owned regular file with mode 0600.\n' "$SYNC_CONF" >&2
+    exit 1
+fi
 # shellcheck disable=SC1090
 . "$SYNC_CONF"
 readonly STAGING_USER=ubuntu@${STAGING_IP:?STAGING_IP must be set in $SYNC_CONF}
 readonly SSH_KEY=${SYNC_SSH_KEY:?SYNC_SSH_KEY must be set in $SYNC_CONF}
+if [[ ! -f "$SSH_KEY" || "$(stat -L -c '%a' "$SSH_KEY")" != '600' ]]; then
+    printf 'Refusing: SYNC_SSH_KEY must be a regular file with mode 0600.\n' >&2
+    exit 1
+fi
+if [[ ! -r "$SSH_KNOWN_HOSTS" ]]; then
+    printf 'Refusing: SSH known_hosts file is missing or unreadable: %s\n' "$SSH_KNOWN_HOSTS" >&2
+    exit 1
+fi
 # 显式 SSH 选项（不依赖 ~/.ssh/config，sudo/cron 下可用）
-SSH_OPTS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
+SSH_OPTS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes \
+    -o UserKnownHostsFile="$SSH_KNOWN_HOSTS" -o StrictHostKeyChecking=yes)
 
 mkdir -p "$(dirname "$LOG")" "$(dirname "$LOCK_FILE")"
 
@@ -51,6 +66,9 @@ set +a
 log() { printf '[%s] %s\n' "$(date -u +%FT%TZ)" "$*" | tee -a "$LOG"; }
 
 trap 'log "同步异常退出"' ERR
+
+log "同步 staging 证书到生产边缘..."
+"$SOURCE_ROOT/deploy/sync-staging-certificate-to-production.sh"
 
 log "===== 开始同步 ====="
 
@@ -194,7 +212,7 @@ staging_exec "cd /opt/bytedepth && sudo ./deploy/ctl.sh up -d bytedepth-app"
 # --- 验证 ---
 log "验证 staging..."
 sleep 15
-HTTP=$(staging_exec "curl -ksS -o /dev/null -w '%{http_code}' https://staging.bytedepth.cn/")
+HTTP=$(staging_exec "curl -ksS -o /dev/null -w '%{http_code}' 'https://staging-bytedepth.bytedepth.cn/'")
 if [ "$HTTP" != "200" ]; then
     log "ERROR: staging 返回 $HTTP，同步可能失败"
     exit 1

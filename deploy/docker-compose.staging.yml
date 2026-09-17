@@ -22,7 +22,8 @@ services:
       BYTEDEPTH_REMEMBER_ME_KEY: ${BYTEDEPTH_REMEMBER_ME_KEY:?BYTEDEPTH_REMEMBER_ME_KEY must be set in .env}
       BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE: "true"
       BYTEDEPTH_SESSION_COOKIE_SECURE: "true"
-      BYTEDEPTH_ENVIRONMENT: ${BYTEDEPTH_ENVIRONMENT:-production}
+      BYTEDEPTH_ENVIRONMENT: staging
+      BYTEDEPTH_SITE_URL: https://bytedepth.cn
       BYTEDEPTH_DEPLOY_SOCKET_PATH: /run/bytedepth-deploy/deploy.sock
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Duser.timezone=Asia/Shanghai --enable-native-access=ALL-UNNAMED -Xmx256m}
 
