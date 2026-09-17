@@ -13,7 +13,12 @@ if ! rg -F 'logs bytedepth-app --tail=300' "$SCRIPT" >/dev/null; then
     printf 'Production verification must query the project-prefixed bytedepth-app service.\n' >&2
     exit 1
 fi
-rg -F 'curl --fail --silent --show-error' "$SCRIPT" >/dev/null
+rg -F -- '--fail' "$SCRIPT" >/dev/null
+rg -F -- '--silent' "$SCRIPT" >/dev/null
+rg -F -- '--show-error' "$SCRIPT" >/dev/null
+rg -F -- '--retry 12' "$SCRIPT" >/dev/null
+rg -F -- '--retry-delay 5' "$SCRIPT" >/dev/null
+rg -F -- '--retry-connrefused' "$SCRIPT" >/dev/null
 rg -F '/posts' "$SCRIPT" >/dev/null
 rg -F '/columns' "$SCRIPT" >/dev/null
 rg -F '/projects' "$SCRIPT" >/dev/null

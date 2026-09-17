@@ -237,7 +237,7 @@ BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" \
 ./deploy/deploy-production-remote.sh "$TAG"
 ```
 
-上述本地入口会 SSH 到 175，在远端后台执行 `cd /opt/bytedepth && sudo ./deploy/deploy-production.sh "$TAG"`，轮询任务日志并调用远端 `sudo ./scripts/verify-production-release.sh "$TAG"`。不得在本机直接执行远端脚本；多台生产服务器时，应为每台提供对应的受控远程入口，不得复制本机 sudo 命令。
+上述本地入口会 SSH 到 175，在远端后台执行 `cd /opt/bytedepth && sudo ./deploy/deploy-production.sh "$TAG"`，轮询任务日志并调用远端 `sudo ./scripts/verify-production-release.sh "$TAG"`。应用容器重建后可能需要数秒才能监听 8080；生产验收脚本必须对 HTTPS 读路径使用带延迟的重试，不能因 Nginx 先于 Spring Boot 就绪而把瞬时 502 判定为发布失败。不得在本机直接执行远端脚本；多台生产服务器时，应为每台提供对应的受控远程入口，不得复制本机 sudo 命令。
 
 `deploy-production.sh` 必须验证 Tag、记录版本与完整 SHA，并调用完整 Compose 部署；部署后必须执行 `scripts/verify-production-release.sh <tag>`。尚未具备该工具的环境禁止按旧的 `git pull main` 方式发布；应先完成发布工具升级。
 
