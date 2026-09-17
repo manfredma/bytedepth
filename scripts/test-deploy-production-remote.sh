@@ -12,8 +12,11 @@ readonly HOST_SCRIPT="$ROOT/deploy/deploy-production.sh"
 grep -Fqx 'readonly PRODUCTION_HOST=175.24.197.202' "$SCRIPT"
 grep -Fqx 'readonly REMOTE_ROOT=/opt/bytedepth' "$SCRIPT"
 grep -Fq 'BYTEDEPTH_PRODUCTION_SSH_KEY' "$SCRIPT"
+grep -Fq 'BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS' "$SCRIPT"
 grep -Fq 'IdentitiesOnly=yes' "$SCRIPT"
 grep -Fq 'BatchMode=yes' "$SCRIPT"
+grep -Fq 'UserKnownHostsFile=' "$SCRIPT"
+grep -Fq 'StrictHostKeyChecking=yes' "$SCRIPT"
 grep -Fq 'deploy-production.sh' "$SCRIPT"
 grep -Fq 'nohup' "$SCRIPT"
 grep -Fq 'verify-production-release.sh' "$SCRIPT"
@@ -29,6 +32,7 @@ fi
 fixture_root="$(mktemp -d)"
 trap 'rm -rf "$fixture_root"' EXIT
 touch "$fixture_root/production-key"
+touch "$fixture_root/known_hosts"
 cat > "$fixture_root/ssh" <<'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -51,7 +55,7 @@ esac
 EOF
 chmod +x "$fixture_root/ssh"
 fixture_output="$fixture_root/output.log"
-PATH="$fixture_root:$PATH" BYTEDEPTH_PRODUCTION_SSH_KEY="$fixture_root/production-key" \
+PATH="$fixture_root:$PATH" BYTEDEPTH_PRODUCTION_SSH_KEY="$fixture_root/production-key" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS="$fixture_root/known_hosts" \
     "$SCRIPT" v9.9.9 > "$fixture_output"
 grep -Fq 'Production deployment and verification passed for v9.9.9' "$fixture_output"
 

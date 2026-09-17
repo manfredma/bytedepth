@@ -32,7 +32,7 @@
 
 - [ ] **Step 1: Write the failing contract assertions.**
 
-  Assert that `deploy/deploy-production-remote.sh` is executable and contains the exact production host, remote root, explicit `BYTEDEPTH_PRODUCTION_SSH_KEY` requirement, SemVer validation, SSH invocation, remote `nohup`, remote log polling, duplicate-tag guard, and remote `scripts/verify-production-release.sh` invocation. Assert that the host script's root guard says it must run on the production host and names `deploy/deploy-production-remote.sh` as the local entry.
+  Assert that `deploy/deploy-production-remote.sh` is executable and contains the exact production host, remote root, explicit `BYTEDEPTH_PRODUCTION_SSH_KEY` and known_hosts requirements, SemVer validation, SSH invocation, remote `nohup`, remote log polling, duplicate-tag guard, and remote `scripts/verify-production-release.sh` invocation. Assert that the host script's root guard says it must run on the production host and names `deploy/deploy-production-remote.sh` as the local entry.
 
   Add a fixture-driven fake-SSH path to `scripts/test-deploy-production-remote.sh`: the fake SSH command records arguments, returns a clean remote state for the first probe, records the detached start command, returns a successful release-history record and deployment log on polling, and records the verification command. Add failure cases for an unreadable key, invalid tag, already deployed tag, remote busy task, and remote verification failure.
 
@@ -62,7 +62,7 @@
 - Test: `scripts/test-deploy-production.sh`, `scripts/test-deploy-production-remote.sh`
 
 **Interfaces:**
-- Consumes: `TAG` argument and required `BYTEDEPTH_PRODUCTION_SSH_KEY` environment variable.
+- Consumes: `TAG` argument and required `BYTEDEPTH_PRODUCTION_SSH_KEY` plus `BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS` environment variables.
 - Produces: `deploy/deploy-production-remote.sh <tag>`; exit 0 only after remote deploy and verification pass.
 
 - [ ] **Step 1: Change the host-only error without weakening the root guard.**
@@ -71,14 +71,14 @@
 
   ```text
   This is a production-host-only script. From the local checkout run:
-  BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" ./deploy/deploy-production-remote.sh vX.Y.Z
+  BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" ./deploy/deploy-production-remote.sh vX.Y.Z
   ```
 
   Do not suggest `sudo ./deploy/deploy-production.sh` from the local checkout.
 
 - [ ] **Step 2: Implement local argument and credential validation.**
 
-  In `deploy/deploy-production-remote.sh`, set readonly constants `PRODUCTION_USER=ubuntu`, `PRODUCTION_HOST=175.24.197.202`, `REMOTE_ROOT=/opt/bytedepth`, and `REMOTE_LOG=/tmp/bytedepth-production-${TAG}.log`. Require a readable `BYTEDEPTH_PRODUCTION_SSH_KEY`; use `ssh -i ... -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new`. Reject any tag that does not match `^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`.
+  In `deploy/deploy-production-remote.sh`, set readonly constants `PRODUCTION_USER=ubuntu`, `PRODUCTION_HOST=175.24.197.202`, `REMOTE_ROOT=/opt/bytedepth`, and `REMOTE_LOG=/tmp/bytedepth-production-${TAG}.log`. Require readable `BYTEDEPTH_PRODUCTION_SSH_KEY` and `BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS`; use `ssh -i ... -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile=... -o StrictHostKeyChecking=yes`. Reject any tag that does not match `^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`.
 
 - [ ] **Step 3: Implement remote preflight and idempotency checks.**
 
@@ -137,7 +137,7 @@
   Document the local command as:
 
   ```bash
-  BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" ./deploy/deploy-production-remote.sh vX.Y.Z
+  BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" ./deploy/deploy-production-remote.sh vX.Y.Z
   ```
 
   Label `cd /opt/bytedepth && sudo ./deploy/deploy-production.sh vX.Y.Z` as the remote implementation detail only. Explain that running the host script from the local checkout is invalid.

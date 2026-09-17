@@ -4,4 +4,4 @@
 # 与每证书的 pre/post hook（standalone 模式 stop/start nginx）互补：
 # pre/post 处理签发期间的端口占用，deploy hook 处理续期后 reload。
 set -euo pipefail
-docker exec bytedepth-nginx-1 nginx -s reload 2>/dev/null || true
+docker exec bytedepth-nginx-1 nginx -s reload

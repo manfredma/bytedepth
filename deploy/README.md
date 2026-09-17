@@ -157,13 +157,13 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 
 1. 124 固定为 staging 模式：`sudo sh -c 'printf "BYTEDEPTH_DEPLOY_MODE=staging\n" > /etc/bytedepth-deploy.conf'`
 2. `.env` 用 `deploy/.env.example` 生成，填 staging 专用新密钥（不复用生产），追加 `BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn`、`BYTEDEPTH_ENVIRONMENT=staging`、`BYTEDEPTH_SITE_URL=https://bytedepth.cn`、`JAVA_TOOL_OPTIONS=...-Xmx256m`。
-3. 申请 TLS 证书：`sudo certbot certonly --standalone -d staging-bytedepth.bytedepth.cn`
+3. 申请或更新 TLS 证书：`sudo ./deploy/provision-staging-certificate.sh`（脚本会安装 standalone challenge 的 stop/start hook 和续期后的 Nginx reload hook）。
 4. 首次启动：先 `ctl.sh up -d mysql redis meilisearch`，执行首次数据同步（见下），再 `ctl.sh up -d`。
 5. staging 同样安装部署 Socket（`bootstrap-ops-deploy.sh` 无条件安装，所有模式一致）：Socket 是远程触发部署的通道，staging 作为测试环境也装以便验证该通道。`deploy-staging.sh` 仍校验 `BYTEDEPTH_DEPLOY_MODE=staging` 防止误在生产机运行。
 
 部署脚本会在拉取候选 ref 前 fail-closed 校验 `.env` 的 `BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn`、`BYTEDEPTH_SITE_URL=https://bytedepth.cn`（如配置）以及该精确域名的 TLS SAN；证书或域名不匹配时不会改动运行中的 staging。Nginx 对未知 Host/IP 也不会代理到 staging 应用。
 
-如果证书监控同时探测生产边缘 175 和 staging 主机 124，新域名的证书签发只在 DNS 指向的 124 上执行；然后在 175 运行 `sudo ./deploy/sync-staging-certificate-to-production.sh`。该脚本只同步新域名的精确 SAN 证书，并在 175 安装一个不代理内容、握手后返回 `444` 的精确 Host 路由。旧域名 `staging.bytedepth.cn` 仍解析到 175，首次或证书缺失时在 175 运行 `sudo ./deploy/provision-production-edge-staging-certificate.sh`；它使用 standalone HTTP-01 为旧域名签发精确证书，并恢复旧域名到 `https://bytedepth.cn` 的生产入口跳转。生产→staging 数据同步前后应调用新域名同步脚本，证书续期后也必须重新同步；不得在 175 为新域名直接使用 HTTP-01，因为其 DNS 验证请求会到达 124。
+如果证书监控同时探测生产边缘 175 和 staging 主机 124，新域名的证书签发只在 DNS 指向的 124 上执行；首次或证书缺失时在 124 运行 `sudo ./deploy/provision-staging-certificate.sh`，它会配置 standalone challenge 的 stop/start hook 和续期后的 Nginx reload hook；然后在 175 运行 `sudo ./deploy/sync-staging-certificate-to-production.sh`。该脚本只同步新域名的精确 SAN 证书，并在 175 安装一个不代理内容、握手后返回 `444` 的精确 Host 路由。旧域名 `staging.bytedepth.cn` 仍解析到 175，首次或证书缺失时在 175 运行 `sudo ./deploy/provision-production-edge-staging-certificate.sh`；它使用 standalone HTTP-01 为旧域名签发精确证书，同时安装旧域名到 `https://bytedepth.cn` 的生产入口跳转。生产→staging 数据同步前后应调用新域名同步脚本，证书续期后也必须重新同步；不得在 175 为新域名直接使用 HTTP-01，因为其 DNS 验证请求会到达 124。
 
 ### 数据同步（生产→staging）
 
@@ -174,7 +174,7 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 - **MeiliSearch**：snapshot 磁盘拷贝 → `--import-snapshot` 导入（timeout 限时）
 - **图片**：`rsync --delete --rsync-path=sudo rsync`
 
-配置文件 `/etc/bytedepth-sync.conf`（root 0600）含 `SYNC_SSH_KEY` 和 `STAGING_IP=10.0.0.5`。同步用专用 key（175→124 内网）。cron 每周日 03:00 自动执行；也可手动 `sudo ./deploy/sync-prod-to-staging.sh`。
+配置文件 `/etc/bytedepth-sync.conf`（root 0600）含 `SYNC_SSH_KEY` 和 `STAGING_IP=10.0.0.5`；175 还必须维护 root 可读的 `/root/.ssh/known_hosts`，同步脚本使用严格主机密钥校验，禁止自动接受新主机。同步用专用 key（175→124 内网）。cron 每周日 03:00 自动执行；也可手动 `sudo ./deploy/sync-prod-to-staging.sh`。
 
 ### 部署
 
@@ -233,7 +233,8 @@ staging 验证通过后，生产打新 Tag 并部署到 175（当前单机）：
 # TAG 必须是刚创建、尚未部署过的正式版本，例如 v1.2.3。
 TAG='v1.2.3'
 BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" \
-  ./deploy/deploy-production-remote.sh "$TAG"
+BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" \
+./deploy/deploy-production-remote.sh "$TAG"
 ```
 
 上述本地入口会 SSH 到 175，在远端后台执行 `cd /opt/bytedepth && sudo ./deploy/deploy-production.sh "$TAG"`，轮询任务日志并调用远端 `sudo ./scripts/verify-production-release.sh "$TAG"`。不得在本机直接执行远端脚本；多台生产服务器时，应为每台提供对应的受控远程入口，不得复制本机 sudo 命令。

@@ -10,6 +10,7 @@ readonly POLL_INTERVAL_SECONDS=10
 readonly POLL_TIMEOUT_SECONDS=3600
 readonly TAG="${1:-}"
 readonly SSH_KEY="${BYTEDEPTH_PRODUCTION_SSH_KEY:-}"
+readonly KNOWN_HOSTS_FILE="${BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS:-${HOME}/.ssh/known_hosts}"
 
 if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
     printf 'Release tag must use stable SemVer, for example v1.2.3\n' >&2
@@ -19,10 +20,14 @@ if [[ -z "$SSH_KEY" || ! -r "$SSH_KEY" ]]; then
     printf 'BYTEDEPTH_PRODUCTION_SSH_KEY must name a readable SSH private key.\n' >&2
     exit 1
 fi
+if [[ ! -r "$KNOWN_HOSTS_FILE" ]]; then
+    printf 'BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS must name a readable known_hosts file.\n' >&2
+    exit 1
+fi
 
 readonly REMOTE_LOG="/tmp/bytedepth-production-${TAG}.log"
 readonly SSH_TARGET="$PRODUCTION_USER@$PRODUCTION_HOST"
-readonly SSH_OPTIONS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
+readonly SSH_OPTIONS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE" -o StrictHostKeyChecking=yes)
 
 remote() {
     ssh "${SSH_OPTIONS[@]}" "$SSH_TARGET" "$@"

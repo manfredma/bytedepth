@@ -35,6 +35,8 @@ staging 使用 `staging-bytedepth.bytedepth.cn`，DNS 指向 staging 主机，TL
 
 旧域名 `staging.bytedepth.cn` 仍解析到 175，因此在 175 单独签发并续期其精确证书；该域名沿用上一版生产入口逻辑跳转到 `https://bytedepth.cn`，不承载 staging 内容。
 
+证书流程必须在写入目标前 fail-closed 校验证书有效期、证书与私钥匹配、证书链和文件权限；生产发布 SSH 使用显式 known_hosts，禁止首次连接自动接受主机密钥。
+
 原 `staging.bytedepth.cn` 由外部流量切换策略转到生产，不再出现在 staging 的运行时入口、E2E 基址或验收命令中。
 
 staging 不使用查询参数或 Cookie 作为路由状态；域名本身就是 staging 入口。所有脚本和人工验收直接使用 `https://staging-bytedepth.bytedepth.cn/`。
