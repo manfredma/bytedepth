@@ -11,6 +11,8 @@ fi
 readonly SYNC_CONF=/etc/bytedepth-sync.conf
 readonly CERT_NAME=staging-bytedepth.bytedepth.cn
 readonly CERT_DIR="/etc/letsencrypt/live/$CERT_NAME"
+readonly LEGACY_CERT_NAME=staging.bytedepth.cn
+readonly LEGACY_CERT_DIR="/etc/letsencrypt/live/$LEGACY_CERT_NAME"
 readonly EDGE_CONFIG=/opt/nginx-conf.d/staging-bytedepth.conf
 
 if [[ ! -r "$SYNC_CONF" ]]; then
@@ -24,6 +26,12 @@ readonly SSH_KEY=${SYNC_SSH_KEY:?SYNC_SSH_KEY must be set in $SYNC_CONF}
 readonly SSH_OPTS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
 readonly TEMP_DIR="$(mktemp -d /tmp/bytedepth-staging-cert.XXXXXX)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
+
+if [[ ! -r "$LEGACY_CERT_DIR/fullchain.pem" || ! -r "$LEGACY_CERT_DIR/privkey.pem" ]]; then
+    printf 'Missing legacy certificate %s; run deploy/provision-production-edge-staging-certificate.sh first.\n' \
+        "$LEGACY_CERT_NAME" >&2
+    exit 1
+fi
 
 install -d -o root -g root -m 0700 "$TEMP_DIR"
 
