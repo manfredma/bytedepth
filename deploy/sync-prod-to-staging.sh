@@ -52,6 +52,9 @@ log() { printf '[%s] %s\n' "$(date -u +%FT%TZ)" "$*" | tee -a "$LOG"; }
 
 trap 'log "同步异常退出"' ERR
 
+log "同步 staging 证书到生产边缘..."
+"$SOURCE_ROOT/deploy/sync-staging-certificate-to-production.sh"
+
 log "===== 开始同步 ====="
 
 # 在 124 执行命令（source 124 本地 .env 获取目标端密码）

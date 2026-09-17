@@ -24,6 +24,7 @@
 
 - 统一本机生产部署入口为远程编排脚本，避免误执行生产主机内部脚本。
 - staging 切换为 `https://staging-bytedepth.bytedepth.cn/` 独立入口；按 `BYTEDEPTH_ENVIRONMENT` 隐藏 staging 的 RSS/sitemap/自动发现，并保留生产环境公开入口。
+- staging 证书签发后由 124 同步到 175 的生产边缘；175 只提供 TLS 握手并拒绝内容请求，避免证书监控命中共享站点证书。
 
 ## [v2.15.7] - 2026-09-15
 

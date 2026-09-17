@@ -27,6 +27,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 前端公共组件必须自隔离，组件之间除相对位置外不得互相影响。环境相关样式必须定义在承载该组件且所有使用页面必加载的组件样式表中，禁止放入仅部分路由加载的页面主题资产；必须有自动化资源归属检查覆盖该约束。
 - staging（124，`staging-bytedepth.bytedepth.cn`）是唯一的 E2E、集成、部署验收和项目所有者验收环境，尤其适用于界面交互、视觉与布局改动；不得要求项目所有者验收未部署的本机代码。流程固定为：实现并补单元测试 → 部署候选 ref（功能分支或 `main`）到 staging（`deploy/deploy-staging.sh <ref>`）→ **在 staging 跑全部 E2E 与集成验收** → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能创建生产版本、Tag 或部署生产。
 - staging 验收和脚本必须使用 `https://staging-bytedepth.bytedepth.cn/`；原 `staging.bytedepth.cn` 不再作为 staging 内容入口。`BYTEDEPTH_ENVIRONMENT=staging` 时，RSS、sitemap 和 RSS 自动发现必须关闭，页面返回 noindex；生产环境保持这些公开入口。新域名只是环境入口，不是安全认证。
+- staging 域名证书以 124 的 Let’s Encrypt 证书为源；若证书监控探测生产边缘 175，必须运行 `deploy/sync-staging-certificate-to-production.sh` 同步精确 SAN 证书，175 只允许 TLS 握手后拒绝内容，不得代理 staging。
 - 合并发布时优先使用 Fast-forward；仅当合并后 `main` HEAD 与 staging 已验收候选完整 SHA 完全一致时，才允许复用候选部署和 evidence 并跳过重复 staging 流程；SHA 变化必须重新部署并重新生成两份 evidence。发布脚本的 SHA 校验是最终护栏。
 - 本机只用于开发期的纯单元测试、静态检查和快速反馈，不能作为 E2E、集成或验收依据。单元测试的边界是断网、无外部进程仍可执行：内存数据库、进程内 mock/fake（包括进程内 Redis 实现）均可在本机运行；内存实现本身也是单元测试。连接任何独立进程（包括 Redis、MySQL、Flyway、Docker/Testcontainers、Nginx）的测试属于集成测试，必须在 staging 执行；即使这些服务在本机临时可用，也不得将本机结果作为集成验收依据。本机缺少这些条件时不得卡住功能分支的 staging 部署、测试或验收。
 - 知识沉淀必须写入项目文档（`docs/`、`deploy/`、`AGENTS.md` 等），禁止放入 agent 特有的记忆（如 `~/.claude` 下的 memory 文件）；既有 agent 记忆应迁移到项目文档后删除，不得在 agent 记忆与项目文档间重复维护同一事实。

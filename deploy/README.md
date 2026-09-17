@@ -163,6 +163,8 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 
 部署脚本会在拉取候选 ref 前 fail-closed 校验 `.env` 的 `BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn`、`BYTEDEPTH_SITE_URL=https://bytedepth.cn`（如配置）以及该精确域名的 TLS SAN；证书或域名不匹配时不会改动运行中的 staging。Nginx 对未知 Host/IP 也不会代理到 staging 应用。
 
+如果证书监控同时探测生产边缘 175 和 staging 主机 124，证书签发只在 DNS 指向的 124 上执行；然后在 175 运行 `sudo ./deploy/sync-staging-certificate-to-production.sh`。该脚本只同步精确 SAN 证书，并在 175 安装一个不代理内容、握手后返回 `444` 的精确 Host 路由。生产→staging 数据同步前后应调用该脚本，证书续期后也必须重新同步；175 不得直接用 HTTP-01 为该域名签发，因为 DNS 验证请求会到达 124。
+
 ### 数据同步（生产→staging）
 
 `deploy/sync-prod-to-staging.sh` 在 175 上执行，推送到 124。同步前停 staging app，覆盖四种数据后重启 app（Flyway 自动迁移）：
