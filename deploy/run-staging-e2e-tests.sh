@@ -12,14 +12,12 @@ readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly RUNTIME_MANIFEST=/var/lib/bytedepth-staging/runtime/manifest
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
-readonly E2E_BASE_URL=https://staging.bytedepth.cn
-readonly E2E_PREVIEW_BOOTSTRAP_URL=https://staging.bytedepth.cn/?preview=true
+readonly E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn
 # Shared Chromium is provisioned at the host level by root maintenance.
 readonly CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 readonly WORK_DIR="$(mktemp -d)"
 readonly E2E_LOG="$WORK_DIR/playwright.log"
-readonly PREVIEW_STORAGE_STATE="$WORK_DIR/staging-preview.json"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 # Deployment, integration tests and E2E share this lock so an evidence record
@@ -59,7 +57,7 @@ invalidate_evidence() {
 discover_e2e_post_slug() {
     local posts_page
 
-    posts_page="$(curl --fail --silent --show-error "$E2E_BASE_URL/posts?preview=true")"
+    posts_page="$(curl --fail --silent --show-error "$E2E_BASE_URL/posts")"
     if [[ "$posts_page" =~ href=\"/posts/([a-z0-9-]+)\" ]]; then
         printf '%s\n' "${BASH_REMATCH[1]}"
         return
@@ -105,8 +103,6 @@ fi
 cd "$SOURCE_ROOT"
 e2e_post_slug="$(discover_e2e_post_slug)"
 export E2E_BASE_URL
-export E2E_PREVIEW_BOOTSTRAP_URL
-export E2E_PREVIEW_STORAGE_STATE="$PREVIEW_STORAGE_STATE"
 if ! E2E_POST_SLUG="$e2e_post_slug" \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE="$CHROMIUM_EXECUTABLE" \
     npm run test:e2e 2>&1 | tee "$E2E_LOG"; then

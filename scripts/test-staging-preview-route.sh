@@ -8,19 +8,15 @@ readonly E2E_RUNNER="$ROOT/deploy/run-staging-e2e-tests.sh"
 readonly SYNC_SCRIPT="$ROOT/deploy/sync-prod-to-staging.sh"
 
 [[ -f "$NGINX_ROOT" && -f "$NGINX_TEMPLATE" ]]
-grep -Fq 'staging_preview' "$NGINX_ROOT"
-grep -Fq 'true 1' "$NGINX_ROOT"
-grep -Fq 'staging_redirect_args' "$NGINX_ROOT"
-grep -Fq '$arg_preview = false' "$NGINX_TEMPLATE"
-grep -Fq '$uri$staging_redirect_args' "$NGINX_TEMPLATE"
-grep -Fq 'https://bytedepth.cn' "$NGINX_TEMPLATE"
+grep -Fq 'staging-bytedepth.bytedepth.cn' "$E2E_RUNNER"
 grep -Fq 'X-Robots-Tag' "$NGINX_TEMPLATE"
 grep -Fq 'noindex' "$NGINX_TEMPLATE"
-grep -Fq 'Secure' "$NGINX_ROOT"
-grep -Fq 'HttpOnly' "$NGINX_ROOT"
-grep -Fq 'SameSite=Lax' "$NGINX_ROOT"
-grep -Fq 'Max-Age=604800' "$NGINX_ROOT"
-grep -Fq 'Max-Age=0' "$NGINX_ROOT"
+grep -Fq 'Referrer-Policy' "$NGINX_TEMPLATE"
+
+if grep -Eq 'staging_preview|arg_preview|staging_redirect_args|preview=true' "$NGINX_ROOT" "$NGINX_TEMPLATE"; then
+    printf 'Staging Nginx must not retain preview query or Cookie routing.\n' >&2
+    exit 1
+fi
 
 if awk '
     /listen 80 default_server/ {inside = 1}
@@ -33,9 +29,8 @@ else
     exit 1
 fi
 
-grep -Fqx 'readonly E2E_PREVIEW_BOOTSTRAP_URL=https://staging.bytedepth.cn/?preview=true' "$E2E_RUNNER"
-grep -Fq 'E2E_PREVIEW_BOOTSTRAP_URL' "$E2E_RUNNER"
-grep -Fq 'https://staging.bytedepth.cn/?preview=true' "$SYNC_SCRIPT"
+grep -Fqx 'readonly E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn' "$E2E_RUNNER"
+grep -Fq 'https://staging-bytedepth.bytedepth.cn' "$SYNC_SCRIPT"
 
 for file in \
     "$ROOT/AGENTS.md" \
@@ -50,7 +45,7 @@ for file in \
     "$ROOT/docs/superpowers/plans/2026-09-10-test-boundaries.md" \
     "$ROOT/docs/superpowers/plans/2026-09-10-network-map.md" \
     "$ROOT/docs/superpowers/plans/2026-08-23-staging-environment.md"; do
-    grep -Fq '?preview=true' "$file"
+    grep -Fq 'staging-bytedepth.bytedepth.cn' "$file"
 done
 
 printf 'Staging preview route contract passed.\n'

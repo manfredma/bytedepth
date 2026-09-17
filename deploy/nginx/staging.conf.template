@@ -7,12 +7,6 @@
 server {
     listen 80;
     server_name ${BYTEDEPTH_DOMAIN};
-    if ($arg_preview = false) {
-        return 302 https://bytedepth.cn$uri$staging_redirect_args;
-    }
-    if ($staging_preview_enabled = 0) {
-        return 301 https://bytedepth.cn$uri$staging_redirect_args;
-    }
     return 301 https://$host$request_uri;
 }
 
@@ -35,13 +29,19 @@ server {
 
     client_max_body_size 10m;
     add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
-    add_header Set-Cookie $staging_preview_cookie_header always;
+    add_header Referrer-Policy "no-referrer" always;
 
-    if ($arg_preview = false) {
-        return 302 https://bytedepth.cn$uri$staging_redirect_args;
+    location = /robots.txt {
+        default_type text/plain;
+        return 200 "User-agent: *\nDisallow: /\n";
     }
-    if ($staging_preview_enabled = 0) {
-        return 301 https://bytedepth.cn$uri$staging_redirect_args;
+
+    location = /feed.xml {
+        return 404;
+    }
+
+    location = /sitemap.xml {
+        return 404;
     }
 
     location / {
@@ -51,10 +51,5 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location = /robots.txt {
-        default_type text/plain;
-        return 200 "User-agent: *\nDisallow: /\n";
     }
 }

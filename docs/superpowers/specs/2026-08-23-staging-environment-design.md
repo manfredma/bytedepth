@@ -16,7 +16,7 @@
 | 环境 | 机器 | 部署模式 | 域名 | 数据来源 |
 | --- | --- | --- | --- | --- |
 | 生产 | `175.24.197.202` | `data-access`（**不变**） | `bytedepth.cn` | 自有，唯一真相源 |
-| 预发 | `124.221.143.25` | `staging`（由 `external-services` 转入） | `staging.bytedepth.cn` | 由 175 周期覆盖 |
+| 预发 | `124.221.143.25` | `staging`（由 `external-services` 转入） | `staging-bytedepth.bytedepth.cn` | 由 175 周期覆盖 |
 
 DNS 已就绪：`@` → 175、`staging` → 124，无通配符。
 
@@ -31,7 +31,7 @@ DNS 已就绪：`@` → 175、`staging` → 124，无通配符。
 1. 124 跑完全独立的一套 single-host 数据栈，不连 175 数据服务。
 2. 数据同步：周期性覆盖（drop + 重建），175 → 124。
 3. staging 用于版本发布预检与测试，**包含写数据**；写操作是临时的，下次同步会被覆盖。
-4. 全量同步、不脱敏；staging 主机保留公网 80/443 以支持预览，但普通公网流量默认转到生产，项目所有者接受预览入口不提供强认证的安全风险。
+4. 全量同步、不脱敏；staging 主机保留公网 80/443 以支持独立域名验收，项目所有者接受该入口不提供强认证的安全风险。
 5. staging 版本来源：任意 Git ref（分支/commit/Tag）。
 6. 同步与部署解耦：同步只管数据，部署只换代码。
 7. 操作方式：SSH 脚本为主；同步每周自动一次，也可手动触发。
@@ -61,7 +61,7 @@ DNS 已就绪：`@` → 175、`staging` → 124，无通配符。
 ### 3.3 配置 staging
 
 1. `.env` 由 `deploy/.env.example` 生成，填入 **staging 专用新随机值**（`DB_PASSWORD`/`REDIS_PASSWORD`/`MEILI_MASTER_KEY`/`BYTEDEPTH_REMEMBER_ME_KEY`），不复用生产密钥。**安全替换旧 external-services 的 `.env`，不残留生产外部服务凭据。**
-2. `.env` 追加：`BYTEDEPTH_DOMAIN=staging.bytedepth.cn`、`BYTEDEPTH_ENVIRONMENT=staging`、`JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Shanghai --enable-native-access=ALL-UNNAMED -Xmx256m`。
+2. `.env` 追加：`BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn`、`BYTEDEPTH_ENVIRONMENT=staging`、`BYTEDEPTH_SITE_URL=https://bytedepth.cn`、`JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Shanghai --enable-native-access=ALL-UNNAMED -Xmx256m`。
 3. GeoIP：可选，放 124 `/data/geoip/GeoLite2-City.mmdb`。
 
 ### 3.4 TLS 证书
@@ -70,7 +70,7 @@ DNS 已就绪：`@` → 175、`staging` → 124，无通配符。
 
 - 用 `certbot certonly --standalone` 临时占用 80 端口申请（先确保 124 的 80 端口空闲、DNS 已生效、安全组放行 80/443）。
 - 或用 DNS-01 challenge（无需 80 端口，需 DNS API）。
-- 证书路径：`/etc/letsencrypt/live/staging.bytedepth.cn/`，nginx 模板用 `${BYTEDEPTH_DOMAIN}` 拼路径。
+- 证书路径：`/etc/letsencrypt/live/staging-bytedepth.bytedepth.cn/`，nginx 模板用 `${BYTEDEPTH_DOMAIN}` 拼路径。
 - 配置 certbot renewal hook：续期后 `sudo ./deploy/ctl.sh up -d --force-recreate nginx` 重载。
 - 申请前验证：DNS 解析已指向 124、CAA 记录允许 Let's Encrypt、防火墙放行。
 
@@ -243,7 +243,7 @@ codex 指出"175 上有 `ubuntu_2.pem`"是未验证假设。现有部署脚本�
 项目所有者已接受：
 
 - staging 全量镜像生产数据（含用户密码哈希、邮箱、访问日志、**Spring Session**），不脱敏。
-- staging 主机的 80/443 仍需公网可达，但普通公网请求默认 301 到生产；只有带 `https://staging.bytedepth.cn/?preview=true` 的预览请求进入 staging。该参数不是安全认证。
+- staging 主机的 80/443 仍需公网可达，入口为 `https://staging-bytedepth.bytedepth.cn/`。该域名不是安全认证；staging 通过 `X-Robots-Tag`、HTML `meta robots` 和不提供 RSS/sitemap 降低搜索引擎发现。
 - staging 部署来自 `main` 或 Tag 的代码（不直接接受任意裸 SHA）。
 
 **爆炸半径**：staging 被攻破 = 生产用户数据泄露。Redis 含生产会话，复制后可在 staging 重放生产 session（可选缓解见 5.2）。TLS 强制、staging admin 密码不得为默认值、与生产同等主机加固。当前方案不增加 HTTP Basic Auth、IP 白名单或 VPN；已启用 `robots.txt`/`X-Robots-Tag` 禁止收录，但预览入口仍不是安全边界。
@@ -251,7 +251,7 @@ codex 指出"175 上有 `ubuntu_2.pem`"是未验证假设。现有部署脚本�
 ## 十、验收标准
 
 - [ ] 124 staging 五服务启动（mysql/redis/meili healthcheck `healthy`，app/nginx `Up`）。
-- [ ] `https://staging.bytedepth.cn/?preview=true` 返回 200，TLS 有效（SNI 验证）；不带预览标记的公网请求 301 到生产。
+- [ ] `https://staging-bytedepth.bytedepth.cn/` 返回 200，TLS 有效（SNI 验证）；响应含 noindex，`/feed.xml` 与 `/sitemap.xml` 返回 404，`robots.txt` 不含 Sitemap。
 - [ ] MySQL 同步后行数/校验和与生产一致。
 - [ ] MeiliSearch 文档数与生产一致。
 - [ ] Redis 以 RDB 干净启动，无旧 AOF 残留。

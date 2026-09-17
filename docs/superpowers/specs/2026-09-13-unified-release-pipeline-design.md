@@ -6,7 +6,7 @@
 
 bytedepth、Career、Toolbox 对齐相同发布顺序、入口名称、证据格式和失败规则。GitHub Actions 只验证可在无凭据 runner 中运行的质量门禁；它绝不连接 staging、生产、Docker、数据库或共享浏览器。staging 是唯一集成与 E2E 环境，生产只接受 `main` 上受控脚本创建的新 annotated SemVer Tag。
 
-访问 staging 页面必须使用 `https://staging.bytedepth.cn/?preview=true` 建立预览状态；不带 `?preview=true` 的公网请求会 301 到 `https://bytedepth.cn`。该参数只是流量路由标记，不是安全认证。
+访问 staging 页面必须使用 `https://staging-bytedepth.bytedepth.cn/`。staging 按 `BYTEDEPTH_ENVIRONMENT=staging` 关闭 RSS、sitemap 和 RSS 自动发现，并返回 noindex；生产环境保持这些入口。新域名只是环境入口，不是安全认证。
 
 ## 统一的 16 步顺序
 

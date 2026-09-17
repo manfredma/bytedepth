@@ -62,8 +62,9 @@
 - Modify: `deploy/nginx/staging-root.conf`
 - Modify: `deploy/nginx/staging.conf.template`
 - Modify: `deploy/docker-compose.staging.yml`
+- Modify: `deploy/deploy-staging.sh`
 - Modify: `deploy/.env.example` only if its staging guidance needs the explicit site URL
-- Test: `scripts/test-staging-search-isolation.sh`
+- Test: `scripts/test-staging-search-isolation.sh`, `scripts/test-deploy-staging.sh`
 
 **Interfaces:**
 - Consumes: `BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn` and `BYTEDEPTH_ENVIRONMENT=staging`.
@@ -81,14 +82,18 @@
 
   Ensure the staging Compose service passes `BYTEDEPTH_ENVIRONMENT=staging` and defaults `BYTEDEPTH_SITE_URL` to `https://bytedepth.cn`; preserve the production Compose configuration unchanged.
 
-- [ ] **Step 4: Run Nginx syntax and focused contracts.**
+- [ ] **Step 4: Fail fast on an unprepared staging host.**
+
+  In `deploy/deploy-staging.sh`, require `.env` to name `staging-bytedepth.bytedepth.cn`, reject a non-production `BYTEDEPTH_SITE_URL`, and require a readable TLS certificate/key whose SAN covers the exact staging hostname. This prevents the new Host from falling through to a shared career/toolbox Nginx route.
+
+- [ ] **Step 5: Run Nginx syntax and focused contracts.**
 
   ```bash
   bash scripts/test-staging-search-isolation.sh
   docker run --rm -v "$PWD/deploy/nginx/staging-root.conf:/etc/nginx/nginx.conf:ro" nginx:alpine nginx -t
   ```
 
-- [ ] **Step 5: Commit Nginx/Compose isolation.**
+- [ ] **Step 6: Commit Nginx/Compose isolation.**
 
   ```bash
   git add deploy/nginx deploy/docker-compose.staging.yml deploy/.env.example scripts/test-staging-search-isolation.sh

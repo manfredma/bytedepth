@@ -84,10 +84,8 @@ chmod +x "$FAKE_BIN/flock"
 cat > "$FAKE_BIN/npm" <<'SCRIPT'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "$STAGING_E2E_NPM_ARGS"
-printf 'E2E_BASE_URL=%s\nE2E_PREVIEW_BOOTSTRAP_URL=%s\nE2E_PREVIEW_STORAGE_STATE=%s\nE2E_POST_SLUG=%s\nPLAYWRIGHT_CHROMIUM_EXECUTABLE=%s\n' "$E2E_BASE_URL" "$E2E_PREVIEW_BOOTSTRAP_URL" "$E2E_PREVIEW_STORAGE_STATE" "$E2E_POST_SLUG" "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" > "$STAGING_E2E_NPM_ENV"
-[[ "$E2E_BASE_URL" == 'https://staging.bytedepth.cn' ]]
-[[ "$E2E_PREVIEW_BOOTSTRAP_URL" == 'https://staging.bytedepth.cn/?preview=true' ]]
-[[ "$E2E_PREVIEW_STORAGE_STATE" == */staging-preview.json ]]
+printf 'E2E_BASE_URL=%s\nE2E_POST_SLUG=%s\nPLAYWRIGHT_CHROMIUM_EXECUTABLE=%s\n' "$E2E_BASE_URL" "$E2E_POST_SLUG" "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" > "$STAGING_E2E_NPM_ENV"
+[[ "$E2E_BASE_URL" == 'https://staging-bytedepth.bytedepth.cn' ]]
 [[ "$E2E_POST_SLUG" == 'staging-e2e-fixture' ]]
 [[ "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" == "$STAGING_E2E_CHROMIUM" ]]
 [[ -s "$STAGING_E2E_GIT_LOG" ]]
@@ -153,7 +151,6 @@ run_runner() {
         STAGING_E2E_CURL_ARGS="$CURL_ARGS" \
         STAGING_E2E_LOCK_FILE="$LOCK_FILE" \
         STAGING_E2E_NPM_ENV="$NPM_ENV" \
-        E2E_PREVIEW_STORAGE_STATE="$TEMP_ROOT/staging-preview.json" \
         STAGING_E2E_GIT_LOG="$GIT_LOG" \
         STAGING_E2E_GIT_COUNT="$TEMP_ROOT/git.count" \
         STAGING_E2E_INSTALL_ARGS="$INSTALL_ARGS" \
@@ -179,7 +176,7 @@ grep -Fqx -- '-x' "$FLOCK_ARGS"
 grep -Fqx "$LOCK_FILE" "$FLOCK_ARGS"
 grep -Fqx 'run' "$NPM_ARGS"
 grep -Fqx 'test:e2e' "$NPM_ARGS"
-grep -Fqx 'E2E_BASE_URL=https://staging.bytedepth.cn' "$NPM_ENV"
+grep -Fqx 'E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn' "$NPM_ENV"
 grep -Fqx 'E2E_POST_SLUG=staging-e2e-fixture' "$NPM_ENV"
 grep -Fqx "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM" "$NPM_ENV"
 grep -Fqx "commit=$CURRENT_SHA" "$EVIDENCE_DIR/staging-e2e"

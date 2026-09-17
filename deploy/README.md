@@ -35,9 +35,9 @@
 | 角色 | 公网 / 内网地址 | 部署模式 | 职责 |
 | --- | --- | --- | --- |
 | 生产 | `175.24.197.202` / `10.0.4.15` | `data-access` | MySQL、Redis、MeiliSearch、图片，以及一套应用和 Nginx，服务 `bytedepth.cn` |
-| 预发 | `124.221.143.25` / `10.0.0.5` | `staging` | 独立 single-host 数据栈（自带 MySQL/Redis/MeiliSearch），服务 `staging.bytedepth.cn`；数据每周由生产覆盖 |
+| 预发 | `124.221.143.25` / `10.0.0.5` | `staging` | 独立 single-host 数据栈（自带 MySQL/Redis/MeiliSearch），服务 `staging-bytedepth.bytedepth.cn`；数据每周由生产覆盖 |
 
-生产应用层为单机（175）。staging 完全独立，与生产物理隔离，数据由 175 周期覆盖。DNS 已配置：`bytedepth.cn` → 175、`staging.bytedepth.cn` → 124，无通配符。
+生产应用层为单机（175）。staging 完全独立，与生产物理隔离，数据由 175 周期覆盖。DNS 应配置：`bytedepth.cn` → 175、`staging-bytedepth.bytedepth.cn` → 124，无通配符；原 `staging.bytedepth.cn` 不作为 staging 内容入口。
 
 ## 2. 所有机器的前置条件
 
@@ -156,8 +156,8 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 ### 初始化
 
 1. 124 固定为 staging 模式：`sudo sh -c 'printf "BYTEDEPTH_DEPLOY_MODE=staging\n" > /etc/bytedepth-deploy.conf'`
-2. `.env` 用 `deploy/.env.example` 生成，填 staging 专用新密钥（不复用生产），追加 `BYTEDEPTH_DOMAIN=staging.bytedepth.cn`、`BYTEDEPTH_ENVIRONMENT=staging`、`JAVA_TOOL_OPTIONS=...-Xmx256m`。
-3. 申请 TLS 证书：`sudo certbot certonly --standalone -d staging.bytedepth.cn`
+2. `.env` 用 `deploy/.env.example` 生成，填 staging 专用新密钥（不复用生产），追加 `BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn`、`BYTEDEPTH_ENVIRONMENT=staging`、`BYTEDEPTH_SITE_URL=https://bytedepth.cn`、`JAVA_TOOL_OPTIONS=...-Xmx256m`。
+3. 申请 TLS 证书：`sudo certbot certonly --standalone -d staging-bytedepth.bytedepth.cn`
 4. 首次启动：先 `ctl.sh up -d mysql redis meilisearch`，执行首次数据同步（见下），再 `ctl.sh up -d`。
 5. staging 同样安装部署 Socket（`bootstrap-ops-deploy.sh` 无条件安装，所有模式一致）：Socket 是远程触发部署的通道，staging 作为测试环境也装以便验证该通道。`deploy-staging.sh` 仍校验 `BYTEDEPTH_DEPLOY_MODE=staging` 防止误在生产机运行。
 
@@ -198,7 +198,7 @@ cd /opt/bytedepth
 sudo ./deploy/run-staging-e2e-tests.sh
 ```
 
-该 wrapper 只在 staging 模式运行，先取得共享锁，固定 `E2E_BASE_URL=https://staging.bytedepth.cn`，并先访问 `E2E_PREVIEW_BOOTSTRAP_URL=https://staging.bytedepth.cn/?preview=true` 建立预览 Cookie，再使用 root 管理的共享 Chromium `/opt/shared-e2e/chrome-linux64/chrome`。运行时 manifest 保存 Chromium 的 `--version` 输出以及 `package-lock.json`、`pom.xml` 的摘要；它刻意不保存 checkout SHA：代码变化但依赖输入未变化时应直接复用预热环境，依赖或浏览器变化时才必须先运行 bootstrap，且项目不得自行下载浏览器。批注 E2E 从 staging 的公开文章列表选择当前存在的第一篇文章，因此生产数据同步后不会依赖失效的固定 slug；它先把完整 checkout SHA 与最近 app 部署记录绑定，且在写 evidence 前再次确认 checkout 与部署记录均未变化。它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
+该 wrapper 只在 staging 模式运行，先取得共享锁，固定 `E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn`，再使用 root 管理的共享 Chromium `/opt/shared-e2e/chrome-linux64/chrome`。运行时 manifest 保存 Chromium 的 `--version` 输出以及 `package-lock.json`、`pom.xml` 的摘要；它刻意不保存 checkout SHA：代码变化但依赖输入未变化时应直接复用预热环境，依赖或浏览器变化时才必须先运行 bootstrap，且项目不得自行下载浏览器。批注 E2E 从 staging 的公开文章列表选择当前存在的第一篇文章，因此生产数据同步后不会依赖失效的固定 slug；它先把完整 checkout SHA 与最近 app 部署记录绑定，且在写 evidence 前再次确认 checkout 与部署记录均未变化。它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
 
 两个 runner 都会在每次 staging run 开始时先删除自己的旧记录，因而失败或 WARNING 绝不保留旧的 passed 状态；只有各自命令成功、输出零 `WARNING`、checkout 与部署 SHA 均稳定时，才将 root-owned `0600` 记录写入 root-owned `0700` 的 `/var/lib/bytedepth-staging/test-history/`：`staging-integration` 与 `staging-e2e`。每份记录严格含 `commit=<完整 SHA>`、对应 `command=`、实际 UTC `timestamp=` 与 `result=passed`，不含凭据。由于记录不可由普通 staging 登录用户读取，创建 Release Tag 前必须通过受控 `sudo cat` over SSH 将两份记录写入本机新建的临时目录，并把该目录显式传给 `prepare-release.sh`；详见 [发布流程](../docs/releases/README.md#staging-预检与生产单机发布)。
 
@@ -219,7 +219,7 @@ ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
 
 涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。流程固定为：实现并补测试 → 跑前置门禁 → 部署候选 ref（分支或 `main`）到 staging → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能进入 6.2 创建生产版本与部署生产。
 
-在 `staging.bytedepth.cn/?preview=true` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。准备 Release 前需对当前 `main` 的 SHA 重新取得两份 evidence；候选分支的结果不能替代 main。staging 验证失败则修代码回到此步，不发布生产。
+在 `staging-bytedepth.bytedepth.cn` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。staging 不提供 `/feed.xml`、`/sitemap.xml`，也不渲染 RSS 自动发现；生产环境仍保留这些入口。准备 Release 前需对当前 `main` 的 SHA 重新取得两份 evidence；候选分支的结果不能替代 main。staging 验证失败则修代码回到此步，不发布生产。
 
 ### 6.2 生产部署
 
