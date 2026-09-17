@@ -1,4 +1,4 @@
-# 生产远程部署入口与 staging 预览路由设计
+# 生产远程部署入口与 staging 独立域名及搜索隔离设计
 
 **关联 ADR：** [ADR-0008](../../architecture/decisions/0008-production-entry-and-staging-preview-route.md)
 
@@ -7,9 +7,9 @@
 本设计解决两个流程问题：
 
 1. 生产部署只能在 175 主机执行，但本地命令示例和脚本错误提示不够明确，导致本机误执行；
-2. staging 对公网直接提供内容，普通流量没有转到生产，同时团队需要继续使用 staging 验收。
+2. staging 对公网直接提供内容，普通流量和搜索引擎不应把 staging 当作生产入口，同时团队需要继续使用 staging 验收。
 
-本设计不增加 Basic Auth、IP 白名单或 VPN，因此“只能我们访问”解释为“普通访问默认被转到生产；知道预览入口的人仍可访问 staging”。
+本设计不增加 Basic Auth、IP 白名单或 VPN，因此“减少暴露”解释为“生产不主动链接 staging，搜索引擎没有主动发现入口；知道新域名的人仍可访问 staging”。
 
 ## 方案
 
@@ -27,29 +27,26 @@
 
 现有主机内部脚本增加明确的 host-only 错误提示，并继续保留 root、annotated Tag、版本匹配、重复部署和完整 Compose 等护栏。
 
-### 2. staging 默认重定向与预览状态
+### 2. staging 独立域名
 
-Nginx 在 `staging.bytedepth.cn` 的 HTTPS server 中按 Cookie/查询参数决定请求处理：
+staging 使用 `staging-bytedepth.bytedepth.cn`，DNS 指向 staging 主机，TLS 证书覆盖该精确域名，Nginx 仅对该 `server_name` 代理 staging 应用。未知 Host 和按 IP 访问不得命中 staging 应用。
 
-```text
-无 staging_preview Cookie 且无 ?preview=true
-    → 301 https://bytedepth.cn$request_uri
+原 `staging.bytedepth.cn` 由外部流量切换策略转到生产，不再出现在 staging 的运行时入口、E2E 基址或验收命令中。
 
-带 ?preview=true
-    → 写入 staging_preview=1 Cookie
-    → 继续代理 staging 应用；地址保留明确的 `?preview=true` 入口
+staging 不使用查询参数或 Cookie 作为路由状态；域名本身就是 staging 入口。所有脚本和人工验收直接使用 `https://staging-bytedepth.bytedepth.cn/`。
 
-有 staging_preview=1 Cookie
-    → 继续代理 staging 应用
-```
+### 3. 按环境隔离搜索发现入口
 
-Cookie 不是权限凭据；它只避免团队在每个站内链接上重复添加参数。`?preview=true` 必须保持精确拼写，大小写、参数名和值均不做宽松兼容，避免脚本和文档产生多个入口。
+`BYTEDEPTH_ENVIRONMENT` 是应用判断环境的唯一开关：
 
-需要提供清除 Cookie 的 `?preview=false` 行为；清除后再次访问 staging 根路径应回到生产重定向。
+- production：保留 RSS 导航、`<link rel="alternate" ... feed.xml>`、sitemap、robots 中的 sitemap 声明和生产 canonical；
+- staging：公共模板不渲染 RSS 导航和 RSS 自动发现；Nginx 对 `/feed.xml`、`/sitemap.xml` 返回 `404`；staging `robots.txt` 只返回 `Disallow: /`，不含 `Sitemap:`；页面增加 `meta robots`。
 
-不带预览状态的 HTTP 和 HTTPS 请求都必须重定向到生产，不能保留按 IP 直通 staging 的 default server。重定向要保留业务路径和除预览控制参数外的查询参数。
+所有 staging 响应增加 `X-Robots-Tag: noindex, nofollow, noarchive` 与 `Referrer-Policy: no-referrer`。应用的 `BYTEDEPTH_SITE_URL` 在 staging 仍固定为 `https://bytedepth.cn`，使 canonical、OG URL、JSON-LD 指向生产。
 
-### 3. 脚本与知识库同步
+上述措施降低搜索引擎主动发现和收录，不提供访问控制；公网 DNS 和 TLS 证书透明度仍可能暴露域名。
+
+### 4. 脚本与知识库同步
 
 以下现有脚本必须使用统一预览入口，不能只改文字说明：
 
@@ -61,31 +58,33 @@ Cookie 不是权限凭据；它只避免团队在每个站内链接上重复添�
 所有 `AGENTS.md`、`deploy/README.md`、`docs/releases/README.md`、`docs/engineering/*`、`docs/agent-guides/*` 和 `docs/superpowers/{plans,specs}/*` 中的现行命令必须：
 
 - 明确区分生产域名和 staging 域名；
-- 访问 staging 页面时写成 `https://staging.bytedepth.cn/?preview=true` 或等价的路径加 `?preview=true`；
-- 明确说明不带 `preview=true` 会 301 到生产；
-- 不把 preview 参数描述为安全控制；
-- 避免用不带参数的 staging URL 作为“返回 200”的验收示例。
+- 访问 staging 页面时写成 `https://staging-bytedepth.bytedepth.cn/`；
+- 明确说明原 `staging.bytedepth.cn` 不再作为 staging 内容入口；
+- 明确说明新域名不是安全认证；
+- staging 的 RSS、sitemap 和页面自动发现入口必须标记为关闭。
 
 历史记录只在不改变事实的前提下补充“当时的 staging 验收入口”；已完成的历史部署结果不得改写成新的运行结果。
 
-### 4. 验证与发布顺序
+### 5. 验证与发布顺序
 
 增加静态契约测试，覆盖：
 
 - 本地编排器存在、使用 SSH 远端目录和生产地址，并调用 host-only 部署脚本；
 - host-only 脚本错误提示不再把本地 `sudo` 作为解决方案；
-- staging Nginx 同时包含无预览重定向、严格 `preview=true` 分支、Cookie 设置/清除和 noindex；
-- E2E、同步脚本和文档使用同一预览 URL 规则；
-- 禁止现行脚本把 `https://staging.bytedepth.cn` 裸地址作为 E2E base URL。
+- staging Nginx 仅接受新域名，并返回 noindex、robots 禁止抓取、RSS/sitemap 404 和 referrer 防泄漏响应；
+- production 保留 RSS/sitemap，staging 按 `BYTEDEPTH_ENVIRONMENT=staging` 隐藏 RSS 自动发现；
+- E2E、同步脚本和文档使用新域名；
+- 禁止运行时资源主动链接新 staging 域名。
 
 实现后执行本机静态检查、单元测试和脚本契约测试；首次切换 staging 路由前，在 staging 验证：
 
-1. 无参数 staging 请求为 301 且目标为生产；
-2. `?preview=true` 能建立 Cookie 并访问 staging；
-3. 清除 Cookie 后再次访问回到 301；
-4. staging E2E 和集成测试仍能完成；
-5. 生产域名、生产 SNI 和查询回归不受影响。
+1. 新 staging 域名 HTTPS、SNI 和 Host 路由正确；
+2. staging 页面返回 noindex headers/meta，`robots.txt` 不含 sitemap；
+3. staging `/feed.xml` 和 `/sitemap.xml` 返回 404；
+4. production 的 RSS、sitemap 和自动发现仍可用；
+5. staging E2E 和集成测试仍能完成；
+6. 生产域名、生产 SNI 和查询回归不受影响。
 
 ## 风险与回滚
 
-若预览 Cookie 或 Nginx 条件判断导致团队无法访问 staging，暂时恢复原 staging proxy 配置，保留生产域名不变，并在本机修复后重新部署 staging。若公共重定向目标错误，立即恢复上一份 Nginx 配置；不得把 staging 流量直接转发到未经验证的主机。
+若新域名 DNS、TLS、Host 路由或环境判断失败，暂时恢复上一份 staging 配置，保留生产域名不变，并在本机修复后重新部署 staging。不得把 staging 流量直接转发到未经验证的主机。
