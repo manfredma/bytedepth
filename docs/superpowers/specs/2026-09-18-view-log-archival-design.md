@@ -90,6 +90,17 @@ retentionCutoff = floorToHour(now(Asia/Shanghai) - 7 days)
 
 状态表不能只保存单一全局水位：已完成的历史小时仍可能收到迟到明细，需要区分“首次归档”和“已归档小时的迟到补偿”。
 
+### 4.6 `view_log_tablespace_state`
+
+| 列 | 类型 | 说明 |
+| --- | --- | --- |
+| source | VARCHAR(16) | `post` 或 `page` |
+| deleted_rows_since_optimize | BIGINT | 上次该来源表空间维护成功后累计删除的明细数 |
+| last_optimized_at | DATETIME | 最近一次该来源表维护成功时间，可为空 |
+| updated_at | DATETIME | 状态更新时间 |
+
+主键：`(source)`。归档事务在删除明细的同一事务中累加该来源的计数；表空间维护仅在对应计数达到阈值且 `OPTIMIZE TABLE` 成功后清零，避免维护失败后丢失待维护信号。
+
 ## 5. 归档数据流
 
 访问事件仍先写入原始明细表，写入链路不依赖统计表成功。
@@ -105,7 +116,7 @@ retentionCutoff = floorToHour(now(Asia/Shanghai) - 7 days)
    - 删除该小时原始明细；
    - 写入归档状态。
 5. 若状态已存在：只聚合该小时内新出现的迟到明细，使用增量累加；删除这些迟到明细并更新状态。
-6. 任意 SQL 失败时回滚该小时事务，不推进状态，不执行删除。
+6. 在同一事务中累加来源的表空间维护计数；任意 SQL 失败时回滚该小时事务，不推进状态，不执行删除。
 7. 释放 named lock。
 
 聚合表的查询结果与原始表是可加的：已经归档的原始行已删除，迟到明细在下一次归档前仍留在原始表，因此统计查询可以安全地合并两者，不会因迟到数据而重复计数。
@@ -129,9 +140,9 @@ retentionCutoff = floorToHour(now(Asia/Shanghai) - 7 days)
 独立任务每周低峰期运行一次：
 
 1. 查询两张原始表累计删除量和 `information_schema.tables` 的表/索引大小。
-2. 只有达到配置阈值才执行 `OPTIMIZE TABLE post_view_log` 和 `OPTIMIZE TABLE page_view_log`。
-3. 每张表单独执行并记录耗时、执行结果和空间变化。
-4. 维护失败不得影响归档任务；但必须以 ERROR 记录并使部署验收可见。
+2. 只有对应 `view_log_tablespace_state.deleted_rows_since_optimize` 达到配置阈值且表空间碎片达到配置条件时，才执行 `OPTIMIZE TABLE post_view_log` 或 `OPTIMIZE TABLE page_view_log`。
+3. 每张表单独执行并记录耗时、执行结果和空间变化；成功后清零对应来源计数。
+4. 维护失败不得影响归档任务，也不得清零对应计数；但必须以 ERROR 记录并使部署验收可见。
 
 ## 7. 统计查询改造
 
@@ -178,7 +189,7 @@ retentionCutoff = floorToHour(now(Asia/Shanghai) - 7 days)
 
 ## 10. 迁移和上线
 
-1. 通过新的 Flyway 版本只新增统计表和归档状态表，不删除原始字段。
+1. 通过新的 Flyway 版本只新增统计表、归档状态表和表空间维护状态表，不删除原始字段。
 2. 部署包含双源查询的代码；在归档状态尚未建立时，查询仍能从原始表返回历史结果。
 3. 归档任务先以只读 SQL 或最终回滚事务的 dry-run/验证模式在 staging 对账；dry-run 不提交聚合表、归档状态或明细删除，避免正式归档时重复累计。
 4. staging 验收通过后启用删除阶段，先处理最老的有限小时批次。
