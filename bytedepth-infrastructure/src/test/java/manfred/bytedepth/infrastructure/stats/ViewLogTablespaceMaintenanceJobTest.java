@@ -47,6 +47,19 @@ class ViewLogTablespaceMaintenanceJobTest {
     }
 
     @Test
+    void stateAndMetricsBeansExposeTheirMappedValues() {
+        var state = new ViewLogTablespaceState();
+        state.setDeletedRowsSinceOptimize(42);
+        assertEquals(42, state.getDeletedRowsSinceOptimize());
+
+        var metrics = new ViewLogTablespaceMetrics();
+        metrics.setDataLength(1000);
+        metrics.setDataFreeBytes(200);
+        assertEquals(1000, metrics.getDataLength());
+        assertEquals(200, metrics.getDataFreeBytes());
+    }
+
+    @Test
     void optimizesEachSourceAtOrAboveThresholdWithFixedIdentifiers() {
         var mapper = mock(ViewLogTablespaceMaintenanceMapper.class);
         var jdbcTemplate = mock(JdbcTemplate.class);
@@ -134,6 +147,25 @@ class ViewLogTablespaceMaintenanceJobTest {
     }
 
     @Test
+    void skipsMaintenanceWhenNamedLockReturnsNoRow() throws Exception {
+        var mapper = mock(ViewLogTablespaceMaintenanceMapper.class);
+        var jdbcTemplate = mock(JdbcTemplate.class);
+        var connection = mock(Connection.class);
+        var lockStatement = mock(PreparedStatement.class);
+        var lockResult = mock(ResultSet.class);
+        when(connection.prepareStatement("SELECT GET_LOCK(?, 0)")).thenReturn(lockStatement);
+        when(lockStatement.executeQuery()).thenReturn(lockResult);
+        when(lockResult.next()).thenReturn(false);
+        when(jdbcTemplate.execute(any(ConnectionCallback.class))).thenAnswer(invocation ->
+                ((ConnectionCallback<?>) invocation.getArgument(0)).doInConnection(connection));
+
+        new ViewLogTablespaceMaintenanceJob(mapper, jdbcTemplate,
+                new ViewLogTablespaceMaintenanceProperties(100, 100)).run();
+
+        verify(mapper, never()).findState(any());
+    }
+
+    @Test
     void releasesDedicatedNamedLockAfterMaintenance() throws Exception {
         var mapper = mock(ViewLogTablespaceMaintenanceMapper.class);
         var jdbcTemplate = mock(JdbcTemplate.class);
@@ -166,6 +198,8 @@ class ViewLogTablespaceMaintenanceJobTest {
                 () -> new ViewLogTablespaceMaintenanceProperties(0, 0));
         assertThrows(IllegalArgumentException.class,
                 () -> new ViewLogTablespaceMaintenanceProperties(1, -1));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ViewLogTablespaceMaintenanceProperties(1, 0, " "));
         assertEquals("bytedepth:view-log-tablespace",
                 new ViewLogTablespaceMaintenanceProperties(1, 0, null).optimizeLockName());
     }

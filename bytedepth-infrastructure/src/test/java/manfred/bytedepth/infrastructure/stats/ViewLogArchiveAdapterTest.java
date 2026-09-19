@@ -50,6 +50,24 @@ class ViewLogArchiveAdapterTest {
     }
 
     @Test
+    void delegatesCandidateBucketLookupToTheMapper() {
+        var mapper = mock(ViewLogArchiveMapper.class);
+        when(mapper.findCandidateBuckets(ViewLogArchiveSource.PAGE, BUCKET, 2)).thenReturn(List.of(BUCKET));
+        var adapter = new ViewLogArchiveAdapter(mapper, synchronousTransactionTemplate());
+
+        assertEquals(List.of(BUCKET), adapter.findCandidateBuckets(ViewLogArchiveSource.PAGE, BUCKET, 2));
+    }
+
+    @Test
+    void threeArgumentConstructorUsesTheDefaultLockName() throws Exception {
+        var jdbcTemplate = lockJdbcTemplate(0);
+        var adapter = new ViewLogArchiveAdapter(mock(ViewLogArchiveMapper.class),
+                synchronousTransactionTemplate(), jdbcTemplate);
+
+        assertEquals(new ViewLogArchiveRunResult(0, 0, 0), adapter.runWithLock(() -> new ViewLogArchiveRunResult(1, 1, 1)));
+    }
+
+    @Test
     void archiveBucketUsesIncrementPathForAPreviouslyArchivedBucket() {
         var mapper = mock(ViewLogArchiveMapper.class);
         when(mapper.findBucketState(ViewLogArchiveSource.POST, BUCKET)).thenReturn(
@@ -144,6 +162,15 @@ class ViewLogArchiveAdapterTest {
     }
 
     @Test
+    void runWithLockReturnsEmptyResultWhenLockFunctionReturnsNoRow() throws Exception {
+        var jdbcTemplate = lockJdbcTemplateWithoutResultRow();
+        var adapter = new ViewLogArchiveAdapter(mock(ViewLogArchiveMapper.class),
+                synchronousTransactionTemplate(), jdbcTemplate, "bytedepth:view-log-archive");
+
+        assertEquals(new ViewLogArchiveRunResult(0, 0, 0), adapter.runWithLock(() -> new ViewLogArchiveRunResult(1, 1, 1)));
+    }
+
+    @Test
     void runWithLockRequiresJdbcTemplate() {
         var adapter = new ViewLogArchiveAdapter(mock(ViewLogArchiveMapper.class), synchronousTransactionTemplate());
 
@@ -173,6 +200,20 @@ class ViewLogArchiveAdapterTest {
         when(releaseStatement.executeQuery()).thenReturn(releaseRows);
         when(connection.prepareStatement("SELECT GET_LOCK(?, 0)")).thenReturn(lockStatement);
         when(connection.prepareStatement("SELECT RELEASE_LOCK(?)")).thenReturn(releaseStatement);
+        when(jdbcTemplate.execute(any(ConnectionCallback.class))).thenAnswer(invocation ->
+                ((ConnectionCallback<Object>) invocation.getArgument(0)).doInConnection(connection));
+        return jdbcTemplate;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static JdbcTemplate lockJdbcTemplateWithoutResultRow() throws Exception {
+        var jdbcTemplate = mock(JdbcTemplate.class);
+        var connection = mock(Connection.class);
+        var lockStatement = mock(PreparedStatement.class);
+        var lockRows = mock(ResultSet.class);
+        when(lockRows.next()).thenReturn(false);
+        when(lockStatement.executeQuery()).thenReturn(lockRows);
+        when(connection.prepareStatement("SELECT GET_LOCK(?, 0)")).thenReturn(lockStatement);
         when(jdbcTemplate.execute(any(ConnectionCallback.class))).thenAnswer(invocation ->
                 ((ConnectionCallback<Object>) invocation.getArgument(0)).doInConnection(connection));
         return jdbcTemplate;
