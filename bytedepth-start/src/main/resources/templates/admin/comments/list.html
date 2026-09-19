@@ -21,6 +21,11 @@
         .post-link a { color: var(--admin-accent); text-decoration: none; }
         .time { font-size: 0.82em; color: #aaa; }
         .body { margin-top: 8px; color: #333; line-height: 1.6; }
+        .comment-actions { margin-top: 14px; }
+        .comment-delete-form { display: inline; }
+        .comment-delete-button { border: 0; border-radius: 4px; background: #fff1f0; color: #cf1322;
+                                 cursor: pointer; font: inherit; padding: 6px 10px; }
+        .comment-delete-button:hover { background: #ffccc7; }
         .empty { color: #888; text-align: center; padding: 60px;
                  background: white; border-radius: 8px; }
     </style>
@@ -45,6 +50,16 @@
         </span>
         <div class="time" th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd HH:mm')}">时间</div>
         <div class="body" th:text="${c.content}">内容</div>
+        <div class="comment-actions">
+            <form class="comment-delete-form" method="post" th:action="@{/admin/comments/{id}/delete(id=${c.id})}"
+                  data-bd-confirm
+                  data-bd-confirm-title="删除评论"
+                  data-bd-confirm-message="确认永久删除这条评论？此操作无法恢复。"
+                  data-bd-confirm-tone="danger"
+                  data-bd-confirm-confirm-text="删除">
+                <button class="comment-delete-button" type="submit">删除</button>
+            </form>
+        </div>
     </div>
 
     <!-- 分页（filterBaseUrl 携带过滤条件） -->
