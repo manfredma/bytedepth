@@ -6,6 +6,7 @@ import manfred.bytedepth.app.analytics.ViewLogRetentionPolicy;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -35,6 +36,7 @@ public class BytedepthApplication {
     }
 
     @Bean
+    @ConditionalOnBean(ViewLogArchivePort.class)
     ArchiveViewLogsCmdExe archiveViewLogsCmdExe(ViewLogArchivePort archivePort,
                                                 ViewLogRetentionPolicy retentionPolicy) {
         return new ArchiveViewLogsCmdExe(archivePort, retentionPolicy);
