@@ -18,4 +18,29 @@ class MigrationScriptsTest {
             assertThat(sql).contains("MODIFY COLUMN `author_id` BIGINT NOT NULL");
         }
     }
+
+    @Test
+    void viewLogArchiveMigrationIsAdditiveAndDefinesAllAggregateKeys() throws IOException {
+        String sql;
+        try (var stream = getClass().getResourceAsStream("/db/migration/V24__add_view_log_archive_stats.sql")) {
+            assertThat(stream).isNotNull();
+            sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        assertThat(sql).contains(
+                "CREATE TABLE post_view_hourly_stat",
+                "CREATE TABLE page_view_hourly_stat",
+                "CREATE TABLE post_view_country_daily_stat",
+                "CREATE TABLE page_view_country_daily_stat",
+                "CREATE TABLE view_log_archive_bucket",
+                "CREATE TABLE view_log_tablespace_state",
+                "PRIMARY KEY (stat_hour, post_id)",
+                "PRIMARY KEY (stat_hour, page_path)",
+                "PRIMARY KEY (stat_date, post_id, country)",
+                "PRIMARY KEY (stat_date, page_path, country)",
+                "PRIMARY KEY (source, bucket_start)",
+                "PRIMARY KEY (source)",
+                "deleted_rows_since_optimize");
+        assertThat(sql).doesNotContain("DROP TABLE", "DELETE FROM");
+    }
 }
