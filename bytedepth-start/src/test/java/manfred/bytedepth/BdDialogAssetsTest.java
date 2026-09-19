@@ -39,6 +39,7 @@ class BdDialogAssetsTest {
     void confirmationPagesUseTheSharedDialogInsteadOfNativeConfirm() throws Exception {
         List<String> templates = List.of(
                 "/templates/admin/posts/list.html",
+                "/templates/admin/comments/list.html",
                 "/templates/admin/series/list.html",
                 "/templates/admin/series/detail.html",
                 "/templates/admin/tags/list.html",
@@ -58,6 +59,11 @@ class BdDialogAssetsTest {
                 .contains("@{/css/bd-dialog.css}")
                 .contains("@{/js/bd-dialog.js}");
         assertThat(classpathText("/templates/admin/posts/list.html")).contains("data-bd-confirm");
+        assertThat(classpathText("/templates/admin/comments/list.html"))
+                .contains("@{/admin/comments/{id}/delete(id=${c.id})}")
+                .contains("data-bd-confirm")
+                .contains("data-bd-confirm-title=\"删除评论\"")
+                .contains("data-bd-confirm-tone=\"danger\"");
         assertThat(classpathText("/templates/admin/ops/dashboard.html"))
                 .contains("window.BytedepthDialog.confirm");
     }
