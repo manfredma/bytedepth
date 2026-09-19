@@ -343,5 +343,6 @@ V10 引入统一 `user` 表后，`admin_user` 的数据已迁移到 `user`，该
 | V21 | upgrade_post_annotations_for_visibility | post_annotation 可见性与匿名归属 |
 | V22 | add_annotation_deleted_flag | post_annotation.deleted |
 | V23 | drop_persistent_logins | 删除 persistent_logins |
+| V24 | add_view_log_archive_stats | 访问日志小时/国家聚合、归档状态、表空间维护状态 |
 
 V5、V7、V8、V9、V16、V17 为种子数据迁移（分类、权限），不涉及表结构变更。

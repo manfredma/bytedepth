@@ -24,6 +24,7 @@
     <update id="resetDeletedRows">
         UPDATE view_log_tablespace_state
         SET deleted_rows_since_optimize = 0,
+            last_optimized_at = NOW(),
             updated_at = NOW()
         WHERE source = #{source.value}
     </update>
