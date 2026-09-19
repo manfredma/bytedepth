@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.app.analytics.ViewLogRetentionPolicy;
 import manfred.bytedepth.app.analytics.PostViewLogPort;
 import manfred.bytedepth.adapter.web.filter.FilterField;
 import org.springframework.stereotype.Controller;
@@ -9,6 +10,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 /**
  * 文章访问日志管理后台。
@@ -23,6 +26,8 @@ public class AdminViewLogController {
     private static final int PAGE_SIZE = 20;
 
     private final PostViewLogPort postViewLogPort;
+    private final ViewLogRetentionPolicy retentionPolicy;
+    private final Clock clock;
 
     @GetMapping
     public String list(Model model,
@@ -30,8 +35,9 @@ public class AdminViewLogController {
                        @RequestParam(required = false) Long userId,
                        @RequestParam(defaultValue = "1") int page) {
         int offset = (page - 1) * PAGE_SIZE;
-        var logs = postViewLogPort.findPage(postId, userId, offset, PAGE_SIZE);
-        long total = postViewLogPort.countPage(postId, userId);
+        LocalDateTime cutoff = retentionPolicy.detailCutoff(LocalDateTime.now(clock));
+        var logs = postViewLogPort.findPage(postId, userId, cutoff, offset, PAGE_SIZE);
+        long total = postViewLogPort.countPage(postId, userId, cutoff);
         int totalPages = (int) Math.max(1, Math.ceil((double) total / PAGE_SIZE));
 
         model.addAttribute("logs", logs);

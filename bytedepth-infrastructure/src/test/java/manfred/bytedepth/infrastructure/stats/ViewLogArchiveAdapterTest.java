@@ -124,7 +124,7 @@ class ViewLogArchiveAdapterTest {
     void runWithLockReturnsEmptyResultWhenNamedLockIsUnavailable() throws Exception {
         var jdbcTemplate = lockJdbcTemplate(0);
         var mapper = mock(ViewLogArchiveMapper.class);
-        var adapter = new ViewLogArchiveAdapter(mapper, synchronousTransactionTemplate(), jdbcTemplate);
+        var adapter = new ViewLogArchiveAdapter(mapper, synchronousTransactionTemplate(), jdbcTemplate, "bytedepth:view-log-archive");
 
         var result = adapter.runWithLock(() -> new ViewLogArchiveRunResult(1, 1, 1));
 
@@ -136,7 +136,7 @@ class ViewLogArchiveAdapterTest {
     void runWithLockExecutesActionAndReleasesNamedLockOnTheSameConnection() throws Exception {
         var jdbcTemplate = lockJdbcTemplate(1);
         var adapter = new ViewLogArchiveAdapter(mock(ViewLogArchiveMapper.class),
-                synchronousTransactionTemplate(), jdbcTemplate);
+                synchronousTransactionTemplate(), jdbcTemplate, "bytedepth:view-log-archive");
 
         var result = adapter.runWithLock(() -> new ViewLogArchiveRunResult(2, 4, 4));
 

@@ -1,6 +1,7 @@
 package manfred.bytedepth.adapter.web.admin;
 
 import manfred.bytedepth.app.analytics.PostViewLogPort;
+import manfred.bytedepth.app.analytics.ViewLogRetentionPolicy;
 import manfred.bytedepth.app.category.CreateCategoryCmdExe;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
@@ -14,6 +15,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ui.ExtendedModelMap;
 
 import java.util.List;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -75,17 +79,22 @@ class SimpleAdminControllerCoverageTest {
     @Test
     void viewLogsCalculateOffsetAndPageCountForEmptyAndPartialPages() {
         PostViewLogPort logs = mock(PostViewLogPort.class);
-        when(logs.findPage(1L, 2L, 40, 20)).thenReturn(List.of());
-        when(logs.countPage(1L, 2L)).thenReturn(41L);
-        AdminViewLogController controller = new AdminViewLogController(logs);
+        var now = LocalDateTime.of(2026, 9, 18, 17, 23);
+        var zone = ZoneId.of("Asia/Shanghai");
+        var policy = new ViewLogRetentionPolicy(7, zone);
+        var clock = Clock.fixed(now.atZone(zone).toInstant(), zone);
+        var cutoff = now.minusDays(7);
+        when(logs.findPage(1L, 2L, cutoff, 40, 20)).thenReturn(List.of());
+        when(logs.countPage(1L, 2L, cutoff)).thenReturn(41L);
+        AdminViewLogController controller = new AdminViewLogController(logs, policy, clock);
         ExtendedModelMap model = new ExtendedModelMap();
 
         assertThat(controller.list(model, 1L, 2L, 3)).isEqualTo("admin/view-logs/list");
         assertThat(model).containsEntry("currentPage", 3).containsEntry("totalPages", 3).containsEntry("pageSize", 20);
-        verify(logs).findPage(1L, 2L, 40, 20);
+        verify(logs).findPage(1L, 2L, cutoff, 40, 20);
 
-        when(logs.findPage(null, null, 0, 20)).thenReturn(List.of());
-        when(logs.countPage(null, null)).thenReturn(0L);
+        when(logs.findPage(null, null, cutoff, 0, 20)).thenReturn(List.of());
+        when(logs.countPage(null, null, cutoff)).thenReturn(0L);
         ExtendedModelMap emptyModel = new ExtendedModelMap();
         controller.list(emptyModel, null, null, 1);
         assertThat(emptyModel).containsEntry("totalPages", 1).containsKey("filterFields").containsEntry("filterBaseUrl", "/admin/view-logs?");

@@ -1,6 +1,7 @@
 package manfred.bytedepth.infrastructure.stats;
 
 import java.util.List;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.analytics.PostViewLogDTO;
 import manfred.bytedepth.app.analytics.PostViewLogPort;
@@ -19,12 +20,12 @@ public class MyBatisPostViewLogAdapter implements PostViewLogPort {
     }
 
     @Override
-    public List<PostViewLogDTO> findPage(Long postId, Long userId, int offset, int size) {
-        return mapper.findPage(postId, userId, offset, size);
+    public List<PostViewLogDTO> findPage(Long postId, Long userId, LocalDateTime cutoff, int offset, int size) {
+        return mapper.findPage(postId, userId, cutoff, offset, size);
     }
 
     @Override
-    public long countPage(Long postId, Long userId) {
-        return mapper.countPage(postId, userId);
+    public long countPage(Long postId, Long userId, LocalDateTime cutoff) {
+        return mapper.countPage(postId, userId, cutoff);
     }
 }

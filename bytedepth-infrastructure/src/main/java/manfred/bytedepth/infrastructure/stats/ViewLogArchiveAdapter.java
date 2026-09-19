@@ -6,6 +6,7 @@ import manfred.bytedepth.app.analytics.ViewLogArchiveResult;
 import manfred.bytedepth.app.analytics.ViewLogArchiveRunResult;
 import manfred.bytedepth.app.analytics.ViewLogArchiveSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -30,18 +31,27 @@ public class ViewLogArchiveAdapter implements ViewLogArchivePort {
     private final ViewLogArchiveMapper mapper;
     private final TransactionTemplate transactionTemplate;
     private final JdbcTemplate jdbcTemplate;
+    private final String lockName;
 
     public ViewLogArchiveAdapter(ViewLogArchiveMapper mapper, TransactionTemplate transactionTemplate) {
-        this(mapper, transactionTemplate, null);
+        this(mapper, transactionTemplate, null, LOCK_NAME);
+    }
+
+    public ViewLogArchiveAdapter(ViewLogArchiveMapper mapper,
+                                 TransactionTemplate transactionTemplate,
+                                 JdbcTemplate jdbcTemplate) {
+        this(mapper, transactionTemplate, jdbcTemplate, LOCK_NAME);
     }
 
     @Autowired
     public ViewLogArchiveAdapter(ViewLogArchiveMapper mapper,
                                  TransactionTemplate transactionTemplate,
-                                 JdbcTemplate jdbcTemplate) {
+                                 JdbcTemplate jdbcTemplate,
+                                 @Value("${bytedepth.analytics.archive-lock-name:bytedepth:view-log-archive}") String lockName) {
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.transactionTemplate = Objects.requireNonNull(transactionTemplate, "transactionTemplate");
         this.jdbcTemplate = jdbcTemplate;
+        this.lockName = Objects.requireNonNull(lockName, "lockName");
     }
 
     @Override
@@ -63,13 +73,13 @@ public class ViewLogArchiveAdapter implements ViewLogArchivePort {
             throw new IllegalStateException("JdbcTemplate is required for named-lock execution");
         }
         return jdbcTemplate.execute((ConnectionCallback<ViewLogArchiveRunResult>) connection -> {
-            if (!callLockFunction(connection, "SELECT GET_LOCK(?, 0)", LOCK_NAME)) {
+            if (!callLockFunction(connection, "SELECT GET_LOCK(?, 0)", lockName)) {
                 return EMPTY_RUN;
             }
             try {
                 return action.get();
             } finally {
-                callLockFunction(connection, "SELECT RELEASE_LOCK(?)", LOCK_NAME);
+                callLockFunction(connection, "SELECT RELEASE_LOCK(?)", lockName);
             }
         });
     }
