@@ -8,6 +8,7 @@ readonly POST_DETAIL="$ROOT/bytedepth-infrastructure/src/main/java/manfred/byted
 readonly ARCHIVE_JOB="$ROOT/bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/ViewLogArchiveJob.java"
 readonly ARCHIVE_ADAPTER="$ROOT/bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/ViewLogArchiveAdapter.java"
 readonly MAINTENANCE_JOB="$ROOT/bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/ViewLogTablespaceMaintenanceJob.java"
+readonly MAINTENANCE_PROPERTIES="$ROOT/bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/ViewLogTablespaceMaintenanceProperties.java"
 readonly APPLICATION_CONFIG="$ROOT/bytedepth-start/src/main/resources/application.yml"
 readonly CHANGELOG="$ROOT/docs/releases/CHANGELOG.md"
 
@@ -17,6 +18,7 @@ readonly CHANGELOG="$ROOT/docs/releases/CHANGELOG.md"
 [[ -f "$ARCHIVE_JOB" ]]
 [[ -f "$ARCHIVE_ADAPTER" ]]
 [[ -f "$MAINTENANCE_JOB" ]]
+[[ -f "$MAINTENANCE_PROPERTIES" ]]
 [[ -s "$CHANGELOG" ]]
 
 aggregate_line="$(awk '/id="insertExactHourlyAggregates"/ {print NR; exit}' "$ARCHIVE_MAPPER")"
@@ -32,6 +34,8 @@ grep -Fq 'runWithLock' "$ARCHIVE_JOB"
 grep -Fq 'GET_LOCK' "$ARCHIVE_ADAPTER"
 grep -Fq 'bytedepth:view-log-archive' "$ARCHIVE_ADAPTER"
 grep -Fq 'optimizeLockName' "$MAINTENANCE_JOB"
+grep -Fq '@ConfigurationProperties(prefix = "bytedepth.analytics")' "$MAINTENANCE_PROPERTIES"
+grep -Fq '@ConstructorBinding' "$MAINTENANCE_PROPERTIES"
 grep -Fq 'bytedepth:view-log-tablespace' "$APPLICATION_CONFIG" "$CHANGELOG"
 grep -Fq '## Unreleased' "$CHANGELOG"
 grep -Fq '### Changed' "$CHANGELOG"
