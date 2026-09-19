@@ -337,6 +337,10 @@ test.describe('划线评论', () => {
             const mark = page.locator(`mark[data-id="${annotation.id}"]`).first();
             await expect(feedItem).toBeVisible();
             await expect(mark).toBeVisible();
+            // 点击正文评注标签会触发生产代码的 smooth scroll；在测量并滚出划线前
+            // 用一次即时滚动取消动画，否则 window.scrollBy 可能与未完成的动画竞争，
+            // 导致滚动位置偶发被动画写回原处。
+            await mark.evaluate(element => element.scrollIntoView({block: 'center', behavior: 'auto'}));
             const attachedPosition = await page.evaluate(([triggerElement, outlineElement]) => {
                 const triggerRect = triggerElement.getBoundingClientRect();
                 const outlineRect = outlineElement.getBoundingClientRect();
