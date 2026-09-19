@@ -73,6 +73,9 @@ bytedepth:
     archive-max-buckets-per-run: 24
     archive-lock-name: bytedepth:view-log-archive
     optimize-min-deleted-rows: 100000
+    optimize-min-free-bytes: 104857600
+    optimize-lock-name: bytedepth:view-log-tablespace
+    optimize-cron: 0 30 3 ? * SUN
   site:
     url: ${BYTEDEPTH_SITE_URL:https://bytedepth.cn}
   upload:

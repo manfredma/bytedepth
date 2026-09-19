@@ -47,4 +47,12 @@ public class BytedepthApplication {
         scheduler.setThreadNamePrefix("view-log-archive-");
         return scheduler;
     }
+
+    @Bean(name = "viewLogTablespaceScheduler")
+    ThreadPoolTaskScheduler viewLogTablespaceScheduler() {
+        var scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("view-log-tablespace-");
+        return scheduler;
+    }
 }
