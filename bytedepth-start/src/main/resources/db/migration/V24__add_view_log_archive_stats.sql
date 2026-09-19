@@ -17,7 +17,7 @@ CREATE TABLE page_view_hourly_stat (
 CREATE TABLE post_view_country_daily_stat (
     stat_date  DATE         NOT NULL COMMENT '自然日（Asia/Shanghai）',
     post_id    BIGINT       NOT NULL COMMENT '文章 ID',
-    country    VARCHAR(64)  NOT NULL COMMENT '国家，未知统一为 UNKNOWN',
+    country    VARCHAR(64)  NOT NULL COMMENT '国家，空值统一为 未知',
     view_count BIGINT       NOT NULL DEFAULT 0 COMMENT '该日该文章该国家 PV',
     PRIMARY KEY (stat_date, post_id, country),
     INDEX idx_post_view_country_post_date (post_id, stat_date),
@@ -27,7 +27,7 @@ CREATE TABLE post_view_country_daily_stat (
 CREATE TABLE page_view_country_daily_stat (
     stat_date  DATE         NOT NULL COMMENT '自然日（Asia/Shanghai）',
     page_path  VARCHAR(255) NOT NULL COMMENT '页面路径',
-    country    VARCHAR(64)  NOT NULL COMMENT '国家，未知统一为 UNKNOWN',
+    country    VARCHAR(64)  NOT NULL COMMENT '国家，空值统一为 未知',
     view_count BIGINT       NOT NULL DEFAULT 0 COMMENT '该日该页面该国家 PV',
     PRIMARY KEY (stat_date, page_path, country),
     INDEX idx_page_view_country_path_date (page_path, stat_date),

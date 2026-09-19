@@ -254,7 +254,7 @@ erDiagram
 | --- | --- | --- | --- |
 | stat_date | DATE | PK, NOT NULL | 自然日（Asia/Shanghai） |
 | post_id | BIGINT | PK, NOT NULL | 文章 ID |
-| country | VARCHAR(64) | PK, NOT NULL | 国家，未知为 UNKNOWN |
+| country | VARCHAR(64) | PK, NOT NULL | 国家，空值为 未知 |
 | view_count | BIGINT | NOT NULL, DEFAULT 0 | 该日该文章该国家 PV |
 
 主键：`(stat_date, post_id, country)`；查询索引：`(post_id, stat_date)`、`(country, stat_date)`。
