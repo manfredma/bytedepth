@@ -164,6 +164,43 @@ describe('annotation sidebar', () => {
     expect(popup.querySelector('[data-comment]')).toBeNull();
   });
 
+  test('keeps the mobile selection menu inside the viewport', () => {
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    const innerHeightDescriptor = Object.getOwnPropertyDescriptor(window, 'innerHeight');
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 100 });
+    const offsetHeightDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      get() {
+        return this.classList.contains('bd-annotation-popup') ? 40 : (offsetHeightDescriptor?.get?.call(this) ?? 0);
+      }
+    });
+    const text = document.querySelector('.content').firstChild;
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, 3);
+    range.getBoundingClientRect = () => ({ left: 10, right: 90, top: 140, bottom: 150, width: 80, height: 10 });
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+    const popupTop = document.querySelector('.bd-annotation-popup').style.top;
+
+    if (offsetHeightDescriptor) {
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', offsetHeightDescriptor);
+    } else {
+      delete HTMLElement.prototype.offsetHeight;
+    }
+    if (innerHeightDescriptor) {
+      Object.defineProperty(window, 'innerHeight', innerHeightDescriptor);
+    } else {
+      delete window.innerHeight;
+    }
+
+    expect(popupTop).toBe('52px');
+  });
+
   test('only comments contribute to the reading toolbar badge', async () => {
     window.__ANNOTATIONS__ = [
       { id: 1, selectedText: '可批', annotationText: '公开评论', color: 'yellow', visibility: 'PUBLIC', startOffset: 0, endOffset: 2 },

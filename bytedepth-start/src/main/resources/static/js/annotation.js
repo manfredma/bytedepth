@@ -841,7 +841,9 @@ window.initAnnotations = function () {
         popup.classList.add('bd-annotation-popup-open');
         const rect = range.getBoundingClientRect();
         popup.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8))}px`;
-        popup.style.top = `${Math.max(8, rect.bottom + 9)}px`;
+        const preferredTop = rect.bottom + 9;
+        const maxTop = window.innerHeight - popup.offsetHeight - 8;
+        popup.style.top = `${Math.max(8, Math.min(preferredTop, maxTop))}px`;
     }
 
     function showAnnotationActions(annotation, mark) {
