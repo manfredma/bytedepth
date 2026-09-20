@@ -189,6 +189,7 @@ class PostControllerTest {
                 .andExpect(model().attributeExists("post"))
                 .andExpect(model().attributeExists("renderedContent"))
                 .andExpect(model().attribute("wordCount", 6))
+                .andExpect(model().attribute("estimatedReadingMinutes", 1))
                 .andExpect(model().attributeExists("tags"))
                 .andExpect(model().attributeExists("comments"))
                 .andExpect(model().attributeExists("pvCount"))

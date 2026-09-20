@@ -15,6 +15,8 @@ import java.util.ArrayList;
 /** Extracts reader-facing plain text from Markdown for previews and search indexing. */
 public final class MarkdownTextExtractor {
 
+    private static final int CHARACTERS_PER_READING_MINUTE = 500;
+
     private static final Parser PARSER = Parser.builder()
             .extensions(List.of(TablesExtension.create()))
             .build();
@@ -33,6 +35,34 @@ public final class MarkdownTextExtractor {
             appendParagraph(paragraph, text);
         }
         return normalize(text.toString());
+    }
+
+    /** Counts reader-visible Markdown characters using the same AST semantics as the renderer. */
+    public static int visibleCharacterCount(String markdown) {
+        if (markdown == null || markdown.isBlank()) {
+            return 0;
+        }
+
+        StringBuilder text = new StringBuilder();
+        PARSER.parse(markdown).accept(new AbstractVisitor() {
+            @Override
+            public void visit(Text node) {
+                text.append(node.getLiteral());
+            }
+
+            @Override
+            public void visit(org.commonmark.node.Code node) {
+                text.append(node.getLiteral());
+            }
+        });
+        return Math.toIntExact(text.codePoints().filter(codePoint -> !Character.isWhitespace(codePoint)).count());
+    }
+
+    /** Estimates reader time at 500 visible characters per minute, with a one-minute minimum. */
+    public static int estimatedReadingMinutes(String markdown) {
+        int visibleCharacters = visibleCharacterCount(markdown);
+        return Math.max(1, (visibleCharacters + CHARACTERS_PER_READING_MINUTE - 1)
+                / CHARACTERS_PER_READING_MINUTE);
     }
 
     /**

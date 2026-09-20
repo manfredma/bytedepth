@@ -110,6 +110,7 @@ class PostControllerSeriesDetailRenderingTest {
         item.setSlug(dto.getSlug());
         item.setTitle(dto.getTitle());
         item.setSeriesOrder(5);
+        item.setEstimatedReadingMinutes(1);
         when(getSeriesPostsQryExe.execute(13L)).thenReturn(List.of(item));
         when(seriesNavigationQryExe.execute(eq(13L), eq(77L), anyList())).thenReturn(
                 new SeriesNavigation(List.of(item), 1, 1, 100, null, null));
@@ -201,7 +202,9 @@ class PostControllerSeriesDetailRenderingTest {
         mockMvc.perform(get("/posts/" + dto.getSlug()))
                 .andExpect(status().isOk())
                 .andExpect(model().attributeExists("seriesNavigation"))
-                .andExpect(content().string(containsString("第 2 篇")));
+                .andExpect(content().string(containsString("第 2 篇")))
+                .andExpect(content().string(containsString("预计阅读 1 分钟")))
+                .andExpect(content().string(containsString("约 1 分钟")));
 
         verify(postRepository, never()).findPrevPublished(77L);
         verify(postRepository, never()).findNextPublished(77L);
@@ -213,6 +216,7 @@ class PostControllerSeriesDetailRenderingTest {
         item.setSlug(slug);
         item.setTitle(title);
         item.setSeriesOrder(seriesOrder);
+        item.setEstimatedReadingMinutes(1);
         return item;
     }
 }

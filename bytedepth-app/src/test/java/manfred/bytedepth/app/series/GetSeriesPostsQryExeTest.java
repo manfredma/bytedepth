@@ -44,12 +44,14 @@ class GetSeriesPostsQryExeTest {
         assertEquals("slug-1", first.getSlug());
         assertEquals("文章1", first.getTitle());
         assertEquals(1, first.getSeriesOrder());
+        assertEquals(1, first.getEstimatedReadingMinutes());
 
         SeriesPostItemDTO second = result.get(1);
         assertEquals(20L, second.getId());
         assertEquals("slug-2", second.getSlug());
         assertEquals("文章2", second.getTitle());
         assertEquals(2, second.getSeriesOrder());
+        assertEquals(1, second.getEstimatedReadingMinutes());
     }
 
     @Test

@@ -108,6 +108,20 @@ class MarkdownTextExtractorTest {
     }
 
     @Test
+    void estimatedReadingMinutesRoundsUpVisibleCharactersAndUsesOneMinuteMinimum() {
+        assertEquals(1, MarkdownTextExtractor.estimatedReadingMinutes(null));
+        assertEquals(1, MarkdownTextExtractor.estimatedReadingMinutes("   "));
+        assertEquals(1, MarkdownTextExtractor.estimatedReadingMinutes("a".repeat(500)));
+        assertEquals(2, MarkdownTextExtractor.estimatedReadingMinutes("a".repeat(501)));
+    }
+
+    @Test
+    void visibleCharacterCountUsesTextAndInlineCodeWithoutWhitespace() {
+        assertEquals(7, MarkdownTextExtractor.visibleCharacterCount("# 标题\n[链接](https://example.com) `代码` 😀"));
+        assertEquals(0, MarkdownTextExtractor.visibleCharacterCount(" \n\t"));
+    }
+
+    @Test
     void plainTextExcludesTableNodes() {
         // GFM 表格不是 Paragraph 节点，plainText 仅提取散文段落，表格内容不纳入
         String markdown = "| 标题A | 标题B |\n| --- | --- |\n| 单元1 | 单元2 |";

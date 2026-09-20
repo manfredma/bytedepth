@@ -5,7 +5,6 @@ import org.commonmark.node.Heading;
 import org.commonmark.node.Image;
 import org.commonmark.node.Node;
 import org.commonmark.node.Text;
-import org.commonmark.node.Code;
 import org.commonmark.node.AbstractVisitor;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.AttributeProvider;
@@ -14,6 +13,7 @@ import org.owasp.html.HtmlPolicyBuilder;
 import org.owasp.html.PolicyFactory;
 import org.owasp.html.Sanitizers;
 import org.springframework.stereotype.Component;
+import manfred.bytedepth.app.post.MarkdownTextExtractor;
 
 import java.util.List;
 import java.util.Map;
@@ -71,22 +71,7 @@ public class MarkdownRenderer {
      * 统计读者能看到的字符数：忽略 Markdown 标记与空白，并按 Unicode 码点计数。
      */
     public int countVisibleCharacters(String markdown) {
-        if (markdown == null || markdown.isBlank()) {
-            return 0;
-        }
-        StringBuilder text = new StringBuilder();
-        parser.parse(markdown).accept(new AbstractVisitor() {
-            @Override
-            public void visit(Text node) {
-                text.append(node.getLiteral());
-            }
-
-            @Override
-            public void visit(Code node) {
-                text.append(node.getLiteral());
-            }
-        });
-        return Math.toIntExact(text.codePoints().filter(codePoint -> !Character.isWhitespace(codePoint)).count());
+        return MarkdownTextExtractor.visibleCharacterCount(markdown);
     }
 
     private static class HeadingIdProvider implements AttributeProvider {

@@ -17,6 +17,7 @@ import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
+import manfred.bytedepth.app.post.MarkdownTextExtractor;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.rating.GetPostRatingQryExe;
@@ -138,6 +139,7 @@ public class PostController {
         model.addAttribute("canonicalUrl", siteUrl + "/posts/" + post.getSlug());
         model.addAttribute("renderedContent", markdownRenderer.render(post.getContent()));
         model.addAttribute("wordCount", markdownRenderer.countVisibleCharacters(post.getContent()));
+        model.addAttribute("estimatedReadingMinutes", MarkdownTextExtractor.estimatedReadingMinutes(post.getContent()));
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
         model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
         Long currentUserId = SecurityUtils.extractUserId(currentUser);

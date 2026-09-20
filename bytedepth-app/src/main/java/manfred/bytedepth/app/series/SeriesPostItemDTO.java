@@ -8,4 +8,5 @@ public class SeriesPostItemDTO {
     private String slug;
     private String title;
     private Integer seriesOrder;
+    private Integer estimatedReadingMinutes;
 }

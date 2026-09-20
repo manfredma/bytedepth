@@ -270,6 +270,9 @@
         .series-selector-item.is-current { background: var(--card); color: var(--accent-dk); font-weight: 700; }
         .series-selector-order { flex: 0 0 2.1em; color: var(--ink-3); font-family: var(--mono); font-size: .75em; text-align: right; }
         .series-selector-item.is-current .series-selector-order { color: var(--accent); }
+        .series-selector-copy { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1; }
+        .series-selector-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .series-selector-reading-time { flex: 0 0 auto; color: var(--ink-3); font-size: .72em; font-weight: 400; white-space: nowrap; }
 
         /* ── 返回链接 ─────────────────────────── */
         .back-link {
@@ -754,7 +757,11 @@
                    th:attr="aria-current=${item.id == post.id ? 'page' : null}"
                    th:title="${item.title}">
                     <span class="series-selector-order" th:text="${iterStat.count} + '.'">1.</span>
-                    <span th:text="${item.title}">文章标题</span>
+                    <span class="series-selector-copy">
+                        <span class="series-selector-title" th:text="${item.title}">文章标题</span>
+                        <span class="series-selector-reading-time" th:if="${item.estimatedReadingMinutes != null}"
+                              th:text="'约 ' + ${item.estimatedReadingMinutes} + ' 分钟'">约 1 分钟</span>
+                    </span>
                 </a>
             </nav>
         </details>
@@ -774,6 +781,8 @@
               th:text="'版本 v' + ${post.contentVersion}">版本 v1</span>
         <span class="meta-sep">·</span>
         <span th:text="'字数 ' + ${#numbers.formatInteger(wordCount, 1, 'COMMA')}">字数 0</span>
+        <span class="meta-sep">·</span>
+        <span th:text="'预计阅读 ' + ${estimatedReadingMinutes} + ' 分钟'">预计阅读 1 分钟</span>
         <span style="margin-left:12px;color:var(--ink-3);">👁 <span th:text="${pvCount}">0</span> 次阅读</span>
     </div>
     <div th:if="${not #lists.isEmpty(tags)}" class="tags">

@@ -13,10 +13,12 @@ test.describe('专栏文章导航', () => {
 
         await expect(page.locator('.series-context')).toBeVisible();
         await expect(page.locator('.series-context-progress')).toContainText(/第 \d+ 篇 · 共 \d+ 篇/);
+        await expect(page.locator('.meta')).toContainText(/预计阅读 \d+ 分钟/);
         const selector = page.locator('.series-selector');
         await expect(selector).toBeVisible();
         await selector.locator('summary').click();
         await expect(selector.locator('.series-selector-item').first()).toBeVisible({timeout: 10_000});
+        await expect(selector.locator('.series-selector-reading-time').first()).toContainText(/约 \d+ 分钟/);
         await expect(selector.locator('[aria-current="page"]')).toHaveCount(1);
     });
 
