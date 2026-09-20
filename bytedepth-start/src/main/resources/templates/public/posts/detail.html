@@ -202,38 +202,74 @@
             box-shadow: 0 4px 24px rgba(0,0,0,.1);
         }
 
-        /* ── 上下篇导航 ──────────────────────── */
-        .post-nav {
+        /* ── 专栏上下篇导航：桌面端紧凑横条，移动端保留触控面积 ── */
+        .post-nav,
+        .series-post-nav {
             display: flex;
-            gap: 12px;
-            margin-top: 48px;
-            padding-top: 28px;
+            gap: 0;
+            margin-top: 40px;
+            padding-top: 18px;
             border-top: 1px solid var(--border);
         }
-        .post-nav a {
+        .post-nav a,
+        .series-nav-link {
             flex: 1;
-            padding: 16px 20px;
-            border-radius: var(--radius);
+            min-width: 0;
+            min-height: 62px;
+            padding: 10px 14px;
+            border-radius: 8px;
             text-decoration: none;
             color: var(--ink);
-            border: 1px solid var(--border);
-            background: var(--bg);
-            transition: all .2s;
-            min-width: 0;
+            border: 1px solid transparent;
+            background: transparent;
+            transition: background .2s, border-color .2s, color .2s;
         }
-        .post-nav a:hover { border-color: var(--navy); background: var(--navy); color: var(--navy-fg); }
-        .post-nav .nav-label {
+        .post-nav a:hover,
+        .series-nav-link:hover { border-color: var(--border); background: var(--bg); }
+        .post-nav .nav-label,
+        .series-nav-label {
+            display: block;
             font-family: var(--sans);
-            font-size: 0.7rem;
-            letter-spacing: .08em;
+            font-size: 0.68rem;
+            letter-spacing: .04em;
             color: var(--ink-3);
-            margin-bottom: 6px;
-            text-transform: uppercase;
+            margin-bottom: 3px;
         }
-        .post-nav a:hover .nav-label { color: rgba(255,255,255,.6); }
-        .post-nav .nav-title { font-size: 0.88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .post-nav .nav-prev { text-align: left; }
-        .post-nav .nav-next { text-align: right; }
+        .post-nav .nav-title,
+        .series-nav-title { display: block; font-size: 0.84rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .post-nav .nav-prev,
+        .series-nav-prev { text-align: left; }
+        .post-nav .nav-next,
+        .series-nav-next { text-align: right; border-left: 1px solid var(--border); }
+        .series-nav-boundary { color: var(--ink-2); }
+
+        /* ── 专栏上下文：文章开头展示进度并支持跳转任意文章 ── */
+        .series-context {
+            margin: 0 0 30px;
+            padding: 14px 16px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg);
+            font-family: var(--sans);
+        }
+        .series-context-heading { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+        .series-context-eyebrow { color: var(--ink-3); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+        .series-context-link { color: var(--ink); font-size: .94rem; font-weight: 700; text-decoration: none; }
+        .series-context-link:hover { color: var(--accent); }
+        .series-context-progress { color: var(--ink-2); font-size: .76rem; }
+        .series-progress { height: 4px; margin-top: 10px; overflow: hidden; border-radius: 999px; background: var(--border); }
+        .series-progress-value { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+        .series-selector { margin-top: 11px; }
+        .series-selector summary { cursor: pointer; color: var(--ink-2); font-size: .78rem; list-style: none; }
+        .series-selector summary::-webkit-details-marker { display: none; }
+        .series-selector summary::before { content: '▸'; display: inline-block; margin-right: 6px; color: var(--accent); transition: transform .15s; }
+        .series-selector[open] summary::before { transform: rotate(90deg); }
+        .series-selector-list { display: grid; gap: 3px; max-height: 300px; margin-top: 8px; padding: 3px; overflow-y: auto; }
+        .series-selector-item { display: flex; align-items: baseline; gap: 8px; padding: 7px 8px; border-radius: 6px; color: var(--ink-2); font-size: .8rem; line-height: 1.4; text-decoration: none; }
+        .series-selector-item:hover { background: var(--card); color: var(--ink); }
+        .series-selector-item.is-current { background: var(--card); color: var(--accent-dk); font-weight: 700; }
+        .series-selector-order { flex: 0 0 2.1em; color: var(--ink-3); font-family: var(--mono); font-size: .75em; text-align: right; }
+        .series-selector-item.is-current .series-selector-order { color: var(--accent); }
 
         /* ── 返回链接 ─────────────────────────── */
         .back-link {
@@ -327,108 +363,6 @@
             font-size: 0.88rem;
             border: 1px solid #a7f3d0;
         }
-
-        /* ── 专栏入口（左侧固定） ────────────── */
-        .series-trigger {
-            position: fixed;
-            left: 0;
-            top: 25%;
-            transform: translateY(-50%);
-            z-index: 300;
-            background: var(--navy);
-            border-radius: 0 8px 8px 0;
-            box-shadow: 3px 0 16px rgba(0,0,0,.2);
-            cursor: pointer;
-            padding: 14px 9px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            transition: all .2s;
-        }
-        .series-trigger:hover { background: var(--accent); }
-        .series-trigger-label {
-            writing-mode: vertical-rl;
-            font-family: var(--sans);
-            font-size: 0.65rem;
-            font-weight: 700;
-            color: rgba(255,255,255,.7);
-            letter-spacing: .1em;
-            text-transform: uppercase;
-        }
-        .series-trigger-icon { font-size: 0.65rem; color: var(--navy-fg); transition: transform .25s; }
-        .series-trigger.open {
-            transform: translateX(-100%) translateY(-50%);
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        /* ── 专栏面板 ────────────────────────── */
-        .series-panel {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 300px;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background: var(--navy);
-            color: var(--navy-fg);
-            box-shadow: 6px 0 32px rgba(0,0,0,.3);
-            z-index: 200;
-            overflow: hidden;
-            overscroll-behavior-y: contain;
-            transform: translateX(-100%);
-            transition: transform .3s cubic-bezier(.25,.46,.45,.94);
-        }
-        .series-panel.open { transform: translateX(0); }
-        .series-panel-header {
-            flex: 0 0 auto;
-            padding: 64px 20px 12px;
-            font-family: var(--sans);
-            font-size: 0.65rem;
-            font-weight: 700;
-            color: rgba(255,255,255,.4);
-            letter-spacing: .12em;
-            text-transform: uppercase;
-            border-bottom: 1px solid rgba(255,255,255,.08);
-        }
-        .series-name {
-            flex: 0 0 auto;
-            padding: 14px 20px;
-            font-family: var(--sans);
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--navy-fg);
-            border-bottom: 1px solid rgba(255,255,255,.08);
-            line-height: 1.4;
-        }
-        .series-panel-list {
-            flex: 1 1 auto;
-            min-height: 0;
-            overflow-y: auto;
-            overscroll-behavior-y: contain;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-gutter: stable;
-        }
-        .series-item {
-            display: block;
-            padding: 11px 20px;
-            font-size: 0.82rem;
-            text-decoration: none;
-            color: rgba(255,255,255,.55);
-            border-left: 3px solid transparent;
-            transition: all .15s;
-            line-height: 1.5;
-        }
-        .series-item:hover { background: rgba(255,255,255,.06); color: var(--navy-fg); border-left-color: var(--accent); }
-        .series-item.active { background: rgba(255,255,255,.10); color: var(--navy-fg); border-left-color: var(--accent); font-weight: 600; }
-        .series-item .order { color: rgba(255,255,255,.3); font-family: var(--mono); font-size: 0.75em; margin-right: 6px; }
-        .series-item.active .order { color: var(--accent); }
-
-        /* ── 遮罩 ────────────────────────────── */
-        .series-overlay { display: none; position: fixed; inset: 0; z-index: 199; background: rgba(0,0,0,.18); }
-        .series-overlay.open { display: block; }
 
         /* ── 阅读工具栏（目录 / 主题 / 回到顶部，右侧悬浮）──── */
         .reading-toolbar {
@@ -539,22 +473,15 @@
             .content { font-size: 0.97rem; line-height: 1.75; }
             .content pre { padding: 14px 14px; font-size: 0.82em; }
             .content table { font-size: 0.82rem; }
-            .post-nav { flex-direction: column; gap: 8px; }
-            .post-nav .nav-next { text-align: left; }
-            .post-nav .nav-title { white-space: normal; }
+            .post-nav,
+            .series-post-nav { flex-direction: column; gap: 8px; padding-top: 16px; }
+            .post-nav a,
+            .series-nav-link { min-height: 76px; padding: 14px 16px; border: 1px solid var(--border); background: var(--bg); }
+            .post-nav .nav-next,
+            .series-nav-next { text-align: left; border-left: 1px solid var(--border); }
+            .post-nav .nav-title,
+            .series-nav-title { white-space: normal; }
             .comment-form { padding: 16px; }
-            /* 手机端：极窄小的专栏入口，不遮挡正文 */
-            .series-trigger {
-                padding: 8px 5px;
-                gap: 4px;
-                border-radius: 0 6px 6px 0;
-                box-shadow: 2px 0 8px rgba(0,0,0,.18);
-            }
-            .series-trigger-label {
-                font-size: 0.52rem;
-                letter-spacing: .06em;
-            }
-            .series-trigger-icon { font-size: 0.52rem; }
 
             /* 阅读工具栏：移动端变为底部横条（仿微信读书 App） */
             .reading-toolbar {
@@ -763,48 +690,6 @@
     });
     </script>
 
-    <!-- 专栏文章：左侧浮动入口 + fixed 覆盖面板（不影响正文布局）-->
-    <th:block th:if="${series != null}">
-        <!-- 遮罩 -->
-        <div class="series-overlay" id="seriesOverlay" onclick="closeSeries()"></div>
-        <!-- 左侧固定入口 -->
-        <div class="series-trigger" id="seriesTrigger" onclick="toggleSeries()">
-            <span class="series-trigger-label">专栏文章</span>
-            <span class="series-trigger-icon">▶</span>
-        </div>
-        <!-- 展开面板（覆盖正文） -->
-        <div class="series-panel" id="seriesPanel">
-            <div class="series-panel-header">专栏文章</div>
-            <div class="series-name" th:text="${series.name}">专栏名</div>
-            <div class="series-panel-list">
-                <a th:each="item, iterStat : ${seriesPosts}"
-                   th:href="@{/posts/{slug}(slug=${item.slug})}"
-                   th:classappend="${item.id == post.id ? ' active' : ''}"
-                   class="series-item">
-                    <span class="order" th:text="${iterStat.count} + '.'"></span>
-                    <span th:text="${item.title}">文章标题</span>
-                </a>
-            </div>
-        </div>
-    </th:block>
-    <script th:src="@{/js/series-navigation.js}"></script>
-    <script>
-    function toggleSeries() {
-        var panel = document.getElementById('seriesPanel');
-        var trigger = document.getElementById('seriesTrigger');
-        var overlay = document.getElementById('seriesOverlay');
-        var isOpen = panel.classList.contains('open');
-        panel.classList.toggle('open');
-        trigger.classList.toggle('open');
-        overlay.classList.toggle('open');
-    }
-    function closeSeries() {
-        document.getElementById('seriesPanel').classList.remove('open');
-        document.getElementById('seriesTrigger').classList.remove('open');
-        document.getElementById('seriesOverlay').classList.remove('open');
-    }
-    </script>
-
     <article id="post-article" class="bd-annotation-scope">
     <aside id="bd-annotation-sidebar" class="bd-annotation-sidebar" aria-label="划线评论栏" aria-hidden="true">
         <header class="bd-annotation-sidebar-header">
@@ -844,6 +729,36 @@
         </section>
     </aside>
     <div class="bd-annotation-reading-content">
+    <section class="series-context"
+             th:if="${isSeriesPost == true and seriesNavigation != null and seriesNavigation.position > 0}"
+             aria-label="专栏阅读进度">
+        <div class="series-context-heading">
+            <span class="series-context-eyebrow">正在阅读专栏</span>
+            <a class="series-context-link" th:href="@{/columns/{slug}(slug=${series.slug})}"
+               th:text="${series.name}">专栏名称</a>
+            <span class="series-context-progress"
+                  th:text="'第 ' + ${seriesNavigation.position} + ' 篇 · 共 ' + ${seriesNavigation.total} + ' 篇'">第 1 篇 · 共 3 篇</span>
+        </div>
+        <div class="series-progress" role="progressbar"
+             aria-label="专栏阅读进度"
+             th:attr="aria-valuenow=${seriesNavigation.position},aria-valuemin=1,aria-valuemax=${seriesNavigation.total}">
+            <span class="series-progress-value" th:style="'width:' + ${seriesNavigation.progressPercent} + '%'" aria-hidden="true"></span>
+        </div>
+        <details class="series-selector">
+            <summary>查看本专栏全部文章</summary>
+            <nav class="series-selector-list" aria-label="专栏文章列表">
+                <a th:each="item, iterStat : ${seriesNavigation.posts}"
+                   th:href="@{/posts/{slug}(slug=${item.slug})}"
+                   class="series-selector-item"
+                   th:classappend="${item.id == post.id ? ' is-current' : ''}"
+                   th:attr="aria-current=${item.id == post.id ? 'page' : null}"
+                   th:title="${item.title}">
+                    <span class="series-selector-order" th:text="${iterStat.count} + '.'">1.</span>
+                    <span th:text="${item.title}">文章标题</span>
+                </a>
+            </nav>
+        </details>
+    </section>
     <h1 th:text="${post.title}">文章标题</h1>
     <div class="meta">
         <span th:if="${post.publishedAt != null}"
@@ -873,19 +788,42 @@
     </div>
     <a th:href="@{/posts}" class="back-link">← 返回列表</a>
 
-    <!-- 上下篇导航 -->
-    <div class="post-nav" th:if="${prevPost != null or nextPost != null}">
-        <a th:if="${prevPost != null}"
-           th:href="@{/posts/{slug}(slug=${prevPost.slug})}"
-           class="nav-prev">
-            <div class="nav-label">← 上一篇</div>
+    <!-- 上下篇导航：专栏文章按 series_order，普通文章按全站发布时间顺序 -->
+    <div class="series-post-nav"
+         th:if="${isSeriesPost == true and seriesNavigation != null and seriesNavigation.total > 0}">
+        <a class="series-nav-link series-nav-prev"
+           th:if="${seriesNavigation.previous != null}"
+           th:href="@{/posts/{slug}(slug=${seriesNavigation.previous.slug})}">
+            <span class="series-nav-label">← 上一篇</span>
+            <span class="series-nav-title" th:text="${seriesNavigation.previous.title}">上一篇标题</span>
+        </a>
+        <a class="series-nav-link series-nav-prev series-nav-boundary"
+           th:if="${seriesNavigation.previous == null}"
+           th:href="@{/columns/{slug}(slug=${series.slug})}">
+            <span class="series-nav-label">← 返回专栏</span>
+            <span class="series-nav-title" th:text="${series.name}">专栏名称</span>
+        </a>
+        <a class="series-nav-link series-nav-next"
+           th:if="${seriesNavigation.next != null}"
+           th:href="@{/posts/{slug}(slug=${seriesNavigation.next.slug})}">
+            <span class="series-nav-label">下一篇 →</span>
+            <span class="series-nav-title" th:text="${seriesNavigation.next.title}">下一篇标题</span>
+        </a>
+        <a class="series-nav-link series-nav-next series-nav-boundary"
+           th:if="${seriesNavigation.next == null}"
+           th:href="@{/columns/{slug}(slug=${series.slug})}">
+            <span class="series-nav-label">查看专栏目录 →</span>
+            <span class="series-nav-title" th:text="${series.name}">专栏名称</span>
+        </a>
+    </div>
+    <div class="post-nav" th:if="${isSeriesPost != true and (prevPost != null or nextPost != null)}">
+        <a th:if="${prevPost != null}" th:href="@{/posts/{slug}(slug=${prevPost.slug})}" class="nav-prev">
+            <div class="nav-label">← 全站上一篇</div>
             <div class="nav-title" th:text="${prevPost.title}">上一篇标题</div>
         </a>
         <span th:if="${prevPost == null}" style="flex:1"></span>
-        <a th:if="${nextPost != null}"
-           th:href="@{/posts/{slug}(slug=${nextPost.slug})}"
-           class="nav-next">
-            <div class="nav-label">下一篇 →</div>
+        <a th:if="${nextPost != null}" th:href="@{/posts/{slug}(slug=${nextPost.slug})}" class="nav-next">
+            <div class="nav-label">全站下一篇 →</div>
             <div class="nav-title" th:text="${nextPost.title}">下一篇标题</div>
         </a>
     </div>

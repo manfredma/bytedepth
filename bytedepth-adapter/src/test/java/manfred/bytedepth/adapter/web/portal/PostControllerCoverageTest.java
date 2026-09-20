@@ -11,6 +11,7 @@ import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.rating.GetPostRatingQryExe;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
+import manfred.bytedepth.app.series.SeriesNavigationQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.SeriesRepository;
@@ -30,6 +31,7 @@ class PostControllerCoverageTest {
                 mock(ListCommentsQryExe.class), mock(ListAnnotationsQryExe.class), mock(AnnotationVisitorIdentity.class),
                 mock(ListTagsQryExe.class), mock(ListCategoriesQryExe.class), mock(PostViewCounter.class),
                 mock(PostRepository.class), mock(SeriesRepository.class), mock(GetSeriesPostsQryExe.class),
+                mock(SeriesNavigationQryExe.class),
                 mock(GetPostRatingQryExe.class), mock(VisitRequestFilter.class), mock(ApplicationEventPublisher.class));
 
         assertThat(controller).isNotNull();

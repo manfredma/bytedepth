@@ -21,6 +21,7 @@ import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.rating.GetPostRatingQryExe;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
+import manfred.bytedepth.app.series.SeriesNavigationQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.SeriesRepository;
@@ -67,6 +68,7 @@ public class PostController {
     private final PostRepository postRepository;
     private final SeriesRepository seriesRepository;
     private final GetSeriesPostsQryExe getSeriesPostsQryExe;
+    private final SeriesNavigationQryExe seriesNavigationQryExe;
     private final GetPostRatingQryExe getPostRatingQryExe;
     private final VisitRequestFilter visitRequestFilter;
     private final ApplicationEventPublisher eventPublisher;
@@ -168,14 +170,22 @@ public class PostController {
         }
         model.addAttribute("pvCount", postViewCounter.getCount(id));
 
-        model.addAttribute("prevPost", postRepository.findPrevPublished(id).orElse(null));
-        model.addAttribute("nextPost", postRepository.findNextPublished(id).orElse(null));
         var currentPost = postRepository.findById(id).orElseThrow();
         if (currentPost.getSeriesId() != null) {
-            model.addAttribute("series",
-                seriesRepository.findById(currentPost.getSeriesId()).orElse(null));
-            model.addAttribute("seriesPosts",
-                getSeriesPostsQryExe.execute(currentPost.getSeriesId()));
+            var series = seriesRepository.findById(currentPost.getSeriesId()).orElse(null);
+            if (series != null) {
+                var seriesPosts = getSeriesPostsQryExe.execute(currentPost.getSeriesId());
+                model.addAttribute("series", series);
+                model.addAttribute("seriesNavigation",
+                        seriesNavigationQryExe.execute(currentPost.getSeriesId(), id, seriesPosts));
+                model.addAttribute("isSeriesPost", true);
+            } else {
+                model.addAttribute("prevPost", postRepository.findPrevPublished(id).orElse(null));
+                model.addAttribute("nextPost", postRepository.findNextPublished(id).orElse(null));
+            }
+        } else {
+            model.addAttribute("prevPost", postRepository.findPrevPublished(id).orElse(null));
+            model.addAttribute("nextPost", postRepository.findNextPublished(id).orElse(null));
         }
         return "public/posts/detail";
     }

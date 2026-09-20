@@ -14,6 +14,7 @@ import manfred.bytedepth.app.post.query.PostDTO;
 import manfred.bytedepth.app.rating.GetPostRatingQryExe;
 import manfred.bytedepth.app.rating.PostRatingDTO;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
+import manfred.bytedepth.app.series.SeriesNavigationQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import manfred.bytedepth.app.annotation.ListAnnotationsQryExe;
 import manfred.bytedepth.domain.annotation.AnnotationVisibility;
@@ -109,6 +110,9 @@ class PostControllerTest {
 
     @MockitoBean
     private GetSeriesPostsQryExe getSeriesPostsQryExe;
+
+    @MockitoBean
+    private SeriesNavigationQryExe seriesNavigationQryExe;
 
     @MockitoBean
     private GetPostRatingQryExe getPostRatingQryExe;

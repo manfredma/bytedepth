@@ -40,36 +40,29 @@ class PostReadingAssetsTest {
     }
 
     @Test
-    void seriesTriggerMovesOutOfThePanelContentWhenThePanelIsOpen() throws IOException {
+    void seriesNavigationUsesAnInlineAccessibleSelector() throws IOException {
         String template = classpathText("/templates/public/posts/detail.html");
-        String navigationScript = classpathText("/static/js/series-navigation.js");
 
         assertThat(template)
-                .contains(".series-trigger.open {")
-                .contains("transform: translateX(-100%) translateY(-50%)")
-                .contains("pointer-events: none")
-                .contains("background: rgba(0,0,0,.18)")
-                .doesNotContain(".series-overlay { display: none; position: fixed; inset: 0; z-index: 199; background: rgba(0,0,0,.3); backdrop-filter")
-                .contains("trigger.classList.toggle('open')")
-                .contains("@{/js/series-navigation.js}")
+                .contains("class=\"series-context\"")
+                .contains("class=\"series-selector\"")
+                .contains("aria-current=${item.id == post.id ? 'page' : null}")
+                .contains("class=\"series-post-nav\"")
+                .contains("@{/columns/{slug}(slug=${series.slug})}")
+                .doesNotContain("seriesPanel")
+                .doesNotContain("series-navigation.js")
                 .contains("id=\"post-article\"")
                 .contains("bd-annotation-reading-content")
                 .doesNotContain("评论会贴近对应段落显示；仅你自己的私有划线对其他读者不可见。");
-        assertThat(navigationScript)
-                .contains("fetch(targetUrl.href")
-                .contains("article.replaceWith(nextArticle)")
-                .contains("panel.querySelectorAll('.series-item')")
-                .contains("window.history.pushState");
     }
 
     @Test
-    void seriesPanelKeepsItsHeadingVisibleAndScrollsOnlyItsArticleList() throws IOException {
+    void desktopSeriesNavigationStaysCompactWhileMobileKeepsTouchTarget() throws IOException {
         String template = classpathText("/templates/public/posts/detail.html");
 
         assertThat(template)
-                .contains("<div class=\"series-panel-list\">")
-                .containsPattern("(?s)\\.series-panel\\s*\\{.*?display: flex;.*?overflow: hidden;")
-                .containsPattern("(?s)\\.series-panel-list\\s*\\{.*?overflow-y: auto;.*?overscroll-behavior-y: contain;.*?-webkit-overflow-scrolling: touch;");
+                .containsPattern("(?s)\\.series-post-nav\\s*\\{.*?min-height: 62px;")
+                .containsPattern("(?s)@media \\(max-width: 768px\\).*?\\.series-nav-link \\{ min-height: 76px;");
     }
 
     @Test

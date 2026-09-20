@@ -30,11 +30,15 @@ import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
 import manfred.bytedepth.app.rating.GetPostRatingQryExe;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
+import manfred.bytedepth.app.series.SeriesNavigation;
+import manfred.bytedepth.app.series.SeriesNavigationQryExe;
+import manfred.bytedepth.app.series.SeriesPostItemDTO;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.PostStatus;
 import manfred.bytedepth.domain.series.SeriesRepository;
+import manfred.bytedepth.domain.series.Series;
 import manfred.bytedepth.domain.stats.PostViewCounter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -53,13 +57,16 @@ class PostControllerCoverageTest {
     private final PublishPostCmdExe publishPost = mock(PublishPostCmdExe.class);
     private final ListCategoriesQryExe categories = mock(ListCategoriesQryExe.class);
     private final PostRepository posts = mock(PostRepository.class);
+    private final SeriesRepository seriesRepository = mock(SeriesRepository.class);
+    private final GetSeriesPostsQryExe seriesPosts = mock(GetSeriesPostsQryExe.class);
+    private final SeriesNavigationQryExe seriesNavigation = mock(SeriesNavigationQryExe.class);
     private final ListTagsQryExe tags = mock(ListTagsQryExe.class);
     private final ListAnnotationsQryExe annotations = mock(ListAnnotationsQryExe.class);
     private final AnnotationVisitorIdentity annotationVisitorIdentity = mock(AnnotationVisitorIdentity.class);
     private final VisitRequestFilter visitFilter = mock(VisitRequestFilter.class);
     private final PostController controller = new PostController(listPosts, getPost, createPost, publishPost,
             mock(MarkdownRenderer.class), mock(ListCommentsQryExe.class), annotations, annotationVisitorIdentity, tags, categories,
-            mock(PostViewCounter.class), posts, mock(SeriesRepository.class), mock(GetSeriesPostsQryExe.class),
+            mock(PostViewCounter.class), posts, seriesRepository, seriesPosts, seriesNavigation,
             mock(GetPostRatingQryExe.class), visitFilter, mock(ApplicationEventPublisher.class));
 
     @AfterEach
@@ -184,6 +191,48 @@ class PostControllerCoverageTest {
 
         assertThat(controller.detail("annotated", model, request())).isEqualTo("public/posts/detail");
         assertThat((List<?>) model.get("annotations")).hasSize(1);
+    }
+
+    @Test
+    void detailBuildsSeriesNavigationForSeriesPosts() {
+        PostDTO published = dto(12L, "series-post", "PUBLISHED", 7L);
+        when(getPost.executeBySlug("series-post")).thenReturn(published);
+        Post seriesPost = post(12L, "series-post", PostStatus.PUBLISHED, 7L);
+        seriesPost.assignSeries(3L, 2);
+        when(posts.findById(12L)).thenReturn(Optional.of(seriesPost));
+        Series series = Series.reconstruct(3L, "工程实践", "engineering-practice", null, 7L);
+        when(seriesRepository.findById(3L)).thenReturn(Optional.of(series));
+        SeriesPostItemDTO item = new SeriesPostItemDTO();
+        item.setId(12L);
+        item.setSlug("series-post");
+        item.setTitle("专栏文章");
+        item.setSeriesOrder(2);
+        when(seriesPosts.execute(3L)).thenReturn(List.of(item));
+        when(seriesNavigation.execute(3L, 12L, List.of(item)))
+                .thenReturn(new SeriesNavigation(List.of(item), 1, 1, 100, null, null));
+        when(visitFilter.shouldRecord(any())).thenReturn(false);
+
+        ExtendedModelMap model = new ExtendedModelMap();
+        assertThat(controller.detail("series-post", model, request())).isEqualTo("public/posts/detail");
+        assertThat(model).containsEntry("series", series).containsEntry("isSeriesPost", true)
+                .containsKey("seriesNavigation");
+    }
+
+    @Test
+    void detailFallsBackToGlobalNavigationWhenSeriesWasRemoved() {
+        PostDTO published = dto(13L, "orphaned-series-post", "PUBLISHED", 7L);
+        when(getPost.executeBySlug("orphaned-series-post")).thenReturn(published);
+        Post orphaned = post(13L, "orphaned-series-post", PostStatus.PUBLISHED, 7L);
+        orphaned.assignSeries(404L, 1);
+        when(posts.findById(13L)).thenReturn(Optional.of(orphaned));
+        when(seriesRepository.findById(404L)).thenReturn(Optional.empty());
+        when(posts.findPrevPublished(13L)).thenReturn(Optional.empty());
+        when(posts.findNextPublished(13L)).thenReturn(Optional.empty());
+        when(visitFilter.shouldRecord(any())).thenReturn(false);
+
+        ExtendedModelMap model = new ExtendedModelMap();
+        assertThat(controller.detail("orphaned-series-post", model, request())).isEqualTo("public/posts/detail");
+        assertThat(model).containsEntry("prevPost", null).containsEntry("nextPost", null);
     }
 
     @Test
