@@ -85,13 +85,24 @@
 
 ## Unreleased
 
+### Added
+
+- 待下一版本开发内容。
+
+## [v2.18.0] - 2026-09-20
+
+**Tag**：`v2.18.0`
+**Commit**：发布提交由受控 Maven Release 流程创建。
+**部署**：待生产验收。
+**回滚基线**：`v2.17.0`
+
 ### Changed
 
 - staging 使用深琥珀填充与金色描边的独立 favicon、PWA 图标和 manifest，与 production 标签页保持同一 `B` 标识但可直接区分环境。
 
-### Added
+### Compatibility
 
-- 待下一版本开发内容。
+- 无数据库迁移或业务 API 语义变更。
 
 ## [v2.15.7] - 2026-09-15
 
