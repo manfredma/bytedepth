@@ -6,7 +6,8 @@ readonly TEMP_ROOT="$(mktemp -d)"
 readonly TEMP_REPO="$TEMP_ROOT/repo"
 trap 'rm -rf "$TEMP_ROOT"' EXIT
 
-mkdir -p "$TEMP_REPO/docs/releases"
+mkdir -p "$TEMP_REPO/docs/releases" "$TEMP_REPO/scripts"
+cp "$SOURCE_ROOT/scripts/check-changelog-order.sh" "$TEMP_REPO/scripts/check-changelog-order.sh"
 git -C "$TEMP_REPO" init -q -b main
 git -C "$TEMP_REPO" config user.email test@example.com
 git -C "$TEMP_REPO" config user.name readiness-test
@@ -51,6 +52,7 @@ done
 git -C "$TEMP_REPO" checkout -q -b docs-only base
 mkdir -p "$TEMP_REPO/docs/engineering"
 printf 'Process note.\n' > "$TEMP_REPO/docs/engineering/process.md"
+printf '%s\n' '## Unreleased' '' '### Added' '' '- Existing capability.' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
 git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm docs-only
 run_check
