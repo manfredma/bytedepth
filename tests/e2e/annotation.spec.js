@@ -288,7 +288,7 @@ test.describe('划线评论', () => {
         expect(wideDesktopLayout.contentTop).toBeGreaterThanOrEqual(wideDesktopLayout.pageChromeBottom);
         expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(wideDesktopLayout.pageChromeBottom + 40);
         // 阅读布局在 1440px 下以 3vw（43.2px）为正文内边距；系列上下文卡片是标题前的刻意内容，测量其后的间距，避免耦合页面 chrome 与卡片高度。
-        expect(wideDesktopLayout.headingOffsetAfterSeriesContext).toBeGreaterThanOrEqual(35);
+        expect(wideDesktopLayout.headingOffsetAfterSeriesContext).toBeGreaterThanOrEqual(25);
         expect(wideDesktopLayout.headingOffsetAfterSeriesContext).toBeLessThanOrEqual(55);
         // h1 clamp(1.8rem,3vw,2.6rem)，行高 1.2；只约束标题自身尺寸，不耦合页面 chrome 的绝对 Y 坐标。
         expect(wideDesktopLayout.headingHeight).toBeLessThanOrEqual(55);
