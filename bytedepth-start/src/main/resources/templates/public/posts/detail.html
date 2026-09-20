@@ -257,8 +257,24 @@
         .series-context-link { color: var(--ink); font-size: .94rem; font-weight: 700; text-decoration: none; }
         .series-context-link:hover { color: var(--accent); }
         .series-context-progress { color: var(--ink-2); font-size: .76rem; }
-        .series-progress { height: 4px; margin-top: 10px; overflow: hidden; border-radius: 999px; background: var(--border); }
-        .series-progress-value { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+        .series-context-open {
+            margin-left: auto;
+            padding: 7px 11px;
+            border: 0;
+            border-radius: 6px;
+            background: var(--accent);
+            color: var(--accent-fg);
+            font-family: var(--sans);
+            font-size: .72rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(223,69,98,.25);
+        }
+        .series-context-open:hover { background: var(--accent-dk); }
+        .series-progress { position: relative; height: 6px; margin-top: 10px; overflow: visible; border-radius: 999px; background: var(--border); }
+        .series-progress-value { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f1b44c, #e35a68); box-shadow: 0 1px 4px rgba(223,69,98,.34); }
+        .series-progress-marker,
+        .series-panel-progress-marker { position: absolute; top: 50%; width: 11px; height: 11px; border: 2px solid var(--card); border-radius: 50%; background: #e35a68; transform: translate(-50%, -50%); box-shadow: 0 1px 5px rgba(141,49,77,.55); }
         .series-selector { margin-top: 11px; }
         .series-selector summary { cursor: pointer; color: var(--ink-2); font-size: .78rem; list-style: none; }
         .series-selector summary::-webkit-details-marker { display: none; }
@@ -366,6 +382,130 @@
             font-size: 0.88rem;
             border: 1px solid #a7f3d0;
         }
+
+        /* ── 专栏入口与左侧吸附面板（桌面/移动端共用） ── */
+        .series-trigger {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 330;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 54px;
+            min-height: 124px;
+            padding: 14px 9px;
+            border: 0;
+            border-radius: 0 8px 8px 0;
+            background: var(--navy);
+            color: var(--navy-fg);
+            box-shadow: 3px 0 16px rgba(0,0,0,.2);
+            cursor: pointer;
+            transition: background .2s, transform .3s, opacity .3s;
+        }
+        .series-trigger:hover { background: var(--accent); }
+        .series-trigger-label {
+            writing-mode: vertical-rl;
+            font-family: var(--sans);
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: rgba(255,255,255,.7);
+            letter-spacing: .1em;
+        }
+        .series-trigger-icon { font-size: 0.65rem; color: var(--navy-fg); }
+        .series-trigger.open {
+            transform: translateX(-100%) translateY(-50%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .series-panel {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: 300px;
+            max-width: 86vw;
+            display: flex;
+            flex-direction: column;
+            background: var(--navy);
+            color: var(--navy-fg);
+            box-shadow: 6px 0 32px rgba(0,0,0,.3);
+            z-index: 329;
+            overflow: hidden;
+            overscroll-behavior-y: contain;
+            transform: translateX(-100%);
+            transition: transform .3s cubic-bezier(.25,.46,.45,.94);
+        }
+        .series-panel.open { transform: translateX(0); }
+        .series-panel-header {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 28px 20px 12px;
+            font-family: var(--sans);
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: rgba(255,255,255,.4);
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+        }
+        .series-panel-close {
+            width: 28px;
+            height: 28px;
+            border: 1px solid rgba(255,255,255,.18);
+            border-radius: 50%;
+            background: transparent;
+            color: rgba(255,255,255,.7);
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+        }
+        .series-panel-close:hover { color: #fff; border-color: var(--accent); }
+        .series-name {
+            flex: 0 0 auto;
+            padding: 14px 20px;
+            font-family: var(--sans);
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--navy-fg);
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            line-height: 1.4;
+        }
+        .series-panel-progress { margin-top: 10px; }
+        .series-panel-progress-bar { position: relative; height: 6px; overflow: visible; border-radius: 999px; background: rgba(255,255,255,.2); }
+        .series-panel-progress-value { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f1b44c, #e35a68); box-shadow: 0 1px 5px rgba(223,69,98,.47); }
+        .series-panel-progress-text { margin-top: 7px; color: rgba(255,255,255,.55); font-size: .72rem; font-weight: 400; }
+        .series-panel-list {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior-y: contain;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-gutter: stable;
+        }
+        .series-item {
+            display: flex;
+            align-items: baseline;
+            gap: 7px;
+            padding: 11px 20px;
+            font-size: 0.82rem;
+            text-decoration: none;
+            color: rgba(255,255,255,.55);
+            border-left: 3px solid transparent;
+            transition: background .15s, color .15s, border-color .15s;
+            line-height: 1.5;
+        }
+        .series-item:hover { background: rgba(255,255,255,.06); color: var(--navy-fg); border-left-color: var(--accent); }
+        .series-item.active { background: rgba(255,255,255,.10); color: var(--navy-fg); border-left-color: var(--accent); font-weight: 600; }
+        .series-item .series-selector-order { flex: 0 0 2.1em; color: rgba(255,255,255,.3); font-family: var(--mono); font-size: 0.75em; text-align: right; }
+        .series-item.active .series-selector-order { color: var(--accent); }
+        .series-item-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .series-item-reading-time { flex: 0 0 auto; color: rgba(255,255,255,.35); font-size: .72em; white-space: nowrap; }
+        .series-overlay { display: none; position: fixed; inset: 0; z-index: 328; background: rgba(26,26,46,.12); }
+        .series-overlay.open { display: block; }
 
         /* ── 阅读工具栏（目录 / 主题 / 回到顶部，右侧悬浮）──── */
         .reading-toolbar {
@@ -485,6 +625,24 @@
             .post-nav .nav-title,
             .series-nav-title { white-space: normal; }
             .comment-form { padding: 16px; }
+
+            /* 专栏面板在手机端仍从左侧吸附，宽度不超过视口，正文只被轻量遮罩覆盖。 */
+            .series-trigger {
+                top: auto;
+                bottom: calc(78px + env(safe-area-inset-bottom));
+                transform: none;
+                padding: 9px 6px;
+                gap: 4px;
+                border-radius: 0 6px 6px 0;
+                box-shadow: 2px 0 8px rgba(0,0,0,.18);
+            }
+            .series-trigger.open { transform: translateX(-100%); }
+            .series-trigger-label { font-size: .56rem; letter-spacing: .06em; }
+            .series-trigger-icon { font-size: .56rem; }
+            .series-panel { width: min(86vw, 300px); max-width: 86vw; }
+            .series-panel-header { padding-top: 18px; }
+            .series-item { padding: 11px 16px; }
+            .series-context-open { margin-left: 0; }
 
             /* 阅读工具栏：移动端变为底部横条（仿微信读书 App） */
             .reading-toolbar {
@@ -693,6 +851,75 @@
     });
     </script>
 
+    <th:block th:if="${isSeriesPost == true and seriesNavigation != null and seriesNavigation.total > 0}">
+        <div class="series-overlay" id="seriesOverlay" onclick="closeSeries()" aria-hidden="true"></div>
+        <button class="series-trigger" id="seriesTrigger" type="button"
+                aria-controls="seriesPanel" aria-expanded="false" onclick="toggleSeries()">
+            <span class="series-trigger-label">专栏文章</span>
+            <span class="series-trigger-icon" aria-hidden="true">▶</span>
+        </button>
+        <aside class="series-panel" id="seriesPanel" aria-label="专栏文章列表" aria-hidden="true">
+            <div class="series-panel-header">
+                <span>专栏文章</span>
+                <button class="series-panel-close" type="button" aria-label="关闭专栏文章列表" onclick="closeSeries()">×</button>
+            </div>
+            <div class="series-name">
+                <a class="series-context-link" th:href="@{/columns/{slug}(slug=${series.slug})}"
+                   th:text="${series.name}">专栏名称</a>
+                <div class="series-panel-progress">
+                <div class="series-panel-progress-bar" role="progressbar" aria-label="专栏阅读进度"
+                         th:attr="aria-valuenow=${seriesNavigation.position},aria-valuemin=1,aria-valuemax=${seriesNavigation.total}">
+                        <span class="series-panel-progress-value"
+                              th:style="'width:' + ${seriesNavigation.progressPercent} + '%'" aria-hidden="true"></span>
+                        <span class="series-panel-progress-marker"
+                              th:style="'left:' + ${seriesNavigation.progressPercent} + '%'" aria-hidden="true"></span>
+                    </div>
+                    <div class="series-panel-progress-text"
+                         th:text="'阅读进度 · 第 ' + ${seriesNavigation.position} + ' 篇 / 共 ' + ${seriesNavigation.total} + ' 篇 · ' + ${seriesNavigation.progressPercent} + '%'">阅读进度 · 第 1 篇 / 共 3 篇 · 33%</div>
+                </div>
+            </div>
+            <nav class="series-panel-list" aria-label="专栏文章列表">
+                <a th:each="item, iterStat : ${seriesNavigation.posts}"
+                   th:href="@{/posts/{slug}(slug=${item.slug})}"
+                   th:classappend="${item.id == post.id ? ' active' : ''}"
+                   class="series-item"
+                   th:attr="aria-current=${item.id == post.id ? 'page' : null}"
+                   th:title="${item.title}">
+                    <span class="series-selector-order" th:text="${iterStat.count} + '.'">1.</span>
+                    <span class="series-item-title" th:text="${item.title}">文章标题</span>
+                    <span class="series-item-reading-time" th:if="${item.estimatedReadingMinutes != null}"
+                          th:text="'约 ' + ${item.estimatedReadingMinutes} + ' 分钟'">约 1 分钟</span>
+                </a>
+            </nav>
+        </aside>
+    </th:block>
+    <script th:src="@{/js/series-navigation.js}"></script>
+    <script>
+    function toggleSeries() {
+        var panel = document.getElementById('seriesPanel');
+        var trigger = document.getElementById('seriesTrigger');
+        var overlay = document.getElementById('seriesOverlay');
+        if (!panel || !trigger || !overlay) { return; }
+        var isOpen = panel.classList.contains('open');
+        panel.classList.toggle('open', !isOpen);
+        trigger.classList.toggle('open', !isOpen);
+        overlay.classList.toggle('open', !isOpen);
+        panel.setAttribute('aria-hidden', isOpen ? 'true' : 'false');
+        trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    }
+    function closeSeries() {
+        var panel = document.getElementById('seriesPanel');
+        var trigger = document.getElementById('seriesTrigger');
+        var overlay = document.getElementById('seriesOverlay');
+        if (!panel || !trigger || !overlay) { return; }
+        panel.classList.remove('open');
+        trigger.classList.remove('open');
+        overlay.classList.remove('open');
+        panel.setAttribute('aria-hidden', 'true');
+        trigger.setAttribute('aria-expanded', 'false');
+    }
+    </script>
+
     <article id="post-article" class="bd-annotation-scope">
     <aside id="bd-annotation-sidebar" class="bd-annotation-sidebar" aria-label="划线评论栏" aria-hidden="true">
         <header class="bd-annotation-sidebar-header">
@@ -740,31 +967,15 @@
             <a class="series-context-link" th:href="@{/columns/{slug}(slug=${series.slug})}"
                th:text="${series.name}">专栏名称</a>
             <span class="series-context-progress"
-                  th:text="'第 ' + ${seriesNavigation.position} + ' 篇 · 共 ' + ${seriesNavigation.total} + ' 篇'">第 1 篇 · 共 3 篇</span>
+                  th:text="'第 ' + ${seriesNavigation.position} + ' 篇 · 共 ' + ${seriesNavigation.total} + ' 篇 · ' + ${seriesNavigation.progressPercent} + '%'">第 1 篇 · 共 3 篇 · 33%</span>
+            <button class="series-context-open" type="button" aria-label="打开专栏导航" onclick="toggleSeries()">打开专栏导航</button>
         </div>
         <div class="series-progress" role="progressbar"
              aria-label="专栏阅读进度"
              th:attr="aria-valuenow=${seriesNavigation.position},aria-valuemin=1,aria-valuemax=${seriesNavigation.total}">
             <span class="series-progress-value" th:style="'width:' + ${seriesNavigation.progressPercent} + '%'" aria-hidden="true"></span>
+            <span class="series-progress-marker" th:style="'left:' + ${seriesNavigation.progressPercent} + '%'" aria-hidden="true"></span>
         </div>
-        <details class="series-selector">
-            <summary>查看本专栏全部文章</summary>
-            <nav class="series-selector-list" aria-label="专栏文章列表">
-                <a th:each="item, iterStat : ${seriesNavigation.posts}"
-                   th:href="@{/posts/{slug}(slug=${item.slug})}"
-                   class="series-selector-item"
-                   th:classappend="${item.id == post.id ? ' is-current' : ''}"
-                   th:attr="aria-current=${item.id == post.id ? 'page' : null}"
-                   th:title="${item.title}">
-                    <span class="series-selector-order" th:text="${iterStat.count} + '.'">1.</span>
-                    <span class="series-selector-copy">
-                        <span class="series-selector-title" th:text="${item.title}">文章标题</span>
-                        <span class="series-selector-reading-time" th:if="${item.estimatedReadingMinutes != null}"
-                              th:text="'约 ' + ${item.estimatedReadingMinutes} + ' 分钟'">约 1 分钟</span>
-                    </span>
-                </a>
-            </nav>
-        </details>
     </section>
     <h1 th:text="${post.title}">文章标题</h1>
     <div class="meta">

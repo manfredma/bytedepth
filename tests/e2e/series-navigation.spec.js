@@ -12,14 +12,30 @@ test.describe('专栏文章导航', () => {
         await firstPost.click();
 
         await expect(page.locator('.series-context')).toBeVisible();
-        await expect(page.locator('.series-context-progress')).toContainText(/第 \d+ 篇 · 共 \d+ 篇/);
+        await expect(page.locator('.series-context-progress')).toContainText(/第 \d+ 篇 · 共 \d+ 篇 · \d+%/);
         await expect(page.locator('.meta')).toContainText(/预计阅读 \d+ 分钟/);
-        const selector = page.locator('.series-selector');
-        await expect(selector).toBeVisible();
-        await selector.locator('summary').click();
-        await expect(selector.locator('.series-selector-item').first()).toBeVisible({timeout: 10_000});
-        await expect(selector.locator('.series-selector-reading-time').first()).toContainText(/约 \d+ 分钟/);
-        await expect(selector.locator('[aria-current="page"]')).toHaveCount(1);
+        const sidebar = page.locator('#seriesPanel');
+        await expect(page.getByRole('button', {name: '打开专栏导航'}).first()).toBeVisible();
+        await page.getByRole('button', {name: '打开专栏导航'}).first().click();
+        await expect(sidebar).toHaveClass(/open/);
+        await expect(sidebar.locator('.series-item').first()).toBeVisible({timeout: 10_000});
+        await expect(sidebar.locator('.series-item-reading-time').first()).toContainText(/约 \d+ 分钟/);
+        await expect(sidebar.locator('[aria-current="page"]')).toHaveCount(1);
+        await expect(sidebar.locator('.series-panel-progress-text')).toContainText(/阅读进度 · 第 \d+ 篇 \/ 共 \d+ 篇 · \d+%/);
+    });
+
+    test('移动端也能通过专栏入口打开侧边栏', async ({page}, testInfo) => {
+        test.skip(testInfo.project.name !== 'mobile-chromium', '仅在移动 Chromium 执行');
+        await page.goto('/columns', {waitUntil: 'domcontentloaded'});
+        await page.locator('.series-link').first().click();
+        await page.locator('.post-card').first().click();
+
+        await expect(page.locator('#seriesTrigger')).toBeVisible();
+        await page.locator('#seriesTrigger').click();
+        await expect(page.locator('#seriesPanel')).toHaveClass(/open/);
+        const panelWidth = await page.locator('#seriesPanel').boundingBox().then(box => box?.width ?? 0);
+        expect(panelWidth).toBeGreaterThan(0);
+        expect(panelWidth).toBeLessThanOrEqual(300);
     });
 
     test('专栏上下篇导航按设备提供合适的触控尺寸', async ({page}, testInfo) => {

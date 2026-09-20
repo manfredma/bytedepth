@@ -40,17 +40,21 @@ class PostReadingAssetsTest {
     }
 
     @Test
-    void seriesNavigationUsesAnInlineAccessibleSelector() throws IOException {
+    void seriesNavigationUsesAResponsiveLeftSidebar() throws IOException {
         String template = classpathText("/templates/public/posts/detail.html");
 
         assertThat(template)
                 .contains("class=\"series-context\"")
-                .contains("class=\"series-selector\"")
+                .contains("id=\"seriesPanel\"")
+                .contains("id=\"seriesTrigger\"")
+                .contains("打开专栏导航")
+                .contains("aria-label=\"打开专栏导航\"")
+                .contains("class=\"series-context-open\"")
+                .contains("class=\"series-item\"")
                 .contains("aria-current=${item.id == post.id ? 'page' : null}")
                 .contains("class=\"series-post-nav\"")
                 .contains("@{/columns/{slug}(slug=${series.slug})}")
-                .doesNotContain("seriesPanel")
-                .doesNotContain("series-navigation.js")
+                .contains("series-navigation.js")
                 .contains("id=\"post-article\"")
                 .contains("bd-annotation-reading-content")
                 .doesNotContain("评论会贴近对应段落显示；仅你自己的私有划线对其他读者不可见。");
@@ -62,7 +66,15 @@ class PostReadingAssetsTest {
 
         assertThat(template)
                 .containsPattern("(?s)\\.series-post-nav\\s*\\{.*?min-height: 62px;")
-                .containsPattern("(?s)@media \\(max-width: 768px\\).*?\\.series-nav-link \\{ min-height: 76px;");
+                .containsPattern("(?s)@media \\(max-width: 768px\\).*?\\.series-nav-link \\{ min-height: 76px;")
+                .containsPattern("(?s)\\.series-panel\\s*\\{.*?position: fixed;")
+                .containsPattern("(?s)@media \\(max-width: 768px\\).*?\\.series-panel \\{.*?width: min\\(86vw, 300px\\);")
+                .containsPattern("(?s)\\.series-trigger\\s*\\{.*?min-width: 54px;")
+                .containsPattern("(?s)\\.series-context-open\\s*\\{.*?background: var\\(--accent\\);")
+                .containsPattern("(?s)\\.series-panel-progress-bar\\s*\\{.*?height: 6px;")
+                .contains("linear-gradient(90deg, #f1b44c, #e35a68)")
+                .contains("class=\"series-panel-progress-marker\"")
+                .contains("阅读进度 ·");
     }
 
     @Test
