@@ -52,7 +52,10 @@ async function selectArticleText(page, start, length) {
 }
 
 async function waitForAnnotationReady(page) {
-    await expect(page.locator('#post-article[data-bd-annotation-ready="true"]')).toBeVisible();
+    // Staging articles can be large enough for the mobile emulation to finish
+    // streaming the HTML after Playwright's default 5-second assertion timeout.
+    await expect(page.locator('#post-article[data-bd-annotation-ready="true"]'))
+        .toBeVisible({timeout: 15_000});
 }
 
 function visibleAnnotationMark(page, id) {
