@@ -44,7 +44,7 @@ public interface PostViewLogMapper extends BaseMapper<PostViewLogDO> {
             LEFT JOIN post p ON p.id = pvl.post_id
             WHERE (#{postId} IS NULL OR pvl.post_id = #{postId})
               AND (#{userId} IS NULL OR pvl.user_id = #{userId})
-              AND pvl.visited_at &gt;= #{cutoff}
+              AND pvl.visited_at >= #{cutoff}
             ORDER BY pvl.visited_at DESC
             LIMIT #{offset}, #{size}
             """)
@@ -59,7 +59,7 @@ public interface PostViewLogMapper extends BaseMapper<PostViewLogDO> {
             FROM post_view_log
             WHERE (#{postId} IS NULL OR post_id = #{postId})
               AND (#{userId} IS NULL OR user_id = #{userId})
-              AND visited_at &gt;= #{cutoff}
+              AND visited_at >= #{cutoff}
             """)
     long countPage(@Param("postId") Long postId,
                    @Param("userId") Long userId,
