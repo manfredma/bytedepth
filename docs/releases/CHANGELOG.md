@@ -85,6 +85,10 @@
 
 ## Unreleased
 
+### Changed
+
+- staging 使用深琥珀填充与金色描边的独立 favicon、PWA 图标和 manifest，与 production 标签页保持同一 `B` 标识但可直接区分环境。
+
 ### Added
 
 - 待下一版本开发内容。

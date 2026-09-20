@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <th:block th:replace="~{fragments/favicon-head :: favicon}"></th:block>
     <th:block th:replace="~{fragments/pwa-head :: pwa}"></th:block>
     <title>稍后再试 - bytedepth</title>
     <style>
