@@ -5,6 +5,7 @@ import manfred.bytedepth.app.analytics.ViewLogRetentionPolicy;
 import manfred.bytedepth.app.category.CreateCategoryCmdExe;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
+import manfred.bytedepth.app.comment.DeleteCommentCmdExe;
 import manfred.bytedepth.app.project.CreateProjectCmdExe;
 import manfred.bytedepth.app.search.ReindexAllPostsCmdExe;
 import manfred.bytedepth.app.user.ActivateUserCmdExe;
@@ -39,9 +40,10 @@ class SimpleAdminControllerCoverageTest {
         verify(create).execute("Java", "java", null);
 
         ListCommentsQryExe comments = mock(ListCommentsQryExe.class);
+        DeleteCommentCmdExe deleteComment = mock(DeleteCommentCmdExe.class);
         when(comments.findPage(2, 5, null, null)).thenReturn(new ListCommentsQryExe.PageResult(List.of(), 0));
         ExtendedModelMap commentModel = new ExtendedModelMap();
-        assertThat(new AdminCommentController(comments).list(commentModel, 2, 5, null, null)).isEqualTo("admin/comments/list");
+        assertThat(new AdminCommentController(comments, deleteComment).list(commentModel, 2, 5, null, null)).isEqualTo("admin/comments/list");
         assertThat(commentModel).containsKey("comments");
         assertThat(commentModel).containsKey("filterFields");
         assertThat(commentModel).containsKey("filterBaseUrl");

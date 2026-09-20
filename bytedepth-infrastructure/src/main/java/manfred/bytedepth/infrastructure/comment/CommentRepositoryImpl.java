@@ -36,6 +36,11 @@ public class CommentRepositoryImpl implements CommentRepository {
     }
 
     @Override
+    public void deleteById(Long id) {
+        commentMapper.deleteById(id);
+    }
+
+    @Override
     public List<Comment> findApprovedByPostId(Long postId) {
         return commentMapper.selectList(new LambdaQueryWrapper<CommentDO>()
                 .eq(CommentDO::getPostId, postId)

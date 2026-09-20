@@ -22,7 +22,7 @@ class MigrationScriptsTest {
     @Test
     void viewLogArchiveMigrationIsAdditiveAndDefinesAllAggregateKeys() throws IOException {
         String sql;
-        try (var stream = getClass().getResourceAsStream("/db/migration/V24__add_view_log_archive_stats.sql")) {
+        try (var stream = getClass().getResourceAsStream("/db/migration/V25__add_view_log_archive_stats.sql")) {
             assertThat(stream).isNotNull();
             sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
@@ -42,5 +42,17 @@ class MigrationScriptsTest {
                 "PRIMARY KEY (source)",
                 "deleted_rows_since_optimize");
         assertThat(sql).doesNotContain("DROP TABLE", "DELETE FROM");
+    }
+
+    @Test
+    void contentVersionMigrationInitializesRowsFromTimestamps() throws IOException {
+        try (var stream = getClass().getResourceAsStream("/db/migration/V24__add_post_content_version.sql")) {
+            assertThat(stream).isNotNull();
+            String sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+
+            assertThat(sql).contains("ADD COLUMN content_version INT NOT NULL DEFAULT 1");
+            assertThat(sql).contains("WHEN updated_at <> created_at THEN 2");
+            assertThat(sql).contains("ELSE 1");
+        }
     }
 }

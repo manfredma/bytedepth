@@ -52,7 +52,10 @@ async function selectArticleText(page, start, length) {
 }
 
 async function waitForAnnotationReady(page) {
-    await expect(page.locator('#post-article[data-bd-annotation-ready="true"]')).toBeVisible();
+    // Staging articles can be large enough for the mobile emulation to finish
+    // streaming the HTML after Playwright's default 5-second assertion timeout.
+    await expect(page.locator('#post-article[data-bd-annotation-ready="true"]'))
+        .toBeVisible({timeout: 15_000});
 }
 
 function visibleAnnotationMark(page, id) {
@@ -337,6 +340,10 @@ test.describe('划线评论', () => {
             const mark = page.locator(`mark[data-id="${annotation.id}"]`).first();
             await expect(feedItem).toBeVisible();
             await expect(mark).toBeVisible();
+            // 点击正文评注标签会触发生产代码的 smooth scroll；在测量并滚出划线前
+            // 用一次即时滚动取消动画，否则 window.scrollBy 可能与未完成的动画竞争，
+            // 导致滚动位置偶发被动画写回原处。
+            await mark.evaluate(element => element.scrollIntoView({block: 'center', behavior: 'auto'}));
             const attachedPosition = await page.evaluate(([triggerElement, outlineElement]) => {
                 const triggerRect = triggerElement.getBoundingClientRect();
                 const outlineRect = outlineElement.getBoundingClientRect();

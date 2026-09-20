@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:fragment="favicon">
+        <link th:if="${environment == 'staging'}" rel="icon" type="image/svg+xml" th:href="@{/icons/favicon-staging.svg}">
+        <link th:if="${environment != 'staging'}" rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+        <link th:if="${environment == 'staging'}" rel="icon" type="image/png" sizes="48x48" th:href="@{/icons/favicon-staging-48.png}">
+        <link th:if="${environment != 'staging'}" rel="icon" type="image/png" sizes="48x48" th:href="@{/icons/favicon-48.png}">
+        <link th:if="${environment == 'staging'}" rel="shortcut icon" th:href="@{/favicon-staging.ico}">
+        <link th:if="${environment != 'staging'}" rel="shortcut icon" th:href="@{/favicon.ico}">
+        <link th:if="${environment == 'staging'}" rel="apple-touch-icon" sizes="192x192" th:href="@{/icons/favicon-staging-192.png}">
+        <link th:if="${environment != 'staging'}" rel="apple-touch-icon" sizes="192x192" th:href="@{/icons/favicon-192.png}">
+    </th:block>
+</head>
+</html>

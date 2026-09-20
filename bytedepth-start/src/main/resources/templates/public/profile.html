@@ -3,7 +3,7 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="zh">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <th:block th:replace="~{fragments/favicon-head :: favicon}"></th:block>
     <link rel="stylesheet" th:href="@{/css/theme.css}">
     <script th:src="@{/js/theme-switcher.js}"></script>
     <title th:text="${profile.username} + ' - bytedepth'">个人主页</title>

@@ -12,6 +12,7 @@ class PostTest {
     void create_shouldSetDraftStatus() {
         Post post = Post.create("标题", "内容");
         assertEquals(PostStatus.DRAFT, post.getStatus());
+        assertEquals(1, post.getContentVersion());
         assertNotNull(post.getCreatedAt());
         assertNull(post.getPublishedAt());
         assertNull(post.getId());
@@ -108,5 +109,32 @@ class PostTest {
         assertEquals(3L, post.getSeriesId());
         assertEquals(4, post.getSeriesOrder());
         assertFalse(post.isOwnedBy(1L));
+    }
+
+    @Test
+    void updateContent_titleChange_incrementsContentVersion() {
+        Post post = Post.create("before", "body");
+
+        post.updateContent("after", "body");
+
+        assertEquals(2, post.getContentVersion());
+    }
+
+    @Test
+    void updateContent_bodyChange_incrementsContentVersion() {
+        Post post = Post.create("title", "before");
+
+        post.updateContent("title", "after");
+
+        assertEquals(2, post.getContentVersion());
+    }
+
+    @Test
+    void updateContent_withoutContentChange_keepsContentVersion() {
+        Post post = Post.create("title", "body");
+
+        post.updateContent("title", "body");
+
+        assertEquals(1, post.getContentVersion());
     }
 }

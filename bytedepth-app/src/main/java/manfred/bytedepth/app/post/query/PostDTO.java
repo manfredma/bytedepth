@@ -15,6 +15,7 @@ public class PostDTO {
     private String status;
     private LocalDateTime publishedAt;
     private LocalDateTime updatedAt;
+    private Integer contentVersion;
     private LocalDateTime createdAt;
     private Long categoryId;
     private String categoryName;

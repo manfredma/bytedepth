@@ -8,6 +8,7 @@ import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
 import manfred.bytedepth.app.comment.CommentDTO;
+import manfred.bytedepth.app.comment.DeleteCommentCmdExe;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
@@ -29,8 +30,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -60,6 +64,8 @@ class AdminCommentControllerTest {
     // AdminCommentController 依赖
     @MockitoBean
     private ListCommentsQryExe listCommentsQryExe;
+    @MockitoBean
+    private DeleteCommentCmdExe deleteCommentCmdExe;
 
     @Test
     void adminCommentList_withoutAuth_deniesAccess() throws Exception {
@@ -122,5 +128,33 @@ class AdminCommentControllerTest {
         mockMvc.perform(get("/admin/comments").param("authorName", " "))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("filterBaseUrl", "/admin/comments?"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void adminCanPhysicallyDeleteAComment() throws Exception {
+        mockMvc.perform(post("/admin/comments/42/delete").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/comments"));
+
+        verify(deleteCommentCmdExe).execute(42L);
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void adminCommentDelete_withoutCsrfIsRejectedBeforeDeleting() throws Exception {
+        mockMvc.perform(post("/admin/comments/42/delete"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(deleteCommentCmdExe);
+    }
+
+    @Test
+    @WithMockUser(authorities = {"blog:post:create"})
+    void adminCommentDelete_withoutDashboardAuthorityIsRejectedBeforeDeleting() throws Exception {
+        mockMvc.perform(post("/admin/comments/42/delete").with(csrf()))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(deleteCommentCmdExe);
     }
 }

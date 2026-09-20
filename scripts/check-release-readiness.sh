@@ -44,6 +44,8 @@ done
 cd "$REPOSITORY_ROOT"
 readonly CHANGELOG_FILE="$REPOSITORY_ROOT/docs/releases/CHANGELOG.md"
 
+bash "$REPOSITORY_ROOT/scripts/check-changelog-order.sh" "$CHANGELOG_FILE"
+
 TARGET_COMMIT="$(git rev-parse --verify "$TARGET_REF^{commit}" 2>/dev/null)" || {
     printf 'Release readiness refused: unable to resolve target ref %s.\n' "$TARGET_REF" >&2
     exit 1

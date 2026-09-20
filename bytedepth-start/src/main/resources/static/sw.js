@@ -2,7 +2,7 @@
 // 策略：内容指纹静态资源 cache-first，页面导航 network-first + 离线回退。
 // CSS / JS 的 URL 由 Spring 依据内容生成 hash；内容变更时自然使用新缓存键。
 
-const CACHE_NAME = 'bytedepth-v7';
+const CACHE_NAME = 'bytedepth-v8';
 
 // 预缓存的核心资源
 const PRECACHE_URLS = [
@@ -16,6 +16,11 @@ const PRECACHE_URLS = [
   '/icons/favicon-192.png',
   '/icons/favicon-512.png',
   '/favicon.ico',
+  '/icons/favicon-staging.svg',
+  '/icons/favicon-staging-48.png',
+  '/icons/favicon-staging-192.png',
+  '/icons/favicon-staging-512.png',
+  '/favicon-staging.ico',
   '/offline.html'
 ];
 

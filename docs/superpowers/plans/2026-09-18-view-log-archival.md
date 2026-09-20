@@ -92,7 +92,7 @@ git commit -m "feat: define view log retention policy"
 ### Task 2: Add the Flyway aggregate and archive-state schema
 
 **Files:**
-- Create: `bytedepth-start/src/main/resources/db/migration/V24__add_view_log_archive_stats.sql`
+- Create: `bytedepth-start/src/main/resources/db/migration/V25__add_view_log_archive_stats.sql`
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/MigrationScriptsTest.java`
 - Modify: `docs/architecture/database-schema.md`
 
@@ -100,13 +100,13 @@ git commit -m "feat: define view log retention policy"
 - The migration creates `post_view_hourly_stat`, `page_view_hourly_stat`, `post_view_country_daily_stat`, `page_view_country_daily_stat`, `view_log_archive_bucket`, and `view_log_tablespace_state` exactly as specified in Section 4 of the spec.
 - All aggregate counts are `BIGINT NOT NULL DEFAULT 0`; all aggregate tables use InnoDB and composite primary keys that support their query ranges.
 
-- [ ] **Step 1: Add failing migration contract assertions.** Assert V24 exists, uses all six table names, has both hourly primary keys, both daily country keys, both state-table primary keys, and does not contain `DROP TABLE` or `DELETE FROM`.
+- [ ] **Step 1: Add failing migration contract assertions.** Assert V25 exists, uses all six table names, has both hourly primary keys, both daily country keys, both state-table primary keys, and does not contain `DROP TABLE` or `DELETE FROM`.
 
 ```java
 @Test
 void viewLogArchiveMigrationIsAdditiveAndDefinesAllAggregateKeys() throws IOException {
     String sql;
-    try (var stream = getClass().getResourceAsStream("/db/migration/V24__add_view_log_archive_stats.sql")) {
+    try (var stream = getClass().getResourceAsStream("/db/migration/V25__add_view_log_archive_stats.sql")) {
         assertThat(stream).isNotNull();
         sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
     }
@@ -129,15 +129,15 @@ void viewLogArchiveMigrationIsAdditiveAndDefinesAllAggregateKeys() throws IOExce
 }
 ```
 
-- [ ] **Step 2: Run the migration test and confirm it fails because V24 is absent.**
+- [ ] **Step 2: Run the migration test and confirm it fails because V25 is absent.**
 
 Run: `./mvnw -pl bytedepth-start -am -Dtest=MigrationScriptsTest test -Dsort.skip=true`
 
-Expected: FAIL with the V24 resource assertion.
+Expected: FAIL with the V25 resource assertion.
 
-- [ ] **Step 3: Write the additive V24 migration.** Include indexes for `(post_id, stat_hour)`, `(page_path, stat_hour)`, `(country, stat_date)`, and archive candidate lookup by `(source, bucket_start)`; do not partition the existing raw tables.
+- [ ] **Step 3: Write the additive V25 migration.** Include indexes for `(post_id, stat_hour)`, `(page_path, stat_hour)`, `(country, stat_date)`, and archive candidate lookup by `(source, bucket_start)`; do not partition the existing raw tables.
 
-- [ ] **Step 4: Update the schema reference.** Add the six tables and V24 to `docs/architecture/database-schema.md`; document that raw tables remain the only source for detail fields, aggregate tables are PV-only, and the tablespace state stores only maintenance counters.
+- [ ] **Step 4: Update the schema reference.** Add the six tables and V25 to `docs/architecture/database-schema.md`; document that raw tables remain the only source for detail fields, aggregate tables are PV-only, and the tablespace state stores only maintenance counters.
 
 - [ ] **Step 5: Run the migration test and verify it passes without warnings.**
 
@@ -148,7 +148,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit the additive schema.**
 
 ```bash
-git add bytedepth-start/src/main/resources/db/migration/V24__add_view_log_archive_stats.sql \
+git add bytedepth-start/src/main/resources/db/migration/V25__add_view_log_archive_stats.sql \
   bytedepth-start/src/test/java/manfred/bytedepth/MigrationScriptsTest.java \
   docs/architecture/database-schema.md
 git commit -m "feat: add view log aggregate tables"
@@ -499,7 +499,7 @@ git commit -m "feat: maintain view log tablespaces"
 - [ ] **Step 2: Update the engineering analytics guide.** Document the two-level retention policy, Spring schedule, seven-day detail boundary, late-row handling, source-level tablespace counters, and that historical country statistics are daily.
 
 - [ ] **Step 3: Add a repeatable static check.** It must fail if:
-  - V24 is missing;
+  - V25 is missing;
   - archive SQL lacks aggregate-before-delete ordering markers;
   - detail SQL lacks a cutoff parameter;
   - the job does not use fixed delay and the named lock;
@@ -563,7 +563,7 @@ Run: `./deploy/deploy-staging.sh feat/view-log-archival`
 
 Use `https://staging-bytedepth.bytedepth.cn/` for all validation. Do not use the local application as integration or acceptance evidence.
 
-- [ ] **Step 6: Execute staging integration verification.** Verify Flyway V24, archive task startup, MySQL named lock behavior, aggregate-plus-raw counts, seven-day detail visibility, failed-transaction retry, late-row reconciliation, and tablespace size reporting.
+- [ ] **Step 6: Execute staging integration verification.** Verify Flyway V25, archive task startup, MySQL named lock behavior, aggregate-plus-raw counts, seven-day detail visibility, failed-transaction retry, late-row reconciliation, and tablespace size reporting.
 
 - [ ] **Step 7: Execute staging E2E verification.** Exercise the admin analytics page and detail page across a range that crosses the archive boundary; verify hourly trend labels and daily country results.
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <link rel="icon" type="image/svg+xml" th:href="@{/icons/favicon.svg}">
+    <th:block th:replace="~{fragments/favicon-head :: favicon}"></th:block>
     <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>文章管理 - bytedepth</title>
     <style>

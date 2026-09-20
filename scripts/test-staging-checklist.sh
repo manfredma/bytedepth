@@ -6,6 +6,7 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly CHECKLIST="$SOURCE_ROOT/scripts/check-staging-checklist.sh"
 
 [[ -x "$CHECKLIST" ]]
+grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-changelog-order.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-run-local-quality.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-check-release-readiness.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-github-quality-workflow.sh"' "$CHECKLIST"

@@ -3,10 +3,13 @@ package manfred.bytedepth.adapter.web.admin;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.adapter.web.filter.FilterField;
 import manfred.bytedepth.app.comment.ListCommentsQryExe;
+import manfred.bytedepth.app.comment.DeleteCommentCmdExe;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.util.UriUtils;
@@ -20,6 +23,7 @@ import java.util.List;
 public class AdminCommentController {
 
     private final ListCommentsQryExe listCommentsQryExe;
+    private final DeleteCommentCmdExe deleteCommentCmdExe;
 
     @GetMapping
     @PreAuthorize("hasAuthority('admin:dashboard:view')")
@@ -40,6 +44,13 @@ public class AdminCommentController {
                 FilterField.number("postId", "文章 ID", postId == null ? "" : String.valueOf(postId), "数字")));
         model.addAttribute("filterBaseUrl", buildFilterBaseUrl(authorName, postId));
         return "admin/comments/list";
+    }
+
+    @PostMapping("/{id}/delete")
+    @PreAuthorize("hasAuthority('admin:dashboard:view')")
+    public String delete(@PathVariable Long id) {
+        deleteCommentCmdExe.execute(id);
+        return "redirect:/admin/comments";
     }
 
     private String buildFilterBaseUrl(String authorName, Long postId) {

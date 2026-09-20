@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-readonly MIGRATION="$ROOT/bytedepth-start/src/main/resources/db/migration/V24__add_view_log_archive_stats.sql"
+readonly MIGRATION="$ROOT/bytedepth-start/src/main/resources/db/migration/V25__add_view_log_archive_stats.sql"
 readonly ARCHIVE_MAPPER="$ROOT/bytedepth-infrastructure/src/main/resources/mapper/ViewLogArchiveMapper.xml"
 readonly POST_DETAIL="$ROOT/bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/PostViewLogMapper.java"
 readonly ARCHIVE_JOB="$ROOT/bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/ViewLogArchiveJob.java"

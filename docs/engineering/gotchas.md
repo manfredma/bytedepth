@@ -15,6 +15,8 @@
 - 不以编译代替测试；生产 Java 改动还必须通过变更覆盖率门禁。
 - 使用 `@ConfigurationProperties` 的不可变 record 如果声明了重载构造器，必须在 canonical constructor 上显式标注 `@ConstructorBinding`；否则本地单测可能通过，但完整 Spring/Testcontainers 上下文会因找不到默认构造器启动失败。对应属性类应由配置契约脚本检查。
 - **staging 门禁先预检、后执行**：部署、集成测试与 E2E 在单机上互斥，重复运行的时间主要来自镜像构建和启动浏览器，不应在 staging 上逐个猜测前提。先在本机用 runner 的 fake/fixture 测试验证脚本逻辑；首次 staging 运行前一次性确认部署 SHA、服务健康、可用磁盘、固定浏览器路径和真实 E2E 数据。失败时保存日志并只针对第一个可复现错误修复，修复先通过离线脚本测试，再重跑 staging。不要因猜测缺浏览器而安装系统 Chromium，也不要依赖会被数据同步清除的固定文章 slug。
+- **移动端文章 E2E 等待正文初始化**：staging 的长文章在移动 Chromium 下可能在 Playwright `goto(..., {waitUntil: 'commit'})` 后超过默认 5 秒才完成 HTML 流式传输；批注测试必须使用显式 15 秒的 `data-bd-annotation-ready` 等待超时，并保留固定 staging E2E 复验，不能把该时序失败误判为业务脚本异常。
+- 批注桌面端 E2E 点击正文“评注”标签会触发生产代码的平滑滚动；测试在测量划线位置或调用 `window.scrollBy` 前，必须先用即时 `scrollIntoView({behavior: 'auto'})` 取消该动画，否则动画与测试滚动竞争会导致偶发的视口位置断言失败。
 - Maven Release Plugin 会留下 `release.properties` 和 `pom.xml.releaseBackup`。它们是本机事务状态而非项目文件；发布前必须工作区干净，发布成功、失败或中断后在确认不需 rollback 时执行 `release:clean`，并且永不提交这些文件。完整恢复规则见 [发布管理](../releases/README.md)。
 
 ## 部署

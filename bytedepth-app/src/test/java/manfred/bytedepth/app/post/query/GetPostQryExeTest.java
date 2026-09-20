@@ -45,6 +45,7 @@ class GetPostQryExeTest {
         assertEquals("java-guide", dto.getSlug());
         assertEquals("Java 指南", dto.getTitle());
         assertEquals("内容", dto.getContent());
+        assertEquals(1, dto.getContentVersion());
         assertEquals("PUBLISHED", dto.getStatus());
         assertEquals(7L, dto.getCategoryId());
         assertEquals(9L, dto.getAuthorId());

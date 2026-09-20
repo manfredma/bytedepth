@@ -51,6 +51,7 @@ class UpdatePostCmdExeTest {
 
         assertEquals("新标题", existing.getTitle());
         assertEquals("新内容", existing.getContent());
+        assertEquals(2, existing.getContentVersion());
         verify(postRepository).save(existing);
     }
 
@@ -166,6 +167,7 @@ class UpdatePostCmdExeTest {
 
         updatePostCmdExe.execute(1L, "标题", "相同内容");
 
+        assertEquals(1, existing.getContentVersion());
         verify(annotationRepository, never()).findByPostId(any());
         verify(annotationRecalculator, never()).recalculate(any(), any(), any());
         verify(postRepository).save(existing);

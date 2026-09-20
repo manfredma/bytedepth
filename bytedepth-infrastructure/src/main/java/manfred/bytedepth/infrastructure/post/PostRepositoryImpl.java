@@ -222,6 +222,7 @@ public class PostRepositoryImpl implements PostRepository {
         d.setCreatedAt(post.getCreatedAt());
         d.setPublishedAt(post.getPublishedAt());
         d.setUpdatedAt(post.getUpdatedAt());
+        d.setContentVersion(post.getContentVersion());
         d.setCategoryId(post.getCategoryId());
         d.setSeriesId(post.getSeriesId());
         d.setSeriesOrder(post.getSeriesOrder());
@@ -235,7 +236,8 @@ public class PostRepositoryImpl implements PostRepository {
             d.getCreatedAt(), d.getPublishedAt(), d.getUpdatedAt(),
             d.getCategoryId(),
             d.getAuthorId(),
-            d.getFeatured()
+            d.getFeatured(),
+            d.getContentVersion()
         );
         if (d.getSeriesId() != null) {
             post.assignSeries(d.getSeriesId(), d.getSeriesOrder());

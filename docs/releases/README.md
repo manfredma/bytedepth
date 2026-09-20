@@ -12,6 +12,7 @@
 4. Tag 所指提交中的 Maven 版本必须与 Tag 一致：`v1.2.3` 对应 `1.2.3`；发布后 `main` 必须推进到下一个 `-SNAPSHOT` 版本。
 5. 每个版本必须在 [CHANGELOG.md](CHANGELOG.md) 中记录用户可见变更、风险或迁移说明；无变更记录不允许打 Tag。运行时代码进入 staging 前必须先通过 `Unreleased` 门禁。
 6. 部署结果必须记录版本、完整 commit SHA、目标节点、时间、验收结论和回滚基线。机器上的运行状态用于实时查询；变更内容以 Git Tag 和 Changelog 为准。
+7. `CHANGELOG.md` 的 `## Unreleased` 必须置顶；正式版本必须按 SemVer 版本号严格倒序排列。版本页按文件顺序渲染，不在运行时自行排序；`scripts/check-changelog-order.sh` 及其契约测试会在本地质量、staging 清单和发布前门禁中校验该规则。
 
 ## 标准开发到发布流程
 

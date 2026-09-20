@@ -164,13 +164,26 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void publicPostDetailShowsContentVersionMetadata() throws Exception {
+        String template = classpathText("/templates/public/posts/detail.html");
+
+        assertThat(template)
+                .contains("版本 v")
+                .contains("${post.contentVersion}");
+    }
+
+    @Test
     void serviceWorkerUsesVersionedCacheFirstStaticAssets() throws Exception {
         String sw = classpathText("/static/sw.js");
 
         assertThat(sw)
-                .contains("bytedepth-v7")
+                .contains("bytedepth-v8")
                 .contains("/favicon.ico")
                 .contains("/icons/favicon-48.png")
+                .contains("/favicon-staging.ico")
+                .contains("/icons/favicon-staging-48.png")
+                .contains("/icons/favicon-staging-192.png")
+                .contains("/icons/favicon-staging-512.png")
                 .contains("内容指纹 URL cache-first")
                 .contains("if (request.method !== 'GET') return;")
                 .contains("if (cached) return cached")
@@ -181,13 +194,16 @@ class ThemeAssetsTest {
     @Test
     void siteIconUsesOneHighContrastAssetFamilyForSearchAndPwa() throws Exception {
         String pwaHead = classpathText("/templates/fragments/pwa-head.html");
+        String faviconFragment = classpathText("/templates/fragments/favicon-head.html");
         String manifest = classpathText("/static/manifest.json");
 
         assertThat(pwaHead)
+                .contains("fragments/favicon-head :: favicon")
+                .doesNotContain("/icons/logo.svg");
+        assertThat(faviconFragment)
                 .contains("/icons/favicon-48.png")
                 .contains("/icons/favicon-192.png")
-                .contains("/favicon.ico")
-                .doesNotContain("/icons/logo.svg");
+                .contains("/favicon.ico");
         assertThat(manifest)
                 .contains("/icons/favicon.svg")
                 .contains("/icons/favicon-192.png")
@@ -198,6 +214,42 @@ class ThemeAssetsTest {
         assertThat(getClass().getResource("/static/icons/favicon-48.png")).isNotNull();
         assertThat(getClass().getResource("/static/icons/favicon-192.png")).isNotNull();
         assertThat(getClass().getResource("/static/icons/favicon-512.png")).isNotNull();
+    }
+
+    @Test
+    void stagingUsesASeparateAmberFaviconFamilyWithoutChangingTheProductionIcon() throws Exception {
+        String faviconFragment = classpathText("/templates/fragments/favicon-head.html");
+        String pwaHead = classpathText("/templates/fragments/pwa-head.html");
+        String stagingManifest = classpathText("/static/manifest-staging.json");
+        String stagingSvg = classpathText("/static/icons/favicon-staging.svg");
+
+        assertThat(faviconFragment)
+                .contains("environment == 'staging'")
+                .contains("/icons/favicon-staging.svg")
+                .contains("/icons/favicon-staging-48.png")
+                .contains("/icons/favicon-staging-192.png")
+                .contains("/favicon-staging.ico")
+                .contains("/icons/favicon.svg")
+                .contains("/icons/favicon-48.png")
+                .contains("/icons/favicon-192.png")
+                .contains("/favicon.ico");
+        assertThat(pwaHead)
+                .contains("/manifest-staging.json")
+                .contains("/manifest.json");
+        assertThat(stagingManifest)
+                .contains("bytedepth staging")
+                .contains("/icons/favicon-staging.svg")
+                .contains("/icons/favicon-staging-192.png")
+                .contains("/icons/favicon-staging-512.png");
+        assertThat(stagingSvg)
+                .contains("fill=\"#78350f\"")
+                .contains("stroke=\"#fbbf24\"")
+                .contains(">B</text>");
+
+        assertThat(getClass().getResource("/static/favicon-staging.ico")).isNotNull();
+        assertThat(getClass().getResource("/static/icons/favicon-staging-48.png")).isNotNull();
+        assertThat(getClass().getResource("/static/icons/favicon-staging-192.png")).isNotNull();
+        assertThat(getClass().getResource("/static/icons/favicon-staging-512.png")).isNotNull();
     }
 
     @Test
