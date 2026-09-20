@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="manfred.bytedepth.infrastructure.stats.ViewLogTablespaceMaintenanceMapper">
+
+    <select id="findState" resultType="manfred.bytedepth.infrastructure.stats.ViewLogTablespaceState">
+        SELECT deleted_rows_since_optimize
+        FROM view_log_tablespace_state
+        WHERE source = #{source.value}
+    </select>
+
+    <select id="findMetrics" resultType="manfred.bytedepth.infrastructure.stats.ViewLogTablespaceMetrics">
+        SELECT COALESCE(data_length, 0) AS data_length,
+               COALESCE(data_free, 0) AS data_free_bytes
+        FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+          AND table_name =
+        <choose>
+            <when test="source.name() == 'POST'">'post_view_log'</when>
+            <when test="source.name() == 'PAGE'">'page_view_log'</when>
+        </choose>
+    </select>
+
+    <update id="resetDeletedRows">
+        UPDATE view_log_tablespace_state
+        SET deleted_rows_since_optimize = 0,
+            last_optimized_at = NOW(),
+            updated_at = NOW()
+        WHERE source = #{source.value}
+    </update>
+</mapper>

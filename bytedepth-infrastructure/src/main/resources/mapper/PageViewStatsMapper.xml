@@ -3,72 +3,78 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="manfred.bytedepth.infrastructure.stats.PageViewStatsMapper">
 
-    <!-- 页面访问排名 -->
-    <select id="topPages"
-            resultType="manfred.bytedepth.app.analytics.PageViewRankDTO">
-        SELECT page_path,
-               COUNT(*)     AS view_count,
-               0.0          AS percent
-        FROM page_view_log
-        WHERE visited_at &gt;= #{startTime}
-          AND visited_at &lt;= #{endTime}
-        GROUP BY page_path
-        ORDER BY view_count DESC
-        LIMIT #{limit}
+    <!-- 页面排名：历史小时 PV + 尚未归档的原始明细。 -->
+    <select id="topPages" resultType="manfred.bytedepth.app.analytics.PageViewRankDTO">
+        SELECT v.page_path, SUM(v.view_count) AS view_count, 0.0 AS percent
+        FROM (
+            SELECT page_path, view_count FROM page_view_hourly_stat
+            WHERE stat_hour &gt;= #{startTime} AND stat_hour &lt; DATE_ADD(#{endTime}, INTERVAL 1 SECOND)
+            UNION ALL
+            SELECT page_path, COUNT(*) AS view_count FROM page_view_log
+            WHERE visited_at &gt;= #{startTime} AND visited_at &lt; DATE_ADD(#{endTime}, INTERVAL 1 SECOND)
+            GROUP BY page_path
+        ) v GROUP BY v.page_path ORDER BY view_count DESC LIMIT #{limit}
     </select>
 
-    <!-- 页面访问：国家/地区分布 -->
-    <select id="pageCountryStats"
-            resultType="manfred.bytedepth.app.analytics.CountryViewStatDTO">
-        SELECT COALESCE(NULLIF(country, ''), '未知') AS country,
-               COUNT(*)                              AS view_count,
-               0.0                                  AS percent
-        FROM page_view_log
-        WHERE visited_at &gt;= #{startTime}
-          AND visited_at &lt;= #{endTime}
-        GROUP BY country
-        ORDER BY view_count DESC
-        LIMIT 30
+    <!-- 国家分布：永久日统计 + 原始明细。 -->
+    <select id="pageCountryStats" resultType="manfred.bytedepth.app.analytics.CountryViewStatDTO">
+        SELECT v.country, SUM(v.view_count) AS view_count, 0.0 AS percent
+        FROM (
+            SELECT country, view_count FROM page_view_country_daily_stat
+            WHERE stat_date &gt;= DATE(#{startTime})
+              AND stat_date &lt; DATE(DATE_ADD(#{endTime}, INTERVAL 1 SECOND))
+            UNION ALL
+            SELECT COALESCE(NULLIF(country, ''), '未知') AS country, COUNT(*) AS view_count
+            FROM page_view_log
+            WHERE visited_at &gt;= #{startTime} AND visited_at &lt; DATE_ADD(#{endTime}, INTERVAL 1 SECOND)
+            GROUP BY COALESCE(NULLIF(country, ''), '未知')
+        ) v GROUP BY v.country ORDER BY view_count DESC LIMIT 30
     </select>
 
-    <!-- 指定国家内页面排名 -->
-    <select id="countryTopPages"
-            resultType="manfred.bytedepth.app.analytics.PageViewRankDTO">
-        SELECT page_path,
-               COUNT(*) AS view_count,
-               0.0      AS percent
-        FROM page_view_log
-        WHERE visited_at &gt;= #{startTime}
-          AND visited_at &lt;= #{endTime}
-          AND country = #{country}
-        GROUP BY page_path
-        ORDER BY view_count DESC
-        LIMIT #{limit}
+    <!-- 指定国家内页面排名。 -->
+    <select id="countryTopPages" resultType="manfred.bytedepth.app.analytics.PageViewRankDTO">
+        SELECT v.page_path, SUM(v.view_count) AS view_count, 0.0 AS percent
+        FROM (
+            SELECT page_path, view_count FROM page_view_country_daily_stat
+            WHERE stat_date &gt;= DATE(#{startTime})
+              AND stat_date &lt; DATE(DATE_ADD(#{endTime}, INTERVAL 1 SECOND))
+              AND country = #{country}
+            UNION ALL
+            SELECT page_path, COUNT(*) AS view_count FROM page_view_log
+            WHERE visited_at &gt;= #{startTime} AND visited_at &lt; DATE_ADD(#{endTime}, INTERVAL 1 SECOND)
+              AND COALESCE(NULLIF(country, ''), '未知') = #{country}
+            GROUP BY page_path
+        ) v GROUP BY v.page_path ORDER BY view_count DESC LIMIT #{limit}
     </select>
 
-    <!-- 单页面时间趋势 -->
-    <select id="pageTrend"
-            resultType="manfred.bytedepth.app.analytics.TrendPointDTO">
-        SELECT DATE_FORMAT(visited_at, #{format}) AS label,
-               COUNT(*)                           AS view_count
-        FROM page_view_log
-        WHERE page_path = #{pagePath}
-          AND visited_at &gt;= #{startTime}
-          AND visited_at &lt;= #{endTime}
-        GROUP BY label
-        ORDER BY label ASC
+    <!-- 单页面趋势：小时统计 + 原始明细统一到小时桶。 -->
+    <select id="pageTrend" resultType="manfred.bytedepth.app.analytics.TrendPointDTO">
+        SELECT DATE_FORMAT(v.stat_hour, #{format}) AS label, SUM(v.view_count) AS view_count
+        FROM (
+            SELECT stat_hour, view_count FROM page_view_hourly_stat
+            WHERE page_path = #{pagePath} AND stat_hour &gt;= #{startTime}
+              AND stat_hour &lt; DATE_ADD(#{endTime}, INTERVAL 1 SECOND)
+            UNION ALL
+            SELECT CAST(DATE_FORMAT(visited_at, '%Y-%m-%d %H:00:00') AS DATETIME) AS stat_hour, COUNT(*) AS view_count
+            FROM page_view_log
+            WHERE page_path = #{pagePath} AND visited_at &gt;= #{startTime}
+              AND visited_at &lt; DATE_ADD(#{endTime}, INTERVAL 1 SECOND)
+            GROUP BY CAST(DATE_FORMAT(visited_at, '%Y-%m-%d %H:00:00') AS DATETIME)
+        ) v GROUP BY label ORDER BY label ASC
     </select>
 
-    <!-- 页面访问总体趋势 -->
-    <select id="pageOverviewTrend"
-            resultType="manfred.bytedepth.app.analytics.TrendPointDTO">
-        SELECT DATE_FORMAT(visited_at, #{format}) AS label,
-               COUNT(*)                           AS view_count
-        FROM page_view_log
-        WHERE visited_at &gt;= #{startTime}
-          AND visited_at &lt;= #{endTime}
-        GROUP BY label
-        ORDER BY label ASC
+    <!-- 页面总体趋势：小时统计 + 原始明细统一到小时桶。 -->
+    <select id="pageOverviewTrend" resultType="manfred.bytedepth.app.analytics.TrendPointDTO">
+        SELECT DATE_FORMAT(v.stat_hour, #{format}) AS label, SUM(v.view_count) AS view_count
+        FROM (
+            SELECT stat_hour, view_count FROM page_view_hourly_stat
+            WHERE stat_hour &gt;= #{startTime} AND stat_hour &lt; DATE_ADD(#{endTime}, INTERVAL 1 SECOND)
+            UNION ALL
+            SELECT CAST(DATE_FORMAT(visited_at, '%Y-%m-%d %H:00:00') AS DATETIME) AS stat_hour, COUNT(*) AS view_count
+            FROM page_view_log
+            WHERE visited_at &gt;= #{startTime} AND visited_at &lt; DATE_ADD(#{endTime}, INTERVAL 1 SECOND)
+            GROUP BY CAST(DATE_FORMAT(visited_at, '%Y-%m-%d %H:00:00') AS DATETIME)
+        ) v GROUP BY label ORDER BY label ASC
     </select>
 
 </mapper>

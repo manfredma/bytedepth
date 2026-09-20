@@ -21,7 +21,7 @@
 ### Task 1: Record the architecture and release intent
 
 **Files:**
-- Create: `docs/architecture/decisions/0009-post-content-version.md`
+- Create: `docs/architecture/decisions/0010-post-content-version.md`
 - Modify: `docs/architecture/decisions/README.md`
 - Create: `docs/superpowers/specs/2026-09-20-post-content-version-design.md`
 - Modify: `docs/releases/CHANGELOG.md`

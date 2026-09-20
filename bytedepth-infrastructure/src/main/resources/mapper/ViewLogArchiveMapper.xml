@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="manfred.bytedepth.infrastructure.stats.ViewLogArchiveMapper">
+
+    <select id="findCandidateBuckets" resultType="java.time.LocalDateTime">
+        SELECT DISTINCT CAST(DATE_FORMAT(visited_at, '%Y-%m-%d %H:00:00') AS DATETIME) AS bucket_start
+        FROM
+        <choose>
+            <when test="source.name() == 'POST'">post_view_log</when>
+            <when test="source.name() == 'PAGE'">page_view_log</when>
+        </choose>
+        WHERE visited_at &lt; #{cutoff}
+        ORDER BY bucket_start ASC
+        LIMIT #{maxBuckets}
+    </select>
+
+    <select id="findBucketState" resultType="manfred.bytedepth.infrastructure.stats.ViewLogArchiveBucket">
+        SELECT bucket_start, archived_row_count
+        FROM view_log_archive_bucket
+        WHERE source = #{source.value}
+          AND bucket_start = #{bucketStart}
+    </select>
+
+    <select id="countRows" resultType="long">
+        SELECT COUNT(*)
+        FROM
+        <choose>
+            <when test="source.name() == 'POST'">post_view_log</when>
+            <when test="source.name() == 'PAGE'">page_view_log</when>
+        </choose>
+        WHERE visited_at &gt;= #{bucketStart}
+          AND visited_at &lt; #{bucketEnd}
+    </select>
+
+    <insert id="insertExactHourlyAggregates">
+        INSERT INTO
+        <choose>
+            <when test="source.name() == 'POST'">post_view_hourly_stat (stat_hour, post_id, view_count)</when>
+            <when test="source.name() == 'PAGE'">page_view_hourly_stat (stat_hour, page_path, view_count)</when>
+        </choose>
+        SELECT CAST(DATE_FORMAT(visited_at, '%Y-%m-%d %H:00:00') AS DATETIME),
+        <choose>
+            <when test="source.name() == 'POST'">post_id</when>
+            <when test="source.name() == 'PAGE'">page_path</when>
+        </choose>, COUNT(*)
+        FROM
+        <choose>
+            <when test="source.name() == 'POST'">post_view_log</when>
+            <when test="source.name() == 'PAGE'">page_view_log</when>
+        </choose>
+        WHERE visited_at &gt;= #{bucketStart}
+          AND visited_at &lt; #{bucketEnd}
+        GROUP BY 1, 2
+    </insert>
+
+    <insert id="insertExactCountryAggregates">
+        INSERT INTO
+        <choose>
+            <when test="source.name() == 'POST'">post_view_country_daily_stat (stat_date, post_id, country, view_count)</when>
+            <when test="source.name() == 'PAGE'">page_view_country_daily_stat (stat_date, page_path, country, view_count)</when>
+        </choose>
+        SELECT DATE(visited_at),
+        <choose>
+            <when test="source.name() == 'POST'">post_id</when>
+            <when test="source.name() == 'PAGE'">page_path</when>
+        </choose>, COALESCE(NULLIF(country, ''), '未知'), COUNT(*)
+        FROM
+        <choose>
+            <when test="source.name() == 'POST'">post_view_log</when>
+            <when test="source.name() == 'PAGE'">page_view_log</when>
+        </choose>
+        WHERE visited_at &gt;= #{bucketStart}
+          AND visited_at &lt; #{bucketEnd}
+        GROUP BY 1, 2, 3
+        ON DUPLICATE KEY UPDATE view_count = view_count + VALUES(view_count)
+    </insert>
+
+    <insert id="incrementHourlyAggregates">
+        INSERT INTO
+        <choose>
+            <when test="source.name() == 'POST'">post_view_hourly_stat (stat_hour, post_id, view_count)</when>
+            <when test="source.name() == 'PAGE'">page_view_hourly_stat (stat_hour, page_path, view_count)</when>
+        </choose>
+        SELECT CAST(DATE_FORMAT(visited_at, '%Y-%m-%d %H:00:00') AS DATETIME),
+        <choose>
+            <when test="source.name() == 'POST'">post_id</when>
+            <when test="source.name() == 'PAGE'">page_path</when>
+        </choose>, COUNT(*)
+        FROM
+        <choose>
+            <when test="source.name() == 'POST'">post_view_log</when>
+            <when test="source.name() == 'PAGE'">page_view_log</when>
+        </choose>
+        WHERE visited_at &gt;= #{bucketStart}
+          AND visited_at &lt; #{bucketEnd}
+        GROUP BY 1, 2
+        ON DUPLICATE KEY UPDATE view_count = view_count + VALUES(view_count)
+    </insert>
+
+    <insert id="incrementCountryAggregates">
+        INSERT INTO
+        <choose>
+            <when test="source.name() == 'POST'">post_view_country_daily_stat (stat_date, post_id, country, view_count)</when>
+            <when test="source.name() == 'PAGE'">page_view_country_daily_stat (stat_date, page_path, country, view_count)</when>
+        </choose>
+        SELECT DATE(visited_at),
+        <choose>
+            <when test="source.name() == 'POST'">post_id</when>
+            <when test="source.name() == 'PAGE'">page_path</when>
+        </choose>, COALESCE(NULLIF(country, ''), '未知'), COUNT(*)
+        FROM
+        <choose>
+            <when test="source.name() == 'POST'">post_view_log</when>
+            <when test="source.name() == 'PAGE'">page_view_log</when>
+        </choose>
+        WHERE visited_at &gt;= #{bucketStart}
+          AND visited_at &lt; #{bucketEnd}
+        GROUP BY 1, 2, 3
+        ON DUPLICATE KEY UPDATE view_count = view_count + VALUES(view_count)
+    </insert>
+
+    <delete id="deleteBucket">
+        DELETE FROM
+        <choose>
+            <when test="source.name() == 'POST'">post_view_log</when>
+            <when test="source.name() == 'PAGE'">page_view_log</when>
+        </choose>
+        WHERE visited_at &gt;= #{bucketStart}
+          AND visited_at &lt; #{bucketEnd}
+    </delete>
+
+    <insert id="insertBucketState">
+        INSERT INTO view_log_archive_bucket (source, bucket_start, archived_at, archived_row_count)
+        VALUES (#{source.value}, #{bucketStart}, NOW(), #{deletedRows})
+    </insert>
+
+    <update id="updateBucketState">
+        UPDATE view_log_archive_bucket
+        SET archived_at = NOW(), archived_row_count = archived_row_count + #{deletedRows}
+        WHERE source = #{source.value}
+          AND bucket_start = #{bucketStart}
+    </update>
+
+    <insert id="incrementTablespaceDeletedRows">
+        INSERT INTO view_log_tablespace_state
+            (source, deleted_rows_since_optimize, updated_at)
+        VALUES (#{source.value}, #{deletedRows}, NOW())
+        ON DUPLICATE KEY UPDATE
+            deleted_rows_since_optimize = deleted_rows_since_optimize + VALUES(deleted_rows_since_optimize),
+            updated_at = NOW()
+    </insert>
+</mapper>

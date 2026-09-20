@@ -23,6 +23,19 @@
 - `reading-progress` 端点显式豁免 CSRF（`SecurityConfig` 中 `ignoringRequestMatchers`）。
 - 完成判定：滚动深度 ≥ 80，或短文（正文不超一屏）且有效阅读 ≥ 15 秒。
 
+## 访问日志保留与归档
+
+访问统计采用“两层数据”策略：
+
+- **明细层**：`post_view_log` 与 `page_view_log` 只保留最近 7 天，后台明细查询也以当前时间减 7 天作为下界；归档边界按 Asia/Shanghai 计算。
+- **统计层**：超过 7 天的明细按小时汇总文章/页面 PV，按自然日汇总国家 PV。统计表不保存 IP、User-Agent、Referer、城市、访问令牌或阅读进度，因此可长期保留。
+
+归档任务由应用内 Spring `@Scheduled` 执行，默认固定延迟 10 分钟，每次最多处理 24 个小时桶，并使用 MySQL named lock `bytedepth:view-log-archive` 防止重复执行。一个小时桶先写入或累加小时 PV、国家日 PV，再删除对应明细；聚合、删除、归档状态和表空间删除计数在同一事务中完成。
+
+迟到数据仍可补偿：已处理小时再次出现明细时，任务会读取归档状态，累加对应聚合并再次删除该小时明细，不覆盖已有统计。统计查询会合并聚合表与最近 7 天明细，因此归档过程不会改变查询口径。
+
+每个来源分别累计删除量（文章、页面）。默认累计删除达到 100,000 行，或 MySQL `information_schema.tables.data_free` 达到 100 MiB 时，才会在 Asia/Shanghai 每周日 03:30 低峰执行固定的 `OPTIMIZE TABLE post_view_log` / `OPTIMIZE TABLE page_view_log`。表空间任务使用独立 named lock `bytedepth:view-log-tablespace`，每张表单独执行；只有成功的表才清零自己的计数，失败表保留计数等待下次重试。
+
 ## 分析查询
 
 - 预设时间按自然周期查询：本周为周一至周日、本月为月初至月末、本年为年初至年末；未来时间桶补 0。自定义 `from`/`to` 范围优先于 `period`。

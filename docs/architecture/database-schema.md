@@ -224,6 +224,67 @@ erDiagram
 | city | VARCHAR(64) | | |
 | visited_at | DATETIME | NOT NULL | |
 
+## 访问统计聚合表
+
+原始访问日志只作为近 7 天访问明细和归档输入源；以下表只保存 PV 聚合，不保存 IP、User-Agent、Referer、城市、访问令牌或阅读进度等明细字段。V25 由 Spring 定时任务按小时归档写入。
+
+### post_view_hourly_stat — 文章小时 PV
+
+| 列 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| stat_hour | DATETIME | PK, NOT NULL | 小时起点（Asia/Shanghai） |
+| post_id | BIGINT | PK, NOT NULL | 文章 ID |
+| view_count | BIGINT | NOT NULL, DEFAULT 0 | 该小时文章 PV |
+
+主键：`(stat_hour, post_id)`；查询索引：`(post_id, stat_hour)`。
+
+### page_view_hourly_stat — 页面小时 PV
+
+| 列 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| stat_hour | DATETIME | PK, NOT NULL | 小时起点（Asia/Shanghai） |
+| page_path | VARCHAR(255) | PK, NOT NULL | 页面路径 |
+| view_count | BIGINT | NOT NULL, DEFAULT 0 | 该小时页面 PV |
+
+主键：`(stat_hour, page_path)`；查询索引：`(page_path, stat_hour)`。
+
+### post_view_country_daily_stat — 文章国家日 PV
+
+| 列 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| stat_date | DATE | PK, NOT NULL | 自然日（Asia/Shanghai） |
+| post_id | BIGINT | PK, NOT NULL | 文章 ID |
+| country | VARCHAR(64) | PK, NOT NULL | 国家，空值为 未知 |
+| view_count | BIGINT | NOT NULL, DEFAULT 0 | 该日该文章该国家 PV |
+
+主键：`(stat_date, post_id, country)`；查询索引：`(post_id, stat_date)`、`(country, stat_date)`。
+
+### page_view_country_daily_stat — 页面国家日 PV
+
+字段与 `post_view_country_daily_stat` 相同，将 `post_id` 替换为 `page_path`。主键：`(stat_date, page_path, country)`；查询索引：`(page_path, stat_date)`、`(country, stat_date)`。
+
+### view_log_archive_bucket — 访问日志小时归档状态
+
+| 列 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| source | VARCHAR(16) | PK, NOT NULL | `post` 或 `page` |
+| bucket_start | DATETIME | PK, NOT NULL | 已处理小时起点 |
+| archived_at | DATETIME | NOT NULL | 最近一次归档完成时间 |
+| archived_row_count | BIGINT | NOT NULL, DEFAULT 0 | 本次删除的明细数 |
+
+主键：`(source, bucket_start)`，用于区分首次归档与迟到数据补偿。
+
+### view_log_tablespace_state — 表空间维护状态
+
+| 列 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| source | VARCHAR(16) | PK, NOT NULL | `post` 或 `page` |
+| deleted_rows_since_optimize | BIGINT | NOT NULL, DEFAULT 0 | 上次成功表空间维护后的累计删除数 |
+| last_optimized_at | DATETIME | NULL | 最近一次成功维护时间 |
+| updated_at | DATETIME | NOT NULL | 状态更新时间 |
+
+该表只保存维护计数，不保存访问明细；只有对应 `OPTIMIZE TABLE` 成功后才清零计数。
+
 ## 系统表
 
 ### page_stats — 页面访问统计
@@ -282,5 +343,6 @@ V10 引入统一 `user` 表后，`admin_user` 的数据已迁移到 `user`，该
 | V21 | upgrade_post_annotations_for_visibility | post_annotation 可见性与匿名归属 |
 | V22 | add_annotation_deleted_flag | post_annotation.deleted |
 | V23 | drop_persistent_logins | 删除 persistent_logins |
+| V25 | add_view_log_archive_stats | 访问日志小时/国家聚合、归档状态、表空间维护状态 |
 
 V5、V7、V8、V9、V16、V17 为种子数据迁移（分类、权限），不涉及表结构变更。
