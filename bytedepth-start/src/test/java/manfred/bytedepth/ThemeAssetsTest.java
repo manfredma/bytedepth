@@ -164,6 +164,15 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void publicPostDetailShowsContentVersionMetadata() throws Exception {
+        String template = classpathText("/templates/public/posts/detail.html");
+
+        assertThat(template)
+                .contains("版本 v")
+                .contains("${post.contentVersion}");
+    }
+
+    @Test
     void serviceWorkerUsesVersionedCacheFirstStaticAssets() throws Exception {
         String sw = classpathText("/static/sw.js");
 

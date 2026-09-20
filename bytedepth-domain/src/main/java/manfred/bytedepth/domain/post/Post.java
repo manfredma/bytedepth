@@ -4,6 +4,7 @@ import lombok.Getter;
 import manfred.bytedepth.domain.common.DomainException;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Getter
 public class Post {
@@ -18,6 +19,7 @@ public class Post {
     private LocalDateTime createdAt;
     private LocalDateTime publishedAt;
     private LocalDateTime updatedAt;
+    private Integer contentVersion;
     private Long categoryId;
     private Long seriesId;
     private Integer seriesOrder;
@@ -44,6 +46,7 @@ public class Post {
         post.featured = false;
         post.createdAt = LocalDateTime.now();
         post.updatedAt = LocalDateTime.now();
+        post.contentVersion = 1;
         return post;
     }
 
@@ -59,6 +62,7 @@ public class Post {
         post.createdAt = createdAt;
         post.publishedAt = publishedAt;
         post.updatedAt = updatedAt;
+        post.contentVersion = 1;
         return post;
     }
 
@@ -86,6 +90,15 @@ public class Post {
                                    LocalDateTime createdAt, LocalDateTime publishedAt,
                                    LocalDateTime updatedAt, Long categoryId,
                                    Long authorId, Boolean featured) {
+        return reconstruct(id, slug, title, content, status, createdAt, publishedAt, updatedAt,
+                categoryId, authorId, featured, 1);
+    }
+
+    /** 含内容版本号的完整重建（持久层使用）。 */
+    public static Post reconstruct(Long id, String slug, String title, String content, PostStatus status,
+                                   LocalDateTime createdAt, LocalDateTime publishedAt,
+                                   LocalDateTime updatedAt, Long categoryId,
+                                   Long authorId, Boolean featured, Integer contentVersion) {
         Post post = new Post();
         post.id = id;
         post.slug = slug;
@@ -98,6 +111,7 @@ public class Post {
         post.publishedAt = publishedAt;
         post.updatedAt = updatedAt;
         post.categoryId = categoryId;
+        post.contentVersion = contentVersion == null ? 1 : contentVersion;
         return post;
     }
 
@@ -120,9 +134,13 @@ public class Post {
     }
 
     public void updateContent(String title, String content) {
+        boolean contentChanged = !Objects.equals(this.title, title) || !Objects.equals(this.content, content);
         this.title = title;
         this.content = content;
         this.updatedAt = LocalDateTime.now();
+        if (contentChanged) {
+            this.contentVersion++;
+        }
     }
 
     public void delete() {

@@ -41,6 +41,7 @@ class PostRepositoryImplTest {
         assertEquals("Title", saved.getTitle());
         assertEquals("Content", saved.getContent());
         assertEquals(7L, saved.getAuthorId());
+        assertEquals(1, saved.getContentVersion());
         assertFalse(saved.getFeatured());
         verify(postMapper).insert(any(PostDO.class));
     }
@@ -57,6 +58,7 @@ class PostRepositoryImplTest {
 
         assertEquals(5L, saved.getId());
         assertEquals("Updated", saved.getTitle());
+        assertEquals(1, saved.getContentVersion());
         assertTrue(saved.getFeatured());
         verify(postMapper).updateById(any(PostDO.class));
     }
@@ -84,6 +86,7 @@ class PostRepositoryImplTest {
     @Test
     void findById_returnsEntityWhenFound() {
         PostDO row = postRow(1L);
+        row.setContentVersion(4);
         when(postMapper.selectById(1L)).thenReturn(row);
 
         Optional<manfred.bytedepth.domain.post.Post> result = repository.findById(1L);
@@ -91,6 +94,7 @@ class PostRepositoryImplTest {
         assertTrue(result.isPresent());
         assertEquals(1L, result.get().getId());
         assertEquals("slug", result.get().getSlug());
+        assertEquals(4, result.get().getContentVersion());
     }
 
     @Test

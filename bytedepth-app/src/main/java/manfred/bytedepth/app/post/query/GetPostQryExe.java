@@ -38,6 +38,7 @@ public class GetPostQryExe {
         dto.setStatus(post.getStatus().name());
         dto.setPublishedAt(post.getPublishedAt());
         dto.setUpdatedAt(post.getUpdatedAt());
+        dto.setContentVersion(post.getContentVersion());
         dto.setCreatedAt(post.getCreatedAt());
         dto.setCategoryId(post.getCategoryId());
         List<String> tagSlugs = tagRepository.findByPostId(post.getId()).stream()
