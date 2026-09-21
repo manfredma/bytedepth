@@ -10,6 +10,7 @@ grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-changelog-order.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-release-sequence.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-run-local-quality.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-check-release-readiness.sh"' "$CHECKLIST"
+grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-check-staging-changelog-change.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-github-quality-workflow.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-maven-runtime.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-platform-portability.sh"' "$CHECKLIST"
@@ -27,6 +28,7 @@ grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-verify-production-release.sh"' "$CHEC
 grep -Fq 'scripts/check-release-readiness.sh' "$SOURCE_ROOT/scripts/run-local-quality.sh"
 grep -Fq 'scripts/check-release-readiness.sh --target "$COMMIT" --base origin/main --mode candidate' "$SOURCE_ROOT/deploy/deploy-staging.sh"
 grep -Fq 'scripts/check-release-readiness.sh --target "$SHA" --base origin/main --mode candidate' "$SOURCE_ROOT/scripts/merge-main-after-quality.sh"
+grep -Fq 'scripts/check-staging-changelog-change.sh --target "$SHA" --base origin/main' "$SOURCE_ROOT/scripts/merge-main-after-quality.sh"
 grep -Fq 'scripts/check-release-readiness.sh --target HEAD --base origin/main --mode release' "$SOURCE_ROOT/scripts/prepare-release.sh"
 
 for process_doc in \

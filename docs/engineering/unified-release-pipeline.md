@@ -12,16 +12,16 @@ staging 是唯一跨进程集成与 E2E 环境；生产操作只在受控主机�
 
 ## 固定顺序
 
-若需求明确“验收后立即发布”，采用下方的立即发布模式：在首次 staging 部署前先确定版本并冻结正式 Changelog，staging 只验收最终 `main` SHA。只有尚未决定是否发布的预览任务才走功能分支 + `Unreleased` 模式。
+staging 只有一条发布路径：在首次 staging 部署前确定版本并冻结正式 Changelog，staging 验收冻结后的待上线候选版本；不提供先预览、验收后再决定是否发布的第二条路径。
 
 1. 功能分支先完成 `CHANGELOG.md` 的 `Unreleased` 条目，再运行 `scripts/run-local-quality.sh`；缺少条目时门禁失败。
 2. PR 的 `.github/workflows/quality.yml` 通过。
-3. 立即发布模式：在首次 staging 部署前于 `main` 冻结正式 Changelog，再部署最终 `main`：`deploy/deploy-staging.sh main`。预览模式才部署功能分支：`deploy/deploy-staging.sh <branch>`。
+3. 在首次 staging 部署前于候选分支冻结正式 Changelog，再吸收远程最新 `main`，通过 Changelog 门禁后部署候选分支：`deploy/deploy-staging.sh <branch-or-tag>`；候选 ref 必须相对 `origin/main` 修改 `docs/releases/CHANGELOG.md`，部署 `main` 会被拒绝。
 4. `deploy/bootstrap-staging-runtime.sh --ensure` 确认共享运行时，只有失配才预热。
-5. 运行 staging 集成与 E2E；两份 evidence 必须绑定最终候选完整 SHA。
+5. 运行 staging 集成与 E2E；两份 evidence 必须绑定冻结候选完整 SHA。
 6. 所有者完成 staging 验收；纯交付基础设施改动审阅 PR 与自动证据即可。
-7. 验收后立即执行 `scripts/prepare-release.sh <release> <next-snapshot>`，校验 main evidence、工作区、Changelog、覆盖率及 Tag 唯一性，创建 annotated Tag；不要在此时再修改会改变 SHA 的发布元数据。
-8. 若预览模式在验收后才决定发布，冻结 Changelog 会改变 `main` SHA，必须重新部署 `main` 并重新生成两份 evidence；这是预览模式的明确代价，不得复用旧 SHA evidence。
+7. 验收通过后只能将候选分支 fast-forward 合并到 `main`，校验完整 SHA 未变化，再立即执行 `scripts/prepare-release.sh <release> <next-snapshot>`，校验 evidence、工作区、Changelog、覆盖率及 Tag 唯一性，创建 annotated Tag；禁止追加会改变 SHA 的发布元数据。
+8. 验收失败才允许修改代码或 Changelog；修改后旧 SHA evidence 作废，必须重新冻结、部署和验证。
 9. 从本机执行 `BYTEDEPTH_PRODUCTION_SSH_KEY=\"$HOME/.ssh/ubuntu_2.pem\" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS=\"$HOME/.ssh/known_hosts\" ./deploy/deploy-production-remote.sh <tag>`；该入口在 175 远端执行 host-only 的 `deploy/deploy-production.sh <tag>`，并使用预置 known_hosts 校验主机身份。
 10. `scripts/verify-production-release.sh <tag>` 完成 HTTPS、版本、项目查询链路和日志回归；所有者记录生产验收与回滚基线。
 

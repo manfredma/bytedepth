@@ -203,6 +203,10 @@ class PostControllerSeriesDetailRenderingTest {
                 .andExpect(status().isOk())
                 .andExpect(model().attributeExists("seriesNavigation"))
                 .andExpect(content().string(containsString("第 2 篇")))
+                .andExpect(content().string(containsString("class=\"series-top-nav\"")))
+                .andExpect(content().string(containsString("aria-label=\"专栏上一篇下一篇\"")))
+                .andExpect(content().string(containsString("series-first")))
+                .andExpect(content().string(containsString("series-last")))
                 .andExpect(content().string(containsString("预计阅读 1 分钟")))
                 .andExpect(content().string(containsString("约 1 分钟")));
 
