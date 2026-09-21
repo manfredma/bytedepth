@@ -13,6 +13,7 @@
 - 状态：`Open`
 - 发现日期：2026-09-21
 - 范围：Maven 依赖元数据与 staging 预热流程；不是专栏排序或侧边栏业务逻辑。
+- 发布策略：该条目明确允许其列出的精确 Maven WARNING 进入 staging/production 发布白名单；未列出的 WARNING 仍必须阻断发布。
 - 依赖链：`mybatis-plus-jsqlparser-4.9:3.5.17` → `fst:3.0.3` → `javassist:3.21.0-GA`。
 - 根因：Javassist 3.21.0-GA 的 POM 按操作系统激活 `mac-tools`/`default-tools` profile，并声明可选的 `com.sun:tools` system dependency，路径为 `${java.home}/../lib/tools.jar`。这是旧 JDK 目录结构的兼容配置，不表示本项目使用 Java 8；当前 Java 25 已不存在该文件。
 - 影响：staging 的 `dependency:go-offline` 在构建 `javassist` 有效模型时产生 `WARNING`，被项目的零 WARNING 门禁阻断。该告警在 `main` 上即可复现，与当前专栏侧边栏改动无关。
@@ -22,7 +23,7 @@
 
 ## TD-0002：staging Maven 预热未拦截 WARNING
 
-- 状态：`Open`
+- 状态：`In Progress`
 - 发现日期：2026-09-21
 - 范围：`deploy/bootstrap-staging-runtime.sh` 的 staging 运行时预热门禁。
 - 现状：预热脚本连续执行 Maven 命令并依据退出码判断成功，但没有像 staging integration runner 那样捕获并扫描 Maven 输出中的 `WARNING`/`WARN`。
