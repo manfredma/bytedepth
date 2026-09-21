@@ -154,10 +154,14 @@ window.initAnnotations = function () {
     }
 
     function selectionData(range) {
+        const rawSelectedText = range.toString();
+        const selectedText = rawSelectedText.trim();
+        const leadingWhitespaceLength = rawSelectedText.length - rawSelectedText.trimStart().length;
+        const startOffset = nodeOffset(range.startContainer) + range.startOffset + leadingWhitespaceLength;
         return {
-            startOffset: nodeOffset(range.startContainer) + range.startOffset,
-            endOffset: nodeOffset(range.endContainer) + range.endOffset,
-            selectedText: range.toString().trim()
+            startOffset,
+            endOffset: startOffset + selectedText.length,
+            selectedText
         };
     }
 

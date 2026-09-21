@@ -2,6 +2,9 @@ package manfred.bytedepth.app.post;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.io.Reader;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class MarkdownTextExtractorTest {
@@ -105,6 +108,35 @@ class MarkdownTextExtractorTest {
     void plainTextHandlesMultipleParagraphsWithNormalization() {
         String markdown = "段落一\n\n段落二\n\n段落三";
         assertEquals("段落一 段落二 段落三", MarkdownTextExtractor.plainText(markdown));
+    }
+
+    @Test
+    void renderedTextMatchesReaderDomTextContent() {
+        String markdown = "# 标题\n\n第一段 **重要**\n\n```java\nint x = 1;\n```";
+
+        assertEquals("标题\n第一段 重要\nint x = 1;\n\n", MarkdownTextExtractor.renderedText(markdown));
+    }
+
+    @Test
+    void renderedTextReturnsEmptyForNullOrBlank() {
+        assertEquals("", MarkdownTextExtractor.renderedText(null));
+        assertEquals("", MarkdownTextExtractor.renderedText("   "));
+    }
+
+    @Test
+    void decodeHtmlTextWrapsReaderFailures() {
+        Reader failingReader = new Reader() {
+            @Override
+            public int read(char[] buffer, int offset, int length) throws IOException {
+                throw new IOException("test reader failure");
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+
+        assertThrows(IllegalStateException.class, () -> MarkdownTextExtractor.decodeHtmlText(failingReader));
     }
 
     @Test

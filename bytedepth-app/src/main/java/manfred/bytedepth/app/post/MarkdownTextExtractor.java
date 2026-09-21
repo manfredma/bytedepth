@@ -8,7 +8,13 @@ import org.commonmark.node.Paragraph;
 import org.commonmark.node.SoftLineBreak;
 import org.commonmark.node.Text;
 import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
 
+import javax.swing.text.html.HTMLEditorKit;
+import javax.swing.text.html.parser.ParserDelegator;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -19,6 +25,12 @@ public final class MarkdownTextExtractor {
 
     private static final Parser PARSER = Parser.builder()
             .extensions(List.of(TablesExtension.create()))
+            .build();
+
+    private static final HtmlRenderer HTML_RENDERER = HtmlRenderer.builder()
+            .extensions(List.of(TablesExtension.create()))
+            .escapeHtml(true)
+            .sanitizeUrls(true)
             .build();
 
     private MarkdownTextExtractor() {
@@ -35,6 +47,47 @@ public final class MarkdownTextExtractor {
             appendParagraph(paragraph, text);
         }
         return normalize(text.toString());
+    }
+
+    /**
+     * Returns the textContent produced by the reader's Markdown HTML rendering.
+     * Annotation offsets use this representation rather than raw Markdown offsets.
+     */
+    public static String renderedText(String markdown) {
+        if (markdown == null || markdown.isBlank()) {
+            return "";
+        }
+
+        String html = HTML_RENDERER.render(PARSER.parse(markdown));
+        StringBuilder encodedText = new StringBuilder();
+        boolean inTag = false;
+        for (int index = 0; index < html.length(); index++) {
+            char current = html.charAt(index);
+            if (!inTag && current == '<') {
+                inTag = true;
+            } else if (inTag && current == '>') {
+                inTag = false;
+            } else if (!inTag) {
+                encodedText.append(current);
+            }
+        }
+
+        return decodeHtmlText(new StringReader("<pre>" + encodedText + "</pre>"));
+    }
+
+    static String decodeHtmlText(Reader reader) {
+        StringBuilder text = new StringBuilder();
+        try {
+            new ParserDelegator().parse(reader, new HTMLEditorKit.ParserCallback() {
+                    @Override
+                    public void handleText(char[] data, int pos) {
+                        text.append(data);
+                    }
+                }, true);
+            return text.toString();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to extract rendered Markdown text", exception);
+        }
     }
 
     /** Counts reader-visible Markdown characters using the same AST semantics as the renderer. */

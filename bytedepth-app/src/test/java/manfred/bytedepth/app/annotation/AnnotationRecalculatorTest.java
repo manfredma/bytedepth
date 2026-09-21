@@ -2,8 +2,13 @@ package manfred.bytedepth.app.annotation;
 
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.AbstractDelta;
+import com.github.difflib.patch.ChangeDelta;
+import com.github.difflib.patch.Chunk;
 import com.github.difflib.patch.DeltaType;
+import com.github.difflib.patch.DeleteDelta;
+import com.github.difflib.patch.InsertDelta;
 import com.github.difflib.patch.Patch;
+import manfred.bytedepth.app.post.MarkdownTextExtractor;
 import manfred.bytedepth.domain.annotation.AnnotationVisibility;
 import manfred.bytedepth.domain.annotation.PostAnnotation;
 import org.junit.jupiter.api.Test;
@@ -82,18 +87,13 @@ class AnnotationRecalculatorTest {
     }
 
     @Test
-    void annotationPartiallyDeleted_adjusted() {
-        // 批注覆盖 "ABC"（0-3），但 "BC" 在新内容中仍存在（"XYZ" vs "ABC" 完全不同）
-        // 实际上 "ABC" → "XYZ" 全部 CHANGE，所以批注完全删除
+    void annotationRangePartiallyReplaced_markedDeleted() {
         PostAnnotation a = annotation("ABC", 0, 3);
         // 用 "ABC" → "ADEF" 让 "A" 保留
         // diff: A → A (EQUAL), BC → DEF (CHANGE)
         List<PostAnnotation> result = recalculator.recalculate("ABC", "ADEF", List.of(a));
-        // "A" 保留（位置 0），"BC" 改为 "DEF"（位置 1-2 → 1-3）
-        // 批注范围部分删除，应调整偏移
-        assertThat(result.get(0).deleted()).isFalse();
-        assertThat(result.get(0).startOffset()).isEqualTo(0);
-        assertThat(result.get(0).endOffset()).isEqualTo(4);
+        // 旧批注范围的一部分被替换，原始选中文字已不再存在，必须隐藏而不是迁移到新文字。
+        assertThat(result.get(0).deleted()).isTrue();
     }
 
     @Test
@@ -274,6 +274,77 @@ class AnnotationRecalculatorTest {
     }
 
     @Test
+    void buildDeltaMap_handlesManuallyConstructedDeltaBoundaries() {
+        Patch<String> patch = new Patch<>();
+        patch.addDelta(new InsertDelta<>(new Chunk<>(1, List.of()), new Chunk<>(1, List.of("X"))));
+        patch.addDelta(new DeleteDelta<>(new Chunk<>(2, List.of("C", "D")), new Chunk<>(2, List.of())));
+        patch.addDelta(new ChangeDelta<>(new Chunk<>(5, List.of("F", "G")), new Chunk<>(5, List.of("Z"))));
+
+        int[] deltaMap = AnnotationRecalculator.buildDeltaMap("ABCDEFG", "AXBEZ", patch);
+
+        assertThat(deltaMap).hasSize(8);
+        assertThat(deltaMap[1]).isEqualTo(1);
+        assertThat(deltaMap[2]).isEqualTo(Integer.MIN_VALUE);
+        assertThat(deltaMap[5]).isEqualTo(Integer.MIN_VALUE);
+        assertThat(deltaMap[7]).isEqualTo(-2);
+
+        Patch<String> boundaryDelete = new Patch<>();
+        boundaryDelete.addDelta(new DeleteDelta<>(new Chunk<>(7, List.of("X")), new Chunk<>(7, List.of())));
+        assertThat(AnnotationRecalculator.buildDeltaMap("ABCDEFG", "ABCDEFG", boundaryDelete)).hasSize(8);
+    }
+
+    @Test
+    void recalculateAnnotation_coversDeletionAndEmptyRangeGuards() {
+        PostAnnotation fullyDeleted = AnnotationRecalculator.recalculateAnnotation(
+                annotation("ABC", 0, 3),
+                new int[]{Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE, -3},
+                new boolean[3], "ABC", "");
+        assertThat(fullyDeleted.deleted()).isTrue();
+
+        PostAnnotation emptyAfterClamp = AnnotationRecalculator.recalculateAnnotation(
+                annotation("A", 0, 1),
+                new int[]{0, 0}, new boolean[1], "A", "");
+        assertThat(emptyAfterClamp.deleted()).isTrue();
+    }
+
+    @Test
+    void recalculateAnnotation_rejectsInvalidOrMismatchedAnchors() {
+        assertThat(AnnotationRecalculator.recalculateAnnotation(
+                annotationWithSelectedText("A", -1, 0),
+                new int[]{0}, new boolean[1], "A", "A").deleted()).isTrue();
+        assertThat(AnnotationRecalculator.recalculateAnnotation(
+                annotationWithSelectedText("A", 0, 2),
+                new int[]{0, 0, 0}, new boolean[1], "A", "A").deleted()).isTrue();
+        assertThat(AnnotationRecalculator.recalculateAnnotation(
+                annotationWithSelectedText("B", 0, 1),
+                new int[]{0, 0}, new boolean[1], "A", "A").deleted()).isTrue();
+
+        PostAnnotation withoutStoredText = annotationWithSelectedText(null, 0, 1);
+        assertThat(AnnotationRecalculator.recalculateAnnotation(
+                withoutStoredText, new int[]{0, 0}, new boolean[1], "A", "A"))
+                .isSameAs(withoutStoredText);
+
+        PostAnnotation emptyRange = annotationWithSelectedText("", 0, 0);
+        assertThat(AnnotationRecalculator.recalculateAnnotation(
+                emptyRange, new int[]{0}, new boolean[1], "A", "A").deleted()).isTrue();
+
+        PostAnnotation changedMapIsShorter = annotationWithSelectedText("AB", 0, 2);
+        assertThat(AnnotationRecalculator.recalculateAnnotation(
+                changedMapIsShorter, new int[]{0, 0, 0}, new boolean[1], "AB", "AB"))
+                .isSameAs(changedMapIsShorter);
+    }
+
+    @Test
+    void buildChangedMap_marksOnlyReplacedOldCharacters() {
+        var patch = DiffUtils.diff(
+                AnnotationRecalculator.splitToChars("目标旧尾巴"),
+                AnnotationRecalculator.splitToChars("目标新尾巴"));
+
+        assertThat(AnnotationRecalculator.buildChangedMap("目标旧尾巴".length(), patch))
+                .containsExactly(false, false, true, false, false);
+    }
+
+    @Test
     void recalculate_withInsertDelta_adjustsCorrectly() {
         // 整个 recalculate 流程：旧内容开头插入，gap filler 运行
         PostAnnotation a = annotation("旧内容", 0, 3);
@@ -282,6 +353,78 @@ class AnnotationRecalculatorTest {
         assertThat(result.get(0).startOffset()).isEqualTo(3);
         assertThat(result.get(0).endOffset()).isEqualTo(6);
         assertThat(result.get(0).deleted()).isFalse();
+    }
+
+    @Test
+    void recalculate_usesRenderedTextOffsetsAcrossMarkdownParagraphs() {
+        String oldContent = "第一段\n\n第二段";
+        String newContent = "第一段\n\n新增段\n\n第二段";
+        // 浏览器渲染正文的 textContent 是“第一段\n第二段\n”，不包含 Markdown 的空行。
+        PostAnnotation annotation = annotationWithSelectedText("第二段", 4, 7);
+
+        List<PostAnnotation> result = recalculator.recalculate(oldContent, newContent, List.of(annotation));
+
+        // 新的渲染文本是“第一段\n新增段\n第二段\n”。
+        assertThat(result.get(0).startOffset()).isEqualTo(8);
+        assertThat(result.get(0).endOffset()).isEqualTo(11);
+        assertThat(result.get(0).selectedText()).isEqualTo("第二段");
+        assertThat(result.get(0).deleted()).isFalse();
+    }
+
+    @Test
+    void recalculate_ignoresMarkdownSyntaxChangesBeforeAnnotation() {
+        String oldContent = "前文\n\n目标";
+        String newContent = "**前文**\n\n目标";
+        // 两版渲染正文中“目标”的位置都为 4。
+        PostAnnotation annotation = annotationWithSelectedText("目标", 4, 6);
+
+        List<PostAnnotation> result = recalculator.recalculate(oldContent, newContent, List.of(annotation));
+
+        assertThat(result.get(0).startOffset()).isEqualTo(4);
+        assertThat(result.get(0).endOffset()).isEqualTo(6);
+        assertThat(result.get(0).selectedText()).isEqualTo("目标");
+        assertThat(result.get(0).deleted()).isFalse();
+    }
+
+    @Test
+    void recalculate_marksAnnotationDeletedWhenRenderedTextIsRemoved() {
+        String oldContent = "前文\n\n目标";
+        String newContent = "前文";
+        PostAnnotation annotation = annotationWithSelectedText("目标", 4, 6);
+
+        List<PostAnnotation> result = recalculator.recalculate(oldContent, newContent, List.of(annotation));
+
+        assertThat(result.get(0).deleted()).isTrue();
+    }
+
+    @Test
+    void recalculate_updatesSelectedTextWhenPartOfTheRenderedRangeIsDeleted() {
+        String oldContent = "前文\n\n目标和尾巴";
+        String newContent = "前文\n\n目标";
+        String oldReaderText = MarkdownTextExtractor.renderedText(oldContent);
+        int start = oldReaderText.indexOf("目标和尾巴");
+        PostAnnotation annotation = annotationWithSelectedText("目标和尾巴", start, start + "目标和尾巴".length());
+
+        List<PostAnnotation> result = recalculator.recalculate(oldContent, newContent, List.of(annotation));
+
+        assertThat(result.get(0).deleted()).isFalse();
+        assertThat(result.get(0).selectedText()).isEqualTo("目标");
+        assertThat(result.get(0).startOffset()).isEqualTo(MarkdownTextExtractor.renderedText(newContent).indexOf("目标"));
+        assertThat(result.get(0).endOffset()).isEqualTo(result.get(0).startOffset() + "目标".length());
+    }
+
+    @Test
+    void recalculate_marksAnnotationDeletedWhenRenderedRangeIsReplaced() {
+        String oldContent = "前文\n\n旧方案";
+        String newContent = "前文\n\n新方案";
+        String oldReaderText = MarkdownTextExtractor.renderedText(oldContent);
+        int start = oldReaderText.indexOf("旧方案");
+        PostAnnotation annotation = annotationWithSelectedText("旧方案", start, start + "旧方案".length());
+
+        List<PostAnnotation> result = recalculator.recalculate(oldContent, newContent, List.of(annotation));
+
+        assertThat(result.get(0).deleted()).isTrue();
+        assertThat(result.get(0).selectedText()).isEqualTo("旧方案");
     }
 
     @Test
@@ -315,8 +458,12 @@ class AnnotationRecalculatorTest {
     }
 
     private static PostAnnotation annotation(String content, int start, int end) {
+        return annotationWithSelectedText(content.substring(start, end), start, end);
+    }
+
+    private static PostAnnotation annotationWithSelectedText(String selectedText, int start, int end) {
         return new PostAnnotation(null, 1L, null, null,
-                content.substring(start, end), null, "yellow",
+                selectedText, null, "yellow",
                 AnnotationVisibility.PRIVATE, start, end, LocalDateTime.now(), false);
     }
 }

@@ -4,6 +4,7 @@ import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.AbstractDelta;
 import com.github.difflib.patch.DeltaType;
 import com.github.difflib.patch.Patch;
+import manfred.bytedepth.app.post.MarkdownTextExtractor;
 import manfred.bytedepth.domain.annotation.PostAnnotation;
 
 import java.util.ArrayList;
@@ -12,11 +13,12 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 /**
- * 文章内容变更后，基于 Diff 信息重算所有批注的字符偏移。
+ * 文章内容变更后，基于阅读页文本 Diff 信息重算所有批注的字符偏移。
  * <p>
  * 当文章内容被编辑时，已有批注的 startOffset/endOffset 会失效。
  * 本服务比较新旧内容，对每个字符位置计算偏移变化量，然后重算每个批注的新位置。
- * 批注范围内的文本在新内容中完全被删除时，该批注被标记为已删除（逻辑删除）。
+ * 批注范围内的文本被替换或完全删除时，该批注被标记为已删除（逻辑删除）；
+ * 仅从范围末尾删除的文本可以安全收缩批注范围。
  */
 @Component
 public class AnnotationRecalculator {
@@ -33,23 +35,26 @@ public class AnnotationRecalculator {
         if (annotations.isEmpty()) {
             return annotations;
         }
-        if (oldContent.equals(newContent)) {
+        String oldReaderText = MarkdownTextExtractor.renderedText(oldContent);
+        String newReaderText = MarkdownTextExtractor.renderedText(newContent);
+        if (oldReaderText.equals(newReaderText)) {
             return annotations;
         }
 
-        // 1. 计算字符级 diff（逐字符拆分，diffInline 按连续字符块分组，不适合）
-        List<String> oldChars = splitToChars(oldContent);
-        List<String> newChars = splitToChars(newContent);
+        // 1. 对浏览器阅读页实际看到的文本做字符级 diff，不能对原始 Markdown 做 diff。
+        List<String> oldChars = splitToChars(oldReaderText);
+        List<String> newChars = splitToChars(newReaderText);
         Patch<String> patch = DiffUtils.diff(oldChars, newChars);
 
         // 2. 构建旧位置 → 新位置偏移映射表
-        // 对于每个旧位置，计算其在新内容中的偏移
-        int[] deltaMap = buildDeltaMap(oldContent, newContent, patch);
+        // 对于每个旧位置，计算其在新阅读文本中的偏移
+        int[] deltaMap = buildDeltaMap(oldReaderText, newReaderText, patch);
+        boolean[] changedMap = buildChangedMap(oldReaderText.length(), patch);
 
         // 3. 对每个批注重算偏移
         List<PostAnnotation> result = new ArrayList<>(annotations.size());
         for (PostAnnotation annotation : annotations) {
-            result.add(recalculateAnnotation(annotation, deltaMap, oldContent, newContent));
+            result.add(recalculateAnnotation(annotation, deltaMap, changedMap, oldReaderText, newReaderText));
         }
         return result;
     }
@@ -75,30 +80,27 @@ public class AnnotationRecalculator {
             int dNewSize = d.getTarget().size();
 
             // 当前 delta 前的区间（不变）：delta 不变
-            for (int i = oldPos; i < dOldPos && i <= oldLen; i++) {
+            int gapEnd = Math.min(dOldPos, oldLen + 1);
+            for (int i = oldPos; i < gapEnd; i++) {
                 deltaMap[i] = delta;
             }
 
-            if (d.getType() == DeltaType.EQUAL) {
-                // 不变的字符：delta 不变，deltaMap 在该区间内保持 delta 值
-                for (int i = dOldPos; i < dOldPos + dOldSize && i <= oldLen; i++) {
-                    deltaMap[i] = delta;
-                }
-                oldPos = dOldPos + dOldSize;
-            } else if (d.getType() == DeltaType.INSERT) {
+            if (d.getType() == DeltaType.INSERT) {
                 // 插入：不影响旧位置的偏移量，但 delta 累计值增加
                 delta += dNewSize;
                 oldPos = dOldPos;
             } else if (d.getType() == DeltaType.DELETE) {
                 // 删除：被删除的字符标记为 MIN_VALUE，delta 累计值减少
-                for (int i = dOldPos; i < dOldPos + dOldSize && i <= oldLen; i++) {
+                int deletedEnd = Math.min(dOldPos + dOldSize, oldLen + 1);
+                for (int i = dOldPos; i < deletedEnd; i++) {
                     deltaMap[i] = Integer.MIN_VALUE;
                 }
                 delta -= dOldSize;
                 oldPos = dOldPos + dOldSize;
-            } else if (d.getType() == DeltaType.CHANGE) {
+            } else {
                 // 修改 = 删除 + 插入：旧字符标记为 MIN_VALUE，delta 反映净变化
-                for (int i = dOldPos; i < dOldPos + dOldSize && i <= oldLen; i++) {
+                int changedEnd = Math.min(dOldPos + dOldSize, oldLen + 1);
+                for (int i = dOldPos; i < changedEnd; i++) {
                     deltaMap[i] = Integer.MIN_VALUE;
                 }
                 delta += (dNewSize - dOldSize);
@@ -114,6 +116,22 @@ public class AnnotationRecalculator {
         return deltaMap;
     }
 
+    /** Marks old positions that participate in a replacement rather than a pure insertion/deletion. */
+    static boolean[] buildChangedMap(int oldLength, Patch<String> patch) {
+        boolean[] changedMap = new boolean[oldLength];
+        for (AbstractDelta<String> delta : patch.getDeltas()) {
+            if (delta.getType() != DeltaType.CHANGE) {
+                continue;
+            }
+            int start = delta.getSource().getPosition();
+            int end = Math.min(oldLength, start + delta.getSource().size());
+            for (int position = Math.max(0, start); position < end; position++) {
+                changedMap[position] = true;
+            }
+        }
+        return changedMap;
+    }
+
     /**
      * 重算单个批注的偏移。
      * <p>
@@ -122,6 +140,11 @@ public class AnnotationRecalculator {
      */
     static PostAnnotation recalculateAnnotation(PostAnnotation annotation, int[] deltaMap,
                                                 String oldContent, String newContent) {
+        return recalculateAnnotation(annotation, deltaMap, new boolean[oldContent.length()], oldContent, newContent);
+    }
+
+    static PostAnnotation recalculateAnnotation(PostAnnotation annotation, int[] deltaMap, boolean[] changedMap,
+                                                String oldContent, String newContent) {
         if (annotation.deleted()) {
             return annotation;
         }
@@ -129,26 +152,36 @@ public class AnnotationRecalculator {
         int oldStart = annotation.startOffset();
         int oldEnd = annotation.endOffset();
 
-        // 检查批注范围内是否所有字符都被删除（完全删除才标记为 deleted）
-        boolean allDeleted = oldStart >= oldEnd;  // 空范围不算全删除
-        if (oldStart >= 0 && oldStart < oldEnd) {
-            allDeleted = true;
-            for (int i = oldStart; i < oldEnd && i < deltaMap.length; i++) {
-                if (deltaMap[i] != Integer.MIN_VALUE) {
-                    allDeleted = false;
-                    break;
-                }
+        // 偏移必须能在旧阅读文本中还原出创建时的选中文字；否则不能静默迁移到未知位置。
+        if (oldStart < 0 || oldStart >= oldEnd || oldEnd > oldContent.length()) {
+            return deletedAnnotation(annotation);
+        }
+        if (annotation.selectedText() != null
+                && !annotation.selectedText().equals(oldContent.substring(oldStart, oldEnd))) {
+            return deletedAnnotation(annotation);
+        }
+
+        // DiffUtils identifies a replacement separately from a pure deletion. A replacement
+        // inside the selection means the original quote no longer identifies the same text.
+        int changedEnd = Math.min(oldEnd, changedMap.length);
+        for (int position = oldStart; position < changedEnd; position++) {
+            if (changedMap[position]) {
+                return deletedAnnotation(annotation);
             }
         }
-        boolean fullyDeleted = oldStart < oldEnd && oldStart >= 0 && allDeleted;
 
-        if (fullyDeleted) {
-            return new PostAnnotation(
-                    annotation.id(), annotation.postId(), annotation.userId(),
-                    annotation.ownerTokenHash(), annotation.selectedText(),
-                    annotation.annotationText(), annotation.color(),
-                    annotation.visibility(), annotation.startOffset(), annotation.endOffset(),
-                    annotation.createdAt(), true);
+        // 检查批注范围内是否所有字符都被删除（完全删除才标记为 deleted）
+        boolean allDeleted = true;
+        int deletionEnd = Math.min(oldEnd, deltaMap.length);
+        for (int i = oldStart; i < deletionEnd; i++) {
+            if (deltaMap[i] != Integer.MIN_VALUE) {
+                allDeleted = false;
+                break;
+            }
+        }
+
+        if (allDeleted) {
+            return deletedAnnotation(annotation);
         }
 
         // 计算新偏移：基于原始偏移和 delta 变化量
@@ -160,16 +193,29 @@ public class AnnotationRecalculator {
         newStart = Math.max(0, Math.min(newStart, newContent.length()));
         newEnd = Math.max(newStart, Math.min(newEnd, newContent.length()));
 
+        if (newStart >= newEnd) {
+            return deletedAnnotation(annotation);
+        }
+
         if (newStart == oldStart && newEnd == oldEnd) {
             return annotation;  // 未变化，返回原对象
         }
 
         return new PostAnnotation(
                 annotation.id(), annotation.postId(), annotation.userId(),
-                annotation.ownerTokenHash(), annotation.selectedText(),
+                annotation.ownerTokenHash(), newContent.substring(newStart, newEnd),
                 annotation.annotationText(), annotation.color(),
                 annotation.visibility(), newStart, newEnd,
                 annotation.createdAt(), false);
+    }
+
+    private static PostAnnotation deletedAnnotation(PostAnnotation annotation) {
+        return new PostAnnotation(
+                annotation.id(), annotation.postId(), annotation.userId(),
+                annotation.ownerTokenHash(), annotation.selectedText(),
+                annotation.annotationText(), annotation.color(),
+                annotation.visibility(), annotation.startOffset(), annotation.endOffset(),
+                annotation.createdAt(), true);
     }
 
     /**

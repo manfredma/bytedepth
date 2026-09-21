@@ -82,6 +82,26 @@ describe('annotation sidebar', () => {
     expect(visibility.value).toBe('PUBLIC');
   });
 
+  test('stores trimmed selection text with matching rendered-text offsets', async () => {
+    document.querySelector('.content').textContent = '  可批注文本  ';
+    const text = document.querySelector('.content').firstChild;
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, 5);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+    document.querySelector('.bd-annotation-popup [data-highlight]').click();
+    document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
+    await Promise.resolve();
+
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toMatchObject({
+      selectedText: '可批注', startOffset: 2, endOffset: 5
+    });
+  });
+
   test('opens a two-level menu before posting a private pure highlight even when the sidebar is open', async () => {
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3); range.getBoundingClientRect = () => ({left: 10, bottom: 20});

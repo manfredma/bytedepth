@@ -90,6 +90,11 @@ if [[ "$deploy_mode" != 'staging' ]]; then
     exit 1
 fi
 
+if [[ -z "${BYTEDEPTH_STAGING_E2E_USERNAME:-}" || -z "${BYTEDEPTH_STAGING_E2E_PASSWORD:-}" ]]; then
+    printf 'Refusing: BYTEDEPTH_STAGING_E2E_USERNAME and BYTEDEPTH_STAGING_E2E_PASSWORD are required for annotation content-update E2E.\n' >&2
+    exit 1
+fi
+
 invalidate_evidence
 tested_commit="$(read_checked_out_commit)"
 require_deployed_commit "$tested_commit"
@@ -104,6 +109,8 @@ cd "$SOURCE_ROOT"
 e2e_post_slug="$(discover_e2e_post_slug)"
 export E2E_BASE_URL
 if ! E2E_POST_SLUG="$e2e_post_slug" \
+    E2E_ADMIN_USERNAME="$BYTEDEPTH_STAGING_E2E_USERNAME" \
+    E2E_ADMIN_PASSWORD="$BYTEDEPTH_STAGING_E2E_PASSWORD" \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE="$CHROMIUM_EXECUTABLE" \
     npm run test:e2e 2>&1 | tee "$E2E_LOG"; then
     printf 'Staging E2E tests failed.\n' >&2
