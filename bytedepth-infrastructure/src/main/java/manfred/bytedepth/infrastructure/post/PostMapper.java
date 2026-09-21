@@ -44,7 +44,7 @@ public interface PostMapper extends BaseMapper<PostDO> {
             "#{id}",
             "</foreach>",
             "</if>",
-            "ORDER BY p.published_at DESC, p.id DESC LIMIT #{limit}",
+            "ORDER BY p.updated_at DESC, p.id DESC LIMIT #{limit}",
             "</script>"})
     List<PostDO> findLatestPublishedExcluding(@Param("excludedIds") List<Long> excludedIds,
                                               @Param("limit") int limit);
@@ -53,7 +53,7 @@ public interface PostMapper extends BaseMapper<PostDO> {
             "INNER JOIN post_tag pt ON p.id = pt.post_id " +
             "INNER JOIN tag t ON pt.tag_id = t.id " +
             "WHERE p.status = 'PUBLISHED' AND t.slug = #{slug} " +
-            "ORDER BY p.published_at DESC " +
+            "ORDER BY p.updated_at DESC, p.id DESC " +
             "LIMIT #{offset}, #{limit}")
     List<PostDO> findPublishedByTagSlug(@Param("slug") String slug,
                                         @Param("offset") int offset,

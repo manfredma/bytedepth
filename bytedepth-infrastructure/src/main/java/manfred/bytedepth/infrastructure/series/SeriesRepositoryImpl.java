@@ -1,6 +1,7 @@
 package manfred.bytedepth.infrastructure.series;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.domain.series.Series;
@@ -15,6 +16,8 @@ import java.util.stream.Collectors;
 @Repository
 @RequiredArgsConstructor
 public class SeriesRepositoryImpl implements SeriesRepository {
+
+    private static final String CHINESE_NAME_ORDER = "name COLLATE utf8mb4_zh_0900_as_cs";
 
     private final SeriesMapper seriesMapper;
 
@@ -99,16 +102,14 @@ public class SeriesRepositoryImpl implements SeriesRepository {
     @Override
     public List<Series> findAll() {
         return seriesMapper.selectList(
-                new LambdaQueryWrapper<SeriesDO>().orderByAsc(SeriesDO::getName)
+                orderedByName(new QueryWrapper<>())
         ).stream().map(this::toEntity).collect(Collectors.toList());
     }
 
     @Override
     public List<Series> findByAuthorId(Long authorId) {
         return seriesMapper.selectList(
-                new LambdaQueryWrapper<SeriesDO>()
-                        .eq(SeriesDO::getAuthorId, authorId)
-                        .orderByAsc(SeriesDO::getName)
+                orderedByName(new QueryWrapper<SeriesDO>().eq("author_id", authorId))
         ).stream().map(this::toEntity).collect(Collectors.toList());
     }
 
@@ -121,11 +122,16 @@ public class SeriesRepositoryImpl implements SeriesRepository {
     }
     @Override public long countByAuthorId(Long authorId, String name) { return seriesMapper.selectCount(filtered(name, authorId)); }
 
-    private LambdaQueryWrapper<SeriesDO> filtered(String name, Long authorId) {
-        LambdaQueryWrapper<SeriesDO> wrapper = new LambdaQueryWrapper<SeriesDO>().orderByAsc(SeriesDO::getName);
-        if (name != null && !name.isBlank()) wrapper.like(SeriesDO::getName, name);
-        if (authorId != null) wrapper.eq(SeriesDO::getAuthorId, authorId);
+    private QueryWrapper<SeriesDO> filtered(String name, Long authorId) {
+        QueryWrapper<SeriesDO> wrapper = orderedByName(new QueryWrapper<>());
+        if (name != null && !name.isBlank()) wrapper.like("name", name);
+        if (authorId != null) wrapper.eq("author_id", authorId);
         return wrapper;
+    }
+
+    private QueryWrapper<SeriesDO> orderedByName(QueryWrapper<SeriesDO> wrapper) {
+        // LambdaQueryWrapper 只能表达物理列名，中文语言排序需要在 ORDER BY 中附加 COLLATE。
+        return wrapper.orderByAsc(CHINESE_NAME_ORDER).orderByAsc("id");
     }
 
     private SeriesDO toDO(Series series) {

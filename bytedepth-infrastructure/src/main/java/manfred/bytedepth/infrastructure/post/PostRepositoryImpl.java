@@ -40,7 +40,8 @@ public class PostRepositoryImpl implements PostRepository {
         Page<PostDO> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<PostDO> wrapper = new LambdaQueryWrapper<PostDO>()
                 .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
-                .orderByDesc(PostDO::getPublishedAt);
+                .orderByDesc(PostDO::getUpdatedAt)
+                .orderByDesc(PostDO::getId);
         return postMapper.selectPage(pageParam, wrapper).getRecords()
                 .stream().map(this::toEntity).collect(Collectors.toList());
     }
@@ -89,7 +90,8 @@ public class PostRepositoryImpl implements PostRepository {
         LambdaQueryWrapper<PostDO> wrapper = new LambdaQueryWrapper<PostDO>()
                 .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
                 .eq(PostDO::getCategoryId, categoryId)
-                .orderByDesc(PostDO::getPublishedAt);
+                .orderByDesc(PostDO::getUpdatedAt)
+                .orderByDesc(PostDO::getId);
         return postMapper.selectPage(pageParam, wrapper).getRecords()
                 .stream().map(this::toEntity).collect(Collectors.toList());
     }
@@ -179,7 +181,8 @@ public class PostRepositoryImpl implements PostRepository {
                 new LambdaQueryWrapper<PostDO>()
                     .eq(PostDO::getAuthorId, authorId)
                     .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
-                    .orderByDesc(PostDO::getPublishedAt))
+                    .orderByDesc(PostDO::getUpdatedAt)
+                    .orderByDesc(PostDO::getId))
             .getRecords().stream().map(this::toEntity).collect(Collectors.toList());
     }
 
@@ -206,7 +209,8 @@ public class PostRepositoryImpl implements PostRepository {
     public List<Post> findAllPublished() {
         return postMapper.selectList(new LambdaQueryWrapper<PostDO>()
                 .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
-                .orderByDesc(PostDO::getPublishedAt))
+                .orderByDesc(PostDO::getUpdatedAt)
+                .orderByDesc(PostDO::getId))
                 .stream().map(this::toEntity).collect(Collectors.toList());
     }
 

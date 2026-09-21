@@ -1,9 +1,14 @@
 package manfred.bytedepth.infrastructure.post;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
@@ -127,6 +132,23 @@ class PostRepositoryImplTest {
         when(postMapper.selectPage(any(), any())).thenReturn(page);
 
         assertTrue(repository.findPublished(1, 10).isEmpty());
+    }
+
+    @Test
+    void findPublished_ordersByUpdatedAtDescendingWithStableIdTieBreaker() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), PostDO.class);
+        Page<PostDO> page = new Page<>(1, 10);
+        page.setRecords(List.of());
+        when(postMapper.selectPage(any(), any())).thenReturn(page);
+
+        repository.findPublished(1, 10);
+
+        ArgumentCaptor<Wrapper<PostDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(postMapper).selectPage(any(), captor.capture());
+        String sql = captor.getValue().getSqlSegment();
+        assertTrue(sql.contains("updated_at"));
+        assertTrue(sql.contains("id"));
+        assertFalse(sql.contains("published_at"));
     }
 
     // ---- findPublishedByHotness ----
