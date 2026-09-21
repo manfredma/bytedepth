@@ -20,14 +20,14 @@
     <select id="pageCountryStats" resultType="manfred.bytedepth.app.analytics.CountryViewStatDTO">
         SELECT v.country, SUM(v.view_count) AS view_count, 0.0 AS percent
         FROM (
-            SELECT country, view_count FROM page_view_country_daily_stat
+            SELECT country COLLATE utf8mb4_unicode_ci AS country, view_count FROM page_view_country_daily_stat
             WHERE stat_date &gt;= DATE(#{startTime})
               AND stat_date &lt; DATE(DATE_ADD(#{endTime}, INTERVAL 1 SECOND))
             UNION ALL
-            SELECT COALESCE(NULLIF(country, ''), '未知') AS country, COUNT(*) AS view_count
+            SELECT COALESCE(NULLIF(country, ''), '未知') COLLATE utf8mb4_unicode_ci AS country, COUNT(*) AS view_count
             FROM page_view_log
             WHERE visited_at &gt;= #{startTime} AND visited_at &lt; DATE_ADD(#{endTime}, INTERVAL 1 SECOND)
-            GROUP BY COALESCE(NULLIF(country, ''), '未知')
+            GROUP BY COALESCE(NULLIF(country, ''), '未知') COLLATE utf8mb4_unicode_ci
         ) v GROUP BY v.country ORDER BY view_count DESC LIMIT 30
     </select>
 

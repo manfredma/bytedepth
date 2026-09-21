@@ -28,6 +28,21 @@ class ViewLogStatsSqlContractTest {
         assertThat(sql).contains("&lt; DATE_ADD(#{endTime}, INTERVAL 1 SECOND)");
     }
 
+    @Test
+    void countryUnionNormalizesCollationAcrossArchivedAndRawRows() throws IOException {
+        String postSql = readResource("/mapper/ViewLogStatsMapper.xml");
+        String pageSql = readResource("/mapper/PageViewStatsMapper.xml");
+
+        assertThat(postSql).contains(
+                "SELECT country COLLATE utf8mb4_unicode_ci AS country",
+                "SELECT COALESCE(NULLIF(country, ''), '未知') COLLATE utf8mb4_unicode_ci AS country",
+                "GROUP BY COALESCE(NULLIF(country, ''), '未知') COLLATE utf8mb4_unicode_ci");
+        assertThat(pageSql).contains(
+                "SELECT country COLLATE utf8mb4_unicode_ci AS country",
+                "SELECT COALESCE(NULLIF(country, ''), '未知') COLLATE utf8mb4_unicode_ci AS country",
+                "GROUP BY COALESCE(NULLIF(country, ''), '未知') COLLATE utf8mb4_unicode_ci");
+    }
+
     private String readResource(String path) throws IOException {
         try (var stream = getClass().getResourceAsStream(path)) {
             assertThat(stream).isNotNull();
