@@ -2,8 +2,13 @@ package manfred.bytedepth.infrastructure.series;
 
 import manfred.bytedepth.domain.series.Series;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.mockito.ArgumentCaptor;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -89,6 +94,20 @@ class SeriesRepositoryImplTest {
 
         assertEquals("Java", repository.findAll().get(0).getName());
         assertEquals(7L, repository.findByAuthorId(7L).get(0).getAuthorId());
+    }
+
+    @Test
+    void findAll_usesChineseCollationAndStableIdTieBreaker() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), SeriesDO.class);
+        when(mapper.selectList(any())).thenReturn(List.of());
+
+        repository.findAll();
+
+        ArgumentCaptor<Wrapper<SeriesDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(mapper).selectList(captor.capture());
+        String sql = captor.getValue().getSqlSegment();
+        assertTrue(sql.contains("COLLATE utf8mb4_zh_0900_as_cs"));
+        assertTrue(sql.contains("id"));
     }
 
     @Test
