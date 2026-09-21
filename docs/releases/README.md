@@ -19,22 +19,22 @@
 ```text
 main（下一版本 -SNAPSHOT）
   → 实现与测试
-  → `bash scripts/verify-changed-coverage.sh`（相对最近正式 Tag 的生产 Java 变更必须行、分支、方法 100%，且 Maven 输出零 WARNING）
-  → 更新 CHANGELOG 的 Unreleased
-  → 在 staging 部署当前 main，并运行 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`（两份完整 SHA evidence 必须匹配 main HEAD）
-  → 将两份 staging evidence 复制到本地 `mktemp -d` 目录，作为发布前验证输入
-  → 发布前验证（全量测试、覆盖率、文档）
-  → 发布提交（去掉 -SNAPSHOT）
-  → 创建并推送新的 annotated tag vX.Y.Z
-  → 双节点部署该 tag 并完成验收
+  → 候选分支冻结正式版本与 CHANGELOG
+  → 将远程最新 main 合并到候选分支
+  → `deploy-staging.sh <候选分支或Tag>`（候选范围必须包含 CHANGELOG 修改）
+  → 在 staging 运行集成与 E2E，验收的就是待上线版本
+  → 验收通过后将候选分支 fast-forward 合并到 main（SHA 不得变化）
+  → 将两份 staging evidence 复制到本地 `mktemp -d` 目录
+  → `prepare-release.sh` 创建新的 annotated tag vX.Y.Z
+  → 部署该 tag 并完成生产验收
   → main 推进到下一个 -SNAPSHOT
 ```
 
-### 验收后立即发布的编排（默认）
+### 冻结与 staging 验收（唯一发布路径）
 
-当需求明确 staging 验收通过后立即发布生产时，必须在**首次 staging 部署前**确定正式版本与下一开发版本，并先在 `main` 冻结正式 Changelog（包含 `## [vX.Y.Z]`、回滚基线和发布说明）。随后将最终候选合并到 `main`，只部署这个最终 `main` SHA 到 staging，运行集成与 E2E，验收通过后直接执行 `prepare-release.sh` 和生产发布。这样两份 evidence 从一开始就绑定最终 `main`，不会因验收后才冻结 Changelog 产生新的 SHA 而重复部署 staging。
+staging 只验收待上线版本，不提供“先预览、之后再决定是否发布”的第二条发布路径。候选分支必须在首次 staging 部署前确定正式版本、下一开发版本并冻结正式 Changelog（包含 `## [vX.Y.Z]`、回滚基线和发布说明），随后吸收远程最新 `main`，再以候选分支部署 staging。`deploy-staging.sh` 会拒绝与 `origin/main` 相同的 ref，并拒绝候选提交范围未修改 `docs/releases/CHANGELOG.md` 的部署。
 
-不得在已知“验收后立即发布”的情况下先部署功能分支、验收后再冻结 Changelog。若只是 staging 预览而尚未决定发布，则保留 `Unreleased` 并按功能分支验收；之后才决定发布时，冻结 Changelog 会改变 `main` SHA，必须重新部署并重新生成两份 evidence，这是预期成本。
+集成、E2E 和项目所有者验收都针对这个冻结候选版本。验收通过后只能将候选分支 fast-forward 合并到 `main`，完整 SHA 必须保持不变；随后直接执行 `prepare-release.sh` 和生产发布。验收失败时才允许修改代码或 Changelog；修改后旧 evidence 作废，必须重新冻结、重新部署和重新验收。
 
 **CHANGELOG 版本号标题时序**：开发改动在 PR 阶段往 `## Unreleased` 下写变更内容（`### Changed`/`### Fixed`），合并 `main`；发版前在 `main` 上把 `## Unreleased` 改为 `## [vX.Y.Z] - 日期` 标题，填 `**Tag**`、`**回滚基线**`（`**Commit**`/`**部署**` 等 release:prepare 与部署后再补），提交。`prepare-release.sh` grep 校验 CHANGELOG 含 `## [vX.Y.Z]`，缺失则拒绝——版本号标题必须在 `prepare-release.sh` 之前出现在 `main`。该标题改动与部署后的验收记录补填，均属发布流程的 `docs(release)` 提交（先例 `36918d0`），非普通开发改动，不与「`main` 仅允许受控发布流程写入」冲突。
 
@@ -91,8 +91,8 @@ BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1
 **发布前置**：进入发布流程前，所有待办任务必须全部解决；有阻塞项先解决或与项目所有者确认暂缓（需明确说"暂时不解决"），不得带遗留项上线。
 
 1. 记录当前已验收发布的 Tag，作为回滚基线。
-2. 在 staging 部署候选 ref 并用真实数据预检：`deploy-staging.sh <ref>`；项目所有者验收通过后合并 `main`。
-3. 合并后先比较完整 SHA：Fast-forward 且 `main` HEAD 与已验收候选 SHA 完全一致时，候选 staging 部署和两份 evidence 可直接复用；只有 SHA 变化时，才在 staging 部署当前 `main` 并重新执行查询回归、写测试、集成和 E2E。两份记录的完整 SHA 始终必须等于 `main` HEAD。
+2. 在 staging 部署冻结候选 ref 并用真实数据预检：`deploy-staging.sh <候选分支或Tag>`；候选范围必须包含 Changelog 修改，项目所有者验收通过后 fast-forward 合并 `main`。
+3. 合并后必须比较完整 SHA：只有 fast-forward 且 `main` HEAD 与已验收候选 SHA 完全一致时，候选 staging 部署和两份 evidence 才可复用；SHA 变化必须停止发布并重新冻结、部署和验收。两份记录的完整 SHA 始终必须等于 `main` HEAD。
 4. 使用 SSH 上受控的 `sudo cat` 读取 root-owned `0700` `/var/lib/bytedepth-staging/test-history/` 内的 `staging-integration` 与 `staging-e2e`，写入本地新建的 `mktemp -d` 目录；不得用普通用户 `scp` 不可读路径。以 `BYTEDEPTH_STAGING_EVIDENCE_DIR` 传给 `prepare-release.sh`；脚本检查通过后才可创建 Tag。
 5. 通过后，生产打新 SemVer Tag，从本机使用 `BYTEDEPTH_PRODUCTION_SSH_KEY=\"$HOME/.ssh/ubuntu_2.pem\" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS=\"$HOME/.ssh/known_hosts\" ./deploy/deploy-production-remote.sh vTag` 部署到 175；该入口会在远端运行 `deploy/deploy-production.sh vTag` 并随后执行 `scripts/verify-production-release.sh vTag`。发布 SSH 必须使用已存在的 known_hosts，禁止首次连接自动接受主机密钥。
 6. 生产验收（SNI 查询回归）通过后宣布上线。staging 验证失败则修代码回到第 2 步，不发布生产。
@@ -107,6 +107,6 @@ staging 回滚非无风险：候选 ref 已执行 Flyway 后，直接部署旧 r
 ## 记录格式
 
 `CHANGELOG.md` 是在创建 Tag 前冻结的变更说明，至少包含：版本号、发布日期、变更摘要、兼容性/迁移说明、发布 Tag 和完整 commit SHA。Tag 已创建但尚未验收的条目必须明确标注“待验收”。实际部署验收不得回写已发布 Tag；应在 `main` 上的对应条目或受控发布工具的发布台账中追加目标节点、时间、验收结论和回滚基线。
-## 发布顺序（候选分支先吸收 main）
+## 发布顺序（唯一候选路径）
 
-发布必须严格按以下顺序执行：变更冻结（含版本说明）→ 将远程最新 `main` 合并到候选分支 → 以候选分支部署 staging 并一次性完成集成、E2E 和验收 → 验收通过后将候选分支 fast-forward 合并到 `main` → 校验 SHA 未变化后创建 Tag 并发布。若合并后 SHA 变化，必须重新 staging 验收；禁止验收后追加文档或其他提交。
+发布必须严格按以下顺序执行：候选分支变更冻结（含版本说明）→ 将远程最新 `main` 合并到候选分支 → 通过 Changelog 门禁后以候选分支部署 staging，并一次性完成集成、E2E 和验收 → 验收通过后将候选分支 fast-forward 合并到 `main` → 校验 SHA 未变化后创建 Tag 并发布。验收失败才允许修改；任何修改都会作废旧 evidence，必须重新冻结并重新 staging。验收通过后禁止追加 Changelog、文档或其他提交。

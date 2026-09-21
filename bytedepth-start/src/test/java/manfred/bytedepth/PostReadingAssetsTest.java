@@ -45,6 +45,10 @@ class PostReadingAssetsTest {
 
         assertThat(template)
                 .contains("class=\"series-context\"")
+                .contains("class=\"series-top-nav\"")
+                .contains("aria-label=\"专栏上一篇下一篇\"")
+                .contains("返回专栏")
+                .contains("查看专栏目录")
                 .contains("id=\"seriesPanel\"")
                 .contains("id=\"seriesTrigger\"")
                 .contains("打开专栏导航")
@@ -61,12 +65,23 @@ class PostReadingAssetsTest {
     }
 
     @Test
+    void seriesSidebarNameUsesTheSidebarContrastColor() throws IOException {
+        String template = classpathText("/templates/public/posts/detail.html");
+
+        assertThat(template)
+                .contains("class=\"series-panel-name-link\"")
+                .containsPattern("(?s)\\.series-panel-name-link\\s*\\{.*?color: var\\(--navy-fg\\);");
+    }
+
+    @Test
     void desktopSeriesNavigationStaysCompactWhileMobileKeepsTouchTarget() throws IOException {
         String template = classpathText("/templates/public/posts/detail.html");
 
         assertThat(template)
                 .containsPattern("(?s)\\.series-post-nav\\s*\\{.*?min-height: 62px;")
+                .containsPattern("(?s)\\.series-top-nav\\s*\\{.*?min-height: 62px;")
                 .containsPattern("(?s)@media \\(max-width: 768px\\).*?\\.series-nav-link \\{ min-height: 76px;")
+                .containsPattern("(?s)@media \\(max-width: 768px\\).*?\\.series-top-nav \\{.*?min-height: 76px;")
                 .containsPattern("(?s)\\.series-panel\\s*\\{.*?position: fixed;")
                 .containsPattern("(?s)@media \\(max-width: 768px\\).*?\\.series-panel \\{.*?width: min\\(86vw, 300px\\);")
                 .containsPattern("(?s)\\.series-trigger\\s*\\{.*?top: 25%;.*?padding: 14px 9px;")

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# staging 部署：接受 origin 上的命名分支或 Tag（默认 main）。
+# staging 部署：接受 origin 上的命名候选分支或 Tag。
 # 在 124 上执行。与生产 deploy-production.sh 的区别：
 # - 接受任意命名分支或 Tag（不限 SemVer Tag，不限 main），用于预发验收尚未合并 main 的功能分支
 # - 不做重复部署校验（staging 可重复部署同一 ref）
@@ -7,15 +7,20 @@
 # - 安全限制：只接受 origin 上已命名的分支或 Tag，拒绝裸 SHA
 #   （bootstrap-ops-deploy.sh 由 root 执行并构建带主机挂载的容器，
 #    命名 ref 经 deploy key 推送，可追溯；裸 SHA 不可追溯，禁止）
-# 用法：./deploy/deploy-staging.sh <ref>   # 本机编排，远程 sudo 执行
+# 用法：./deploy/deploy-staging.sh <候选分支或Tag>   # 本机编排，远程 sudo 执行
 set -Eeuo pipefail
+
+if [[ $# -lt 1 || -z "${1:-}" ]]; then
+    printf 'Usage: %s <candidate-branch-or-tag>\n' "$0" >&2
+    exit 2
+fi
 
 if [[ "${EUID}" -ne 0 ]]; then
     STAGING_HOST="${BYTEDEPTH_STAGING_HOST:-124.221.143.25}"
     SSH_KEY="${BYTEDEPTH_SSH_KEY:-$HOME/.ssh/ubuntu_2.pem}"
     exec ssh -i "$SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
         "ubuntu@$STAGING_HOST" \
-        "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh ${1:-main}"
+        "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh $1"
 fi
 
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -36,7 +41,7 @@ if [[ "${1:-}" != '--lock-held' ]]; then
 fi
 shift
 
-readonly REF="${1:-main}"
+readonly REF="$1"
 
 git_cmd() { git -c safe.directory="$SOURCE_ROOT" "$@"; }
 
@@ -135,6 +140,7 @@ if ! record_timed_phase "$TIMING_FILE" source_checkout git_cmd checkout --detach
     exit 1
 fi
 
+bash scripts/check-staging-changelog-change.sh --target "$COMMIT" --base origin/main
 bash scripts/check-release-readiness.sh --target "$COMMIT" --base origin/main --mode candidate
 
 # Any prior result describes the previously deployed application, never this

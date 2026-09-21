@@ -178,7 +178,7 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 
 ### 部署
 
-`deploy/deploy-staging.sh <ref>` 在 124 执行，接受 origin 上已命名的分支或 Tag（默认 `main`，不直接接受任意裸 SHA）。功能分支先部署到 staging 验收、通过后再合并 `main`。部署、集成测试和 E2E 共用 `/var/lib/bytedepth-staging/deployment-test.lock`；同一台 staging 上它们互斥运行。部署取得锁后立即删除两份旧 evidence，因此新部署绝不会继承上一版本的测试通过记录。
+`deploy/deploy-staging.sh <候选分支或Tag>` 在 124 执行，只接受 origin 上已命名的 ref（不直接接受任意裸 SHA）。候选分支必须在首次 staging 部署前冻结正式 Changelog，且相对 `origin/main` 的提交范围必须修改 `docs/releases/CHANGELOG.md`；部署 `main` 或未修改 Changelog 的候选会被拒绝。部署、集成测试和 E2E 共用 `/var/lib/bytedepth-staging/deployment-test.lock`；同一台 staging 上它们互斥运行。部署取得锁后立即删除两份旧 evidence，因此新部署绝不会继承上一版本的测试通过记录。
 
 访问日志归档和表空间维护均由应用容器内的 Spring 定时任务执行：归档默认每 10 分钟运行，表空间维护默认每周日 03:30（Asia/Shanghai）运行。它们随完整 Compose 部署启动，不需要宿主机新增 cron、systemd timer 或第二套调度器；部署时必须按正常流程重建并启动完整 Compose 服务。
 
@@ -193,7 +193,7 @@ cd /opt/bytedepth
 sudo ./deploy/run-staging-integration-tests.sh
 ```
 
-该 runner 只接受 `/etc/bytedepth-deploy.conf` 中的 `BYTEDEPTH_DEPLOY_MODE=staging`。它会先取得共享锁、读取完整 checkout SHA，并核对 `/var/lib/bytedepth-staging/deploy-history` 的最近部署 SHA；二者不一致时不会开始测试。它只从 staging `.env` 提取非空的 `REDIS_PASSWORD`，不加载或输出其他变量；密码写入 runner 私有的 `0600` Docker `--env-file`，Failsafe profile 再从容器环境读取，绝不会作为 Maven 或 Docker 命令行参数出现。runner 先要求至少 2 GiB 临时磁盘余量，再从该完整 SHA 以 `git archive` 建立私有的、仅含受版本控制源码的临时目录；它绝不复制 `.git`、`node_modules`、构建产物或 staging `.env`，因此容器只接收上述 Redis env-file；再以一次性 Maven 25 容器加入 `bytedepth_default` 网络。bootstrap 与该容器共享同一只读 Maven repository；JUnit 6 所需的 `junit-platform-launcher` 作为父 POM 继承的 test 依赖明确声明，因此常规 `dependency:go-offline` 可预取其完整运行时。它还用与 runner 一致的 profile 执行两次零测试解析探针（在线解析、再严格离线重验）：指定一个不存在的 Surefire/Failsafe 测试名且显式允许未匹配，因而不会执行真实单测或集成测试。Failsafe 通过 Docker 服务 DNS `redis:6379` 访问测试专用 Redis 凭据，不发布端口，也不会让 Maven 写入已部署 checkout。进入 `tee` 前 runner 会将任何出现的精确密码替换为 `[REDACTED]`。Maven 输出含任意大小写 `WARNING` 时 runner 失败；密钥不得写入命令输出、日志或聊天记录。
+该 runner 只接受 `/etc/bytedepth-deploy.conf` 中的 `BYTEDEPTH_DEPLOY_MODE=staging`。它会先取得共享锁、读取完整 checkout SHA，并核对 `/var/lib/bytedepth-staging/deploy-history` 的最近部署 SHA；二者不一致时不会开始测试。它只从 staging `.env` 提取非空的 `REDIS_PASSWORD`，不加载或输出其他变量；密码写入 runner 私有的 `0600` Docker `--env-file`，Failsafe profile 再从容器环境读取，绝不会作为 Maven 或 Docker 命令行参数出现。runner 先要求至少 2 GiB 临时磁盘余量，再从该完整 SHA 以 `git archive` 建立私有的、仅含受版本控制源码的临时目录；它绝不复制 `.git`、`node_modules`、构建产物或 staging `.env`，因此容器只接收上述 Redis env-file；再以一次性 Maven 25 容器加入 `bytedepth_default` 网络。bootstrap 与该容器共享同一只读 Maven repository；JUnit 6 所需的 `junit-platform-launcher` 作为父 POM 继承的 test 依赖明确声明，因此常规 `dependency:go-offline` 可预取其完整运行时。它还用与 runner 一致的 profile 执行两次零测试解析探针（在线解析、再严格离线重验）：指定一个不存在的 Surefire/Failsafe 测试名且显式允许未匹配，因而不会执行真实单测或集成测试。Failsafe 通过 Docker 服务 DNS `redis:6379` 访问测试专用 Redis 凭据，不发布端口，也不会让 Maven 写入已部署 checkout。进入 `tee` 前 runner 会将任何出现的精确密码替换为 `[REDACTED]`。Maven 输出中的未登记 `WARNING`/`WARN` 才会失败；白名单及其依据见 [技术债清单](../engineering/technical-debt.md)。
 
 ### E2E 测试与 release evidence
 
@@ -206,6 +206,7 @@ sudo --preserve-env=BYTEDEPTH_STAGING_E2E_USERNAME,BYTEDEPTH_STAGING_E2E_PASSWOR
 ```
 
 该 wrapper 只在 staging 模式运行，且会 fail-fast 要求显式注入 `BYTEDEPTH_STAGING_E2E_USERNAME` 与 `BYTEDEPTH_STAGING_E2E_PASSWORD`；凭据只作为 `E2E_ADMIN_USERNAME`/`E2E_ADMIN_PASSWORD` 传给 Playwright，不写入 evidence、日志或命令行参数。它先取得共享锁，固定 `E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn`，再使用 root 管理的共享 Chromium `/opt/shared-e2e/chrome-linux64/chrome`。运行时 manifest 保存 Chromium 的 `--version` 输出以及 `package-lock.json`、`pom.xml` 的摘要；它刻意不保存 checkout SHA：代码变化但依赖输入未变化时应直接复用预热环境，依赖或浏览器变化时才必须先运行 bootstrap，且项目不得自行下载浏览器。批注 E2E 从 staging 的公开文章列表选择当前存在的第一篇文章，并用显式注入的管理账号创建临时草稿、创建划线评注、修改 Markdown、验证存活批注重定位和已删除批注隐藏，最后清理测试数据；因此不依赖失效的固定 slug。它先把完整 checkout SHA 与最近 app 部署记录绑定，且在写 evidence 前再次确认 checkout 与部署记录均未变化。它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含任意大小写 `WARNING` 或命令失败都会拒绝通过。
+该 wrapper 只在 staging 模式运行，且会 fail-fast 要求显式注入 `BYTEDEPTH_STAGING_E2E_USERNAME` 与 `BYTEDEPTH_STAGING_E2E_PASSWORD`；凭据只作为 `E2E_ADMIN_USERNAME`/`E2E_ADMIN_PASSWORD` 传给 Playwright，不写入 evidence、日志或命令行参数。它先取得共享锁，固定 `E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn`，再使用 root 管理的共享 Chromium `/opt/shared-e2e/chrome-linux64/chrome`。运行时 manifest 保存 Chromium 的 `--version` 输出以及 `package-lock.json`、`pom.xml` 的摘要；它刻意不保存 checkout SHA：代码变化但依赖输入未变化时应直接复用预热环境，依赖或浏览器变化时才必须先运行 bootstrap，且项目不得自行下载浏览器。批注 E2E 从 staging 的公开文章列表选择当前存在的第一篇文章，并用显式注入的管理账号创建临时草稿、创建划线评注、修改 Markdown、验证存活批注重定位和已删除批注隐藏，最后清理测试数据；因此不依赖失效的固定 slug。它先把完整 checkout SHA 与最近 app 部署记录绑定，且在写 evidence 前再次确认 checkout 与部署记录均未变化。它不接受本机浏览器或其他 ref 的 E2E 结果。Playwright 输出含未登记的 `WARNING`/`WARN` 或命令失败都会拒绝通过。
 
 两个 runner 都会在每次 staging run 开始时先删除自己的旧记录，因而失败或 WARNING 绝不保留旧的 passed 状态；只有各自命令成功、输出零 `WARNING`、checkout 与部署 SHA 均稳定时，才将 root-owned `0600` 记录写入 root-owned `0700` 的 `/var/lib/bytedepth-staging/test-history/`：`staging-integration` 与 `staging-e2e`。每份记录严格含 `commit=<完整 SHA>`、对应 `command=`、实际 UTC `timestamp=` 与 `result=passed`，不含凭据。由于记录不可由普通 staging 登录用户读取，创建 Release Tag 前必须通过受控 `sudo cat` over SSH 将两份记录写入本机新建的临时目录，并把该目录显式传给 `prepare-release.sh`；详见 [发布流程](../docs/releases/README.md#staging-预检与生产单机发布)。
 
@@ -218,15 +219,14 @@ sudo --preserve-env=BYTEDEPTH_STAGING_E2E_USERNAME,BYTEDEPTH_STAGING_E2E_PASSWOR
 在 staging 部署候选 ref 并用真实数据验证：
 
 ```bash
-# staging 接受 origin 上已命名的分支或 Tag（默认 main）
-# 功能分支先部署验收，通过后再合并 main
+# staging 接受 origin 上已命名的冻结候选分支或 Tag
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
   "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh <分支或Tag>"
 ```
 
-涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。流程固定为：实现并补测试 → 跑前置门禁 → 部署候选 ref（分支或 `main`）到 staging → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能进入 6.2 创建生产版本与部署生产。
+涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。流程固定为：实现并补测试 → 冻结版本与 Changelog → 吸收远程最新 `main` → 跑前置门禁 → 部署冻结候选 ref 到 staging → 项目所有者在 staging 验收 → **验收通过后候选分支 fast-forward 合并 `main`**；合并后 SHA 不得变化，直接进入 6.2 创建生产版本与部署生产。验收失败才允许修改，旧 evidence 必须作废并重新走全流程。
 
-在 `staging-bytedepth.bytedepth.cn` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。staging 不提供 `/feed.xml`、`/sitemap.xml`，也不渲染 RSS 自动发现；生产环境仍保留这些入口。准备 Release 前需对当前 `main` 的 SHA 重新取得两份 evidence；候选分支的结果不能替代 main。staging 验证失败则修代码回到此步，不发布生产。
+在 `staging-bytedepth.bytedepth.cn` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。staging 不提供 `/feed.xml`、`/sitemap.xml`，也不渲染 RSS 自动发现；生产环境仍保留这些入口。准备 Release 前需确认 fast-forward 后的 `main` SHA 与候选 SHA 完全一致；否则停止发布并重新冻结、部署和验收。staging 验证失败则修代码回到此步，不发布生产。
 
 ### 6.2 生产部署
 
@@ -244,7 +244,7 @@ BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" \
 
 `deploy-production.sh` 必须验证 Tag、记录版本与完整 SHA，并调用完整 Compose 部署；部署后必须执行 `scripts/verify-production-release.sh <tag>`。尚未具备该工具的环境禁止按旧的 `git pull main` 方式发布；应先完成发布工具升级。
 
-生产部署在 Docker Compose 构建前自动执行 `deploy/prewarm-production-maven-cache.sh`，用固定 Java 25 Maven 容器按目标 Tag 预热 `/opt/shared-maven/repository`。历史上 staging 缓存完整但生产主机缺少目标版本依赖，导致 Docker 离线构建失败；两个主机的缓存不能互相假设。预热输出出现 WARNING 或失败都会阻断发布；Dockerfile 的实际离线 `clean package` 是最终校验，禁止恢复 `dependency:go-offline` 预检。
+生产部署在 Docker Compose 构建前自动执行 `deploy/prewarm-production-maven-cache.sh`，用固定 Java 25 Maven 容器按目标 Tag 预热 `/opt/shared-maven/repository`。历史上 staging 缓存完整但生产主机缺少目标版本依赖，导致 Docker 离线构建失败；两个主机的缓存不能互相假设。预热输出出现未登记 WARNING 或失败都会阻断发布；已登记技术债中的精确告警按白名单处理。Dockerfile 的实际离线 `clean package` 是最终校验，禁止恢复 `dependency:go-offline` 预检。
 
 ### 6.3 发布后验收
 

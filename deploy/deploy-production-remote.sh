@@ -28,6 +28,9 @@ fi
 readonly REMOTE_LOG="/tmp/bytedepth-production-${TAG}.log"
 readonly SSH_TARGET="$PRODUCTION_USER@$PRODUCTION_HOST"
 readonly SSH_OPTIONS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE" -o StrictHostKeyChecking=yes)
+readonly LOG_SNAPSHOT_FILE="$(mktemp)"
+trap 'rm -f "$LOG_SNAPSHOT_FILE"' EXIT
+source "$(cd "$(dirname "$0")" && pwd)/lib/warning-policy.sh"
 
 remote() {
     ssh "${SSH_OPTIONS[@]}" "$SSH_TARGET" "$@"
@@ -73,9 +76,10 @@ while :; do
         printf 'Production polling failed; remote log: %s\n' "$REMOTE_LOG" >&2
         exit 1
     }
-    if grep -Eqi 'WARNING' <<< "$log_snapshot"; then
+    printf '%s\n' "$log_snapshot" > "$LOG_SNAPSHOT_FILE"
+    if ! warning_policy_check_file "$LOG_SNAPSHOT_FILE" >/dev/null; then
         printf '%s\n' "$log_snapshot" >&2
-        printf 'Refusing: production deployment log contains WARNING; remote log: %s\n' "$REMOTE_LOG" >&2
+        printf 'Refusing: production deployment log contains an unallowlisted WARNING; remote log: %s\n' "$REMOTE_LOG" >&2
         exit 1
     fi
     if remote "sudo -n grep -Fqx 'version=$TAG' '$RELEASE_HISTORY'" >/dev/null 2>&1; then

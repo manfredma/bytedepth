@@ -259,9 +259,13 @@ test.describe('划线评论', () => {
         await expect(page.locator('#post-article')).toHaveClass(/bd-annotation-reading-layout-open/);
         const wideDesktopLayout = await page.evaluate(() => {
             const content = document.querySelector('.bd-annotation-reading-content').getBoundingClientRect();
-            const heading = document.querySelector('.bd-annotation-reading-content h1').getBoundingClientRect();
+            const headingElement = document.querySelector('.bd-annotation-reading-content h1');
+            const heading = headingElement.getBoundingClientRect();
+            const headingLineHeight = parseFloat(getComputedStyle(headingElement).lineHeight);
             const seriesContext = document.querySelector('.bd-annotation-reading-content .series-context');
             const seriesContextRect = seriesContext?.getBoundingClientRect();
+            const seriesTopNav = document.querySelector('.bd-annotation-reading-content .series-top-nav');
+            const seriesTopNavRect = seriesTopNav?.getBoundingClientRect();
             const sidebar = document.querySelector('#bd-annotation-sidebar');
             const sidebarRect = sidebar.getBoundingClientRect();
             const navigationRect = document.querySelector('.nav-bar').getBoundingClientRect();
@@ -273,7 +277,9 @@ test.describe('划线评论', () => {
                 contentTop: content.top,
                 headingOffsetTop: heading.top - content.top,
                 headingOffsetAfterSeriesContext: heading.top - (seriesContextRect?.bottom ?? content.top),
+                headingOffsetAfterSeriesTopNav: heading.top - (seriesTopNavRect?.bottom ?? seriesContextRect?.bottom ?? content.top),
                 headingHeight: heading.height,
+                headingLineCount: Math.round(heading.height / headingLineHeight),
                 sidebarLeft: sidebarRect.left,
                 sidebarTop: sidebarRect.top,
                 sidebarBottom: sidebarRect.bottom,
@@ -287,11 +293,11 @@ test.describe('划线评论', () => {
         // 正文紧接在导航及（staging 时）预发提示条之后，保留文章自身的最大 40px 顶部间距。
         expect(wideDesktopLayout.contentTop).toBeGreaterThanOrEqual(wideDesktopLayout.pageChromeBottom);
         expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(wideDesktopLayout.pageChromeBottom + 40);
-        // 阅读布局在 1440px 下以 3vw（43.2px）为正文内边距；系列上下文卡片是标题前的刻意内容，测量其后的间距，避免耦合页面 chrome 与卡片高度。
-        expect(wideDesktopLayout.headingOffsetAfterSeriesContext).toBeGreaterThanOrEqual(25);
-        expect(wideDesktopLayout.headingOffsetAfterSeriesContext).toBeLessThanOrEqual(55);
-        // h1 clamp(1.8rem,3vw,2.6rem)，行高 1.2；只约束标题自身尺寸，不耦合页面 chrome 的绝对 Y 坐标。
-        expect(wideDesktopLayout.headingHeight).toBeLessThanOrEqual(55);
+        // 阅读布局在 1440px 下以 3vw（43.2px）为正文内边距；专栏上下文和文章开头导航都是标题前的刻意内容，测量导航其后的间距，避免耦合页面 chrome 与卡片高度。
+        expect(wideDesktopLayout.headingOffsetAfterSeriesTopNav).toBeGreaterThanOrEqual(25);
+        expect(wideDesktopLayout.headingOffsetAfterSeriesTopNav).toBeLessThanOrEqual(55);
+        // h1 clamp(1.8rem,3vw,2.6rem)，行高 1.2；标题长度由 staging 数据决定，允许最多两行，避免与文章排序耦合。
+        expect(wideDesktopLayout.headingLineCount).toBeLessThanOrEqual(2);
         expect(wideDesktopLayout.sidebarTop).toBeGreaterThanOrEqual(0);
         expect(wideDesktopLayout.sidebarTop).toBeLessThanOrEqual(100);
         expect(wideDesktopLayout.sidebarBottom).toBeGreaterThan(0);

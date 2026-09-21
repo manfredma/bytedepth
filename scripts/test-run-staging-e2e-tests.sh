@@ -54,6 +54,7 @@ SCRIPT
 chmod +x "$FIXTURE_CHROMIUM"
 sed 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome$@readonly SHARED_CHROMIUM_EXECUTABLE='"$FIXTURE_CHROMIUM"'@' \
     "$SOURCE_ROOT/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
+cp "$SOURCE_ROOT/deploy/lib/warning-policy.sh" "$FIXTURE_SOURCE/deploy/lib/warning-policy.sh"
 printf 'ref=main\ncommit=%s\ndeployed_at=2026-09-10T10:11:12Z\n---\n' "$CURRENT_SHA" > "$DEPLOY_HISTORY"
 
 sed \

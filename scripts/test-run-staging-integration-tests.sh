@@ -135,6 +135,7 @@ chmod +x "$FIXTURE_CHROMIUM"
 sed -e 's@^readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository$@readonly SHARED_MAVEN_REPOSITORY='"$SHARED_MAVEN_REPOSITORY"'@' \
     -e 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome$@readonly SHARED_CHROMIUM_EXECUTABLE='"$FIXTURE_CHROMIUM"'@' \
     "$SOURCE_ROOT/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
+cp "$SOURCE_ROOT/deploy/lib/warning-policy.sh" "$FIXTURE_SOURCE/deploy/lib/warning-policy.sh"
 printf 'fixture source\n' > "$FIXTURE_SOURCE/fixture-marker"
 printf 'fixture Docker socket placeholder\n' > "$DOCKER_SOCKET"
 mkdir -p "$FIXTURE_SOURCE/.mvn"
