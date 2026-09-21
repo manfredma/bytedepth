@@ -472,6 +472,8 @@
             border-bottom: 1px solid rgba(255,255,255,.08);
             line-height: 1.4;
         }
+        .series-panel-name-link { color: var(--navy-fg); font-size: .94rem; font-weight: 700; text-decoration: none; }
+        .series-panel-name-link:hover { color: var(--accent); }
         .series-panel-progress { margin-top: 10px; }
         .series-panel-progress-bar { position: relative; height: 6px; overflow: visible; border-radius: 999px; background: rgba(255,255,255,.2); }
         .series-panel-progress-value { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f1b44c, #e35a68); box-shadow: 0 1px 5px rgba(223,69,98,.47); }
@@ -858,7 +860,7 @@
                 <button class="series-panel-close" type="button" aria-label="关闭专栏文章列表" onclick="closeSeries()">×</button>
             </div>
             <div class="series-name">
-                <a class="series-context-link" th:href="@{/columns/{slug}(slug=${series.slug})}"
+                <a class="series-panel-name-link" th:href="@{/columns/{slug}(slug=${series.slug})}"
                    th:text="${series.name}">专栏名称</a>
                 <div class="series-panel-progress">
                 <div class="series-panel-progress-bar" role="progressbar" aria-label="专栏阅读进度"

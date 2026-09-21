@@ -61,6 +61,15 @@ class PostReadingAssetsTest {
     }
 
     @Test
+    void seriesSidebarNameUsesTheSidebarContrastColor() throws IOException {
+        String template = classpathText("/templates/public/posts/detail.html");
+
+        assertThat(template)
+                .contains("class=\"series-panel-name-link\"")
+                .containsPattern("(?s)\\.series-panel-name-link\\s*\\{.*?color: var\\(--navy-fg\\);");
+    }
+
+    @Test
     void desktopSeriesNavigationStaysCompactWhileMobileKeepsTouchTarget() throws IOException {
         String template = classpathText("/templates/public/posts/detail.html");
 
