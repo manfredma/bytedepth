@@ -178,7 +178,7 @@ staging 是独立 single-host 环境，自带 MySQL/Redis/MeiliSearch，与生�
 
 ### 部署
 
-`deploy/deploy-staging.sh <ref>` 在 124 执行，接受 origin 上已命名的分支或 Tag（默认 `main`，不直接接受任意裸 SHA）。功能分支先部署到 staging 验收、通过后再合并 `main`。部署、集成测试和 E2E 共用 `/var/lib/bytedepth-staging/deployment-test.lock`；同一台 staging 上它们互斥运行。部署取得锁后立即删除两份旧 evidence，因此新部署绝不会继承上一版本的测试通过记录。
+`deploy/deploy-staging.sh <候选分支或Tag>` 在 124 执行，只接受 origin 上已命名的 ref（不直接接受任意裸 SHA）。候选分支必须在首次 staging 部署前冻结正式 Changelog，且相对 `origin/main` 的提交范围必须修改 `docs/releases/CHANGELOG.md`；部署 `main` 或未修改 Changelog 的候选会被拒绝。部署、集成测试和 E2E 共用 `/var/lib/bytedepth-staging/deployment-test.lock`；同一台 staging 上它们互斥运行。部署取得锁后立即删除两份旧 evidence，因此新部署绝不会继承上一版本的测试通过记录。
 
 访问日志归档和表空间维护均由应用容器内的 Spring 定时任务执行：归档默认每 10 分钟运行，表空间维护默认每周日 03:30（Asia/Shanghai）运行。它们随完整 Compose 部署启动，不需要宿主机新增 cron、systemd timer 或第二套调度器；部署时必须按正常流程重建并启动完整 Compose 服务。
 
@@ -217,15 +217,14 @@ sudo ./deploy/run-staging-e2e-tests.sh
 在 staging 部署候选 ref 并用真实数据验证：
 
 ```bash
-# staging 接受 origin 上已命名的分支或 Tag（默认 main）
-# 功能分支先部署验收，通过后再合并 main
+# staging 接受 origin 上已命名的冻结候选分支或 Tag
 ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
   "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh <分支或Tag>"
 ```
 
-涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。流程固定为：实现并补测试 → 跑前置门禁 → 部署候选 ref（分支或 `main`）到 staging → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能进入 6.2 创建生产版本与部署生产。
+涉及界面交互、视觉或布局的改动时，staging 是项目所有者的固定验收环境，不要求验收未部署的本机代码。流程固定为：实现并补测试 → 冻结版本与 Changelog → 吸收远程最新 `main` → 跑前置门禁 → 部署冻结候选 ref 到 staging → 项目所有者在 staging 验收 → **验收通过后候选分支 fast-forward 合并 `main`**；合并后 SHA 不得变化，直接进入 6.2 创建生产版本与部署生产。验收失败才允许修改，旧 evidence 必须作废并重新走全流程。
 
-在 `staging-bytedepth.bytedepth.cn` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。staging 不提供 `/feed.xml`、`/sitemap.xml`，也不渲染 RSS 自动发现；生产环境仍保留这些入口。准备 Release 前需对当前 `main` 的 SHA 重新取得两份 evidence；候选分支的结果不能替代 main。staging 验证失败则修代码回到此步，不发布生产。
+在 `staging-bytedepth.bytedepth.cn` 执行查询回归与写测试验证，并在 staging 主机运行上面的 `run-staging-integration-tests.sh` 与 `run-staging-e2e-tests.sh`。staging 不提供 `/feed.xml`、`/sitemap.xml`，也不渲染 RSS 自动发现；生产环境仍保留这些入口。准备 Release 前需确认 fast-forward 后的 `main` SHA 与候选 SHA 完全一致；否则停止发布并重新冻结、部署和验收。staging 验证失败则修代码回到此步，不发布生产。
 
 ### 6.2 生产部署
 

@@ -5,6 +5,7 @@ REF="${1:?Usage: $0 <branch>}"
 REPO="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##')"
 git fetch origin "$REF" main
 SHA="$(git rev-parse "origin/$REF")"
+bash scripts/check-staging-changelog-change.sh --target "$SHA" --base origin/main
 bash scripts/check-release-readiness.sh --target "$SHA" --base origin/main --mode candidate
 command -v gh >/dev/null || { echo 'gh is required' >&2; exit 1; }
 for attempt in $(seq 1 120); do
