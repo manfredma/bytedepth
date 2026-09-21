@@ -66,6 +66,8 @@ async function createAnnotation(page, selectedText, annotationText = null) {
 async function updateDraft(page, editPath, title, content) {
     await page.goto(editPath, {waitUntil: 'commit'});
     const categoryId = await page.locator('select[name="categoryId"] option:checked').getAttribute('value');
+    const updatePath = await page.locator('form.post-editor-form').getAttribute('action');
+    expect(updatePath).toBeTruthy();
     const updated = await page.evaluate(async ({title: postTitle, content: postContent, category, path}) => {
         const csrf = document.querySelector('meta[name="_csrf"]')?.content;
         const body = new URLSearchParams({title: postTitle, content: postContent, categoryId: category, _csrf: csrf});
@@ -75,27 +77,28 @@ async function updateDraft(page, editPath, title, content) {
             body
         });
         return {ok: response.ok, status: response.status};
-    }, {title, content, category: categoryId, path: editPath});
+    }, {title, content, category: categoryId, path: updatePath});
     expect(updated.ok, `draft update failed with HTTP ${updated.status}`).toBeTruthy();
 }
 
-async function removeAnnotation(page, id) {
-    await page.evaluate(async annotationId => {
+async function removeAnnotation(page, postPath, id) {
+    await page.evaluate(async ({path, annotationId}) => {
         const csrf = document.querySelector('meta[name="_csrf"]')?.content;
-        const response = await fetch(`${window.location.pathname}/annotations/${annotationId}`, {
+        const response = await fetch(`${path}/annotations/${annotationId}`, {
             method: 'DELETE', headers: {'X-CSRF-TOKEN': csrf}
         });
         if (response.status !== 204) {
             throw new Error(`annotation cleanup failed with HTTP ${response.status}`);
         }
-    }, id);
+    }, {path: postPath, annotationId: id});
 }
 
 async function deleteDraft(page, editPath) {
     await page.goto(editPath, {waitUntil: 'commit'});
+    const deletePath = editPath.replace(/\/edit$/, '/delete');
     await page.evaluate(async path => {
         const csrf = document.querySelector('meta[name="_csrf"]')?.content;
-        const response = await fetch(`${path}/delete`, {
+        const response = await fetch(path, {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: new URLSearchParams({_csrf: csrf})
@@ -103,7 +106,7 @@ async function deleteDraft(page, editPath) {
         if (!response.ok) {
             throw new Error(`draft cleanup failed with HTTP ${response.status}`);
         }
-    }, editPath);
+    }, deletePath);
 }
 
 test.describe('文章更新后的划线锚点', () => {
@@ -143,24 +146,14 @@ test.describe('文章更新后的划线锚点', () => {
             await expect(page.locator(`.bd-annotation-feed-item[data-id="${deletedAnnotation.id}"]`)).toHaveCount(0);
         } finally {
             if (liveAnnotation) {
-                await removeAnnotation(page, liveAnnotation.id);
+                await removeAnnotation(page, paths.postPath, liveAnnotation.id);
             }
             if (deletedAnnotation) {
                 // 已失效批注不在公开列表中，但删除 API 仍按归属允许清理。
-                await page.evaluate(async annotationId => {
-                    const csrf = document.querySelector('meta[name="_csrf"]')?.content;
-                    await fetch(`${window.location.pathname}/annotations/${annotationId}`, {
-                        method: 'DELETE', headers: {'X-CSRF-TOKEN': csrf}
-                    });
-                }, deletedAnnotation.id);
+                await removeAnnotation(page, paths.postPath, deletedAnnotation.id);
             }
             if (replacedAnnotation) {
-                await page.evaluate(async annotationId => {
-                    const csrf = document.querySelector('meta[name="_csrf"]')?.content;
-                    await fetch(`${window.location.pathname}/annotations/${annotationId}`, {
-                        method: 'DELETE', headers: {'X-CSRF-TOKEN': csrf}
-                    });
-                }, replacedAnnotation.id);
+                await removeAnnotation(page, paths.postPath, replacedAnnotation.id);
             }
             await deleteDraft(page, paths.editPath);
         }
