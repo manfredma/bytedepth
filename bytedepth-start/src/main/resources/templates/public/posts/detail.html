@@ -290,6 +290,62 @@
         .series-selector-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .series-selector-reading-time { flex: 0 0 auto; color: var(--ink-3); font-size: .72em; font-weight: 400; white-space: nowrap; }
 
+        /* ── 文章开头专栏上一篇/下一篇：建立阅读路径，底部完整导航保留 ── */
+        .series-top-nav {
+            display: flex;
+            min-height: 62px;
+            margin: -12px 0 32px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--card);
+            font-family: var(--sans);
+        }
+        .series-top-nav-link {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 10px 15px;
+            color: var(--ink);
+            text-decoration: none;
+            transition: background .2s, color .2s;
+        }
+        .series-top-nav-link + .series-top-nav-link { border-left: 1px solid var(--border); }
+        .series-top-nav-link:hover { background: var(--bg); color: var(--accent-dk); }
+        .series-top-nav-next { justify-content: flex-end; text-align: right; }
+        .series-top-nav-arrow {
+            flex: 0 0 auto;
+            width: 27px;
+            height: 27px;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            color: var(--ink-2);
+            background: var(--bg);
+            font-size: .95rem;
+            line-height: 1;
+        }
+        .series-top-nav-copy { min-width: 0; }
+        .series-top-nav-label {
+            display: block;
+            margin-bottom: 2px;
+            color: var(--ink-3);
+            font-size: .67rem;
+            letter-spacing: .04em;
+        }
+        .series-top-nav-title {
+            display: block;
+            overflow: hidden;
+            color: inherit;
+            font-size: .84rem;
+            font-weight: 600;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .series-top-nav-boundary { color: var(--ink-2); }
+
         /* ── 返回链接 ─────────────────────────── */
         .back-link {
             display: inline-flex;
@@ -622,6 +678,21 @@
             .series-nav-next { text-align: left; border-left: 1px solid var(--border); }
             .post-nav .nav-title,
             .series-nav-title { white-space: normal; }
+            .series-top-nav {
+                flex-direction: column;
+                min-height: 76px;
+                margin: -4px 0 26px;
+            }
+            .series-top-nav-link {
+                min-height: 76px;
+                padding: 14px 16px;
+            }
+            .series-top-nav-link + .series-top-nav-link {
+                border-top: 1px solid var(--border);
+                border-left: 0;
+            }
+            .series-top-nav-next { justify-content: flex-start; text-align: left; }
+            .series-top-nav-title { white-space: normal; }
             .comment-form { padding: 16px; }
 
             /* 专栏面板在手机端仍从左侧吸附，宽度不超过视口，正文只被轻量遮罩覆盖。 */
@@ -971,6 +1042,46 @@
             <span class="series-progress-marker" th:style="'left:' + ${seriesNavigation.progressPercent} + '%'" aria-hidden="true"></span>
         </div>
     </section>
+    <nav class="series-top-nav"
+         th:if="${isSeriesPost == true and seriesNavigation != null and seriesNavigation.position > 0}"
+         aria-label="专栏上一篇下一篇">
+        <a class="series-top-nav-link series-top-nav-prev"
+           th:if="${seriesNavigation.previous != null}"
+           th:href="@{/posts/{slug}(slug=${seriesNavigation.previous.slug})}">
+            <span class="series-top-nav-arrow" aria-hidden="true">←</span>
+            <span class="series-top-nav-copy">
+                <span class="series-top-nav-label">上一篇</span>
+                <span class="series-top-nav-title" th:text="${seriesNavigation.previous.title}">上一篇标题</span>
+            </span>
+        </a>
+        <a class="series-top-nav-link series-top-nav-prev series-top-nav-boundary"
+           th:if="${seriesNavigation.previous == null}"
+           th:href="@{/columns/{slug}(slug=${series.slug})}">
+            <span class="series-top-nav-arrow" aria-hidden="true">←</span>
+            <span class="series-top-nav-copy">
+                <span class="series-top-nav-label">返回专栏</span>
+                <span class="series-top-nav-title" th:text="${series.name}">专栏名称</span>
+            </span>
+        </a>
+        <a class="series-top-nav-link series-top-nav-next"
+           th:if="${seriesNavigation.next != null}"
+           th:href="@{/posts/{slug}(slug=${seriesNavigation.next.slug})}">
+            <span class="series-top-nav-copy">
+                <span class="series-top-nav-label">下一篇</span>
+                <span class="series-top-nav-title" th:text="${seriesNavigation.next.title}">下一篇标题</span>
+            </span>
+            <span class="series-top-nav-arrow" aria-hidden="true">→</span>
+        </a>
+        <a class="series-top-nav-link series-top-nav-next series-top-nav-boundary"
+           th:if="${seriesNavigation.next == null}"
+           th:href="@{/columns/{slug}(slug=${series.slug})}">
+            <span class="series-top-nav-copy">
+                <span class="series-top-nav-label">查看专栏目录</span>
+                <span class="series-top-nav-title" th:text="${series.name}">专栏名称</span>
+            </span>
+            <span class="series-top-nav-arrow" aria-hidden="true">→</span>
+        </a>
+    </nav>
     <h1 th:text="${post.title}">文章标题</h1>
     <div class="meta">
         <span th:if="${post.publishedAt != null}"
