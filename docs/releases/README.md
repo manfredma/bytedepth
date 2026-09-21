@@ -30,6 +30,12 @@ main（下一版本 -SNAPSHOT）
   → main 推进到下一个 -SNAPSHOT
 ```
 
+### 验收后立即发布的编排（默认）
+
+当需求明确 staging 验收通过后立即发布生产时，必须在**首次 staging 部署前**确定正式版本与下一开发版本，并先在 `main` 冻结正式 Changelog（包含 `## [vX.Y.Z]`、回滚基线和发布说明）。随后将最终候选合并到 `main`，只部署这个最终 `main` SHA 到 staging，运行集成与 E2E，验收通过后直接执行 `prepare-release.sh` 和生产发布。这样两份 evidence 从一开始就绑定最终 `main`，不会因验收后才冻结 Changelog 产生新的 SHA 而重复部署 staging。
+
+不得在已知“验收后立即发布”的情况下先部署功能分支、验收后再冻结 Changelog。若只是 staging 预览而尚未决定发布，则保留 `Unreleased` 并按功能分支验收；之后才决定发布时，冻结 Changelog 会改变 `main` SHA，必须重新部署并重新生成两份 evidence，这是预期成本。
+
 **CHANGELOG 版本号标题时序**：开发改动在 PR 阶段往 `## Unreleased` 下写变更内容（`### Changed`/`### Fixed`），合并 `main`；发版前在 `main` 上把 `## Unreleased` 改为 `## [vX.Y.Z] - 日期` 标题，填 `**Tag**`、`**回滚基线**`（`**Commit**`/`**部署**` 等 release:prepare 与部署后再补），提交。`prepare-release.sh` grep 校验 CHANGELOG 含 `## [vX.Y.Z]`，缺失则拒绝——版本号标题必须在 `prepare-release.sh` 之前出现在 `main`。该标题改动与部署后的验收记录补填，均属发布流程的 `docs(release)` 提交（先例 `36918d0`），非普通开发改动，不与「`main` 仅允许受控发布流程写入」冲突。
 
 发布工具必须自动校验工作区、版本号、Tag 格式和 Tag 唯一性；部署脚本必须只接受已验证的 Tag，并在状态中保存 `version` 与完整 SHA。发布工具完成前，禁止执行下一次生产部署。

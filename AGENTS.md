@@ -26,6 +26,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 生产部署从本机只能执行 `BYTEDEPTH_PRODUCTION_SSH_KEY=\"$HOME/.ssh/ubuntu_2.pem\" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS=\"$HOME/.ssh/known_hosts\" ./deploy/deploy-production-remote.sh vX.Y.Z`；`deploy/deploy-production.sh` 是 175 生产主机内部脚本，禁止在本机直接运行或用本机 `sudo` 重试。
 - 前端公共组件必须自隔离，组件之间除相对位置外不得互相影响。环境相关样式必须定义在承载该组件且所有使用页面必加载的组件样式表中，禁止放入仅部分路由加载的页面主题资产；必须有自动化资源归属检查覆盖该约束。
 - staging（124，`staging-bytedepth.bytedepth.cn`）是唯一的 E2E、集成、部署验收和项目所有者验收环境，尤其适用于界面交互、视觉与布局改动；不得要求项目所有者验收未部署的本机代码。流程固定为：实现并补单元测试 → 部署候选 ref（功能分支或 `main`）到 staging（`deploy/deploy-staging.sh <ref>`）→ **在 staging 跑全部 E2E 与集成验收** → 项目所有者在 staging 验收 → **验收通过后才 PR 合并 `main`**；合并 `main` 后才能创建生产版本、Tag 或部署生产。
+- **验收后立即发布编排（强制）**：如果需求已明确 staging 验收通过后立即发布，首次 staging 部署前必须确定 release/next-SNAPSHOT 版本、冻结正式 Changelog，并将最终候选合并到 `main`；staging 只部署最终 `main` SHA，验收通过后直接执行受控 release 和生产部署，不得先验收功能分支再冻结 Changelog 导致 SHA 变化和重复 staging。仅预览、尚未决定发布的任务才允许先验收功能分支；之后决定发布时必须承认并执行一次新的 main staging 验收。该规则与 `docs/releases/README.md`、`scripts/test-release-sequence.sh` 一起维护。
 - staging 验收和脚本必须使用 `https://staging-bytedepth.bytedepth.cn/`；原 `staging.bytedepth.cn` 不再作为 staging 内容入口。`BYTEDEPTH_ENVIRONMENT=staging` 时，RSS、sitemap 和 RSS 自动发现必须关闭，页面返回 noindex；生产环境保持这些公开入口。新域名只是环境入口，不是安全认证。
 - staging 域名证书以 124 的 Let’s Encrypt 证书为源；若证书监控探测生产边缘 175，必须运行 `deploy/sync-staging-certificate-to-production.sh` 同步精确 SAN 证书，175 只允许 TLS 握手后拒绝内容，不得代理 staging。
 - 旧域名 `staging.bytedepth.cn` 仍解析到 175，必须在 175 单独维护精确 SAN 证书并沿用上一版生产入口逻辑跳转到 `https://bytedepth.cn`；它不是 staging 内容入口。

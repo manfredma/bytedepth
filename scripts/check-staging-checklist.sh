@@ -6,6 +6,7 @@ set -Eeuo pipefail
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 bash "$SOURCE_ROOT/scripts/test-changelog-order.sh"
+bash "$SOURCE_ROOT/scripts/test-release-sequence.sh"
 bash "$SOURCE_ROOT/scripts/test-check-release-readiness.sh"
 bash "$SOURCE_ROOT/scripts/test-run-local-quality.sh"
 bash "$SOURCE_ROOT/scripts/test-github-quality-workflow.sh"
