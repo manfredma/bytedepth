@@ -35,7 +35,8 @@ test.describe('专栏文章导航', () => {
         await expect(page.locator('#seriesPanel')).toHaveClass(/open/);
         const panelWidth = await page.locator('#seriesPanel').boundingBox().then(box => box?.width ?? 0);
         expect(panelWidth).toBeGreaterThan(0);
-        expect(panelWidth).toBeLessThanOrEqual(300);
+        // CSS 的 300px 上限在移动 Chromium 的设备像素换算中可能出现极小的亚像素误差。
+        expect(panelWidth).toBeLessThanOrEqual(300.5);
     });
 
     test('专栏上下篇导航按设备提供合适的触控尺寸', async ({page}, testInfo) => {
