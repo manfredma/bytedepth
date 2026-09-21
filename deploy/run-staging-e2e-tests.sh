@@ -16,6 +16,7 @@ readonly E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn
 # Shared Chromium is provisioned at the host level by root maintenance.
 readonly CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
+source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 readonly WORK_DIR="$(mktemp -d)"
 readonly E2E_LOG="$WORK_DIR/playwright.log"
 trap 'rm -rf "$WORK_DIR"' EXIT
@@ -110,8 +111,8 @@ if ! E2E_POST_SLUG="$e2e_post_slug" \
     exit 1
 fi
 
-if grep -qi 'warning' "$E2E_LOG"; then
-    printf 'Refusing: Playwright output contains WARNING.\n' >&2
+if ! warning_policy_check_file "$E2E_LOG"; then
+    printf 'Refusing: Playwright output contains an unallowlisted WARN or WARNING.\n' >&2
     exit 1
 fi
 

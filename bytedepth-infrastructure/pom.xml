@@ -24,19 +24,6 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-jsqlparser-4.9</artifactId>
-            <exclusions>
-                <!--
-                    MyBatis-Plus declares FST as an optional cache dependency.
-                    FST 3.0.3 pulls javassist 3.21.0-GA, whose POM references
-                    the removed Java tools.jar and makes Java 25 go-offline
-                    resolution emit a WARNING. The application does not use
-                    that optional cache path.
-                -->
-                <exclusion>
-                    <groupId>de.ruedigermoeller</groupId>
-                    <artifactId>fst</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.mysql</groupId>

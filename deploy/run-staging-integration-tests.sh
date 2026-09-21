@@ -15,6 +15,7 @@ readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
 readonly DOCKER_SOCKET=/var/run/docker.sock
 readonly MINIMUM_WORKSPACE_FREE_KIB=2097152
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
+source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 WORK_DIR="$(mktemp -d)"
 readonly WORK_DIR
 readonly MAVEN_LOG="$WORK_DIR/maven.log"
@@ -159,8 +160,8 @@ if ! sudo docker run --rm --network bytedepth_default \
     exit 1
 fi
 
-if grep -Eqi '\[WARN(ING)?\]|WARN(ING)?[: ]' "$MAVEN_LOG"; then
-    printf 'Refusing: Maven output contains WARN or WARNING.\n' >&2
+if ! warning_policy_check_file "$MAVEN_LOG"; then
+    printf 'Refusing: Maven output contains an unallowlisted WARN or WARNING.\n' >&2
     exit 1
 fi
 

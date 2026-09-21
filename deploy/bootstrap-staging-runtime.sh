@@ -13,6 +13,7 @@ readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
 readonly RUNTIME_MANIFEST="$STATE_DIR/runtime/manifest"
 source "$SOURCE_ROOT/deploy/lib/timing.sh"
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
+source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 
 if [[ "${1:-}" != --lock-held ]]; then
     install -d -o root -g root -m 0700 "$STATE_DIR"
@@ -54,24 +55,39 @@ prepare_maven() {
     (
         flock -x 8
         cd "$SOURCE_ROOT"
-        "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" clean install -DskipTests -Dsort.skip=true
-        "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
-            dependency:go-offline -Dsort.skip=true -DincludePlugins=true -DincludePluginDependencies=true -DskipTests
-        # Surefire/Failsafe select their JUnit runtime dynamically, outside the
-        # dependency graph visible to dependency:go-offline.  Resolve that exact
-        # runtime without running a test: the impossible selector and the two
-        # fail-if-no-match flags keep this a dependency probe rather than test execution.
-        "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
-            -Pstaging-integration verify -Dtest=staging_bootstrap_dependency_probe \
-            -Dit.test=staging_bootstrap_dependency_probe -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dfailsafe.failIfNoSpecifiedTests=false -DskipTests=false -Dsort.skip=true
-        "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
-            -o -Pstaging-integration verify -Dtest=staging_bootstrap_dependency_probe \
-            -Dit.test=staging_bootstrap_dependency_probe -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dfailsafe.failIfNoSpecifiedTests=false -DskipTests=false -Dsort.skip=true
-        "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" verify -DskipTests -Dsort.skip=true
-        "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -Pstaging-integration verify -DskipTests -Dsort.skip=true
-        "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -o -Pstaging-integration verify -DskipTests -Dsort.skip=true
+        maven_log="$(mktemp)"
+        trap 'rm -f "$maven_log"' EXIT
+        set +e
+        (
+            set -Eeuo pipefail
+            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" clean install -DskipTests -Dsort.skip=true
+            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
+                dependency:go-offline -Dsort.skip=true -DincludePlugins=true -DincludePluginDependencies=true -DskipTests
+            # Surefire/Failsafe select their JUnit runtime dynamically, outside the
+            # dependency graph visible to dependency:go-offline.  Resolve that exact
+            # runtime without running a test: the impossible selector and the two
+            # fail-if-no-match flags keep this a dependency probe rather than test execution.
+            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
+                -Pstaging-integration verify -Dtest=staging_bootstrap_dependency_probe \
+                -Dit.test=staging_bootstrap_dependency_probe -Dsurefire.failIfNoSpecifiedTests=false \
+                -Dfailsafe.failIfNoSpecifiedTests=false -DskipTests=false -Dsort.skip=true
+            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
+                -o -Pstaging-integration verify -Dtest=staging_bootstrap_dependency_probe \
+                -Dit.test=staging_bootstrap_dependency_probe -Dsurefire.failIfNoSpecifiedTests=false \
+                -Dfailsafe.failIfNoSpecifiedTests=false -DskipTests=false -Dsort.skip=true
+            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" verify -DskipTests -Dsort.skip=true
+            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -Pstaging-integration verify -DskipTests -Dsort.skip=true
+            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -o -Pstaging-integration verify -DskipTests -Dsort.skip=true
+        ) 2>&1 | tee "$maven_log"
+        maven_status="${PIPESTATUS[0]}"
+        set -e
+        if [[ "$maven_status" -ne 0 ]]; then
+            return "$maven_status"
+        fi
+        if ! warning_policy_check_file "$maven_log"; then
+            printf 'Refusing: Maven runtime preparation emitted an unallowlisted WARN or WARNING.\n' >&2
+            return 1
+        fi
     ) 8>"$SHARED_MAVEN_LOCK"
 }
 

@@ -26,6 +26,10 @@ rg -q 'dependency:go-offline' "$BOOTSTRAP" || {
     printf 'Bootstrap must pre-resolve Maven plugins and plugin dependencies.\n' >&2
     exit 1
 }
+rg -Fq 'warning_policy_check_file' "$BOOTSTRAP" || {
+    printf 'Bootstrap must apply the shared warning allowlist before rollout.\n' >&2
+    exit 1
+}
 rg -q 'includePlugins=true' "$BOOTSTRAP" || {
     printf 'Bootstrap must pre-resolve Maven plugin transitive dependencies.\n' >&2
     exit 1

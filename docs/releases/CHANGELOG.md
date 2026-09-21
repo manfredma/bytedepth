@@ -8,10 +8,6 @@
 
 - v2.22.0 发布后，主线进入 `2.23.0-SNAPSHOT` 开发周期。
 
-### Fixed
-
-- 修复 staging Maven 运行时预热因 MyBatis-Plus 可选 FST 依赖引用已删除的 `tools.jar` 而产生 WARNING，确保 Java 25 的零告警部署门禁可通过。
-
 ## [v2.22.0] - 2026-09-21
 
 **Tag**：`v2.22.0`
