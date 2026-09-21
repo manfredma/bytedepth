@@ -4,6 +4,7 @@ import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.PostStatus;
 import manfred.bytedepth.infrastructure.stats.RedisStatsService;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -34,6 +35,11 @@ class PostRepositoryIT {
         // Testcontainers 1.21.x 的 JUnit 扩展尚未适配 JUnit 6；显式启动保持
         // Spring ServiceConnection 的真实容器边界，同时避免扩展发出兼容性 WARN。
         mysql.start();
+    }
+
+    @AfterAll
+    static void stopMySql() {
+        mysql.stop();
     }
 
     @MockitoBean

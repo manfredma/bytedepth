@@ -32,6 +32,20 @@ assert_testcontainers_uses_docker_29_compatible_bom() {
 
 assert_testcontainers_uses_docker_29_compatible_bom "$ROOT_POM"
 
+assert_staging_mysql_containers_have_bounded_lifecycle() {
+    local integration_test
+
+    for integration_test in \
+        "$SOURCE_ROOT/bytedepth-start/src/test/java/manfred/bytedepth/integration/PostRepositoryIT.java" \
+        "$SOURCE_ROOT/bytedepth-start/src/test/java/manfred/bytedepth/integration/AnnotationContentUpdateIT.java"; do
+        grep -Fq 'static MySQLContainer' "$integration_test"
+        grep -Fq '@AfterAll' "$integration_test"
+        grep -Fq 'mysql.stop();' "$integration_test"
+    done
+}
+
+assert_staging_mysql_containers_have_bounded_lifecycle
+
 assert_docker_build_overrides_selected_workspace_settings() {
     local dockerfile="$1"
     local source_copy_line override_line package_line
