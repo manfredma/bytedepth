@@ -11,6 +11,7 @@
 ## 构建与测试
 
 - 所有 Maven 命令都显式使用 Java 25，并带 `-Dsort.skip=true`；完整命令见 [Maven 指南](../agent-guides/maven.md)。
+- MyBatis-Plus 的 `mybatis-plus-jsqlparser-4.9` 必须排除可选的 `de.ruedigermoeller:fst`；FST 3.0.3 会引入引用已删除 `tools.jar` 的 Javassist 3.21.0 POM，使 Java 25 的 staging `dependency:go-offline` 产生 WARNING。该约束由 Maven runtime 检查自动验证。
 - 修改 Controller 构造器或应用接口时，同步修改 `@WebMvcTest` 的 mock；接口或返回类型变更要检查全部调用方。
 - 不以编译代替测试；生产 Java 改动还必须通过变更覆盖率门禁。
 - MyBatis 注解（如 `@Select`）中的 SQL 不经过 XML 实体解码；比较运算符必须直接写 `>=`、`<` 等原生 SQL，不能复制 XML mapper 中的 `&gt;=`、`&lt;` 写法，否则数据库会收到非法 SQL。

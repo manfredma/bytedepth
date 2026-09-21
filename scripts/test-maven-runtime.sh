@@ -18,6 +18,10 @@ rg -F -- '"$SOURCE_ROOT/mvnw"' "$ROOT/deploy/bootstrap-staging-runtime.sh" >/dev
 rg -F -- '"$STAGING_MAVEN_IMAGE"' "$ROOT/deploy/run-staging-integration-tests.sh" >/dev/null
 rg -F -- '"$SOURCE_ROOT/mvnw"' "$ROOT/scripts/run-local-quality.sh" >/dev/null
 rg -F -- '"$SOURCE_ROOT/mvnw"' "$ROOT/scripts/prepare-release.sh" >/dev/null
+rg -Uq '(?s)<groupId>com\.baomidou</groupId>\s*<artifactId>mybatis-plus-jsqlparser-4\.9</artifactId>.*?<exclusions>.*?<groupId>de\.ruedigermoeller</groupId>\s*<artifactId>fst</artifactId>' "$ROOT/bytedepth-infrastructure/pom.xml" || {
+    printf 'MyBatis-Plus JSqlParser must exclude optional FST to keep Java 25 Maven resolution warning-free.\n' >&2
+    exit 1
+}
 if rg -q 'maven:3\.9-eclipse-temurin-25|JAVA_HOME=.*mvn ' "$ROOT/deploy" "$ROOT/Dockerfile"; then
     printf 'Maven runtime must not use a floating image or host Maven.\n' >&2
     exit 1
