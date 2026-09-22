@@ -9,6 +9,7 @@
     <link rel="stylesheet" th:href="@{/css/post-rating.css}">
     <link rel="stylesheet" th:href="@{/css/annotation.css}">
     <link rel="stylesheet" th:href="@{/css/post-image-lightbox.css}">
+    <link rel="stylesheet" th:href="@{/css/code-blocks.css}">
     <script th:src="@{/js/theme-switcher.js}"></script>
     <title th:text="${post.title} + ' - bytedepth'">文章详情</title>
     <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
@@ -1205,6 +1206,7 @@
 </script>
 <script th:src="@{/js/annotation.js}"></script>
 <script th:src="@{/js/post-image-lightbox.js}"></script>
+<script th:src="@{/js/code-blocks.js}"></script>
 
 </div>
 <!-- Mermaid 图表渲染 -->

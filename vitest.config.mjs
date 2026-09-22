@@ -3,7 +3,10 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     coverage: {
-      include: ['bytedepth-start/src/main/resources/static/js/post-image-lightbox.js'],
+      include: [
+        'bytedepth-start/src/main/resources/static/js/post-image-lightbox.js',
+        'bytedepth-start/src/main/resources/static/js/code-blocks.js'
+      ],
       provider: 'v8',
       reporter: ['text'],
       thresholds: {

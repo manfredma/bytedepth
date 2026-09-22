@@ -28,6 +28,26 @@ class PostReadingAssetsTest {
     }
 
     @Test
+    void articlePageLoadsOptInCodeBlockEnhancementAssets() throws IOException {
+        String template = classpathText("/templates/public/posts/detail.html");
+        String css = classpathText("/static/css/code-blocks.css");
+        String script = classpathText("/static/js/code-blocks.js");
+
+        assertThat(template)
+                .contains("@{/css/code-blocks.css}")
+                .contains("@{/js/code-blocks.js}");
+        assertThat(css)
+                .contains(".content .bd-code-block")
+                .contains(".content .bd-code-tabs")
+                .doesNotContain(".content pre {");
+        assertThat(script)
+                .contains("#post-article .content")
+                .contains(".bd-code-block")
+                .contains(".bd-code-tabs")
+                .doesNotContain("querySelectorAll('pre')");
+    }
+
+    @Test
     void viewLogRendersTheCombinedReadingStatusColumn() throws IOException {
         String template = classpathText("/templates/admin/view-logs/list.html");
 

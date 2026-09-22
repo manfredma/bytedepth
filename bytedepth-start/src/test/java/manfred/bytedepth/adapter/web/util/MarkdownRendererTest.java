@@ -42,6 +42,59 @@ class MarkdownRendererTest {
     }
 
     @Test
+    void leavesAdjacentOrdinaryCodeBlocksWithoutEnhancementMarkup() {
+        String rendered = renderer.render("```java\nint value = 1;\n```\n\n```kotlin\nval value = 1\n```");
+
+        assertThat(rendered)
+                .contains("<pre><code class=\"language-java\">")
+                .contains("<pre><code class=\"language-kotlin\">")
+                .doesNotContain("bd-code-block")
+                .doesNotContain("bd-code-tabs");
+    }
+
+    @Test
+    void preservesTheExactRenderedShapeOfAPlainCodeBlock() {
+        assertThat(renderer.render("```java\nint value = 1;\n```")).isEqualTo(
+                "<pre><code class=\"language-java\">int value &#61; 1;\n</code></pre>\n");
+    }
+
+    @Test
+    void rendersOptInCodeBlockTitleAndFoldControls() {
+        String rendered = renderer.render("```java title:Example.java fold\nSystem.out.println(\"<safe>\");\n```");
+
+        assertThat(rendered)
+                .contains("class=\"bd-code-block\"")
+                .contains("Example.java")
+                .contains("aria-expanded=\"false\"")
+                .contains("System.out.println(&#34;&lt;safe&gt;&#34;);")
+                .contains("class=\"bd-code-block__copy\"");
+    }
+
+    @Test
+    void groupsOnlyExplicitlyMarkedAdjacentCodeBlocks() {
+        String rendered = renderer.render("```java title:Example.java tabs:install\njava code\n```\n\n```kotlin title:Example.kt tabs:install\nkotlin code\n```");
+
+        assertThat(rendered)
+                .contains("class=\"bd-code-tabs\"")
+                .contains("bd-code-tabs__panel")
+                .contains("role=\"tablist\"")
+                .contains("Example.java")
+                .contains("Example.kt")
+                .contains("java code")
+                .contains("kotlin code");
+    }
+
+    @Test
+    void doesNotGroupExplicitTabBlocksAcrossParagraphsOrDifferentGroups() {
+        String rendered = renderer.render("```java title:A.java tabs:first\na\n```\n\n说明\n\n```kotlin title:B.kt tabs:first\nb\n```\n\n```js title:C.js tabs:second\nc\n```");
+
+        assertThat(rendered)
+                .doesNotContain("class=\"bd-code-tabs\"")
+                .contains("class=\"bd-code-block\"")
+                .contains("说明");
+    }
+
+    @Test
     void preservesObsidianInPageAnchorLinks() {
         String rendered = renderer.render("## TDD 三定律与工作流\n\n[跳转](#TDD%20三定律与工作流)");
 
