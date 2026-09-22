@@ -12,6 +12,7 @@
 }
 .bd-image-lightbox::backdrop { background: rgba(13, 20, 32, .82); }
 .bd-image-lightbox__frame { position: relative; display: grid; place-items: center; width: 100%; height: 100%; overflow: hidden; touch-action: pan-x pan-y; }
+.bd-image-lightbox--zoomed .bd-image-lightbox__frame { touch-action: none; }
 .bd-image-lightbox__frame--svg { background: #fff; }
 .bd-image-lightbox__image { display: block; max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: center; user-select: none; -webkit-user-drag: none; }
 .bd-image-lightbox--zoomed .bd-image-lightbox__image { cursor: grab; }

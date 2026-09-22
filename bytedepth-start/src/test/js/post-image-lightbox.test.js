@@ -24,8 +24,8 @@ test('article pages load the isolated image lightbox assets', () => {
   expect(detailTemplate).toContain('/js/post-image-lightbox.js');
 });
 
-test('lightbox CSS preserves single-finger panning while reserving pinch zoom for the image', () => {
-  expect(lightboxCss).toMatch(/\.bd-image-lightbox__frame\s*\{[^}]*touch-action:\s*pan-x pan-y;/s);
+test('zoomed lightbox takes over touch panning instead of native page scrolling', () => {
+  expect(lightboxCss).toMatch(/\.bd-image-lightbox--zoomed\s+\.bd-image-lightbox__frame\s*\{[^}]*touch-action:\s*none;/s);
 });
 
 test('lightbox keeps a stable near-viewport stage for images with extreme aspect ratios', () => {
