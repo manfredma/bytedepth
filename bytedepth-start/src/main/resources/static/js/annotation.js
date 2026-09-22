@@ -137,27 +137,40 @@ window.initAnnotations = function () {
         }
     }
 
-    function nodeOffset(node) {
-        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+    function textLength(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return node.parentElement?.closest('.bd-annotation-comment-trigger') ? 0 : node.textContent.length;
+        }
+        return Array.from(node.childNodes).reduce((length, child) => length + textLength(child), 0);
+    }
+
+    function offsetBeforeNode(node) {
         let offset = 0;
-        let current;
-        while ((current = walker.nextNode())) {
-            if (current.parentElement?.closest('.bd-annotation-comment-trigger')) {
-                continue;
+        let current = node;
+        while (current && current !== content) {
+            let sibling = current.previousSibling;
+            while (sibling) {
+                offset += textLength(sibling);
+                sibling = sibling.previousSibling;
             }
-            if (current === node) {
-                return offset;
-            }
-            offset += current.textContent.length;
+            current = current.parentNode;
         }
         return offset;
+    }
+
+    function boundaryOffset(container, offset) {
+        if (container.nodeType === Node.TEXT_NODE) {
+            return offsetBeforeNode(container) + offset;
+        }
+        const child = container.childNodes[offset];
+        return child ? offsetBeforeNode(child) : offsetBeforeNode(container) + textLength(container);
     }
 
     function selectionData(range) {
         const rawSelectedText = range.toString();
         const selectedText = rawSelectedText.trim();
         const leadingWhitespaceLength = rawSelectedText.length - rawSelectedText.trimStart().length;
-        const startOffset = nodeOffset(range.startContainer) + range.startOffset + leadingWhitespaceLength;
+        const startOffset = boundaryOffset(range.startContainer, range.startOffset) + leadingWhitespaceLength;
         return {
             startOffset,
             endOffset: startOffset + selectedText.length,

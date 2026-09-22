@@ -102,6 +102,27 @@ describe('annotation sidebar', () => {
     });
   });
 
+  test('converts element range boundaries to offsets within the selected paragraph', async () => {
+    const content = document.querySelector('.content');
+    content.innerHTML = '<p>第一行</p><p>第二行</p>';
+    const firstParagraph = content.querySelector('p');
+    const range = document.createRange();
+    range.setStart(firstParagraph, 0);
+    range.setEnd(firstParagraph, firstParagraph.childNodes.length);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+    document.querySelector('.bd-annotation-popup [data-highlight]').click();
+    document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
+    await Promise.resolve();
+
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toMatchObject({
+      selectedText: '第一行', startOffset: 0, endOffset: 3
+    });
+  });
+
   test('opens a two-level menu before posting a private pure highlight even when the sidebar is open', async () => {
     const text = document.querySelector('.content').firstChild;
     const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 3); range.getBoundingClientRect = () => ({left: 10, bottom: 20});
