@@ -1209,36 +1209,37 @@
 
 </div>
 <!-- Mermaid 图表渲染 -->
-<script th:src="@{/vendor/mermaid/mermaid.min.js}"></script>
+<script th:src="@{/vendor/mermaid/mermaid.min.js}" defer></script>
 <script>
-if (typeof mermaid !== 'undefined') {
-mermaid.initialize({
-    startOnLoad: false,
-    theme: 'base',
-    themeVariables: {
-        primaryColor:       '#dae8fc',
-        primaryTextColor:   '#1c1917',
-        primaryBorderColor: '#6c8ebf',
-        lineColor:          '#57534e',
-        secondaryColor:     '#f7f5f0',
-        tertiaryColor:      '#fff',
-        background:         '#ffffff',
-        mainBkg:            '#dae8fc',
-        nodeBorder:         '#6c8ebf',
-        clusterBkg:         '#f7f5f0',
-        titleColor:         '#1c1917',
-        edgeLabelBackground:'#ffffff',
-        activeTaskBkgColor: '#e94560',
-        activeTaskBorderColor: '#c73652',
-        fontFamily:         "'JetBrains Mono', monospace",
-        fontSize:           '13px',
-    },
-    flowchart:  { useMaxWidth: true, htmlLabels: true },
-    sequence:   { useMaxWidth: true },
-    gantt:      { useMaxWidth: true },
-});
-
 document.addEventListener('DOMContentLoaded', function () {
+    if (typeof mermaid === 'undefined') {
+        return;
+    }
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: 'base',
+        themeVariables: {
+            primaryColor:       '#dae8fc',
+            primaryTextColor:   '#1c1917',
+            primaryBorderColor: '#6c8ebf',
+            lineColor:          '#57534e',
+            secondaryColor:     '#f7f5f0',
+            tertiaryColor:      '#fff',
+            background:         '#ffffff',
+            mainBkg:            '#dae8fc',
+            nodeBorder:         '#6c8ebf',
+            clusterBkg:         '#f7f5f0',
+            titleColor:         '#1c1917',
+            edgeLabelBackground:'#ffffff',
+            activeTaskBkgColor: '#e94560',
+            activeTaskBorderColor: '#c73652',
+            fontFamily:         "'JetBrains Mono', monospace",
+            fontSize:           '13px',
+        },
+        flowchart:  { useMaxWidth: true, htmlLabels: true },
+        sequence:   { useMaxWidth: true },
+        gantt:      { useMaxWidth: true },
+    });
     document.querySelectorAll('pre code.language-mermaid').forEach(function (codeEl) {
         var pre = codeEl.parentElement;
         var div = document.createElement('div');
@@ -1250,7 +1251,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     mermaid.run();
 });
-}
 </script>
 <!-- Schema.org 结构化数据：让 Google 展示发布时间、作者等富文本摘要 -->
 <script type="application/ld+json" th:inline="javascript">

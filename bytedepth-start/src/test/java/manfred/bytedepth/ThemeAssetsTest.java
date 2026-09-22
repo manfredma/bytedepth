@@ -172,9 +172,9 @@ class ThemeAssetsTest {
                 .contains("@{/vendor/echarts/echarts.min.js}")
                 .doesNotContain("cdn.jsdelivr.net/npm/echarts");
         assertThat(postDetail)
-                .contains("@{/vendor/mermaid/mermaid.min.js}")
+                .contains("@{/vendor/mermaid/mermaid.min.js}\" defer")
                 .doesNotContain("cdn.jsdelivr.net/npm/mermaid")
-                .contains("if (typeof mermaid !== 'undefined')");
+                .contains("if (typeof mermaid === 'undefined')");
         assertThat(getClass().getResource("/static/vendor/echarts/echarts.min.js")).isNotNull();
         assertThat(getClass().getResource("/static/vendor/mermaid/mermaid.min.js")).isNotNull();
     }
