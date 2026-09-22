@@ -116,7 +116,7 @@ public class AdminAnalyticsController {
 
     @GetMapping("/api/overview-trend")
     @ResponseBody
-    public OverviewTrendDTO overviewTrend(
+    public Object overviewTrend(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
@@ -124,8 +124,16 @@ public class AdminAnalyticsController {
         LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end, hasExplicitRange(from, to), granularity);
-        return overview(
-                viewLogStatsPort.overviewTrend(start, end, format), start, end, format);
+        List<TrendPointDTO> current = viewLogStatsPort.overviewTrend(start, end, format);
+        if ("all".equals(period)) {
+            return currentOnly(current, start, end, format);
+        }
+        LocalDateTime previousStart = previousStart(start, end);
+        LocalDateTime previousEnd = start.minusSeconds(1);
+        return comparison(
+                current,
+                viewLogStatsPort.overviewTrend(previousStart, previousEnd, format),
+                start, end, previousStart, previousEnd, format);
     }
 
     // ── 页面统计 API ──────────────────────────────────────────────
@@ -196,7 +204,7 @@ public class AdminAnalyticsController {
 
     @GetMapping("/api/page-overview-trend")
     @ResponseBody
-    public OverviewTrendDTO pageOverviewTrend(
+    public Object pageOverviewTrend(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
@@ -204,8 +212,16 @@ public class AdminAnalyticsController {
         LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end, hasExplicitRange(from, to), granularity);
-        return overview(
-                pageViewStatsPort.pageOverviewTrend(start, end, format), start, end, format);
+        List<TrendPointDTO> current = pageViewStatsPort.pageOverviewTrend(start, end, format);
+        if ("all".equals(period)) {
+            return currentOnly(current, start, end, format);
+        }
+        LocalDateTime previousStart = previousStart(start, end);
+        LocalDateTime previousEnd = start.minusSeconds(1);
+        return comparison(
+                current,
+                pageViewStatsPort.pageOverviewTrend(previousStart, previousEnd, format),
+                start, end, previousStart, previousEnd, format);
     }
 
     // ── 工具方法（package-private 供测试直接调用）─────────────────────────
@@ -340,8 +356,8 @@ public class AdminAnalyticsController {
         return result;
     }
 
-    private static OverviewTrendDTO overview(List<TrendPointDTO> source,
-                                             LocalDateTime start, LocalDateTime end, String format) {
+    private static OverviewTrendDTO currentOnly(List<TrendPointDTO> source,
+                                                LocalDateTime start, LocalDateTime end, String format) {
         OverviewTrendDTO result = new OverviewTrendDTO();
         result.setCurrent(completeTrend(source, start, end, format));
         result.setCurrentPeriod(periodLabel(start, end));

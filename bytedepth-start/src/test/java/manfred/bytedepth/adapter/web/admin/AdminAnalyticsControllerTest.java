@@ -267,7 +267,7 @@ class AdminAnalyticsControllerTest {
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
-    void overviewTrend_returnsOnlyTheCurrentWindow() throws Exception {
+    void overviewTrend_returnsCurrentAndPreviousWindows() throws Exception {
         when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
                 .thenReturn(List.of(trendPoint("02:00", 4)));
 
@@ -278,10 +278,11 @@ class AdminAnalyticsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.current[2].label").value("02:00"))
                 .andExpect(jsonPath("$.current[2].viewCount").value(4))
-                .andExpect(jsonPath("$.previous").doesNotExist())
-                .andExpect(jsonPath("$.previousPeriod").doesNotExist());
+                .andExpect(jsonPath("$.previous[2].label").value("02:00"))
+                .andExpect(jsonPath("$.previous[2].viewCount").value(4))
+                .andExpect(jsonPath("$.previousPeriod").value("2026-07-28"));
 
-        verify(viewLogStatsPort, times(1)).overviewTrend(any(), any(), eq("%H:00"));
+        verify(viewLogStatsPort, times(2)).overviewTrend(any(), any(), eq("%H:00"));
     }
 
     @Test
@@ -436,7 +437,7 @@ class AdminAnalyticsControllerTest {
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
-    void pageOverviewTrend_returnsOnlyTheCurrentWindow() throws Exception {
+    void pageOverviewTrend_returnsCurrentAndPreviousWindows() throws Exception {
         when(pageViewStatsPort.pageOverviewTrend(any(), any(), eq("%m-%d")))
                 .thenReturn(List.of(trendPoint("07-02", 5)));
 
@@ -445,10 +446,28 @@ class AdminAnalyticsControllerTest {
                         .param("to", "2026-07-03"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.current.length()").value(3))
+                .andExpect(jsonPath("$.previous.length()").value(3))
+                .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
+
+        verify(pageViewStatsPort, times(2)).pageOverviewTrend(any(), any(), eq("%m-%d"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void pageOverviewTrend_allPeriodReturnsOnlyCurrentWindow() throws Exception {
+        when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
+        when(pageViewStatsPort.pageOverviewTrend(any(), any(), anyString()))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/analytics/api/page-overview-trend")
+                        .param("period", "all")
+                        .param("granularity", "hour"))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.previous").doesNotExist())
                 .andExpect(jsonPath("$.previousPeriod").doesNotExist());
 
-        verify(pageViewStatsPort, times(1)).pageOverviewTrend(any(), any(), eq("%m-%d"));
+        verify(pageViewStatsPort).pageOverviewTrend(
+                eq(LocalDate.of(2026, 6, 1).atStartOfDay()), any(), anyString());
     }
 
     @Test
@@ -461,7 +480,9 @@ class AdminAnalyticsControllerTest {
         mockMvc.perform(get("/admin/analytics/api/overview-trend")
                         .param("period", "all")
                         .param("granularity", "hour"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.previous").doesNotExist())
+                .andExpect(jsonPath("$.previousPeriod").doesNotExist());
 
         verify(viewLogStatsPort, times(1)).overviewTrend(
                 eq(LocalDate.of(2026, 6, 1).atStartOfDay()), any(), eq("%H:00"));
