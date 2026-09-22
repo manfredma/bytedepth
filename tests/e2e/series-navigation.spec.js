@@ -24,6 +24,31 @@ test.describe('专栏文章导航', () => {
         await expect(sidebar.locator('.series-panel-progress-text')).toContainText(/阅读进度 · 第 \d+ 篇 \/ 共 \d+ 篇 · \d+%/);
     });
 
+    test('侧边栏文章链接执行完整文档导航', async ({page}) => {
+        await page.goto('/columns', {waitUntil: 'domcontentloaded'});
+        await page.locator('.series-link').first().click();
+        await page.locator('.post-card').first().click();
+
+        const sidebar = page.locator('#seriesPanel');
+        await page.getByRole('button', {name: '打开专栏导航'}).first().click();
+        await expect(sidebar).toHaveClass(/open/);
+
+        const target = sidebar.locator('.series-item:not([aria-current="page"])').first();
+        await expect(target).toBeVisible({timeout: 10_000});
+        const targetHref = await target.getAttribute('href');
+        expect(targetHref).toBeTruthy();
+        const targetUrl = new URL(targetHref, page.url());
+
+        await Promise.all([
+            page.waitForNavigation({waitUntil: 'domcontentloaded'}),
+            target.click()
+        ]);
+
+        expect(new URL(page.url()).pathname).toBe(targetUrl.pathname);
+        await expect(page.locator('#post-article')).toBeVisible();
+        await expect(page.locator('#post-article h1')).toBeVisible();
+    });
+
     test('移动端也能通过专栏入口打开侧边栏', async ({page}, testInfo) => {
         test.skip(testInfo.project.name !== 'mobile-chromium', '仅在移动 Chromium 执行');
         await page.goto('/columns', {waitUntil: 'domcontentloaded'});
