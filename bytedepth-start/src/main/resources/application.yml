@@ -69,6 +69,7 @@ mybatis-plus:
 bytedepth:
   environment: ${BYTEDEPTH_ENVIRONMENT:production}
   analytics:
+    launch-date: 2026-06-01
     retention-days: 7
     archive-fixed-delay: 10m
     archive-max-buckets-per-run: 24

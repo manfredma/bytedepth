@@ -37,15 +37,25 @@ describe('analytics date range', () => {
       .toEqual({ from: '2026-09-14', to: '2026-09-20' });
   });
 
-  test('all resolves to an explicit range ending today', () => {
-    expect(window.AnalyticsDateRange.rangeForPeriod('all', new Date(2026, 8, 15)))
-      .toEqual({ from: '2000-01-01', to: '2026-09-15' });
+  test('all starts at the configured site launch date', () => {
+    expect(window.AnalyticsDateRange.rangeForPeriod(
+      'all', new Date(2026, 8, 15), '2026-06-01'))
+      .toEqual({ from: '2026-06-01', to: '2026-09-15' });
+  });
+
+  test('all requires a configured site launch date', () => {
+    expect(() => window.AnalyticsDateRange.rangeForPeriod(
+      'all', new Date(2026, 8, 15)))
+      .toThrow('launchDate is required for all period');
   });
 
   test('analytics template uses one custom range trigger instead of native date inputs', () => {
     expect(template).toContain('id="date-range-trigger"');
     expect(template).toContain('id="date-range-popover"');
     expect(template).toContain('class="time-controls"');
+    expect(template).toContain('data-analytics-launch-date');
+    expect(template).toContain('const previous = comparison.previous || []');
+    expect(template).toContain('if (previous.length)');
     expect(template).not.toContain('date-range-label">时间范围');
     expect(template).toContain('positionDatePicker');
     expect(template).not.toContain('type="date"');

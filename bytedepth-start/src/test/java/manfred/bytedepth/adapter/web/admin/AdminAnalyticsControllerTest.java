@@ -30,9 +30,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
@@ -63,6 +63,8 @@ class AdminAnalyticsControllerTest {
     private ViewLogStatsPort viewLogStatsPort;
     @MockitoBean
     private PageViewStatsPort pageViewStatsPort;
+    @MockitoBean
+    private AnalyticsProperties analyticsProperties;
 
     // ── 认证守卫 ──────────────────────────────────────────
 
@@ -85,9 +87,12 @@ class AdminAnalyticsControllerTest {
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
     void analyticsPage_withAdmin_returnsAnalyticsView() throws Exception {
+        when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
+
         mockMvc.perform(get("/admin/analytics"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("admin/analytics"));
+                .andExpect(view().name("admin/analytics"))
+                .andExpect(model().attribute("analyticsLaunchDate", LocalDate.of(2026, 6, 1)));
     }
 
     // ── top-posts：percent 回填逻辑 ───────────────────────
@@ -236,7 +241,9 @@ class AdminAnalyticsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.current.length()").value(3))
                 .andExpect(jsonPath("$.current[1].label").value("07-02"))
-                .andExpect(jsonPath("$.current[1].viewCount").value(3));
+                .andExpect(jsonPath("$.current[1].viewCount").value(3))
+                .andExpect(jsonPath("$.previous.length()").value(3))
+                .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
     }
 
     @Test
@@ -260,12 +267,9 @@ class AdminAnalyticsControllerTest {
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
-    void overviewTrend_returnsThePreviousEqualWindowAlignedToCurrentLabels() throws Exception {
-        AtomicInteger queryCount = new AtomicInteger();
+    void overviewTrend_returnsOnlyTheCurrentWindow() throws Exception {
         when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
-                .thenAnswer(invocation -> queryCount.getAndIncrement() == 0
-                        ? List.of(trendPoint("02:00", 4))
-                        : List.of(trendPoint("02:00", 9)));
+                .thenReturn(List.of(trendPoint("02:00", 4)));
 
         mockMvc.perform(get("/admin/analytics/api/overview-trend")
                         .param("from", "2026-07-29")
@@ -274,9 +278,10 @@ class AdminAnalyticsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.current[2].label").value("02:00"))
                 .andExpect(jsonPath("$.current[2].viewCount").value(4))
-                .andExpect(jsonPath("$.previous[2].label").value("02:00"))
-                .andExpect(jsonPath("$.previous[2].viewCount").value(9))
-                .andExpect(jsonPath("$.previousPeriod").value("2026-07-28"));
+                .andExpect(jsonPath("$.previous").doesNotExist())
+                .andExpect(jsonPath("$.previousPeriod").doesNotExist());
+
+        verify(viewLogStatsPort, times(1)).overviewTrend(any(), any(), eq("%H:00"));
     }
 
     @Test
@@ -407,7 +412,9 @@ class AdminAnalyticsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.current.length()").value(3))
                 .andExpect(jsonPath("$.current[1].label").value("07-02"))
-                .andExpect(jsonPath("$.current[1].viewCount").value(3));
+                .andExpect(jsonPath("$.current[1].viewCount").value(3))
+                .andExpect(jsonPath("$.previous.length()").value(3))
+                .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
     }
 
     // ── page-overview-trend ────────────────────────────────
@@ -429,39 +436,54 @@ class AdminAnalyticsControllerTest {
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
-    void pageOverviewTrend_returnsThePrecedingEqualDayRange() throws Exception {
-        AtomicInteger queryCount = new AtomicInteger();
+    void pageOverviewTrend_returnsOnlyTheCurrentWindow() throws Exception {
         when(pageViewStatsPort.pageOverviewTrend(any(), any(), eq("%m-%d")))
-                .thenAnswer(invocation -> queryCount.getAndIncrement() == 0
-                        ? List.of(trendPoint("07-02", 5))
-                        : List.of(trendPoint("06-29", 8)));
+                .thenReturn(List.of(trendPoint("07-02", 5)));
 
         mockMvc.perform(get("/admin/analytics/api/page-overview-trend")
                         .param("from", "2026-07-01")
                         .param("to", "2026-07-03"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.current.length()").value(3))
-                .andExpect(jsonPath("$.previous.length()").value(3))
-                .andExpect(jsonPath("$.previous[1].label").value("07-02"))
-                .andExpect(jsonPath("$.previous[1].viewCount").value(8))
-                .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
+                .andExpect(jsonPath("$.previous").doesNotExist())
+                .andExpect(jsonPath("$.previousPeriod").doesNotExist());
+
+        verify(pageViewStatsPort, times(1)).pageOverviewTrend(any(), any(), eq("%m-%d"));
     }
 
     @Test
     @WithMockUser(authorities = {"admin:dashboard:view"})
-    void overviewTrend_usesZeroesWhenThePreviousWindowHasNoVisits() throws Exception {
-        AtomicInteger queryCount = new AtomicInteger();
+    void overviewTrend_usesConfiguredLaunchDateForAllPeriod() throws Exception {
+        when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
         when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
-                .thenAnswer(invocation -> queryCount.getAndIncrement() == 0
-                        ? List.of(trendPoint("02:00", 4)) : List.of());
+                .thenReturn(List.of());
 
         mockMvc.perform(get("/admin/analytics/api/overview-trend")
-                        .param("from", "2026-07-29")
-                        .param("to", "2026-07-29")
+                        .param("period", "all")
                         .param("granularity", "hour"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.previous[2].label").value("02:00"))
-                .andExpect(jsonPath("$.previous[2].viewCount").value(0));
+                .andExpect(status().isOk());
+
+        verify(viewLogStatsPort, times(1)).overviewTrend(
+                eq(LocalDate.of(2026, 6, 1).atStartOfDay()), any(), eq("%H:00"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view"})
+    void overviewTrend_allPeriodIgnoresPreLaunchFromDate() throws Exception {
+        when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
+        when(viewLogStatsPort.overviewTrend(any(), any(), anyString()))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/analytics/api/overview-trend")
+                        .param("period", "all")
+                        .param("from", "2000-01-01")
+                        .param("to", "2026-09-15"))
+                .andExpect(status().isOk());
+
+        verify(viewLogStatsPort).overviewTrend(
+                eq(LocalDate.of(2026, 6, 1).atStartOfDay()),
+                eq(LocalDate.of(2026, 9, 15).atTime(23, 59, 59)),
+                anyString());
     }
 
     // ── 静态工具方法单元测试 ───────────────────────────────
@@ -505,8 +527,8 @@ class AdminAnalyticsControllerTest {
 
     @Test
     void blankExplicitDatesFallBackToTheSelectedPeriod() {
-        assertThat(AdminAnalyticsController.toStartTime("all", " "))
-                .isEqualTo(LocalDateTime.of(2000, 1, 1, 0, 0));
+        assertThat(AdminAnalyticsController.toStartTime("all", " ", LocalDate.now(), LocalDate.of(2026, 6, 1)))
+                .isEqualTo(LocalDateTime.of(2026, 6, 1, 0, 0));
         assertThat(AdminAnalyticsController.toEndTime("week", " "))
                 .isEqualTo(LocalDate.now().with(java.time.temporal.TemporalAdjusters.nextOrSame(
                         java.time.DayOfWeek.SUNDAY)).atTime(23, 59, 59));
@@ -531,10 +553,18 @@ class AdminAnalyticsControllerTest {
     }
 
     @Test
-    void toStartTime_allPeriod_returnsEarlyEpoch() {
-        LocalDateTime result = AdminAnalyticsController.toStartTime("all", null);
-        // "全部"应覆盖所有历史数据，起点远早于任何真实访问日志
-        assertThat(result).isBefore(LocalDateTime.of(2010, 1, 1, 0, 0));
+    void toStartTime_allPeriod_returnsConfiguredLaunchDate() {
+        LocalDateTime result = AdminAnalyticsController.toStartTime(
+                "all", "2000-01-01", LocalDate.of(2026, 9, 15), LocalDate.of(2026, 6, 1));
+        assertThat(result).isEqualTo(LocalDateTime.of(2026, 6, 1, 0, 0));
+    }
+
+    @Test
+    void toStartTime_allPeriod_withoutLaunchDate_rejectsMissingConfiguration() {
+        assertThatThrownBy(() -> AdminAnalyticsController.toStartTime(
+                "all", null, LocalDate.of(2026, 9, 15)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("launchDate is required for all period");
     }
 
     @Test

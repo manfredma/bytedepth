@@ -2,6 +2,7 @@ package manfred.bytedepth.adapter.web.admin;
 
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.analytics.CountryViewStatDTO;
+import manfred.bytedepth.app.analytics.OverviewTrendDTO;
 import manfred.bytedepth.app.analytics.PageViewRankDTO;
 import manfred.bytedepth.app.analytics.PageViewStatsPort;
 import manfred.bytedepth.app.analytics.PostViewRankDTO;
@@ -9,6 +10,7 @@ import manfred.bytedepth.app.analytics.TrendPointDTO;
 import manfred.bytedepth.app.analytics.TrendComparisonDTO;
 import manfred.bytedepth.app.analytics.ViewLogStatsPort;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -39,10 +41,12 @@ public class AdminAnalyticsController {
 
     private final ViewLogStatsPort viewLogStatsPort;
     private final PageViewStatsPort pageViewStatsPort;
+    private final AnalyticsProperties analyticsProperties;
 
     /** 页面骨架，数据全部由前端 AJAX 拉取。 */
     @GetMapping
-    public String page() {
+    public String page(Model model) {
+        model.addAttribute("analyticsLaunchDate", analyticsProperties.launchDate());
         return "admin/analytics";
     }
 
@@ -53,7 +57,7 @@ public class AdminAnalyticsController {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         List<PostViewRankDTO> rows = viewLogStatsPort.topPosts(start, end, limit);
         long total = rows.stream().mapToLong(PostViewRankDTO::getViewCount).sum();
@@ -67,7 +71,7 @@ public class AdminAnalyticsController {
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         List<CountryViewStatDTO> rows = viewLogStatsPort.countryStats(start, end);
         long total = rows.stream().mapToLong(CountryViewStatDTO::getViewCount).sum();
@@ -83,7 +87,7 @@ public class AdminAnalyticsController {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         List<PostViewRankDTO> rows = viewLogStatsPort.countryTopPosts(country, start, end, limit);
         long total = rows.stream().mapToLong(PostViewRankDTO::getViewCount).sum();
@@ -99,7 +103,7 @@ public class AdminAnalyticsController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(defaultValue = "auto") String granularity) {
-        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end, hasExplicitRange(from, to), granularity);
         LocalDateTime previousStart = previousStart(start, end);
@@ -112,20 +116,16 @@ public class AdminAnalyticsController {
 
     @GetMapping("/api/overview-trend")
     @ResponseBody
-    public TrendComparisonDTO overviewTrend(
+    public OverviewTrendDTO overviewTrend(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(defaultValue = "auto") String granularity) {
-        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end, hasExplicitRange(from, to), granularity);
-        LocalDateTime previousStart = previousStart(start, end);
-        LocalDateTime previousEnd = start.minusSeconds(1);
-        return comparison(
-                viewLogStatsPort.overviewTrend(start, end, format),
-                viewLogStatsPort.overviewTrend(previousStart, previousEnd, format),
-                start, end, previousStart, previousEnd, format);
+        return overview(
+                viewLogStatsPort.overviewTrend(start, end, format), start, end, format);
     }
 
     // ── 页面统计 API ──────────────────────────────────────────────
@@ -137,7 +137,7 @@ public class AdminAnalyticsController {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         List<PageViewRankDTO> rows = pageViewStatsPort.topPages(start, end, limit);
         long total = rows.stream().mapToLong(PageViewRankDTO::getViewCount).sum();
@@ -151,7 +151,7 @@ public class AdminAnalyticsController {
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         List<CountryViewStatDTO> rows = pageViewStatsPort.pageCountryStats(start, end);
         long total = rows.stream().mapToLong(CountryViewStatDTO::getViewCount).sum();
@@ -167,7 +167,7 @@ public class AdminAnalyticsController {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         List<PageViewRankDTO> rows = pageViewStatsPort.countryTopPages(country, start, end, limit);
         long total = rows.stream().mapToLong(PageViewRankDTO::getViewCount).sum();
@@ -183,7 +183,7 @@ public class AdminAnalyticsController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(defaultValue = "auto") String granularity) {
-        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end, hasExplicitRange(from, to), granularity);
         LocalDateTime previousStart = previousStart(start, end);
@@ -196,29 +196,39 @@ public class AdminAnalyticsController {
 
     @GetMapping("/api/page-overview-trend")
     @ResponseBody
-    public TrendComparisonDTO pageOverviewTrend(
+    public OverviewTrendDTO pageOverviewTrend(
             @RequestParam(defaultValue = "week") String period,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(defaultValue = "auto") String granularity) {
-        LocalDateTime start = toStartTime(period, from);
+        LocalDateTime start = startTime(period, from);
         LocalDateTime end   = toEndTime(period, to);
         String format = toDateFormat(start, end, hasExplicitRange(from, to), granularity);
-        LocalDateTime previousStart = previousStart(start, end);
-        LocalDateTime previousEnd = start.minusSeconds(1);
-        return comparison(
-                pageViewStatsPort.pageOverviewTrend(start, end, format),
-                pageViewStatsPort.pageOverviewTrend(previousStart, previousEnd, format),
-                start, end, previousStart, previousEnd, format);
+        return overview(
+                pageViewStatsPort.pageOverviewTrend(start, end, format), start, end, format);
     }
 
     // ── 工具方法（package-private 供测试直接调用）─────────────────────────
+
+    private LocalDateTime startTime(String period, String from) {
+        return toStartTime(period, from, LocalDate.now(), analyticsProperties.launchDate());
+    }
 
     static LocalDateTime toStartTime(String period, String from) {
         return toStartTime(period, from, LocalDate.now());
     }
 
     static LocalDateTime toStartTime(String period, String from, LocalDate today) {
+        return toStartTime(period, from, today, null);
+    }
+
+    static LocalDateTime toStartTime(String period, String from, LocalDate today, LocalDate launchDate) {
+        if ("all".equals(period)) {
+            if (launchDate == null) {
+                throw new IllegalArgumentException("launchDate is required for all period");
+            }
+            return launchDate.atStartOfDay();
+        }
         if (from != null && !from.isBlank()) {
             return LocalDate.parse(from).atStartOfDay();
         }
@@ -228,8 +238,6 @@ public class AdminAnalyticsController {
             case "month" -> today.withDayOfMonth(1).atStartOfDay();
             // 本年：自然年边界（今年 1 月 1 日 00:00），而非"过去 365 天"
             case "year"  -> today.withDayOfYear(1).atStartOfDay();
-            // 全部：从极早时间起，覆盖所有历史数据
-            case "all"   -> LocalDate.of(2000, 1, 1).atStartOfDay();
             // 本周：自然周边界（本周一 00:00，周一为一周起始），而非"过去 7 天"
             default      -> today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).atStartOfDay();
         };
@@ -329,6 +337,14 @@ public class AdminAnalyticsController {
         result.setPrevious(previous);
         result.setCurrentPeriod(periodLabel(start, end));
         result.setPreviousPeriod(periodLabel(previousStart, previousEnd));
+        return result;
+    }
+
+    private static OverviewTrendDTO overview(List<TrendPointDTO> source,
+                                             LocalDateTime start, LocalDateTime end, String format) {
+        OverviewTrendDTO result = new OverviewTrendDTO();
+        result.setCurrent(completeTrend(source, start, end, format));
+        result.setCurrentPeriod(periodLabel(start, end));
         return result;
     }
 

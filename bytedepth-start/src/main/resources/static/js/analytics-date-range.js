@@ -16,7 +16,7 @@
     return result;
   }
 
-  function rangeForPeriod(period, now) {
+  function rangeForPeriod(period, now, launchDate) {
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     if (period === 'today') { return { from: format(date), to: format(date) }; }
     if (period === 'week') {
@@ -30,7 +30,10 @@
     if (period === 'year') {
       return { from: format(new Date(date.getFullYear(), 0, 1)), to: format(new Date(date.getFullYear(), 11, 31)) };
     }
-    return { from: '2000-01-01', to: format(date) };
+    if (!launchDate) {
+      throw new Error('launchDate is required for all period');
+    }
+    return { from: launchDate, to: format(date) };
   }
 
   root.AnalyticsDateRange = { rangeForPeriod };

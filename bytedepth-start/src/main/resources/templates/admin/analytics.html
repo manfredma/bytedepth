@@ -92,7 +92,7 @@
         }
     </style>
 </head>
-<body>
+<body th:attr="data-analytics-launch-date=${analyticsLaunchDate}">
 <nav th:replace="~{fragments/nav :: navbar(false)}"></nav>
 <div class="admin-shell">
 <aside th:replace="~{fragments/admin-sidebar :: sidebar('analytics')}"></aside>
@@ -160,6 +160,7 @@
 <script th:src="@{/js/analytics-date-range.js}"></script>
 <script>
     // ─── 状态 ────────────────────────────────────────────────────
+    const analyticsLaunchDate = document.body.dataset.analyticsLaunchDate;
     const initialRange = AnalyticsDateRange.rangeForPeriod('week', new Date());
     const state = {
         period:    'week',
@@ -231,7 +232,7 @@
 
     function applyPeriod(period) {
         state.period = period;
-        const range = AnalyticsDateRange.rangeForPeriod(period, new Date());
+        const range = AnalyticsDateRange.rangeForPeriod(period, new Date(), analyticsLaunchDate);
         state.from = range.from; state.to = range.to; state.granularity = 'auto'; state.postId = null; state.country = null;
         document.querySelectorAll('.period-tab').forEach(t => t.classList.toggle('active', t.dataset.period === period));
         renderDateRangeLabel();
@@ -495,10 +496,30 @@
             return;
         }
 
+        const legend = [comparison.currentPeriod];
+        const series = [{
+            name: comparison.currentPeriod,
+            type: 'line', data: current.map(d => d.viewCount),
+            smooth: true, symbol: 'circle', symbolSize: 6,
+            areaStyle: { color: adminAccentArea() },
+            itemStyle: { color: adminAccent() },
+            lineStyle: { color: adminAccent(), width: 2 }
+        }];
+        if (previous.length) {
+            legend.push(comparison.previousPeriod);
+            series.push({
+                name: comparison.previousPeriod,
+                type: 'line', data: previous.map(d => d.viewCount),
+                smooth: true, symbol: 'circle', symbolSize: 5,
+                itemStyle: { color: '#6c8ebf' },
+                lineStyle: { color: '#6c8ebf', width: 2, type: 'dashed' }
+            });
+        }
+
         trendChart.setOption({
             tooltip: { trigger: 'axis' },
             legend: {
-                data: [comparison.currentPeriod, comparison.previousPeriod],
+                data: legend,
                 bottom: 25, textStyle: { fontSize: 11 }
             },
             toolbox: {
@@ -516,20 +537,7 @@
             xAxis: { type: 'category', data: current.map(d => d.label),
                      boundaryGap: false },
             yAxis: { type: 'value', minInterval: 1 },
-            series: [{
-                name: comparison.currentPeriod,
-                type: 'line', data: current.map(d => d.viewCount),
-                smooth: true, symbol: 'circle', symbolSize: 6,
-                areaStyle: { color: adminAccentArea() },
-                itemStyle: { color: adminAccent() },
-                lineStyle: { color: adminAccent(), width: 2 }
-            }, {
-                name: comparison.previousPeriod,
-                type: 'line', data: previous.map(d => d.viewCount),
-                smooth: true, symbol: 'circle', symbolSize: 5,
-                itemStyle: { color: '#6c8ebf' },
-                lineStyle: { color: '#6c8ebf', width: 2, type: 'dashed' }
-            }]
+            series
         }, true);
 
         // 时间粒度下钻（仅在总体趋势模式下）
