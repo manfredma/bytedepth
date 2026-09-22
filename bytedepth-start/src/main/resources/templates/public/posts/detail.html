@@ -1248,7 +1248,14 @@ document.addEventListener('DOMContentLoaded', function () {
         // textContent 自动解码 HTML 实体（&gt; → > 等）
         div.textContent = codeEl.textContent;
         div.style.cssText = 'background:var(--card);padding:16px 0;text-align:center;';
-        pre.replaceWith(div);
+        // 增强代码块需要保留原始 code 节点，复制按钮才能读取 Mermaid 源码。
+        // 普通 Mermaid 代码块继续沿用原有的 pre 替换行为。
+        if (pre.closest('.bd-code-block')) {
+            pre.hidden = true;
+            pre.parentElement.appendChild(div);
+        } else {
+            pre.replaceWith(div);
+        }
     });
     mermaid.run();
 });

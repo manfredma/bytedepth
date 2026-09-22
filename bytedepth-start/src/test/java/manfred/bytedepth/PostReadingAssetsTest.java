@@ -48,6 +48,16 @@ class PostReadingAssetsTest {
     }
 
     @Test
+    void mermaidRenderingPreservesEnhancedCodeSourceForCopying() throws IOException {
+        String template = classpathText("/templates/public/posts/detail.html");
+
+        assertThat(template)
+                .contains("if (pre.closest('.bd-code-block'))")
+                .contains("pre.hidden = true")
+                .contains("pre.replaceWith(div)");
+    }
+
+    @Test
     void viewLogRendersTheCombinedReadingStatusColumn() throws IOException {
         String template = classpathText("/templates/admin/view-logs/list.html");
 

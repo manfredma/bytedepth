@@ -25,8 +25,8 @@
 
 **Files:**
 - Create: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/util/CodeBlockMetadata.java`
-- Test: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/util/CodeBlockMetadataTest.java`
-- Modify: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/util/MarkdownRendererTest.java`
+- Test: `bytedepth-adapter/src/test/java/manfred/bytedepth/adapter/web/util/CodeBlockMetadataTest.java`
+- Modify: `bytedepth-adapter/src/test/java/manfred/bytedepth/adapter/web/util/MarkdownRendererTest.java`
 
 **Interfaces:**
 - Produces `CodeBlockMetadata.parse(String info)` with immutable fields `language`, `title`, `fold`, and `tabGroup`.
@@ -42,7 +42,7 @@
 
 **Files:**
 - Modify: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/util/MarkdownRenderer.java`
-- Modify: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/util/MarkdownRendererTest.java`
+- Modify: `bytedepth-adapter/src/test/java/manfred/bytedepth/adapter/web/util/MarkdownRendererTest.java`
 
 **Interfaces:**
 - `MarkdownRenderer.render(String markdown)` continues to return the existing output for ordinary Markdown.

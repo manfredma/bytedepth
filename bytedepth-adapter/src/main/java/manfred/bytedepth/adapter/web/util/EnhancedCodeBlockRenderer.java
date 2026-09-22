@@ -178,7 +178,7 @@ final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
         }
 
         private String languageLabel(CodeBlockMetadata metadata) {
-            return metadata.language().isBlank() ? "代码" : metadata.language();
+            return metadata.language();
         }
 
         private void open(String tag, Map<String, String> attributes) {

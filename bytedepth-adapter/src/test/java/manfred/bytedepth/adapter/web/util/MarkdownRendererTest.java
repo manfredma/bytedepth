@@ -71,6 +71,25 @@ class MarkdownRendererTest {
     }
 
     @Test
+    void rendersFoldOnlyBlockWithLanguageLabel() {
+        String rendered = renderer.render("```java fold\nint value = 1;\n```");
+
+        assertThat(rendered)
+                .contains("class=\"bd-code-block__language\">java</span>")
+                .contains("aria-label=\"展开代码\"");
+    }
+
+    @Test
+    void omitsUnsafeLanguageClassForEnhancedCodeBlocks() {
+        String rendered = renderer.render("```java<script> fold\nint value = 1;\n```");
+
+        assertThat(rendered)
+                .contains("class=\"bd-code-block\"")
+                .contains("&lt;script&gt;")
+                .doesNotContain("class=\"language-java<script>\"");
+    }
+
+    @Test
     void groupsOnlyExplicitlyMarkedAdjacentCodeBlocks() {
         String rendered = renderer.render("```java title:Example.java tabs:install\njava code\n```\n\n```kotlin title:Example.kt tabs:install\nkotlin code\n```");
 
@@ -85,6 +104,16 @@ class MarkdownRendererTest {
     }
 
     @Test
+    void usesLanguageLabelsForTabsWithoutTitles() {
+        String rendered = renderer.render("```java tabs:install\njava code\n```\n\n```kotlin tabs:install\nkotlin code\n```");
+
+        assertThat(rendered)
+                .contains("bd-code-tabs__tab");
+        assertThat(rendered).containsPattern("bd-code-tabs__tab[^>]*>java</button>");
+        assertThat(rendered).containsPattern("bd-code-tabs__tab[^>]*>kotlin</button>");
+    }
+
+    @Test
     void doesNotGroupExplicitTabBlocksAcrossParagraphsOrDifferentGroups() {
         String rendered = renderer.render("```java title:A.java tabs:first\na\n```\n\n说明\n\n```kotlin title:B.kt tabs:first\nb\n```\n\n```js title:C.js tabs:second\nc\n```");
 
@@ -92,6 +121,16 @@ class MarkdownRendererTest {
                 .doesNotContain("class=\"bd-code-tabs\"")
                 .contains("class=\"bd-code-block\"")
                 .contains("说明");
+    }
+
+    @Test
+    void leavesNestedCodeBlocksOnTheOrdinaryRenderingPath() {
+        String rendered = renderer.render("> ```java title:Nested.java fold\n> nested\n> ```");
+
+        assertThat(rendered)
+                .contains("<pre><code class=\"language-java\">")
+                .doesNotContain("bd-code-block")
+                .doesNotContain("bd-code-tabs");
     }
 
     @Test
