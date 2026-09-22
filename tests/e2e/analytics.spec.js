@@ -18,12 +18,12 @@ test.describe('访问统计分析', () => {
             '需要 E2E_ADMIN_USERNAME/E2E_ADMIN_PASSWORD 才能执行后台分析 E2E');
 
         await loginAsAdmin(page);
-        const countriesResponse = page.waitForResponse(response =>
-            response.url().includes('/admin/analytics/api/countries')
-            && response.request().method() === 'GET');
-
-        await page.goto('/admin/analytics', {waitUntil: 'domcontentloaded'});
-        const response = await countriesResponse;
+        const [response] = await Promise.all([
+            page.waitForResponse(candidate =>
+                candidate.url().includes('/admin/analytics/api/countries')
+                && candidate.request().method() === 'GET'),
+            page.goto('/admin/analytics', {waitUntil: 'domcontentloaded'})
+        ]);
         expect(response.ok(), `country statistics failed with HTTP ${response.status()}`).toBeTruthy();
         await expect(page.locator('#pie-chart canvas')).toHaveCount(1);
     });

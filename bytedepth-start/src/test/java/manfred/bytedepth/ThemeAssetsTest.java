@@ -164,6 +164,22 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void visualizationLibrariesArePinnedToLocalStaticAssets() throws Exception {
+        String analytics = classpathText("/templates/admin/analytics.html");
+        String postDetail = classpathText("/templates/public/posts/detail.html");
+
+        assertThat(analytics)
+                .contains("@{/vendor/echarts/echarts.min.js}")
+                .doesNotContain("cdn.jsdelivr.net/npm/echarts");
+        assertThat(postDetail)
+                .contains("@{/vendor/mermaid/mermaid.min.js}")
+                .doesNotContain("cdn.jsdelivr.net/npm/mermaid")
+                .contains("if (typeof mermaid !== 'undefined')");
+        assertThat(getClass().getResource("/static/vendor/echarts/echarts.min.js")).isNotNull();
+        assertThat(getClass().getResource("/static/vendor/mermaid/mermaid.min.js")).isNotNull();
+    }
+
+    @Test
     void publicPostDetailShowsContentVersionMetadata() throws Exception {
         String template = classpathText("/templates/public/posts/detail.html");
 

@@ -1209,8 +1209,9 @@
 
 </div>
 <!-- Mermaid 图表渲染 -->
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script th:src="@{/vendor/mermaid/mermaid.min.js}"></script>
 <script>
+if (typeof mermaid !== 'undefined') {
 mermaid.initialize({
     startOnLoad: false,
     theme: 'base',
@@ -1249,6 +1250,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     mermaid.run();
 });
+}
 </script>
 <!-- Schema.org 结构化数据：让 Google 展示发布时间、作者等富文本摘要 -->
 <script type="application/ld+json" th:inline="javascript">

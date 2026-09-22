@@ -6,7 +6,7 @@
     <th:block th:replace="~{fragments/favicon-head :: favicon}"></th:block>
     <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
     <title>访问统计 - bytedepth</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script th:src="@{/vendor/echarts/echarts.min.js}"></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

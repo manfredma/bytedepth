@@ -33,6 +33,7 @@ spring:
             paths:
               - /css/**
               - /js/**
+              - /vendor/**
   data:
     redis:
       host: localhost
