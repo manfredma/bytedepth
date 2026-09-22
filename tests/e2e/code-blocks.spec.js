@@ -84,17 +84,19 @@ test.describe('代码块增强兼容性', () => {
             const tabs = page.locator('.bd-code-tabs');
             await expect(tabs).toHaveCount(1);
             await expect(tabs.getByRole('tab')).toHaveCount(2);
-            await expect(tabs.getByRole('tabpanel').first()).toHaveAttribute('aria-hidden', 'false');
-            await expect(tabs.getByRole('tabpanel').first().locator('.bd-code-block__body')).toBeHidden();
+            const panels = tabs.locator('.bd-code-tabs__panel');
+            await expect(panels).toHaveCount(2);
+            await expect(panels.first()).toHaveAttribute('aria-hidden', 'false');
+            await expect(panels.first().locator('.bd-code-block__body')).toBeHidden();
 
-            await tabs.getByRole('tabpanel').first().getByRole('button', {name: '展开代码'}).click();
-            await expect(tabs.getByRole('tabpanel').first().locator('.bd-code-block__body')).toBeVisible();
+            await panels.first().getByRole('button', {name: '展开代码'}).click();
+            await expect(panels.first().locator('.bd-code-block__body')).toBeVisible();
 
             await tabs.getByRole('tab').nth(1).click();
-            await expect(tabs.getByRole('tabpanel').nth(0)).toBeHidden();
-            await expect(tabs.getByRole('tabpanel').nth(1)).toBeVisible();
-            await expect(tabs.getByRole('tabpanel').nth(1).locator('.bd-code-block__title')).toHaveText('Example.kt');
-            const copyButton = tabs.getByRole('tabpanel').nth(1).getByRole('button', {name: '复制代码'});
+            await expect(panels.nth(0)).toBeHidden();
+            await expect(panels.nth(1)).toBeVisible();
+            await expect(panels.nth(1).locator('.bd-code-block__title')).toHaveText('Example.kt');
+            const copyButton = panels.nth(1).getByRole('button', {name: '复制代码'});
             await copyButton.click();
             await expect(copyButton).toHaveText('已复制');
         } finally {
