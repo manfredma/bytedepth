@@ -215,7 +215,29 @@ staging_e2e_password="$(security find-generic-password \
 test -n "$staging_e2e_password"
 ```
 
-Keychain 条目只保存 `admin` 的 staging E2E 密码；远程执行 runner 时，调用方必须将它显式注入为 `BYTEDEPTH_STAGING_E2E_PASSWORD`，并由远端命令使用 `sudo --preserve-env=BYTEDEPTH_STAGING_E2E_USERNAME,BYTEDEPTH_STAGING_E2E_PASSWORD` 传给 runner。普通 staging `.env` 不包含该凭据。条目缺失或登录失败时应停止并修复受控凭据来源，不得猜测密码或创建临时管理员账号。
+Keychain 条目只保存 `admin` 的 staging E2E 密码；远程执行 runner 时，不能只在本机写 `BYTEDEPTH_STAGING_E2E_PASSWORD=... ssh ...`，因为 SSH 默认不会转发任意环境变量，`sudo --preserve-env` 也只能保留远端进程已有的变量。应通过 SSH 标准输入传到远端 shell，再由远端显式导出并交给 `sudo`，密码不会出现在远端命令行参数中：
+
+```bash
+staging_e2e_username=admin
+staging_e2e_password="$(security find-generic-password \
+  -a admin -s bytedepth-staging-e2e -w)"
+test -n "$staging_e2e_password"
+{
+  printf '%s\n' "$staging_e2e_username"
+  printf '%s\n' "$staging_e2e_password"
+} | ssh -i ~/.ssh/ubuntu_2.pem \
+  -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+  ubuntu@124.221.143.25 \
+  'IFS= read -r BYTEDEPTH_STAGING_E2E_USERNAME &&
+   IFS= read -r BYTEDEPTH_STAGING_E2E_PASSWORD &&
+   export BYTEDEPTH_STAGING_E2E_USERNAME BYTEDEPTH_STAGING_E2E_PASSWORD &&
+   cd /opt/bytedepth &&
+   sudo --preserve-env=BYTEDEPTH_STAGING_E2E_USERNAME,BYTEDEPTH_STAGING_E2E_PASSWORD \
+     ./deploy/run-staging-e2e-tests.sh'
+unset staging_e2e_username staging_e2e_password
+```
+
+普通 staging `.env` 不包含该凭据。条目缺失或登录失败时应停止并修复受控凭据来源，不得猜测密码或创建临时管理员账号。
 
 两个 runner 都会在每次 staging run 开始时先删除自己的旧记录，因而失败或 WARNING 绝不保留旧的 passed 状态；只有各自命令成功、输出零 `WARNING`、checkout 与部署 SHA 均稳定时，才将 root-owned `0600` 记录写入 root-owned `0700` 的 `/var/lib/bytedepth-staging/test-history/`：`staging-integration` 与 `staging-e2e`。每份记录严格含 `commit=<完整 SHA>`、对应 `command=`、实际 UTC `timestamp=` 与 `result=passed`，不含凭据。由于记录不可由普通 staging 登录用户读取，创建 Release Tag 前必须通过受控 `sudo cat` over SSH 将两份记录写入本机新建的临时目录，并把该目录显式传给 `prepare-release.sh`；详见 [发布流程](../docs/releases/README.md#staging-预检与生产单机发布)。
 
