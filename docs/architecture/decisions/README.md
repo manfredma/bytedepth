@@ -31,3 +31,4 @@
 | [ADR-0009](0009-tiered-view-log-retention.md) | 分层保留访问统计并由 Spring 定时归档 | Accepted | 2026-09-18 |
 | [ADR-0010](0010-post-content-version.md) | 将文章内容版本号存储在文章主表 | Accepted | 2026-09-20 |
 | [ADR-0011](0011-rendered-text-annotation-anchors.md) | 批注使用阅读页渲染文本作为锚点 | Accepted | 2026-09-21 |
+| [ADR-0012](0012-page-navigation-over-partial-replacement.md) | 文章级导航使用完整页面导航而非局部替换 | Proposed | 2026-09-22 |

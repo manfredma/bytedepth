@@ -58,9 +58,10 @@ class PostReadingAssetsTest {
                 .contains("aria-current=${item.id == post.id ? 'page' : null}")
                 .contains("class=\"series-post-nav\"")
                 .contains("@{/columns/{slug}(slug=${series.slug})}")
-                .contains("series-navigation.js")
                 .contains("id=\"post-article\"")
                 .contains("bd-annotation-reading-content")
+                .doesNotContain("series-navigation.js")
+                .doesNotContain("replaceArticle")
                 .doesNotContain("评论会贴近对应段落显示；仅你自己的私有划线对其他读者不可见。");
     }
 
