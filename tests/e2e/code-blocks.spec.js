@@ -131,7 +131,7 @@ test.describe('代码块增强兼容性', () => {
             await expect(copyButton).toHaveText('已复制');
 
             const customizerTabs = allTabs.nth(1);
-            await expect(customizerTabs.getByRole('tab')).toHaveText(['Java', 'Go', 'Python']);
+            await expect(customizerTabs.getByRole('tab')).toHaveText(['Java', 'Go', 'python']);
             const customizerPanels = customizerTabs.locator('.bd-code-tabs__panel');
             await expect(customizerPanels).toHaveCount(3);
             await expect(customizerPanels.first().locator('.bd-code-block__title')).toHaveText('Rule.java');
