@@ -83,10 +83,10 @@ test.describe('代码块增强兼容性', () => {
             '```java group:interpreter tab:Java title:"Rule.java"',
             'return evaluateJava();',
             '```',
-            '```go group:interpreter tab:Go title:"rule.go"',
+            '```go group=interpreter tab=Go title=rule.go',
             'return evaluateGo()',
             '```',
-            '```python group:interpreter tab:Python title:"rule.py"',
+            '```python group:interpreter title:rule.py',
             'return evaluate_python()',
             '```'
         ].join('\n');

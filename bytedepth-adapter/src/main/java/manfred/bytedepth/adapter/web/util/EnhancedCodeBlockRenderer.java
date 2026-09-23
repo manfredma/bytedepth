@@ -192,7 +192,9 @@ final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
 
         private String label(CodeBlockMetadata metadata) {
             return metadata.tabLabel()
-                    .orElseGet(() -> metadata.title().orElseGet(() -> languageLabel(metadata)));
+                    .orElseGet(() -> metadata.obsidianGroup()
+                            ? languageLabel(metadata)
+                            : metadata.title().orElseGet(() -> languageLabel(metadata)));
         }
 
         private String languageLabel(CodeBlockMetadata metadata) {

@@ -117,7 +117,7 @@ class MarkdownRendererTest {
 
     @Test
     void groupsOnlyExplicitlyMarkedAdjacentCodeBlocks() {
-        String rendered = renderer.render("```java title:Example.java tabs:install\njava code\n```\n\n```kotlin title:Example.kt tabs:install\nkotlin code\n```");
+        String rendered = renderer.render("```java title:Example.java tabs:install\njava code\n```\n```kotlin title:Example.kt tabs:install\nkotlin code\n```");
 
         assertThat(rendered)
                 .contains("class=\"bd-code-tabs\"")
@@ -132,7 +132,7 @@ class MarkdownRendererTest {
     @Test
     void rendersObsidianGroupTabLabelsSeparatelyFromPanelTitles() {
         String rendered = renderer.render(
-                "```java group:install tab:Java title:Rule.java\njava code\n```\n\n"
+                "```java group:install tab:Java title:Rule.java\njava code\n```\n"
                         + "```python group:install tab:Python title:rule.py\npython code\n```");
 
         assertThat(rendered)
@@ -145,12 +145,24 @@ class MarkdownRendererTest {
 
     @Test
     void usesLanguageLabelsForTabsWithoutTitles() {
-        String rendered = renderer.render("```java tabs:install\njava code\n```\n\n```kotlin tabs:install\nkotlin code\n```");
+        String rendered = renderer.render("```java tabs:install\njava code\n```\n```kotlin tabs:install\nkotlin code\n```");
 
         assertThat(rendered)
                 .contains("bd-code-tabs__tab");
         assertThat(rendered).containsPattern("bd-code-tabs__tab[^>]*>java</button>");
         assertThat(rendered).containsPattern("bd-code-tabs__tab[^>]*>kotlin</button>");
+    }
+
+    @Test
+    void usesLanguageForObsidianGroupWhenTabIsOmitted() {
+        String rendered = renderer.render(
+                "```python group=install title=rule.py\npython code\n```\n"
+                        + "```go group=install tab=Go title=rule.go\ngo code\n```");
+
+        assertThat(rendered)
+                .containsPattern("bd-code-tabs__tab[^>]*>python</button>")
+                .containsPattern("bd-code-tabs__tab[^>]*>Go</button>")
+                .contains("class=\"bd-code-block__title\">rule.py</span>");
     }
 
     @Test

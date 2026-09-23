@@ -58,6 +58,27 @@ class CodeBlockMetadataTest {
     }
 
     @Test
+    void parsesObsidianEqualsMetadata() {
+        CodeBlockMetadata metadata = CodeBlockMetadata.parse(
+                "go group=interpreter tab=Go title=rule.go");
+
+        assertThat(metadata.tabGroup()).contains("interpreter");
+        assertThat(metadata.tabLabel()).contains("Go");
+        assertThat(metadata.title()).contains("rule.go");
+        assertThat(metadata.obsidianGroup()).isTrue();
+    }
+
+    @Test
+    void usesLanguageForObsidianGroupWithoutTab() {
+        CodeBlockMetadata metadata = CodeBlockMetadata.parse(
+                "python group:interpreter title:rule.py");
+
+        assertThat(metadata.tabGroup()).contains("interpreter");
+        assertThat(metadata.tabLabel()).isEmpty();
+        assertThat(metadata.obsidianGroup()).isTrue();
+    }
+
+    @Test
     void ignoresUnknownAndMalformedParameters() {
         CodeBlockMetadata metadata = CodeBlockMetadata.parse("java unknown:value title: tabs:");
 
@@ -139,6 +160,8 @@ class CodeBlockMetadataTest {
         assertThat(metadata.title()).isEmpty();
         assertThat(metadata.fold()).isFalse();
         assertThat(metadata.tabGroup()).isEmpty();
+        assertThat(metadata.tabLabel()).isEmpty();
+        assertThat(metadata.obsidianGroup()).isFalse();
 
         assertThat(CodeBlockMetadata.parse(" \t").language()).isEmpty();
     }

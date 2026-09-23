@@ -12,7 +12,8 @@ record CodeBlockMetadata(
         Optional<String> title,
         boolean fold,
         Optional<String> tabGroup,
-        Optional<String> tabLabel) {
+        Optional<String> tabLabel,
+        boolean obsidianGroup) {
 
     static CodeBlockMetadata parse(String info) {
         List<String> tokens = tokenize(info);
@@ -24,13 +25,14 @@ record CodeBlockMetadata(
         String title = null;
         String tabGroup = null;
         String tabLabel = null;
+        boolean obsidianGroup = false;
         boolean fold = false;
         for (String token : tokens.subList(1, tokens.size())) {
             if (token.equals("fold")) {
                 fold = true;
                 continue;
             }
-            int separator = token.indexOf(':');
+            int separator = separatorIndex(token);
             if (separator <= 0 || separator == token.length() - 1) {
                 continue;
             }
@@ -43,6 +45,7 @@ record CodeBlockMetadata(
                 title = value;
             } else if (key.equals("tabs") || key.equals("group")) {
                 tabGroup = value;
+                obsidianGroup = key.equals("group");
             } else if (key.equals("tab")) {
                 tabLabel = value;
             }
@@ -52,11 +55,24 @@ record CodeBlockMetadata(
                 Optional.ofNullable(title),
                 fold,
                 Optional.ofNullable(tabGroup),
-                Optional.ofNullable(tabLabel));
+                Optional.ofNullable(tabLabel),
+                obsidianGroup);
     }
 
     private static CodeBlockMetadata ordinary() {
-        return new CodeBlockMetadata("", Optional.empty(), false, Optional.empty(), Optional.empty());
+        return new CodeBlockMetadata("", Optional.empty(), false, Optional.empty(), Optional.empty(), false);
+    }
+
+    private static int separatorIndex(String token) {
+        int colon = token.indexOf(':');
+        int equals = token.indexOf('=');
+        if (colon < 0) {
+            return equals;
+        }
+        if (equals < 0) {
+            return colon;
+        }
+        return Math.min(colon, equals);
     }
 
     private static String valueOf(String raw) {

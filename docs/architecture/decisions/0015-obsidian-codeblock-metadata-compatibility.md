@@ -7,8 +7,8 @@
 
 ## 上下文
 
-Obsidian 的 Codeblock Customizer 使用 `group:<name>`、`tab:<label>` 和可选的
-`title:<filename>` 描述多语言代码块。bytedepth 之前只识别自己的
+Obsidian 的 Codeblock Customizer 使用 `group:<name>`/`group=<name>`、可选的
+`tab:<label>`/`tab=<label>` 和可选的 `title:<filename>`/`title=<filename>` 描述多语言代码块。bytedepth 之前只识别自己的
 `tabs:<name>` 语法；Obsidian 笔记导入时会保留 Markdown 原文，因此 `group/tab`
 会被静默忽略，远程页面退化为多个独立代码块。
 
@@ -21,15 +21,17 @@ Obsidian 的 Codeblock Customizer 使用 `group:<name>`、`tab:<label>` 和可�
 bytedepth 的代码块元数据解析器直接兼容 Codeblock Customizer 的元数据，同时保留
 现有 `tabs:` 语法：
 
-- `tabs:<group>` 与 `group:<group>` 都映射为 Tab 分组；
+- `tabs:<group>` 与 `group:<group>`/`group=<group>` 都映射为 Tab 分组；
 - `tab:<label>` 只决定 Tab 页签名称；
 - `title:`/`file:` 只决定代码面板标题，不被新的 `tab:` 语法误用为页签名称；
-- 没有 `tab:` 时，页签名称回退为现有行为：标题优先、语言其次；
+- Codeblock Customizer 的 `tab` 可省略，缺省时页签名称回退为语言名；旧 `tabs:` 语法继续保持标题优先、语言其次的既有行为；
 - 普通代码块和旧 `tabs:` 文章继续保持兼容；
 - 导入脚本不重写代码围栏，只负责保留 Markdown 并在同步前执行 Obsidian 代码块校验。
 
-Obsidian 代码块校验器必须拒绝同一 `group` 中不连续的代码块、缺少 `tab` 的组成员
-以及重复的 Tab 名称，并报告对应笔记和行号。
+Obsidian 代码块校验器必须拒绝同一 `group` 中不连续的代码块和重复的有效页签名称，并报告对应笔记和行号；缺少 `tab` 时使用语言名参与重复检查。
+
+校验器及其测试属于 `obsidian-note-checker` skill；它是 Obsidian → bytedepth 导入流程的前置工具，
+不打包进 bytedepth 运行时，也不作为生产服务的运行时依赖。bytedepth 仓库只维护服务端对该元数据的解析与渲染兼容。
 
 ## 方案取舍
 
