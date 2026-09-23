@@ -34,3 +34,4 @@
 | [ADR-0012](0012-page-navigation-over-partial-replacement.md) | 文章级导航使用完整页面导航而非局部替换 | Proposed | 2026-09-22 |
 | [ADR-0013](0013-opt-in-code-block-enhancements.md) | 代码块增强采用显式启用且保持普通代码块兼容 | Superseded | 2026-09-22 |
 | [ADR-0014](0014-unified-code-block-component.md) | 所有顶层代码块统一使用可展开代码组件 | Accepted | 2026-09-23 |
+| [ADR-0015](0015-obsidian-codeblock-metadata-compatibility.md) | 兼容 Obsidian Codeblock Customizer 的代码块元数据 | Accepted | 2026-09-23 |

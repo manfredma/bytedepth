@@ -48,11 +48,22 @@ class CodeBlockMetadataTest {
     }
 
     @Test
+    void parsesObsidianCodeblockCustomizerGroupAndTabMetadata() {
+        CodeBlockMetadata metadata = CodeBlockMetadata.parse(
+                "java group:interpreter-rule tab:\"Java\" title:\"Rule.java\"");
+
+        assertThat(metadata.tabGroup()).contains("interpreter-rule");
+        assertThat(metadata.tabLabel()).contains("Java");
+        assertThat(metadata.title()).contains("Rule.java");
+    }
+
+    @Test
     void ignoresUnknownAndMalformedParameters() {
         CodeBlockMetadata metadata = CodeBlockMetadata.parse("java unknown:value title: tabs:");
 
         assertThat(metadata.title()).isEmpty();
         assertThat(metadata.tabGroup()).isEmpty();
+        assertThat(metadata.tabLabel()).isEmpty();
     }
 
     @Test

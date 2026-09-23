@@ -130,6 +130,20 @@ class MarkdownRendererTest {
     }
 
     @Test
+    void rendersObsidianGroupTabLabelsSeparatelyFromPanelTitles() {
+        String rendered = renderer.render(
+                "```java group:install tab:Java title:Rule.java\njava code\n```\n\n"
+                        + "```python group:install tab:Python title:rule.py\npython code\n```");
+
+        assertThat(rendered)
+                .contains("class=\"bd-code-tabs\"")
+                .containsPattern("bd-code-tabs__tab[^>]*>Java</button>")
+                .containsPattern("bd-code-tabs__tab[^>]*>Python</button>")
+                .contains("class=\"bd-code-block__title\">Rule.java</span>")
+                .contains("class=\"bd-code-block__title\">rule.py</span>");
+    }
+
+    @Test
     void usesLanguageLabelsForTabsWithoutTitles() {
         String rendered = renderer.render("```java tabs:install\njava code\n```\n\n```kotlin tabs:install\nkotlin code\n```");
 

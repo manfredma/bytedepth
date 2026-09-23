@@ -11,7 +11,8 @@ record CodeBlockMetadata(
         String language,
         Optional<String> title,
         boolean fold,
-        Optional<String> tabGroup) {
+        Optional<String> tabGroup,
+        Optional<String> tabLabel) {
 
     static CodeBlockMetadata parse(String info) {
         List<String> tokens = tokenize(info);
@@ -22,6 +23,7 @@ record CodeBlockMetadata(
         String language = tokens.get(0);
         String title = null;
         String tabGroup = null;
+        String tabLabel = null;
         boolean fold = false;
         for (String token : tokens.subList(1, tokens.size())) {
             if (token.equals("fold")) {
@@ -39,15 +41,22 @@ record CodeBlockMetadata(
             }
             if (key.equals("file") || (key.equals("title") && title == null)) {
                 title = value;
-            } else if (key.equals("tabs")) {
+            } else if (key.equals("tabs") || key.equals("group")) {
                 tabGroup = value;
+            } else if (key.equals("tab")) {
+                tabLabel = value;
             }
         }
-        return new CodeBlockMetadata(language, Optional.ofNullable(title), fold, Optional.ofNullable(tabGroup));
+        return new CodeBlockMetadata(
+                language,
+                Optional.ofNullable(title),
+                fold,
+                Optional.ofNullable(tabGroup),
+                Optional.ofNullable(tabLabel));
     }
 
     private static CodeBlockMetadata ordinary() {
-        return new CodeBlockMetadata("", Optional.empty(), false, Optional.empty());
+        return new CodeBlockMetadata("", Optional.empty(), false, Optional.empty(), Optional.empty());
     }
 
     private static String valueOf(String raw) {

@@ -76,6 +76,18 @@ test.describe('代码块增强兼容性', () => {
             '',
             '```python title:Example.py tabs:install',
             'print("python")',
+            '```',
+            '',
+            'Obsidian Codeblock Customizer 格式：',
+            '',
+            '```java group:interpreter tab:Java title:"Rule.java"',
+            'return evaluateJava();',
+            '```',
+            '```go group:interpreter tab:Go title:"rule.go"',
+            'return evaluateGo()',
+            '```',
+            '```python group:interpreter tab:Python title:"rule.py"',
+            'return evaluate_python()',
             '```'
         ].join('\n');
         const paths = await createDraft(page, title, content);
@@ -83,7 +95,7 @@ test.describe('代码块增强兼容性', () => {
             await page.goto(paths.postPath, {waitUntil: 'domcontentloaded'});
 
             const blocks = page.locator('.bd-code-block');
-            await expect(blocks).toHaveCount(4);
+            await expect(blocks).toHaveCount(7);
             await expect(blocks.first().locator('.bd-code-block__language')).toHaveText('Code');
             await expect(blocks.first().locator('.bd-code-block__line')).toHaveText('1');
             await expect(blocks.first().getByRole('button', {name: '收起代码'})).toBeVisible();
@@ -116,6 +128,16 @@ test.describe('代码块增强兼容性', () => {
             const copyButton = panels.nth(1).getByRole('button', {name: '复制代码'});
             await copyButton.click();
             await expect(copyButton).toHaveText('已复制');
+
+            const customizerTabs = page.locator('.bd-code-tabs').nth(1);
+            await expect(customizerTabs.getByRole('tab')).toHaveText(['Java', 'Go', 'Python']);
+            const customizerPanels = customizerTabs.locator('.bd-code-tabs__panel');
+            await expect(customizerPanels).toHaveCount(3);
+            await expect(customizerPanels.first().locator('.bd-code-block__title')).toHaveText('Rule.java');
+            await customizerTabs.getByRole('tab', {name: 'Python'}).click();
+            await expect(customizerPanels.nth(2)).toBeVisible();
+            await expect(customizerPanels.nth(2).locator('.bd-code-block__title')).toHaveText('rule.py');
+            await expect(customizerPanels.nth(2).locator('.bd-code-block__line')).toHaveText('1');
         } finally {
             await deleteDraft(page, paths.editPath);
         }
