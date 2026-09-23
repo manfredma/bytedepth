@@ -80,7 +80,8 @@ class CodeBlockMetadataTest {
 
     @Test
     void ignoresUnknownAndMalformedParameters() {
-        CodeBlockMetadata metadata = CodeBlockMetadata.parse("java unknown:value title: tabs:");
+        CodeBlockMetadata metadata = CodeBlockMetadata.parse(
+                "java unknown:value unknown=value unknown:a=b unknown title: tabs:");
 
         assertThat(metadata.title()).isEmpty();
         assertThat(metadata.tabGroup()).isEmpty();
