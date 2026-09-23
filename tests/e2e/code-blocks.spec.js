@@ -105,8 +105,9 @@ test.describe('代码块增强兼容性', () => {
             await expect(blocks.nth(1).locator('.bd-code-block__language')).toHaveText('text');
             await expect(blocks.nth(1).locator('pre code')).toHaveText('plain ordinary code\n');
 
-            const tabs = page.locator('.bd-code-tabs');
-            await expect(tabs).toHaveCount(1);
+            const allTabs = page.locator('.bd-code-tabs');
+            await expect(allTabs).toHaveCount(2);
+            const tabs = allTabs.nth(0);
             await expect(tabs.getByRole('tab')).toHaveCount(2);
             const panels = tabs.locator('.bd-code-tabs__panel');
             await expect(panels).toHaveCount(2);
@@ -129,7 +130,7 @@ test.describe('代码块增强兼容性', () => {
             await copyButton.click();
             await expect(copyButton).toHaveText('已复制');
 
-            const customizerTabs = page.locator('.bd-code-tabs').nth(1);
+            const customizerTabs = allTabs.nth(1);
             await expect(customizerTabs.getByRole('tab')).toHaveText(['Java', 'Go', 'Python']);
             const customizerPanels = customizerTabs.locator('.bd-code-tabs__panel');
             await expect(customizerPanels).toHaveCount(3);
