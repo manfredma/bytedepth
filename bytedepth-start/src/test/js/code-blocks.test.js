@@ -25,12 +25,26 @@ test('code block CSS is scoped to enhanced markup', () => {
     expect(codeBlocksCss).not.toMatch(/\.content pre\s*\{/);
 });
 
-test('ordinary code blocks are not touched', async () => {
-    document.body.innerHTML = '<article id="post-article"><div class="content"><pre><code class="language-java">plain code</code></pre></div></article>';
+test('ordinary and unmarked code blocks use the unified component behavior', async () => {
+    document.body.innerHTML = `
+        <article id="post-article"><div class="content">
+            <div class="bd-code-block">
+                <div class="bd-code-block__header">
+                    <span class="bd-code-block__language">Code</span>
+                    <span class="bd-code-block__actions">
+                        <button class="bd-code-block__toggle" type="button" aria-expanded="true">收起</button>
+                        <button class="bd-code-block__copy" type="button">复制</button>
+                    </span>
+                </div>
+                <div class="bd-code-block__body"><div class="bd-code-block__lines" aria-hidden="true"><span class="bd-code-block__line">1</span></div><pre><code>plain code</code></pre></div>
+            </div>
+        </div></article>`;
     await loadCodeBlocks();
 
-    expect(document.querySelector('.content pre').outerHTML)
-        .toBe('<pre><code class="language-java">plain code</code></pre>');
+    const block = document.querySelector('.bd-code-block');
+    expect(block.querySelector('.bd-code-block__body').hidden).toBe(false);
+    expect(block.querySelector('.bd-code-block__toggle').textContent).toBe('收起');
+    expect(block.querySelector('.bd-code-block__copy')).not.toBeNull();
 });
 
 test('pages without article content do not initialize code block behavior', async () => {
@@ -113,7 +127,7 @@ test('copy handles an enhanced block without a code element', async () => {
     expect(writeText).toHaveBeenCalledWith('');
 });
 
-test('fold button hides and restores only the enhanced code body', async () => {
+test('fold button starts collapsed and restores only its own code body', async () => {
     document.body.innerHTML = `
         <article id="post-article"><div class="content">
             <pre><code>ordinary</code></pre>
@@ -127,10 +141,28 @@ test('fold button hides and restores only the enhanced code body', async () => {
     const block = document.querySelector('.bd-code-block');
     const toggle = block.querySelector('.bd-code-block__toggle');
     expect(block.querySelector('.bd-code-block__body').hidden).toBe(true);
+    expect(block.classList.contains('bd-code-block--collapsed')).toBe(true);
     toggle.click();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(block.querySelector('.bd-code-block__body').hidden).toBe(false);
+    expect(block.classList.contains('bd-code-block--collapsed')).toBe(false);
     expect(document.querySelector('.content > pre').hidden).toBe(false);
+});
+
+test('syntax highlighting is progressive and does not replace the source text contract', async () => {
+    document.body.innerHTML = `
+        <article id="post-article"><div class="content">
+            <div class="bd-code-block">
+                <div class="bd-code-block__header"><button class="bd-code-block__copy" type="button">复制</button></div>
+                <div class="bd-code-block__body"><pre><code class="language-java">int value = 1;</code></pre></div>
+            </div>
+        </div></article>`;
+    const highlightElement = vi.fn();
+    globalThis.Prism = {highlightElement};
+    await loadCodeBlocks();
+
+    expect(highlightElement).toHaveBeenCalledWith(document.querySelector('code'));
+    delete globalThis.Prism;
 });
 
 test('fold button remains usable when the enhanced body is absent', async () => {

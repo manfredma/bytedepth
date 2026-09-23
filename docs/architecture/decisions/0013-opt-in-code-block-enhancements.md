@@ -1,6 +1,6 @@
 # ADR-0013: 代码块增强采用显式启用且保持普通代码块兼容
 
-- **状态**: Accepted
+- **状态**: Superseded（由 [ADR-0014](0014-unified-code-block-component.md) 取代）
 - **日期**: 2026-09-22
 - **决策者**: 项目所有者
 

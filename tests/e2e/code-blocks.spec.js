@@ -50,7 +50,7 @@ async function deleteDraft(page, editPath) {
 }
 
 test.describe('代码块增强兼容性', () => {
-    test('普通代码块保持原样，显式元数据才启用增强交互', async ({page}, testInfo) => {
+    test('所有顶层代码块统一渲染并保持各自交互状态', async ({page}, testInfo) => {
         test.skip(testInfo.project.name !== 'chromium', '代码块交互验收在桌面 Chromium 执行');
         test.skip(!adminUsername || !adminPassword,
             '需要 E2E_ADMIN_USERNAME/E2E_ADMIN_PASSWORD 才能执行真实文章 E2E');
@@ -58,7 +58,13 @@ test.describe('代码块增强兼容性', () => {
         await loginAsAdmin(page);
         const title = `code-block-e2e-${Date.now()}`;
         const content = [
-            '普通代码：',
+            '未标注语言代码：',
+            '',
+            '```',
+            'unmarked code',
+            '```',
+            '',
+            '标注语言代码：',
             '',
             '```text',
             'plain ordinary code',
@@ -68,18 +74,24 @@ test.describe('代码块增强兼容性', () => {
             'System.out.println("java");',
             '```',
             '',
-            '```kotlin title:Example.kt tabs:install',
-            'println("kotlin")',
+            '```python title:Example.py tabs:install',
+            'print("python")',
             '```'
         ].join('\n');
         const paths = await createDraft(page, title, content);
         try {
             await page.goto(paths.postPath, {waitUntil: 'domcontentloaded'});
 
-            const ordinaryPre = page.locator('pre').filter({has: page.locator('code.language-text')});
-            await expect(ordinaryPre).toHaveCount(1);
-            await expect(ordinaryPre.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " bd-code-block ")]'))
-                .toHaveCount(0);
+            const blocks = page.locator('.bd-code-block');
+            await expect(blocks).toHaveCount(4);
+            await expect(blocks.first().locator('.bd-code-block__language')).toHaveText('Code');
+            await expect(blocks.first().locator('.bd-code-block__line')).toHaveText('1');
+            await expect(blocks.first().getByRole('button', {name: '收起代码'})).toBeVisible();
+            await expect(blocks.first().locator('pre code')).toHaveText('unmarked code\n');
+            await expect(blocks.first().locator('.bd-code-block__title')).toHaveCount(0);
+
+            await expect(blocks.nth(1).locator('.bd-code-block__language')).toHaveText('text');
+            await expect(blocks.nth(1).locator('pre code')).toHaveText('plain ordinary code\n');
 
             const tabs = page.locator('.bd-code-tabs');
             await expect(tabs).toHaveCount(1);
@@ -88,14 +100,19 @@ test.describe('代码块增强兼容性', () => {
             await expect(panels).toHaveCount(2);
             await expect(panels.first()).toHaveAttribute('aria-hidden', 'false');
             await expect(panels.first().locator('.bd-code-block__body')).toBeHidden();
+            await expect(panels.first().locator('.bd-code-block__line')).toHaveText('1');
+            await expect(panels.first().getByRole('button', {name: '展开代码'})).toHaveCSS('background-color', /.+/);
 
             await panels.first().getByRole('button', {name: '展开代码'}).click();
             await expect(panels.first().locator('.bd-code-block__body')).toBeVisible();
+            await expect(panels.first().locator('code .token')).not.toHaveCount(0);
 
             await tabs.getByRole('tab').nth(1).click();
             await expect(panels.nth(0)).toBeHidden();
             await expect(panels.nth(1)).toBeVisible();
-            await expect(panels.nth(1).locator('.bd-code-block__title')).toHaveText('Example.kt');
+            await expect(panels.nth(1).locator('.bd-code-block__title')).toHaveText('Example.py');
+            await expect(panels.nth(1).locator('.bd-code-block__line')).toHaveText('1');
+            await expect(panels.nth(1).locator('code .token')).not.toHaveCount(0);
             const copyButton = panels.nth(1).getByRole('button', {name: '复制代码'});
             await copyButton.click();
             await expect(copyButton).toHaveText('已复制');

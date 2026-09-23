@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * The small, deliberately opt-in metadata contract supported by enhanced code blocks.
+ * The small metadata contract supported by the unified top-level code block component.
  */
 record CodeBlockMetadata(
         String language,
@@ -44,10 +44,6 @@ record CodeBlockMetadata(
             }
         }
         return new CodeBlockMetadata(language, Optional.ofNullable(title), fold, Optional.ofNullable(tabGroup));
-    }
-
-    boolean enhanced() {
-        return title.isPresent() || fold || tabGroup.isPresent();
     }
 
     private static CodeBlockMetadata ordinary() {

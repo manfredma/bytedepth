@@ -35,6 +35,9 @@ class PostReadingAssetsTest {
 
         assertThat(template)
                 .contains("@{/css/code-blocks.css}")
+                .contains("@{/vendor/prism/prism.css}")
+                .contains("@{/vendor/prism/prism.js}")
+                .contains("@{/vendor/prism/prism-java.min.js}")
                 .contains("@{/js/code-blocks.js}");
         assertThat(css)
                 .contains(".content .bd-code-block")
@@ -44,6 +47,7 @@ class PostReadingAssetsTest {
                 .contains("#post-article .content")
                 .contains(".bd-code-block")
                 .contains(".bd-code-tabs")
+                .contains("Prism")
                 .doesNotContain("querySelectorAll('pre')");
     }
 

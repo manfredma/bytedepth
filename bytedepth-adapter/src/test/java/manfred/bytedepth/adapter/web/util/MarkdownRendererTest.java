@@ -42,20 +42,43 @@ class MarkdownRendererTest {
     }
 
     @Test
-    void leavesAdjacentOrdinaryCodeBlocksWithoutEnhancementMarkup() {
+    void rendersAdjacentOrdinaryCodeBlocksWithTheUnifiedComponent() {
         String rendered = renderer.render("```java\nint value = 1;\n```\n\n```kotlin\nval value = 1\n```");
 
         assertThat(rendered)
-                .contains("<pre><code class=\"language-java\">")
-                .contains("<pre><code class=\"language-kotlin\">")
-                .doesNotContain("bd-code-block")
+                .contains("class=\"bd-code-block__language\">java</span>")
+                .contains("class=\"bd-code-block__language\">kotlin</span>")
+                .contains("class=\"bd-code-block__toggle\"")
+                .contains("class=\"bd-code-block__copy\"")
+                .contains("class=\"bd-code-block__lines\"")
                 .doesNotContain("bd-code-tabs");
+        assertThat(rendered.split("class=\"bd-code-block\"", -1)).hasSize(3);
     }
 
     @Test
-    void preservesTheExactRenderedShapeOfAPlainCodeBlock() {
-        assertThat(renderer.render("```java\nint value = 1;\n```")).isEqualTo(
-                "<pre><code class=\"language-java\">int value &#61; 1;\n</code></pre>\n");
+    void rendersAnUnmarkedCodeBlockWithNeutralLabelWithoutInventingAFileName() {
+        String rendered = renderer.render("```\nint value = 1;\n```");
+
+        assertThat(rendered)
+                .contains("class=\"bd-code-block__language\">Code</span>")
+                .contains("class=\"bd-code-block__toggle\"")
+                .contains("class=\"bd-code-block__copy\"")
+                .contains("class=\"bd-code-block__line\">1</span>")
+                .contains("int value &#61; 1;")
+                .doesNotContain(".java")
+                .doesNotContain("未标注语言");
+    }
+
+    @Test
+    void rendersEmptyAndUnterminatedCodeBlocksWithCorrectLineCounts() {
+        String empty = renderer.render("```java\n```");
+        String unterminated = renderer.render("```java\nreturn 1;");
+
+        assertThat(empty)
+                .contains("class=\"bd-code-block__line\">1</span>");
+        assertThat(unterminated)
+                .contains("class=\"bd-code-block__line\">1</span>")
+                .contains("return 1;");
     }
 
     @Test
@@ -63,11 +86,13 @@ class MarkdownRendererTest {
         String rendered = renderer.render("```java title:Example.java fold\nSystem.out.println(\"<safe>\");\n```");
 
         assertThat(rendered)
-                .contains("class=\"bd-code-block\"")
+                .contains("class=\"bd-code-block bd-code-block--collapsed\"")
                 .contains("Example.java")
                 .contains("aria-expanded=\"false\"")
+                .contains("hidden=\"hidden\"")
                 .contains("System.out.println(&#34;&lt;safe&gt;&#34;);")
-                .contains("class=\"bd-code-block__copy\"");
+                .contains("class=\"bd-code-block__copy\"")
+                .contains("class=\"bd-code-block__toggle\"");
     }
 
     @Test
@@ -76,7 +101,8 @@ class MarkdownRendererTest {
 
         assertThat(rendered)
                 .contains("class=\"bd-code-block__language\">java</span>")
-                .contains("aria-label=\"展开代码\"");
+                .contains("aria-label=\"展开代码\"")
+                .contains("class=\"bd-code-block bd-code-block--collapsed\"");
     }
 
     @Test
@@ -84,7 +110,7 @@ class MarkdownRendererTest {
         String rendered = renderer.render("```java<script> fold\nint value = 1;\n```");
 
         assertThat(rendered)
-                .contains("class=\"bd-code-block\"")
+                .contains("class=\"bd-code-block bd-code-block--collapsed\"")
                 .contains("&lt;script&gt;")
                 .doesNotContain("class=\"language-java<script>\"");
     }
@@ -147,7 +173,8 @@ class MarkdownRendererTest {
         String rendered = renderer.render("```mermaid\ngraph TD\n  A --> B\n```");
 
         assertThat(rendered)
-                .contains("<pre><code class=\"language-mermaid\">")
+                .contains("class=\"bd-code-block\"")
+                .contains("<code class=\"language-mermaid\">")
                 .contains("graph TD");
     }
 

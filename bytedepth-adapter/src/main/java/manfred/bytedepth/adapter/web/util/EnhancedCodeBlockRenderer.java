@@ -53,10 +53,8 @@ final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
                         } else {
                             renderEnhancedBlock(codeBlock, metadata);
                         }
-                    } else if (metadata.enhanced()) {
-                        renderEnhancedBlock(codeBlock, metadata);
                     } else {
-                        context.render(current);
+                        renderEnhancedBlock(codeBlock, metadata);
                     }
                     current = groupEnd(codeBlock, metadata);
                     continue;
@@ -127,7 +125,11 @@ final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
         }
 
         private void renderEnhancedBlock(FencedCodeBlock codeBlock, CodeBlockMetadata metadata) {
-            open("div", Map.of("class", "bd-code-block"));
+            Map<String, String> blockAttributes = new LinkedHashMap<>();
+            blockAttributes.put("class", metadata.fold()
+                    ? "bd-code-block bd-code-block--collapsed"
+                    : "bd-code-block");
+            open("div", blockAttributes);
             open("div", Map.of("class", "bd-code-block__header"));
             open("span", Map.of("class", "bd-code-block__language"));
             html.text(languageLabel(metadata));
@@ -137,29 +139,43 @@ final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
                 html.text(title);
                 close("span");
             });
+            open("span", Map.of("class", "bd-code-block__actions"));
+            open("button", Map.of(
+                    "class", "bd-code-block__toggle",
+                    "type", "button",
+                    "aria-expanded", String.valueOf(!metadata.fold()),
+                    "aria-label", metadata.fold() ? "展开代码" : "收起代码"));
+            html.text(metadata.fold() ? "展开" : "收起");
+            close("button");
             open("button", Map.of(
                     "class", "bd-code-block__copy",
                     "type", "button",
                     "aria-label", "复制代码"));
             html.text("复制");
             close("button");
-            if (metadata.fold()) {
-                open("button", Map.of(
-                        "class", "bd-code-block__toggle",
-                        "type", "button",
-                        "aria-expanded", "false",
-                        "aria-label", "展开代码"));
-                html.text("展开");
-                close("button");
-            }
+            close("span");
             close("div");
-            open("div", Map.of("class", "bd-code-block__body"));
+            Map<String, String> bodyAttributes = new LinkedHashMap<>();
+            bodyAttributes.put("class", "bd-code-block__body");
+            if (metadata.fold()) {
+                bodyAttributes.put("hidden", "hidden");
+            }
+            open("div", bodyAttributes);
             renderCode(codeBlock, metadata);
             close("div");
             close("div");
         }
 
         private void renderCode(FencedCodeBlock codeBlock, CodeBlockMetadata metadata) {
+            String literal = codeBlock.getLiteral();
+            open("div", Map.of("class", "bd-code-block__code"));
+            open("div", Map.of("class", "bd-code-block__lines", "aria-hidden", "true"));
+            for (int line = 1; line <= lineCount(literal); line++) {
+                open("span", Map.of("class", "bd-code-block__line"));
+                html.text(String.valueOf(line));
+                close("span");
+            }
+            close("div");
             html.line();
             html.tag("pre");
             Map<String, String> attributes = new LinkedHashMap<>();
@@ -167,10 +183,11 @@ final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
                 attributes.put("class", "language-" + metadata.language());
             }
             html.tag("code", attributes);
-            html.text(codeBlock.getLiteral());
+            html.text(literal);
             html.tag("/code");
             html.tag("/pre");
             html.line();
+            close("div");
         }
 
         private String label(CodeBlockMetadata metadata) {
@@ -178,7 +195,11 @@ final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
         }
 
         private String languageLabel(CodeBlockMetadata metadata) {
-            return metadata.language();
+            return metadata.language().isBlank() ? "Code" : metadata.language();
+        }
+
+        private int lineCount(String literal) {
+            return Math.max(1, (int) literal.lines().count());
         }
 
         private void open(String tag, Map<String, String> attributes) {

@@ -33,11 +33,22 @@
         }
     };
 
+    const highlightCode = code => {
+        const prism = window.Prism;
+        if (prism && typeof prism.highlightElement === 'function') {
+            prism.highlightElement(code);
+        }
+    };
+
     article.querySelectorAll('.bd-code-block').forEach(block => {
+        const code = block.querySelector('pre code');
+        if (code) {
+            highlightCode(code);
+        }
+
         const copyButton = block.querySelector('.bd-code-block__copy');
         if (copyButton) {
             copyButton.addEventListener('click', () => {
-                const code = block.querySelector('pre code');
                 void copyText(copyButton, code ? code.textContent : '');
             });
         }

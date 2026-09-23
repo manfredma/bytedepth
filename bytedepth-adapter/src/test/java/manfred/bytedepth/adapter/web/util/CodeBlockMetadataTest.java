@@ -14,7 +14,6 @@ class CodeBlockMetadataTest {
         assertThat(metadata.title()).isEmpty();
         assertThat(metadata.fold()).isFalse();
         assertThat(metadata.tabGroup()).isEmpty();
-        assertThat(metadata.enhanced()).isFalse();
     }
 
     @Test
@@ -30,7 +29,6 @@ class CodeBlockMetadataTest {
         CodeBlockMetadata metadata = CodeBlockMetadata.parse("java title:\"Example Main.java\"");
 
         assertThat(metadata.title()).contains("Example Main.java");
-        assertThat(metadata.enhanced()).isTrue();
     }
 
     @Test
@@ -39,7 +37,6 @@ class CodeBlockMetadataTest {
 
         assertThat(metadata.fold()).isTrue();
         assertThat(metadata.tabGroup()).contains("install");
-        assertThat(metadata.enhanced()).isTrue();
     }
 
     @Test
@@ -48,7 +45,6 @@ class CodeBlockMetadataTest {
 
         assertThat(metadata.fold()).isFalse();
         assertThat(metadata.tabGroup()).contains("install");
-        assertThat(metadata.enhanced()).isTrue();
     }
 
     @Test
@@ -57,7 +53,6 @@ class CodeBlockMetadataTest {
 
         assertThat(metadata.title()).isEmpty();
         assertThat(metadata.tabGroup()).isEmpty();
-        assertThat(metadata.enhanced()).isFalse();
     }
 
     @Test
@@ -66,7 +61,6 @@ class CodeBlockMetadataTest {
 
         assertThat(metadata.title()).isEmpty();
         assertThat(metadata.tabGroup()).isEmpty();
-        assertThat(metadata.enhanced()).isFalse();
     }
 
     @Test
@@ -75,7 +69,6 @@ class CodeBlockMetadataTest {
 
         assertThat(metadata.title()).isEmpty();
         assertThat(metadata.tabGroup()).isEmpty();
-        assertThat(metadata.enhanced()).isFalse();
     }
 
     @Test
@@ -83,7 +76,6 @@ class CodeBlockMetadataTest {
         CodeBlockMetadata metadata = CodeBlockMetadata.parse("java title:\"Unclosed");
 
         assertThat(metadata.title()).isEmpty();
-        assertThat(metadata.enhanced()).isFalse();
     }
 
     @Test
@@ -91,7 +83,6 @@ class CodeBlockMetadataTest {
         CodeBlockMetadata metadata = CodeBlockMetadata.parse("java title:Unclosed\"");
 
         assertThat(metadata.title()).isEmpty();
-        assertThat(metadata.enhanced()).isFalse();
     }
 
     @Test
@@ -99,7 +90,6 @@ class CodeBlockMetadataTest {
         CodeBlockMetadata metadata = CodeBlockMetadata.parse("java title:\"");
 
         assertThat(metadata.title()).isEmpty();
-        assertThat(metadata.enhanced()).isFalse();
     }
 
     @Test
@@ -121,7 +111,6 @@ class CodeBlockMetadataTest {
         CodeBlockMetadata metadata = CodeBlockMetadata.parse("java  fold");
 
         assertThat(metadata.fold()).isTrue();
-        assertThat(metadata.enhanced()).isTrue();
     }
 
     @Test
@@ -139,7 +128,6 @@ class CodeBlockMetadataTest {
         assertThat(metadata.title()).isEmpty();
         assertThat(metadata.fold()).isFalse();
         assertThat(metadata.tabGroup()).isEmpty();
-        assertThat(metadata.enhanced()).isFalse();
 
         assertThat(CodeBlockMetadata.parse(" \t").language()).isEmpty();
     }
