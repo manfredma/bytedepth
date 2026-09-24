@@ -269,6 +269,9 @@ migrate_meilisearch() {
     systemctl stop "$BYTEDEPTH_STAGING_MEILI_SERVICE" 2>/dev/null || true
     rm -rf -- "$BYTEDEPTH_NATIVE_ROOT/meilisearch"/*
     install -d -o meilisearch -g meilisearch -m 0750 "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
+    printf '%s\n' 'env = "production"' > "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
+    chmod 0600 "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
+    chown meilisearch:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
     local import_log import_pid import_status
     import_log="$(mktemp "$STATE_DIR/meilisearch-import.XXXXXX")"
     /usr/local/bin/meilisearch --import-snapshot "$OLD_MEILI_SNAPSHOT" \
@@ -280,8 +283,8 @@ migrate_meilisearch() {
             printf 'Refusing: Meilisearch snapshot import exited before the posts index became available.\n' >&2
             return 1
         fi
-        if curl --fail --silent --show-error http://127.0.0.1:7700/health >/dev/null \
-            && curl --fail --silent --show-error http://127.0.0.1:7700/indexes/posts >/dev/null; then
+        if curl --fail --silent http://127.0.0.1:7700/health >/dev/null \
+            && curl --fail --silent http://127.0.0.1:7700/indexes/posts >/dev/null; then
             kill -TERM "$import_pid"
             set +e
             wait "$import_pid"

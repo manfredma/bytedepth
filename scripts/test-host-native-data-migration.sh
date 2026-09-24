@@ -42,6 +42,7 @@ require_text_transition 'docker exec "$DOCKER_MEILI" /bin/sh -c '\''curl --fail 
 require_text_transition 'command -v jq >/dev/null'
 require_text_transition 'for _ in {1..600}'
 require_text_transition 'indexes/posts'
+require_text_transition 'meilisearch.toml'
 if rg -n 'docker compose|docker-compose' "$TRANSITION" >/dev/null; then
     printf 'Blue/green transition must not recreate the old Compose stack.\n' >&2
     exit 1
