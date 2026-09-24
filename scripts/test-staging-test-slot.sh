@@ -55,6 +55,12 @@ INSERT INTO admin (id, password_hash) VALUES (1, '$argon2id$v=19$m=1$fixture');
 SAFE_FIXTURE
 validate_fixture_cmd="source \"\$1\"; validate_fixture \"\$2\""
 bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/safe-fixture.sql"
+cat > "$tmp/decimal-fixture.sql" <<'DECIMAL_FIXTURE'
+INSERT INTO article (id, title, score) VALUES (1, 'fixture', 1.23);
+INSERT INTO category (id, name) VALUES (1, 'fixture');
+INSERT INTO admin (id, password_hash) VALUES (1, '$argon2id$v=19$m=1$fixture');
+DECIMAL_FIXTURE
+bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/decimal-fixture.sql"
 cat > "$tmp/unsafe-fixture.sql" <<'UNSAFE_FIXTURE'
 INSERT INTO article (id, title) VALUES (1, 'fixture');
 INSERT INTO category (id, name) VALUES (1, 'fixture');
@@ -85,6 +91,18 @@ INSERT INTO admin (id, password_hash) VALUES (1, '$argon2id$v=19$m=1$fixture');
 \u
 BACKSLASH_COMMAND_FIXTURE
 fail_without_calls 'mysql backslash client command' bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/backslash-command-fixture.sql"
+for statement in 'RENAME TABLE article TO article_copy;' 'SET GLOBAL max_connections = 100;' 'CALL dangerous_procedure();' 'LOCK TABLES article WRITE;' 'CREATE EVENT dangerous_event ON SCHEDULE EVERY 1 DAY DO DELETE FROM article;' 'LOAD XML LOCAL INFILE "fixture.xml" INTO TABLE article;'; do
+    {
+        printf '%s\n' "INSERT INTO article (id, title) VALUES (1, 'fixture');"
+        printf '%s\n' "INSERT INTO category (id, name) VALUES (1, 'fixture');"
+        printf '%s\n' "INSERT INTO admin (id, password_hash) VALUES (1, '\$argon2id\$v=19\$m=1\$fixture');"
+        printf '%s\n' "$statement"
+    } > "$tmp/dangerous-fixture.sql"
+    fail_without_calls "dangerous fixture statement: $statement" bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/dangerous-fixture.sql"
+done
+
+rg -q 'state_uncertain=1' "$root/deploy/provision-staging-test-slot.sh"
+rg -q 'cleanup_failed=1' "$root/deploy/provision-staging-test-slot.sh"
 
 stop_line="$(rg -n 'systemctl stop bytedepth-test-slot\.service' "$root/deploy/teardown-staging-test-slot.sh" | cut -d: -f1)"
 delete_line="$(rg -n 'redis_scan_delete|DROP USER|rm -r --' "$root/deploy/teardown-staging-test-slot.sh" | head -1 | cut -d: -f1)"

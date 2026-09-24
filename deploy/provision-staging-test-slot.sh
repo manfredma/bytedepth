@@ -50,6 +50,7 @@ it_user_created=0
 e2e_user_created=0
 it_index_created=0
 e2e_index_created=0
+state_uncertain=0
 it_key_uid=''; e2e_key_uid=''
 it_index=''; e2e_index=''
 it_db=''; e2e_db=''
@@ -60,6 +61,9 @@ provision_cleanup() {
         return
     fi
     cleanup_failed=0
+    if (( state_uncertain != 0 )); then
+        cleanup_failed=1
+    fi
     for profile in it e2e; do
         case "$profile" in
             it) key_uid="$it_key_uid"; index="$it_index"; db="$it_db"; user="$it_user"; password="$it_password"; key_created=$it_key_created; index_created=$it_index_created; user_created=$it_user_created; db_created=$it_db_created ;;
@@ -191,21 +195,31 @@ for profile in it e2e; do
         e2e) db="$e2e_db"; user="$e2e_user"; password="$e2e_password"; index="$e2e_index" ;;
         *) slot_die "unsupported test profile: $profile"; exit 1 ;;
     esac
-    if ! mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE DATABASE \`$db\`"; then
-        [[ $(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'") == 1 ]] || { slot_die 'database creation failed and resource identity is unknown'; exit 1; }
-    fi
     case "$profile" in
         it) it_db_created=1 ;;
         e2e) e2e_db_created=1 ;;
     esac
-    grant_db="${db//_/\\_}"
-    if ! mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'"; then
-        [[ $(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM mysql.user WHERE user='$user' AND host='localhost'") == 1 ]] || { slot_die 'user creation failed and resource identity is unknown'; exit 1; }
+    if ! mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE DATABASE \`$db\`"; then
+        if ! db_count="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'")"; then
+            state_uncertain=1
+            slot_die 'database creation failed and resource identity is unknown'
+            exit 1
+        fi
+        [[ $db_count == 1 ]] || { slot_die 'database creation was not confirmed'; exit 1; }
     fi
+    grant_db="${db//_/\\_}"
     case "$profile" in
         it) it_user_created=1 ;;
         e2e) e2e_user_created=1 ;;
     esac
+    if ! mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'"; then
+        if ! user_count="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM mysql.user WHERE user='$user' AND host='localhost'")"; then
+            state_uncertain=1
+            slot_die 'user creation failed and resource identity is unknown'
+            exit 1
+        fi
+        [[ $user_count == 1 ]] || { slot_die 'user creation was not confirmed'; exit 1; }
+    fi
     mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
     grants="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SHOW GRANTS FOR '$user'@'localhost'")"
     expected_grant_line="GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
