@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
+# shellcheck disable=SC1091
 source "$SOURCE_ROOT/scripts/lib/java-25.sh"
 readonly RELEASE_VERSION="${1:-}"
 readonly DEVELOPMENT_VERSION="${2:-}"
@@ -43,6 +45,10 @@ require_staging_evidence() {
     local command
     local timestamp
     local result
+    local runtime_mode
+    local run_id
+    local manifest_sha
+    local cleanup
     local last_byte
     local timestamp_value
 
@@ -54,7 +60,7 @@ require_staging_evidence() {
     line_count="$(wc -l < "$evidence_file")"
     line_count="${line_count//[[:space:]]/}"
     last_byte="$(tail -c 1 "$evidence_file" | od -An -t x1 | tr -d '[:space:]')"
-    if [[ "$line_count" != 4 || "$last_byte" != '0a' ]]; then
+    if [[ "$line_count" != 8 || "$last_byte" != '0a' ]]; then
         printf 'Malformed staging evidence file: %s\n' "$evidence_name" >&2
         exit 1
     fi
@@ -64,6 +70,10 @@ require_staging_evidence() {
         IFS= read -r command
         IFS= read -r timestamp
         IFS= read -r result
+        IFS= read -r runtime_mode
+        IFS= read -r run_id
+        IFS= read -r manifest_sha
+        IFS= read -r cleanup
     } < "$evidence_file"
 
     timestamp_value="${timestamp#timestamp=}"
@@ -72,7 +82,11 @@ require_staging_evidence() {
         || [[ "$command" != "command=$expected_command" ]] \
         || [[ ! "$timestamp" =~ ^timestamp=[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] \
         || [[ "$(normalize_utc_timestamp "$timestamp_value")" != "$timestamp_value" ]] \
-        || [[ "$result" != 'result=passed' ]]; then
+        || [[ "$result" != 'result=passed' ]] \
+        || [[ "$runtime_mode" != 'runtime_mode=host-native' ]] \
+        || [[ ! "$run_id" =~ ^run_id=[0-9]{8}_[0-9]{6}_[a-z0-9]{8}$ ]] \
+        || [[ ! "$manifest_sha" =~ ^test_resource_manifest_sha=[0-9a-f]{64}$ ]] \
+        || [[ "$cleanup" != 'cleanup=result=passed' ]]; then
         printf 'Malformed or mismatched staging evidence file: %s\n' "$evidence_name" >&2
         exit 1
     fi
@@ -123,7 +137,8 @@ if [[ -z "${BYTEDEPTH_STAGING_EVIDENCE_DIR:-}" ]] \
     exit 1
 fi
 
-readonly HEAD_SHA="$(git rev-parse HEAD)"
+HEAD_SHA="$(git rev-parse HEAD)"
+readonly HEAD_SHA
 if [[ ! "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
     printf 'Unable to determine the full current commit SHA.\n' >&2
     exit 1

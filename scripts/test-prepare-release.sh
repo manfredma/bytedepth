@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-readonly TEMP_ROOT="$(mktemp -d)"
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
+TEMP_ROOT="$(mktemp -d)"
+readonly TEMP_ROOT
 readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
 readonly EVIDENCE_DIR="$TEMP_ROOT/staging-evidence"
 readonly RELEASE_SCRIPT="$SOURCE_ROOT/scripts/prepare-release.sh"
@@ -57,13 +59,16 @@ assert_maven_test_boundaries() {
   assert_xpath_true "$pom_file" "count($surefire/$byte_buddy_agent_dependency) = 1" || return 1
   assert_xpath_true "$pom_file" "count($failsafe/$byte_buddy_agent_dependency) = 1" || return 1
   assert_xpath_true "$pom_file" "count(//*[local-name()='argLine'][contains(text(), '-javaagent:') and contains(text(), 'mockito-core')]) = 0" || return 1
-  assert_xpath_true "$pom_file" "$failsafe/*[local-name()='configuration']/*[local-name()='systemPropertyVariables']/*[local-name()='bytedepth.it.redis.password' and text()='\${env.BYTEDEPTH_IT_REDIS_PASSWORD}']" || return 1
+  assert_xpath_true "$pom_file" "count($failsafe/*[local-name()='configuration']/*[local-name()='systemPropertyVariables']/*[local-name()='bytedepth.it.redis.password']) = 0" || return 1
   assert_xpath_true "$pom_file" "$surefire/*[local-name()='configuration']/*[local-name()='excludes']/*[local-name()='exclude' and text()='**/*IT.java']" || return 1
 }
 
 assert_maven_test_boundaries "$SOURCE_ROOT/pom.xml"
 # Coverage is unit-only by construction and must never opt into the staging Failsafe profile.
-! rg -Fq 'staging-integration' "$SOURCE_ROOT/scripts/verify-changed-coverage.sh"
+if rg -Fq 'staging-integration' "$SOURCE_ROOT/scripts/verify-changed-coverage.sh"; then
+  printf 'Coverage checker must not activate staging integration tests.\n' >&2
+  exit 1
+fi
 
 mkdir -p "$TEMP_ROOT/scripts/lib" "$TEMP_ROOT/docs/releases" "$TEMP_ROOT/java/bin" "$TEMP_ROOT/bin"
 cp "$SOURCE_ROOT/scripts/prepare-release.sh" "$TEMP_ROOT/scripts/prepare-release.sh"
@@ -153,6 +158,20 @@ assert_release_rejects_without_maven() {
     [[ ! -e "$log_file" ]] || ! grep -q '^mvn release_mode=1 ' "$log_file"
 }
 
+write_valid_evidence() {
+    local name="$1" commit="$2" command="$3" timestamp="${4:-2026-09-10T10:11:12Z}"
+    cat > "$EVIDENCE_DIR/$name" <<EOF
+commit=$commit
+command=$command
+timestamp=$timestamp
+result=passed
+runtime_mode=host-native
+run_id=20260924_231530_a1b2c3d4
+test_resource_manifest_sha=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+cleanup=result=passed
+EOF
+}
+
 # Commit-bound staging records are mandatory; a bare green result is not evidence.
 assert_release_rejects_without_maven 'absent staging evidence' "$TEMP_ROOT/absent-evidence.log"
 
@@ -161,81 +180,31 @@ printf 'green\n' > "$EVIDENCE_DIR/staging-integration"
 printf 'green\n' > "$EVIDENCE_DIR/staging-e2e"
 assert_release_rejects_without_maven 'malformed staging evidence' "$TEMP_ROOT/malformed-evidence.log"
 
-cat > "$EVIDENCE_DIR/staging-integration" <<EOF
-commit=$CURRENT_SHA
-command=run-staging-integration-tests
-timestamp=2026-09-10T10:11:12Z
-result=passed
-EOF
+write_valid_evidence staging-integration "$CURRENT_SHA" run-staging-integration-tests
 rm "$EVIDENCE_DIR/staging-e2e"
 assert_release_rejects_without_maven 'absent staging E2E evidence' "$TEMP_ROOT/absent-e2e.log"
 
-cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
-commit=$CURRENT_SHA
-command=run-staging-e2e-tests
-timestamp=2026-09-10T10:11:12Z
-result=passed
-EOF
+write_valid_evidence staging-e2e "$CURRENT_SHA" run-staging-e2e-tests
 rm "$EVIDENCE_DIR/staging-integration"
 assert_release_rejects_without_maven 'absent staging integration evidence' "$TEMP_ROOT/absent-integration.log"
 
-cat > "$EVIDENCE_DIR/staging-integration" <<EOF
-commit=$CURRENT_SHA
-command=run-staging-integration-tests
-timestamp=2026-09-10T10:11:12Z
-result=passed
-EOF
-cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
-commit=ffffffffffffffffffffffffffffffffffffffff
-command=run-staging-e2e-tests
-timestamp=2026-09-10T10:11:12Z
-result=passed
-EOF
+write_valid_evidence staging-integration "$CURRENT_SHA" run-staging-integration-tests
+write_valid_evidence staging-e2e ffffffffffffffffffffffffffffffffffffffff run-staging-e2e-tests
 assert_release_rejects_without_maven 'mismatched staging E2E commit' "$TEMP_ROOT/mismatched-e2e.log"
 
-cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
-commit=$CURRENT_SHA
-command=run-staging-e2e-tests
-timestamp=2026-09-10T10:11:12Z
-result=passed
-EOF
-cat > "$EVIDENCE_DIR/staging-integration" <<EOF
-commit=ffffffffffffffffffffffffffffffffffffffff
-command=run-staging-integration-tests
-timestamp=2026-09-10T10:11:12Z
-result=passed
-EOF
+write_valid_evidence staging-e2e "$CURRENT_SHA" run-staging-e2e-tests
+write_valid_evidence staging-integration ffffffffffffffffffffffffffffffffffffffff run-staging-integration-tests
 assert_release_rejects_without_maven 'mismatched staging integration commit' "$TEMP_ROOT/mismatched-integration.log"
 
-cat > "$EVIDENCE_DIR/staging-integration" <<EOF
-commit=$CURRENT_SHA
-command=run-staging-integration-tests
-timestamp=2026-09-10T10:11:12Z
-result=passed
-EOF
-cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
-commit=$CURRENT_SHA
-command=run-staging-e2e-tests
-timestamp=2026-02-30T10:11:12Z
-result=passed
-EOF
+write_valid_evidence staging-integration "$CURRENT_SHA" run-staging-integration-tests
+write_valid_evidence staging-e2e "$CURRENT_SHA" run-staging-e2e-tests 2026-02-30T10:11:12Z
 assert_release_rejects_without_maven 'an impossible UTC timestamp' "$TEMP_ROOT/impossible-timestamp.log"
 
-cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
-commit=$CURRENT_SHA
-command=run-staging-e2e-tests
-timestamp=2026-09-10T10:11:12Z
-result=passed
-EOF
+write_valid_evidence staging-e2e "$CURRENT_SHA" run-staging-e2e-tests
 printf 'unterminated-extra-field' >> "$EVIDENCE_DIR/staging-e2e"
 assert_release_rejects_without_maven 'an incomplete fifth evidence line' "$TEMP_ROOT/incomplete-fifth-line.log"
 
-cat > "$EVIDENCE_DIR/staging-e2e" <<EOF
-commit=$CURRENT_SHA
-command=run-staging-e2e-tests
-timestamp=2026-09-10T10:11:12Z
-result=passed
-EOF
+write_valid_evidence staging-e2e "$CURRENT_SHA" run-staging-e2e-tests
 if RELEASE_TEST_TRACKED_TOOL_ARTIFACT=1 run_prepare "$TEMP_ROOT/tracked-tool-artifact.log" >/dev/null 2>&1; then
     printf 'Expected release preparation to reject tracked agent tool artifacts.\n' >&2
     exit 1

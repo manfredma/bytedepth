@@ -25,7 +25,6 @@
         <cola.version>4.3.2</cola.version>
         <mybatis.plus.version>3.5.17</mybatis.plus.version>
         <sort.skip>true</sort.skip>
-        <testcontainers.version>1.21.4</testcontainers.version>
         <owasp.html.sanitizer.version>20260313.1</owasp.html.sanitizer.version>
         <commonmark.version>0.30.0</commonmark.version>
         <bucket4j.version>8.19.0</bucket4j.version>
@@ -39,15 +38,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Testcontainers BOM 放在 Spring Boot 之前，覆盖其中的旧版本。
-                 1.21.4 默认探测 Docker API 1.44，兼容 Docker Engine 29。-->
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers-bom</artifactId>
-                <version>${testcontainers.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -271,12 +261,6 @@
                                     profile contract without putting credentials on the command line.
                                 -->
                                 <spring.profiles.active>${env.SPRING_PROFILES_ACTIVE}</spring.profiles.active>
-                                <bytedepth.it.manifest>${env.BYTEDEPTH_TEST_MANIFEST}</bytedepth.it.manifest>
-                                <bytedepth.it.redis.host>${env.BYTEDEPTH_STAGING_IT_REDIS_HOST}</bytedepth.it.redis.host>
-                                <bytedepth.it.redis.port>${env.BYTEDEPTH_STAGING_IT_REDIS_PORT}</bytedepth.it.redis.port>
-                                <bytedepth.it.redis.password>${env.BYTEDEPTH_STAGING_IT_REDIS_PASSWORD}</bytedepth.it.redis.password>
-                                <bytedepth.it.redis.database>${env.BYTEDEPTH_STAGING_IT_REDIS_DATABASE}</bytedepth.it.redis.database>
-                                <bytedepth.it.redis.key-namespace>${env.BYTEDEPTH_STAGING_IT_REDIS_KEY_NAMESPACE}</bytedepth.it.redis.key-namespace>
                             </systemPropertyVariables>
                         </configuration>
                         <executions>

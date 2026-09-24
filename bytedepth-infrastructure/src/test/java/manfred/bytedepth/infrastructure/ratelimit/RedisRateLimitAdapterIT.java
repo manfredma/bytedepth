@@ -42,24 +42,26 @@ class RedisRateLimitAdapterIT {
 
     private static RateLimitRedisProperties stagingProperties() {
         RateLimitRedisProperties properties = stagingProperties(
-                System.getProperty("bytedepth.it.redis.host"),
-                System.getProperty("bytedepth.it.redis.password"));
-        String port = requireNonBlank(System.getProperty("bytedepth.it.redis.port"), "bytedepth.it.redis.port");
+                requireEnv("BYTEDEPTH_STAGING_IT_REDIS_HOST"),
+                requireEnv("BYTEDEPTH_STAGING_IT_REDIS_PASSWORD"));
+        String port = requireEnv("BYTEDEPTH_STAGING_IT_REDIS_PORT");
         try {
             properties.setPort(Integer.parseInt(port));
         } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException("System property bytedepth.it.redis.port must be a number", exception);
+            throw new IllegalArgumentException("Environment variable BYTEDEPTH_STAGING_IT_REDIS_PORT must be a number", exception);
         }
-        String database = requireNonBlank(System.getProperty("bytedepth.it.redis.database"),
-                "bytedepth.it.redis.database");
+        String database = requireEnv("BYTEDEPTH_STAGING_IT_REDIS_DATABASE");
         try {
             properties.setDatabase(Integer.parseInt(database));
         } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException("System property bytedepth.it.redis.database must be a number", exception);
+            throw new IllegalArgumentException("Environment variable BYTEDEPTH_STAGING_IT_REDIS_DATABASE must be a number", exception);
         }
-        properties.setKeyNamespace(requireNonBlank(System.getProperty("bytedepth.it.redis.key-namespace"),
-                "bytedepth.it.redis.key-namespace"));
+        properties.setKeyNamespace(requireEnv("BYTEDEPTH_STAGING_IT_REDIS_KEY_NAMESPACE"));
         return properties;
+    }
+
+    private static String requireEnv(String name) {
+        return requireNonBlank(System.getenv(name), name);
     }
 
     private static void deleteRateLimitKey(RateLimitRedisProperties properties, String rule, String identity) {

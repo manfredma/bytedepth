@@ -22,6 +22,11 @@ assert_no_docker_or_testcontainers() {
             exit 1
         fi
     done
+    if rg -n -i 'testcontainers|spring-boot-testcontainers' "$POM" "$SOURCE_ROOT/bytedepth-start/pom.xml"; then
+        printf 'Task 3 must remove Testcontainers dependencies from the integration test path.\n' >&2
+        exit 1
+    fi
+    [[ ! -e "$SOURCE_ROOT/bytedepth-start/src/test/resources/testcontainers.properties" ]]
 }
 
 assert_it_tests_use_external_profile() {
@@ -46,10 +51,13 @@ assert_failsafe_uses_staging_profile() {
         in_profile && /<\/profile>/ { exit }
     ' "$POM")"
     [[ "$profile_block" == *"<spring.profiles.active>\${env.SPRING_PROFILES_ACTIVE}</spring.profiles.active>"* ]]
-    [[ "$profile_block" == *"<bytedepth.it.manifest>\${env.BYTEDEPTH_TEST_MANIFEST}</bytedepth.it.manifest>"* ]]
-    [[ "$profile_block" == *"<bytedepth.it.redis.host>\${env.BYTEDEPTH_STAGING_IT_REDIS_HOST}</bytedepth.it.redis.host>"* ]]
-    [[ "$profile_block" == *"<bytedepth.it.redis.database>\${env.BYTEDEPTH_STAGING_IT_REDIS_DATABASE}</bytedepth.it.redis.database>"* ]]
-    [[ "$profile_block" == *"<bytedepth.it.redis.key-namespace>\${env.BYTEDEPTH_STAGING_IT_REDIS_KEY_NAMESPACE}</bytedepth.it.redis.key-namespace>"* ]]
+    if rg -n 'bytedepth\.it\.(manifest|redis\.(host|port|password|database|key-namespace))' <<< "$profile_block"; then
+        return 1
+    fi
+    if rg -n 'BYTEDEPTH_STAGING_IT_REDIS_PASSWORD' <<< "$profile_block"; then
+        return 1
+    fi
+    rg -q 'BYTEDEPTH_STAGING_IT_REDIS_HOST|BYTEDEPTH_STAGING_IT_REDIS_DATABASE' "$SOURCE_ROOT/bytedepth-start/src/main/resources/application-staging-it.yml"
 }
 
 assert_runner_uses_manifest_transaction() {
@@ -61,7 +69,10 @@ assert_runner_uses_manifest_transaction() {
     rg -q '\./mvnw -o -Pstaging-integration verify' "$RUNNER"
     rg -q 'trap on_exit EXIT' "$RUNNER"
     rg -q 'cleanup_slot' "$RUNNER"
-    ! rg -n -- '-Dbytedepth\.it\.(redis|mysql)|-Dspring\.datasource|TESTCONTAINERS' "$RUNNER"
+    if rg -n -- '-Dbytedepth\.it\.(redis|mysql)|-Dspring\.datasource|TESTCONTAINERS' "$RUNNER"; then
+        return 1
+    fi
+    rg -q 'BYTEDEPTH_STAGING_IT_REDIS_PASSWORD' "$RUNNER"
 }
 
 assert_evidence_contract() {

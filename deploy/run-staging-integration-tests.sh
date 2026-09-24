@@ -268,8 +268,8 @@ require_deployed_commit "$tested_commit"
 
 install -d -o root -g root -m 0700 "$EVIDENCE_DIR"
 evidence_tmp="$(mktemp "$EVIDENCE_DIR/.staging-integration.XXXXXX")"
-printf 'runtime_mode=host-native\nrun_id=%s\ntest_resource_manifest_sha=%s\ncleanup=result=passed\ncommit=%s\ncommand=run-staging-integration-tests\ntimestamp=%s\nresult=passed\n' \
-    "$run_id" "$manifest_sha" "$tested_commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$evidence_tmp"
+printf 'commit=%s\ncommand=run-staging-integration-tests\ntimestamp=%s\nresult=passed\nruntime_mode=host-native\nrun_id=%s\ntest_resource_manifest_sha=%s\ncleanup=result=passed\n' \
+    "$tested_commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$run_id" "$manifest_sha" > "$evidence_tmp"
 install -o root -g root -m 0600 "$evidence_tmp" "$EVIDENCE_DIR/staging-integration"
 rm -f -- "$evidence_tmp"
 printf 'Staging integration tests passed for %s.\n' "$tested_commit"
