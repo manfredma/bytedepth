@@ -238,7 +238,7 @@ ensure_meilisearch_runtime() {
 }
 
 migrate_meilisearch() {
-    local meili_key task status snapshot docker_meili_version
+    local meili_key task status snapshot docker_meili_version import_dir
     meili_key="$(env_value "$DOT_ENV" MEILI_MASTER_KEY)"
     [[ -n "$meili_key" ]] || return 1
     ensure_meilisearch_runtime
@@ -267,15 +267,13 @@ migrate_meilisearch() {
     [[ -n "$snapshot" && -f "$snapshot" ]] || return 1
     install -o root -g root -m 0600 "$snapshot" "$OLD_MEILI_SNAPSHOT"
     systemctl stop "$BYTEDEPTH_STAGING_MEILI_SERVICE" 2>/dev/null || true
-    rm -rf -- "$BYTEDEPTH_NATIVE_ROOT/meilisearch"/*
-    install -d -o meilisearch -g meilisearch -m 0750 "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
-    printf '%s\n' 'env = "production"' > "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
-    chmod 0600 "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
-    chown meilisearch:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
+    import_dir="$BYTEDEPTH_NATIVE_ROOT/meilisearch-import"
+    rm -rf -- "$import_dir"
+    install -d -o root -g root -m 0700 "$import_dir"
     local import_log import_pid import_status
     import_log="$(mktemp "$STATE_DIR/meilisearch-import.XXXXXX")"
     /usr/local/bin/meilisearch --import-snapshot "$OLD_MEILI_SNAPSHOT" \
-        --db-path "$BYTEDEPTH_NATIVE_ROOT/meilisearch" >"$import_log" 2>&1 &
+        --db-path "$import_dir" >"$import_log" 2>&1 &
     import_pid=$!
     for _ in {1..600}; do
         if ! kill -0 "$import_pid" 2>/dev/null; then
@@ -304,6 +302,13 @@ migrate_meilisearch() {
         printf 'Refusing: Meilisearch snapshot import exceeded 600 seconds.\n' >&2
         return 1
     fi
+    rm -rf -- "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
+    install -d -o meilisearch -g meilisearch -m 0750 "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
+    cp -a -- "$import_dir"/. "$BYTEDEPTH_NATIVE_ROOT/meilisearch/"
+    rm -rf -- "$import_dir"
+    printf '%s\n' 'env = "production"' > "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
+    chmod 0600 "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
+    chown meilisearch:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
     chown -R meilisearch:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
     systemctl start "$BYTEDEPTH_STAGING_MEILI_SERVICE"
     systemctl is-active --quiet "$BYTEDEPTH_STAGING_MEILI_SERVICE"
