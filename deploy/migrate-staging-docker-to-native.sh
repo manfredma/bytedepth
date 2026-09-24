@@ -110,7 +110,12 @@ initialize_native_mysql() {
             return 1
         }
         rmdir -- "$data_dir"
-        mysqld --initialize-insecure --user=mysql --datadir="$data_dir"
+        chown mysql:mysql "$BYTEDEPTH_NATIVE_ROOT"
+        if ! mysqld --initialize-insecure --user=mysql --datadir="$data_dir"; then
+            chown root:root "$BYTEDEPTH_NATIVE_ROOT"
+            return 1
+        fi
+        chown root:root "$BYTEDEPTH_NATIVE_ROOT"
         chown mysql:mysql "$data_dir"
     fi
 }
