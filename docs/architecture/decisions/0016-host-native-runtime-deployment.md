@@ -22,6 +22,10 @@
 
 集成测试和 E2E 采用串行 test slot，不直接使用 staging 资源：每次 run 创建独立 MySQL 数据库和最小权限账号、Redis 预留 logical DB 加运行级 key namespace、Meilisearch 独立 index；测试应用临时接管 staging URL，完成后由同一编排脚本销毁资源并恢复 staging 应用。只有在逻辑隔离经压测证明不足时，才升级为第二套宿主机中间件服务。
 
+隔离资源配置通过 Spring Profile 管理：IT 使用 `staging-it`，E2E 使用 `staging-e2e`。
+profile 文件定义资源映射和必需配置项，运行时 manifest 只向 profile 提供本次 run 的
+外部值；不得在各个 runner 中重复维护一套命令行属性名。
+
 放弃的方案：
 
 - **继续全部使用 Docker Compose**：运行方式稳定，但不能满足当前小资源环境降低容器与构建峰值的目标。

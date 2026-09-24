@@ -4,7 +4,7 @@
 
 **Goal:** 将 staging 和生产从 Docker Compose 运行时迁移到宿主机 systemd 服务，并建立自动化的外部 JAR 发布、数据迁移、测试资源隔离、验收和回滚流程。
 
-**Architecture:** MySQL、Redis、Meilisearch、Java 应用和 Nginx 由宿主机固定版本和 systemd 管理，应用只运行外部构建并经过 SHA 校验的 JAR。staging 的集成测试和 E2E 使用串行 test slot：IT/E2E 各自拥有独立 MySQL 库/账号、Redis logical DB+运行级 namespace、Meilisearch index；测试结束后自动清理并恢复正常 staging 应用。
+**Architecture:** MySQL、Redis、Meilisearch、Java 应用和 Nginx 由宿主机固定版本和 systemd 管理，应用只运行外部构建并经过 SHA 校验的 JAR。staging 的集成测试和 E2E 使用串行 test slot：IT/E2E 各自拥有独立 MySQL 库/账号、Redis logical DB+运行级 namespace、Meilisearch index；隔离配置分别由 `staging-it`/`staging-e2e` Spring Profile 选择，测试结束后自动清理并恢复正常 staging 应用。
 
 **Tech Stack:** Java 25、Maven Wrapper 3.9.11、Spring Boot、多模块 Maven、MySQL 8、Redis 7、Meilisearch 1.7、Nginx、systemd、Bash、Playwright。
 
@@ -17,7 +17,7 @@
 - 本机前端测试、lint 或 Playwright 前先执行 `npm ci --ignore-scripts --no-audit --no-fund`。
 - 目标主机不执行 Maven 构建，不执行 Docker/Compose 运行时构建；运行时只接收已校验的不可变 JAR。
 - staging 是唯一集成、E2E 和验收环境；staging URL 必须是 `https://staging-bytedepth.bytedepth.cn/`。
-- 集成测试和 E2E 不得直接使用 staging MySQL、Redis 或 Meilisearch 资源；禁止 `FLUSHALL`、通配符删除和默认/临时管理员账号。
+- 集成测试和 E2E 不得直接使用 staging MySQL、Redis 或 Meilisearch 资源；必须分别激活 `staging-it`/`staging-e2e` Spring Profile；禁止 `FLUSHALL`、通配符删除和默认/临时管理员账号。
 - 每项业务代码改动必须补单元测试；本次业务逻辑分支覆盖率达到 100%；所有构建、测试、静态分析和部署输出中的 WARNING 必须处理。
 - 首次 staging 部署前必须有非空且分类明确的 `CHANGELOG.md` `## Unreleased` 条目。
 - 发布前必须有当前 `main` 完整 SHA 绑定的 staging integration 和 E2E 两份 `result=passed` evidence。
@@ -29,7 +29,7 @@
 
 | 责任 | 文件/目录 | 说明 |
 |------|----------|------|
-| 应用运行时配置 | `bytedepth-start/src/main/resources/application.yml` | 将数据库、Redis、搜索 index、上传目录改为环境注入，默认值保持生产兼容 |
+| 应用运行时配置 | `bytedepth-start/src/main/resources/application.yml`、`application-staging-it.yml`、`application-staging-e2e.yml` | 生产默认值保持兼容；隔离资源统一通过 Spring Profile 选择，实际 run 值由 root-only 外部环境文件注入 |
 | Redis namespace | `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/redis/RedisKeyNamespace.java` | 统一生成 Session、PV、阅读进度、限流和 Ops 扫描前缀 |
 | 搜索 index | `bytedepth-infrastructure/.../search/MeiliSearchPostIndexer.java` | 将硬编码 `posts` 改为配置值 |
 | 测试资源编排 | `deploy/lib/staging-test-slot.sh`、`deploy/provision-staging-test-slot.sh`、`deploy/teardown-staging-test-slot.sh` | 生成 manifest、创建/清理 IT/E2E 资源和恢复应用 |
@@ -45,6 +45,7 @@
 
 **Files:**
 - Create: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/redis/RedisKeyNamespace.java`
+- Create: `bytedepth-start/src/main/resources/application-staging-it.yml`, `application-staging-e2e.yml`
 - Modify: `bytedepth-start/src/main/resources/application.yml`
 - Modify: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/RedisStatsService.java`
 - Modify: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/RedisReadingProgressTokenAdapter.java`
@@ -56,12 +57,13 @@
 
 **Interfaces:**
 - `RedisKeyNamespace` consumes `bytedepth.redis.key-namespace` and exposes `key(String family, String suffix)` plus `prefix(String family)`; an empty namespace preserves existing production key names.
+- `staging-it` and `staging-e2e` are the only supported isolated-resource profiles; their required values are supplied through a root-only external environment file generated from the manifest.
 - `RateLimitRedisProperties` produces `database` and `keyNamespace` for the separate Bucket4j Redis client.
 - `MeiliSearchPostIndexer` consumes `bytedepth.search.index` with default `posts`.
 
 - [ ] **Step 1: Write failing tests for namespacing and index selection.** Assert empty namespace produces existing production keys, `bytedepth:it:r1:` prefixes every Redis family, rate-limit properties carry the test database/namespace, and the search REST URI uses `posts_it_r1` rather than `posts`.
 - [ ] **Step 2: Run the focused tests and verify failure.** Run `./mvnw -pl bytedepth-infrastructure,bytedepth-start -am -Dtest=RedisStatsServiceTest,RedisReadingProgressTokenAdapterTest,RedisRateLimitAdapterTest,MeiliSearchPostIndexerTest,ThemeAssetsTest test -Dsort.skip=true`; expected: the new assertions fail against hardcoded prefixes/index.
-- [ ] **Step 3: Implement configuration injection.** Add environment-backed values for JDBC URL/user/password, Redis database/password/namespace, rate-limit database/namespace, Meili index/API key, and upload directory. Preserve production defaults exactly where existing data compatibility requires it.
+- [ ] **Step 3: Implement configuration injection.** Add `staging-it` and `staging-e2e` profile files with required JDBC URL/user/password, Redis database/password/namespace, rate-limit database/namespace, Meili index/API key and upload directory mappings. Preserve production defaults exactly where existing data compatibility requires it; do not make runners pass a second ad-hoc property contract.
 - [ ] **Step 4: Replace hardcoded Redis families.** Inject one namespace object into stats, reading-progress, rate-limit and Ops adapters; make Ops scans use the same generated prefixes. Ensure `spring.session.redis.namespace`, ordinary Redis database, and rate-limit database can be set independently but are set consistently by the test profile.
 - [ ] **Step 5: Make search index configurable.** Replace the static `INDEX = "posts"` with constructor-injected `@Value("${bytedepth.search.index:posts}")`, retain the package-visible RestClient test constructor, and use the configured value for index, delete and search paths.
 - [ ] **Step 6: Run focused tests and the module unit suite.** Run the focused command again, then `./mvnw -pl bytedepth-infrastructure,bytedepth-start -am test -Dsort.skip=true`; expected: PASS with zero unregistered WARNING.
@@ -103,7 +105,7 @@
 - Modify: `scripts/test-run-staging-integration-tests.sh`
 
 **Interfaces:**
-- Failsafe consumes `BYTEDEPTH_IT_DATASOURCE_URL`, `BYTEDEPTH_IT_DATASOURCE_USERNAME`, `BYTEDEPTH_IT_DATASOURCE_PASSWORD`, `BYTEDEPTH_IT_REDIS_DATABASE`, `BYTEDEPTH_IT_REDIS_NAMESPACE`, `BYTEDEPTH_IT_REDIS_PASSWORD`, `BYTEDEPTH_IT_SEARCH_INDEX`, and the manifest path.
+- Failsafe activates `staging-it` and consumes the profile's root-only external environment file; the runner passes only the profile selector and manifest path, not a duplicate list of Spring resource properties.
 - `run-staging-integration-tests.sh` obtains the existing deployment-test lock, provisions/loads the IT resources, runs Maven against the deployed candidate SHA, and invalidates evidence on every failure.
 
 - [ ] **Step 1: Add failing contract assertions that no integration test declares `MySQLContainer` and the runner does not require a Docker socket.** Extend `scripts/test-run-staging-integration-tests.sh` with negative checks for Docker/Testcontainers and positive checks for manifest variables.
@@ -125,7 +127,7 @@
 - Modify: `tests/e2e/*.spec.js` only where fixture/run-id cleanup is required
 
 **Interfaces:**
-- `bytedepth-test-slot.service` consumes a root-owned EnvironmentFile generated from the E2E manifest and listens on the existing application port only after `bytedepth-app.service` is stopped.
+- `bytedepth-test-slot.service` activates `staging-e2e` and consumes a root-owned EnvironmentFile generated from the E2E manifest; it listens on the existing application port only after `bytedepth-app.service` is stopped.
 - `run-staging-e2e-tests.sh` consumes the E2E manifest, uses the unchanged staging HTTPS URL, and exports the existing admin credentials from the controlled staging secret path without creating an account.
 
 - [ ] **Step 1: Add failing service and runner contract checks.** Assert the test unit requires `bytedepth-app.service` to be stopped, uses the manifest JAR/SHA, references test DB/Redis/index variables, and restores `bytedepth-app.service` on failure.

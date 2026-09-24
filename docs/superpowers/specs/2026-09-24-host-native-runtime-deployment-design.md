@@ -115,6 +115,20 @@ staging 测试使用一个全局部署/测试锁，当前不允许并发运行�
 | 上传目录 | `/data/images-test/<RUN_ID>/it` | `/data/images-test/<RUN_ID>/e2e` | `/data/images` |
 | URL | 不对外暴露，使用本机 test profile | 继续使用 `https://staging-bytedepth.bytedepth.cn/` | 同一 URL |
 
+### Spring Profile 配置契约
+
+隔离资源的应用配置统一通过 Spring Profile 选择，不允许在 Maven、systemd 或
+Playwright 命令中散落一组互不一致的 `-D` 配置。仓库内固定提供
+`application-staging-it.yml` 和 `application-staging-e2e.yml`，分别由
+`staging-it`、`staging-e2e` profile 激活；两个 profile 显式配置各自的 JDBC、Redis
+logical DB、Redis namespace、限流 Redis 配置、Meilisearch index 和上传目录。
+
+每次 run 的实际数据库地址、随机凭据、Redis DB、namespace、Meili index 和目录由
+manifest 生成 root-only 的外部环境文件注入，profile 文件只负责把这些受控输入映射到
+Spring 配置。IT 必须以 `spring.profiles.active=staging-it` 运行，E2E test-slot
+必须以 `spring.profiles.active=staging-e2e` 启动；缺少 profile 或缺少 profile 所需值时
+直接失败。生产默认配置仍由 `application.yml` 提供，不能误激活测试 profile。
+
 为降低资源开销，E2E 不再另开一套 Nginx 或公开域名：测试编排先停止 staging 应用，再启动 `bytedepth-test-slot.service` 接管 8080，Nginx 和证书保持不变。E2E 仍通过规定的 staging URL 运行；测试结束后，无论成功或失败都必须停止测试服务、销毁测试资源并恢复 `bytedepth-app.service`。恢复失败必须使本次 run 失败并阻止后续验收/发布。
 
 这意味着测试槽位是“串行、短生命周期、可恢复”的临时运行时，不是第二套长期 staging。测试锁持有期间页面可能短暂不可用，属于已知的验收窗口行为；项目所有者验收必须在测试槽位清理完成、正常 staging 应用恢复并通过健康检查后进行。

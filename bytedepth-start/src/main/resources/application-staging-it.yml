@@ -1,0 +1,34 @@
+spring:
+  config:
+    activate:
+      on-profile: staging-it
+  datasource:
+    url: ${BYTEDEPTH_STAGING_IT_DATASOURCE_URL}
+    username: ${BYTEDEPTH_STAGING_IT_DATASOURCE_USERNAME}
+    password: ${BYTEDEPTH_STAGING_IT_DATASOURCE_PASSWORD}
+  data:
+    redis:
+      host: ${BYTEDEPTH_STAGING_IT_REDIS_HOST:127.0.0.1}
+      port: ${BYTEDEPTH_STAGING_IT_REDIS_PORT:6379}
+      database: ${BYTEDEPTH_STAGING_IT_REDIS_DATABASE}
+      password: ${BYTEDEPTH_STAGING_IT_REDIS_PASSWORD}
+  session:
+    redis:
+      namespace: ${BYTEDEPTH_STAGING_IT_REDIS_SESSION_NAMESPACE}
+
+bytedepth:
+  redis:
+    key-namespace: ${BYTEDEPTH_STAGING_IT_REDIS_KEY_NAMESPACE}
+  rate-limit:
+    redis:
+      host: ${BYTEDEPTH_STAGING_IT_REDIS_HOST:127.0.0.1}
+      port: ${BYTEDEPTH_STAGING_IT_REDIS_PORT:6379}
+      password: ${BYTEDEPTH_STAGING_IT_REDIS_PASSWORD}
+      database: ${BYTEDEPTH_STAGING_IT_REDIS_DATABASE}
+      key-namespace: ${BYTEDEPTH_STAGING_IT_REDIS_KEY_NAMESPACE}
+  search:
+    url: ${BYTEDEPTH_STAGING_IT_SEARCH_URL:http://127.0.0.1:7700}
+    api-key: ${BYTEDEPTH_STAGING_IT_SEARCH_API_KEY}
+    index: ${BYTEDEPTH_STAGING_IT_SEARCH_INDEX}
+  upload:
+    image-dir: ${BYTEDEPTH_STAGING_IT_UPLOAD_IMAGE_DIR}

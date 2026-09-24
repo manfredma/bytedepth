@@ -305,6 +305,25 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void isolatedStagingResourcesAreSelectedThroughSpringProfiles() throws Exception {
+        String integration = classpathText("/application-staging-it.yml");
+        String e2e = classpathText("/application-staging-e2e.yml");
+
+        assertThat(integration)
+                .contains("on-profile: staging-it")
+                .contains("BYTEDEPTH_STAGING_IT_DATASOURCE_URL")
+                .contains("BYTEDEPTH_STAGING_IT_REDIS_DATABASE")
+                .contains("BYTEDEPTH_STAGING_IT_REDIS_KEY_NAMESPACE")
+                .contains("BYTEDEPTH_STAGING_IT_SEARCH_INDEX");
+        assertThat(e2e)
+                .contains("on-profile: staging-e2e")
+                .contains("BYTEDEPTH_STAGING_E2E_DATASOURCE_URL")
+                .contains("BYTEDEPTH_STAGING_E2E_REDIS_DATABASE")
+                .contains("BYTEDEPTH_STAGING_E2E_REDIS_KEY_NAMESPACE")
+                .contains("BYTEDEPTH_STAGING_E2E_SEARCH_INDEX");
+    }
+
+    @Test
     void publicTemplatesLoadThemeAssets() throws Exception {
         List<String> templates = List.of(
                 "/templates/public/index.html",
