@@ -35,6 +35,7 @@ rg -q 'EnvironmentFile=/etc/bytedepth/staging-native.env' "$UNIT_DIR/bytedepth-s
 rg -q 'requirepass \$BYTEDEPTH_REDIS_PASSWORD' "$INSTALLER"
 rg -q 'local/usr.sbin.mysqld' "$INSTALLER"
 rg -q 'apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld' "$INSTALLER"
+rg -q 'capability chown' "$INSTALLER"
 rg -q 'ExecStart=/usr/sbin/mysqld.*__NATIVE_ROOT__/mysql.*__MYSQL_PORT__' "$UNIT_DIR/bytedepth-staging-native-mysql.service.in"
 rg -q -- '--socket=/run/bytedepth-staging-native/mysql.sock' "$UNIT_DIR/bytedepth-staging-native-mysql.service.in"
 rg -q 'ExecStart=/usr/bin/redis-server.*staging-native-redis.conf' "$UNIT_DIR/bytedepth-staging-native-redis.service.in"

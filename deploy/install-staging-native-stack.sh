@@ -114,8 +114,9 @@ chown root:root /etc/bytedepth/staging-native-redis.conf
 
 if command -v apparmor_parser >/dev/null && [[ -f /etc/apparmor.d/usr.sbin.mysqld ]]; then
     printf '%s\n' \
+        'capability chown,' \
         "$native_root/ r," \
-        "$native_root/mysql/ rw," \
+        "$native_root/mysql/ rwk," \
         "$native_root/mysql/** rwk," \
         '/run/bytedepth-staging-native/ r,' \
         '/run/bytedepth-staging-native/** rwk,' > /etc/apparmor.d/local/usr.sbin.mysqld
