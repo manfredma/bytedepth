@@ -1,0 +1,32 @@
+[Unit]
+Description=bytedepth isolated staging-native E2E test slot
+After=network-online.target
+Wants=network-online.target
+Conflicts=bytedepth-staging-native-app.service
+Before=bytedepth-staging-native-app.service
+RequiresMountsFor=__NATIVE_ROOT__/images-test
+ConditionPathExists=/run/bytedepth/staging-native-e2e.env
+ConditionPathExists=/opt/bytedepth/current/app.jar
+
+[Service]
+Type=simple
+User=bytedepth
+Group=bytedepth
+EnvironmentFile=/run/bytedepth/staging-native-e2e.env
+WorkingDirectory=/opt/bytedepth/current
+ExecStartPre=/bin/sh -c '! /bin/systemctl is-active --quiet bytedepth-staging-native-app.service'
+ExecStartPre=/usr/bin/test -r ${BYTEDEPTH_TEST_SLOT_JAR}
+ExecStartPre=/usr/bin/test -n ${BYTEDEPTH_TEST_SLOT_SHA256}
+ExecStartPre=/bin/sh -c 'test "$(/usr/bin/sha256sum "$BYTEDEPTH_TEST_SLOT_JAR" | /usr/bin/cut -d " " -f1)" = "$BYTEDEPTH_TEST_SLOT_SHA256"'
+ExecStart=/usr/bin/java -jar ${BYTEDEPTH_TEST_SLOT_JAR}
+Restart=on-failure
+RestartSec=3s
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=__NATIVE_ROOT__/images-test /run/bytedepth
+MemoryMax=768M
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

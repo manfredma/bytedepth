@@ -18,7 +18,7 @@
 | staging | 124.221.143.25 | staging | https://staging-bytedepth.bytedepth.cn/ |
 | production | 175.24.197.202 | production | https://bytedepth.cn/ |
 
-两台机器的数据服务和应用相互隔离。应用发布目录为 /opt/bytedepth/releases/<ref>/app.jar，/opt/bytedepth/current 是当前发布的软链接；部署状态位于 /var/lib/bytedepth-deploy/，staging 测试状态位于 /var/lib/bytedepth-staging/。持久化数据目录为 /data/mysql、/data/redis、/data/meilisearch 和 /data/images。
+两台机器的数据服务和应用相互隔离。应用发布目录为 /opt/bytedepth/releases/<ref>/app.jar，/opt/bytedepth/current 是当前发布的软链接；部署状态位于 /var/lib/bytedepth-deploy/，staging 测试状态位于 /var/lib/bytedepth-staging/。最终原生运行时的持久化数据目录为 /data/mysql、/data/redis、/data/meilisearch 和 /data/images。staging 蓝绿迁移期间，独立候选栈使用 /data/bytedepth-native-staging 及 13306/16379/17700/18080/18081，绝不与仍在运行的旧栈共享数据目录。
 
 应用服务名是 bytedepth-app.service；数据服务名是 mysql.service、redis.service、meilisearch.service；边缘服务名是 nginx.service。E2E 临时接管服务名为 bytedepth-test-slot.service，它与应用服务互斥。
 
@@ -52,7 +52,25 @@ install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数
     sudo journalctl -u bytedepth-app.service -n 200 --no-pager
     sudo journalctl -u nginx.service -n 100 --no-pager
 
-## 4. staging 候选部署
+## 4. staging Docker → 原生蓝绿迁移
+
+迁移不是直接覆盖 Docker 正在使用的数据目录，而是先完整部署一套独立原生栈。124 上保留现有 Docker 应用、MySQL、Redis、Meilisearch 和共享 Docker Nginx，执行：
+
+    sudo install -o root -g root -m 0600 deploy/staging-native.conf.example /etc/bytedepth/staging-native.conf
+    sudo ./deploy/install-staging-native-stack.sh
+    sudo ./deploy/migrate-staging-docker-to-native.sh prepare
+
+`prepare` 会初始化独立 MySQL、Redis、Meilisearch、图片目录和 systemd unit；MySQL/Meilisearch/图片从旧栈复制，Redis 复制 RDB 后再启动原生服务。此时公网仍由 Docker 栈提供。候选 JAR 部署并完成本节后续的集成测试与 E2E 后，执行：
+
+    sudo ./deploy/migrate-staging-docker-to-native.sh switch
+
+`switch` 停止旧应用、执行最后一次数据同步，启动原生应用和内部 edge，再只修改宿主机 `/opt/nginx-conf.d/default.conf` 的 bytedepth upstream 为 `172.18.0.1:18081`，通过共享 Docker Nginx reload。其他项目的路由不变。切换失败可执行：
+
+    sudo ./deploy/migrate-staging-docker-to-native.sh rollback
+
+回滚会恢复 Nginx 配置并启动原 Docker 应用；旧容器和 `/data/*` 在所有者验收前不得删除。验收通过后才允许显式执行 `sudo env BYTEDEPTH_NATIVE_CLEANUP_ACCEPTED=1 ./deploy/migrate-staging-docker-to-native.sh cleanup`，该命令只删除 bytedepth 旧容器和旧数据目录，不删除共享 Nginx 或其他项目。
+
+## 5. staging 候选部署
 
 本机必须有 staging SSH 私钥和已核验的 known_hosts 文件。候选 ref 必须是 origin 上的命名分支或 Tag，且相对 origin/main 修改了 docs/releases/CHANGELOG.md。候选构建在本机/构建机完成，传输 JAR 和 manifest，staging 只校验并安装产物。
 
@@ -69,7 +87,7 @@ install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数
     curl --fail --silent --show-error https://staging-bytedepth.bytedepth.cn/version
     sudo systemctl is-active bytedepth-app.service nginx.service
 
-## 5. staging 数据同步与证书
+## 6. staging 数据同步与证书
 
 生产到 staging 的同步只在 175 生产数据节点执行，使用 /etc/bytedepth-sync.conf 中的专用 SSH key 和 /root/.ssh/known_hosts。同步会停 staging 应用，按顺序处理 MySQL、Redis、Meilisearch 和图片，然后恢复应用并验证公开入口：
 
@@ -93,7 +111,7 @@ staging 证书在 124 签发，生产边缘只同步精确 SAN 证书并拒绝�
 
 应用服务依赖 /data/images 挂载存在；挂载不完整时不得启动应用。
 
-## 6. 隔离集成测试
+## 7. 隔离集成测试
 
 集成测试只在 staging 主机运行，不能用本机启动的外部进程作为验收依据：
 
@@ -110,7 +128,7 @@ runner 读取显式注入的 root-only MySQL defaults、Redis secret、Meilisear
 
 测试完成后 runner 删除本次资源并恢复 bytedepth-app.service。资源身份无法确认时会写入 state-uncertain，保留 manifest 和资源供人工恢复，但仍会尝试恢复应用；不得自动删除可能属于未知状态的资源。
 
-## 7. 隔离 E2E 测试与 evidence
+## 8. 隔离 E2E 测试与 evidence
 
 集成测试通过后，在同一 staging checkout 运行真实浏览器 E2E。管理员账号必须是既有 staging 管理员，凭据由调用者显式注入：
 
@@ -158,7 +176,7 @@ runner 固定使用公开 staging URL 和 /opt/shared-e2e/chrome-linux64/chrome�
 
 任何测试失败、WARNING、checkout 变化、部署 SHA 不一致或清理失败都会删除对应 evidence，禁止以旧记录放行发布。
 
-## 8. 生产发布、验证与回滚
+## 9. 生产发布、验证与回滚
 
 生产发布前必须完成 staging 集成、E2E 和所有者验收，随后 fast-forward 合并 main，确认 SHA 不变，创建新的 annotated Tag。生产本机调用必须显式提供两个 SSH 文件：
 
@@ -178,7 +196,7 @@ runner 固定使用公开 staging URL 和 /opt/shared-e2e/chrome-linux64/chrome�
 
 代码回滚只能选择已经验证过的旧原生发布，并先确认数据库迁移兼容。若 schema 不兼容，必须先从对应备份恢复数据，再安装旧 JAR；不能只把软链接指回旧目录。发布中自动回滚仅恢复 current、应用和 Nginx，不能回滚已执行的 Flyway 数据迁移。
 
-## 9. 发布前门禁
+## 10. 发布前门禁
 
 本机只作离线单元测试和静态检查；完整门禁入口为：
 

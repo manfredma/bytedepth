@@ -1,0 +1,28 @@
+[Unit]
+Description=ByteDepth isolated staging native application
+Requires=bytedepth-staging-native-mysql.service bytedepth-staging-native-redis.service bytedepth-staging-native-meilisearch.service
+After=network-online.target bytedepth-staging-native-mysql.service bytedepth-staging-native-redis.service bytedepth-staging-native-meilisearch.service
+Wants=network-online.target
+RequiresMountsFor=__NATIVE_ROOT__/images
+
+[Service]
+Type=simple
+User=bytedepth
+Group=bytedepth
+WorkingDirectory=/opt/bytedepth/current
+EnvironmentFile=/etc/bytedepth/staging-native.env
+ExecStart=/usr/bin/java -XX:MaxRAMPercentage=65 -jar /opt/bytedepth/current/app.jar
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=120s
+TimeoutStopSec=30s
+LimitNOFILE=65536
+MemoryMax=768M
+ReadWritePaths=__NATIVE_ROOT__/images
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

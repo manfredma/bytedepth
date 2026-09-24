@@ -24,6 +24,8 @@ source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 # shellcheck disable=SC1090,SC1091
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
+source "$SOURCE_ROOT/deploy/lib/staging-native-target.sh"
+load_staging_native_target
 
 WORK_DIR=""
 MAVEN_LOG=""
@@ -106,13 +108,13 @@ load_resource_credentials() {
     export REDISCLI_AUTH
     BYTEDEPTH_TEST_MEILI_API_KEY="$(< "$BYTEDEPTH_TEST_MEILI_SECRET_FILE")"
     export BYTEDEPTH_TEST_MEILI_API_KEY
-    BYTEDEPTH_TEST_MEILI_URL="${BYTEDEPTH_TEST_MEILI_URL:-http://127.0.0.1:7700}"
-    [[ "$BYTEDEPTH_TEST_MEILI_URL" == http://127.0.0.1:7700 ]] || {
+    BYTEDEPTH_TEST_MEILI_URL="${BYTEDEPTH_TEST_MEILI_URL:-http://127.0.0.1:$BYTEDEPTH_STAGING_MEILI_PORT}"
+    [[ "$BYTEDEPTH_TEST_MEILI_URL" == "http://127.0.0.1:$BYTEDEPTH_STAGING_MEILI_PORT" ]] || {
         printf 'Refusing: Meili must use the local staging endpoint.\n' >&2
         return 1
     }
     export BYTEDEPTH_TEST_MEILI_URL
-    redis_capacity="$(redis-cli CONFIG GET databases | tail -n 1)"
+    redis_capacity="$(slot_redis_cli CONFIG GET databases | tail -n 1)"
     [[ "$redis_capacity" =~ ^[0-9]+$ ]] || {
         printf 'Refusing: Redis capacity could not be determined.\n' >&2
         return 1
@@ -165,9 +167,9 @@ cleanup_slot() {
             cleanup_status=1
         fi
     fi
-    if (( app_stopped != 0 )) && ! systemctl is-active --quiet bytedepth-app.service; then
-        systemctl start bytedepth-app.service || cleanup_status=1
-        systemctl is-active --quiet bytedepth-app.service || cleanup_status=1
+    if (( app_stopped != 0 )) && ! systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE"; then
+        systemctl start "$BYTEDEPTH_STAGING_APP_SERVICE" || cleanup_status=1
+        systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE" || cleanup_status=1
     fi
     cleanup_done=1
     if (( cleanup_status == 0 )); then
@@ -219,9 +221,9 @@ export BYTEDEPTH_TEST_SLOT_LOCK_HELD=1
 export BYTEDEPTH_DEPLOY_MODE=staging
 install -d -o root -g root -m 0700 "$TEST_STATE_DIR"
 
-systemctl stop bytedepth-app.service
+systemctl stop "$BYTEDEPTH_STAGING_APP_SERVICE"
 app_stopped=1
-if systemctl is-active --quiet bytedepth-app.service; then
+if systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE"; then
     printf 'Refusing: staging app remained active; test resources were not provisioned.\n' >&2
     exit 1
 fi

@@ -76,7 +76,8 @@ restore_current_release() {
 verify_running_release() {
     local expected_commit="$1"
     local base_url="${BYTEDEPTH_HEALTH_URL:-http://127.0.0.1:8080}"
-    systemctl is-active --quiet bytedepth-app.service || return 1
+    local app_service="${BYTEDEPTH_APP_SERVICE:-bytedepth-app.service}"
+    systemctl is-active --quiet "$app_service" || return 1
     curl --fail --silent --show-error --retry 12 --retry-delay 2 --retry-connrefused \
         --connect-timeout 5 "$base_url/version" | grep -F "$expected_commit" >/dev/null
 }

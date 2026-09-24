@@ -3,14 +3,16 @@ set -euo pipefail
 umask 077
 # shellcheck source=deploy/lib/staging-test-slot.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/staging-test-slot.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/staging-native-target.sh"
 
 [[ $EUID == 0 ]] || { slot_die 'run as root'; exit 1; }
+load_staging_native_target
 [[ ${BYTEDEPTH_DEPLOY_MODE:-} == staging && ${BYTEDEPTH_TEST_SLOT_LOCK_HELD:-} == 1 ]] || { slot_die 'staging mode and deployment-test lock are required'; exit 1; }
 [[ $# == 2 && $1 == --manifest ]] || { slot_die 'usage: --manifest PATH'; exit 1; }
 manifest="$2"
 state_dir="${BYTEDEPTH_TEST_STATE_DIR:?}"
 slot_root_directory "$state_dir"
-slot_root_directory /data/images-test
+slot_root_directory "$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT"
 [[ $manifest == "$state_dir/"*/manifest ]] || { slot_die 'manifest outside state directory'; exit 1; }
 require_manifest "$manifest"
 run_id="$(slot_manifest_value "$manifest" run_id)"
@@ -27,13 +29,13 @@ if [[ -e "$(dirname "$manifest")/state-uncertain" ]]; then
 fi
 REDISCLI_AUTH="$(< "$BYTEDEPTH_TEST_REDIS_SECRET_FILE")"; export REDISCLI_AUTH
 BYTEDEPTH_TEST_MEILI_API_KEY="$(< "$BYTEDEPTH_TEST_MEILI_SECRET_FILE")"; export BYTEDEPTH_TEST_MEILI_API_KEY
-BYTEDEPTH_TEST_MEILI_URL="${BYTEDEPTH_TEST_MEILI_URL:-http://127.0.0.1:7700}"
-[[ $BYTEDEPTH_TEST_MEILI_URL == http://127.0.0.1:7700 ]] || { slot_die 'Meili must use local endpoint'; exit 1; }
+BYTEDEPTH_TEST_MEILI_URL="${BYTEDEPTH_TEST_MEILI_URL:-http://127.0.0.1:$BYTEDEPTH_STAGING_MEILI_PORT}"
+[[ $BYTEDEPTH_TEST_MEILI_URL == "http://127.0.0.1:$BYTEDEPTH_STAGING_MEILI_PORT" ]] || { slot_die 'Meili must use local endpoint'; exit 1; }
 export BYTEDEPTH_TEST_MEILI_URL
 
 failed=0
-if systemctl is-active --quiet bytedepth-test-slot.service; then
-    if ! systemctl stop bytedepth-test-slot.service || systemctl is-active --quiet bytedepth-test-slot.service; then
+if systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then
+    if ! systemctl stop "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE" || systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then
         slot_die 'test slot service could not be stopped; refusing destructive cleanup'
         exit 1
     fi
@@ -56,7 +58,7 @@ for profile in it e2e; do
     elif [[ $key_status != 404 ]]; then failed=1; fi
     mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "DROP USER IF EXISTS '$user'@'localhost'; DROP DATABASE IF EXISTS \`$db\`" || failed=1
     [[ $(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'") == 0 ]] || failed=1
-    image_dir="/data/images-test/$run_id/$profile"
+    image_dir="$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT/$run_id/$profile"
     assert_not_staging_resource directory "$image_dir" "$run_id" || failed=1
     if [[ -d $image_dir && ! -L $image_dir ]]; then
         # The exact RUN_ID/profile directory is the only recursive target.
@@ -64,8 +66,8 @@ for profile in it e2e; do
     fi
 done
 verify_staging_resource_baseline "$BYTEDEPTH_TEST_STAGING_REDIS_DB" "$baseline" || failed=1
-systemctl start bytedepth-app.service || failed=1
-systemctl is-active --quiet bytedepth-app.service || failed=1
+systemctl start "$BYTEDEPTH_STAGING_APP_SERVICE" || failed=1
+systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE" || failed=1
 if (( failed != 0 )); then slot_die 'cleanup or staging restoration failed; preserving manifest'; exit 1; fi
 for profile in it e2e; do
     env_file="$(slot_manifest_value "$manifest" "${profile}_env")"
@@ -75,5 +77,5 @@ done
 rm -- "$manifest"
 rm -- "$baseline"
 rmdir -- "$(dirname "$manifest")"
-rmdir -- "/data/images-test/$run_id"
+rmdir -- "$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT/$run_id"
 printf 'Removed test resources for %s and restored staging app\n' "$run_id"

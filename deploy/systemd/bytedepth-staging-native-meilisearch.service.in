@@ -1,0 +1,23 @@
+[Unit]
+Description=ByteDepth isolated staging native Meilisearch
+After=local-fs.target network.target
+Before=bytedepth-staging-native-app.service
+
+[Service]
+Type=simple
+User=meilisearch
+Group=meilisearch
+EnvironmentFile=-/etc/bytedepth/staging-native-meilisearch.env
+ExecStart=/usr/local/bin/meilisearch --config-file-path /etc/bytedepth/staging-native-meilisearch.toml --db-path __NATIVE_ROOT__/meilisearch --http-addr 127.0.0.1:__MEILI_PORT__
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=60s
+TimeoutStopSec=30s
+LimitNOFILE=65536
+ReadWritePaths=__NATIVE_ROOT__/meilisearch
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

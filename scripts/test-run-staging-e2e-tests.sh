@@ -64,12 +64,13 @@ rg -q 'window\.scrollBy' "$ANNOTATION_E2E"
 rg -q 'expect\.poll' "$ANNOTATION_E2E"
 rg -q 'provision-staging-test-slot\.sh' "$RUNNER"
 rg -q 'teardown-staging-test-slot\.sh' "$RUNNER"
-rg -q 'bytedepth-test-slot\.service' "$RUNNER"
-rg -q 'systemctl stop bytedepth-app\.service' "$RUNNER"
-rg -q 'systemctl start (bytedepth-test-slot\.service|"\$SLOT_SERVICE")' "$RUNNER"
-rg -q 'systemctl stop (bytedepth-test-slot\.service|"\$SLOT_SERVICE")' "$RUNNER"
+rg -q 'BYTEDEPTH_STAGING_TEST_SLOT_SERVICE|SLOT_SERVICE' "$RUNNER"
+rg -q 'systemctl stop "\$BYTEDEPTH_STAGING_APP_SERVICE"' "$RUNNER"
+rg -q 'systemctl start "\$SLOT_SERVICE"' "$RUNNER"
+rg -q 'systemctl stop "\$SLOT_SERVICE"' "$RUNNER"
 rg -q 'SPRING_PROFILES_ACTIVE.*staging-e2e|== staging-e2e' "$RUNNER"
 rg -q 'BYTEDEPTH_ENVIRONMENT=staging' "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
+rg -q 'BYTEDEPTH_STAGING_APP_PORT' "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
 rg -q 'BYTEDEPTH_TEST_MANIFEST|run_id=' "$RUNNER"
 rg -q 'cleanup|restore' "$RUNNER"
 rg -q 'state-uncertain' "$RUNNER"
@@ -94,6 +95,7 @@ sed 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrom
     "$SOURCE_ROOT/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
 cp "$SOURCE_ROOT/deploy/lib/warning-policy.sh" "$FIXTURE_SOURCE/deploy/lib/warning-policy.sh"
 cp "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh" "$FIXTURE_SOURCE/deploy/lib/staging-test-slot.sh"
+cp "$SOURCE_ROOT/deploy/lib/staging-native-target.sh" "$FIXTURE_SOURCE/deploy/lib/staging-native-target.sh"
 cat >> "$FIXTURE_SOURCE/deploy/lib/staging-test-slot.sh" <<'SCRIPT'
 slot_root_private() { return 0; }
 slot_root_directory() { [[ -d "$1" && ! -L "$1" ]]; }
@@ -168,7 +170,7 @@ sed \
     -e "s@^readonly TEST_STATE_DIR=/var/lib/bytedepth-staging/test-slots\$@readonly TEST_STATE_DIR=$FIXTURE_ROOT/test-slots@" \
     -e "s@^readonly SLOT_PROVISION=/opt/bytedepth/deploy/provision-staging-test-slot.sh\$@readonly SLOT_PROVISION=$FIXTURE_SOURCE/deploy/provision-staging-test-slot.sh@" \
     -e "s@^readonly SLOT_TEARDOWN=/opt/bytedepth/deploy/teardown-staging-test-slot.sh\$@readonly SLOT_TEARDOWN=$FIXTURE_SOURCE/deploy/teardown-staging-test-slot.sh@" \
-    -e "s@^readonly SLOT_ENV=/run/bytedepth/staging-e2e.env\$@readonly SLOT_ENV=$FIXTURE_ROOT/staging-e2e.env@" \
+    -e "s@^[[:space:]]*readonly SLOT_ENV=/run/bytedepth/staging-e2e.env\$@    readonly SLOT_ENV=$FIXTURE_ROOT/staging-e2e.env@" \
     -e "s@^readonly SLOT_RUNTIME_DIR=/run/bytedepth\$@readonly SLOT_RUNTIME_DIR=$FIXTURE_ROOT/runtime@" \
     -e "s@^readonly SLOT_JAR=/opt/bytedepth/current/app.jar\$@readonly SLOT_JAR=$FIXTURE_JAR@" \
     -e "s@^readonly CHROMIUM_EXECUTABLE=.*\$@readonly CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM@" \

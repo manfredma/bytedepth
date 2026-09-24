@@ -9,6 +9,11 @@ validate_run_id() {
 
 slot_stat_uid() { stat -f %u "$1" 2>/dev/null || stat -c %u "$1"; }
 slot_stat_mode() { stat -f %Lp "$1" 2>/dev/null || stat -c %a "$1"; }
+slot_redis_cli() {
+    redis-cli -h "${BYTEDEPTH_STAGING_REDIS_HOST:-127.0.0.1}" \
+        -p "${BYTEDEPTH_STAGING_REDIS_PORT:-6379}" "$@"
+}
+slot_test_image_root() { printf '%s\n' "${BYTEDEPTH_STAGING_TEST_IMAGE_ROOT:-/data/images-test}"; }
 slot_root_private() {
     [[ ! -L $1 && $(slot_stat_uid "$1") == 0 && $(slot_stat_mode "$1") == 600 ]] || slot_die "not a root-owned 0600 file: $1"
 }
@@ -24,7 +29,7 @@ assert_not_staging_resource() {
         "user:bd_it_$run_id"|"user:bd_e2e_$run_id"|\
         "meili:posts_it_$run_id"|"meili:posts_e2e_$run_id"|\
         "redis:bytedepth:it:$run_id:"|"redis:bytedepth:e2e:$run_id:") return 0 ;;
-        directory:*) [[ "$name" == "/data/images-test/$run_id/it" || "$name" == "/data/images-test/$run_id/e2e" ]] && return 0 ;;
+        directory:*) [[ "$name" == "$(slot_test_image_root)/$run_id/it" || "$name" == "$(slot_test_image_root)/$run_id/e2e" ]] && return 0 ;;
     esac
     slot_die "resource is outside RUN_ID scope: $kind"
 }
@@ -105,14 +110,14 @@ redis_scan_delete() {
     [[ $# == 3 ]] || { slot_die 'unexpected Redis operation'; return; }
     assert_not_staging_resource redis "$namespace" "$run_id" || return
     [[ $db == "$BYTEDEPTH_TEST_IT_REDIS_DB" || $db == "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'unreserved Redis DB'; return; }
-    keys="$(redis-cli -n "$db" --scan --pattern "${namespace}*")" || return
+    keys="$(slot_redis_cli -n "$db" --scan --pattern "${namespace}*")" || return
     while IFS= read -r key; do
         [[ -n $key ]] || continue
         [[ $key == "$namespace"* ]] || { slot_die 'Redis scan returned out-of-scope key'; return; }
         ((before+=1))
-        redis-cli -n "$db" DEL "$key" >/dev/null || return
+        slot_redis_cli -n "$db" DEL "$key" >/dev/null || return
     done <<< "$keys"
-    keys="$(redis-cli -n "$db" --scan --pattern "${namespace}*")" || return
+    keys="$(slot_redis_cli -n "$db" --scan --pattern "${namespace}*")" || return
     while IFS= read -r key; do [[ -z $key ]] || ((after+=1)); done <<< "$keys"
     (( after == 0 )) || slot_die "Redis cleanup left $after keys (found $before)"
 }
@@ -139,7 +144,7 @@ staging_resource_snapshot() {
     local staging_db="$1" redis_snapshot meili_stats record key_hex dump_hex ttl ttl_state key_id value_hash scan_file failed
     [[ $staging_db =~ ^[0-9]+$ && $staging_db != "$BYTEDEPTH_TEST_IT_REDIS_DB" && $staging_db != "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'invalid staging Redis DB'; return; }
     scan_file="$(mktemp)"
-    if ! redis-cli -n "$staging_db" --raw EVAL '
+    if ! slot_redis_cli -n "$staging_db" --raw EVAL '
 local function hex(value)
   local result = {}
   for i = 1, #value do result[i] = string.format("%02x", string.byte(value, i)) end

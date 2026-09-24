@@ -115,16 +115,16 @@ grep -Fqx "        slot_die 'provision state is uncertain; preserving manifest a
 rg -q 'state-uncertain' "$root/deploy/teardown-staging-test-slot.sh"
 rg -q 'refusing destructive cleanup until manual recovery' "$root/deploy/teardown-staging-test-slot.sh"
 
-grep -Fqx 'if systemctl is-active --quiet bytedepth-test-slot.service; then' <(sed -n '25,45p' "$root/deploy/teardown-staging-test-slot.sh") || {
+grep -Fqx 'if systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then' <(sed -n '35,45p' "$root/deploy/teardown-staging-test-slot.sh") || {
     printf 'FAIL: teardown must stop the optional E2E test slot only when it exists and is active\n' >&2
     exit 1
 }
-grep -Fqx '    if ! systemctl stop bytedepth-test-slot.service || systemctl is-active --quiet bytedepth-test-slot.service; then' <(sed -n '25,45p' "$root/deploy/teardown-staging-test-slot.sh") || {
+grep -Fqx '    if ! systemctl stop "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE" || systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then' <(sed -n '35,45p' "$root/deploy/teardown-staging-test-slot.sh") || {
     printf 'FAIL: teardown must stop the optional E2E test slot only when it exists and is active\n' >&2
     exit 1
 }
 
-stop_line="$(rg -n 'systemctl stop bytedepth-test-slot\.service' "$root/deploy/teardown-staging-test-slot.sh" | cut -d: -f1)"
+stop_line="$(rg -n 'systemctl stop "\$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"' "$root/deploy/teardown-staging-test-slot.sh" | cut -d: -f1)"
 delete_line="$(rg -n 'redis_scan_delete|DROP USER|rm -r --' "$root/deploy/teardown-staging-test-slot.sh" | head -1 | cut -d: -f1)"
 [[ $stop_line =~ ^[0-9]+$ && $delete_line =~ ^[0-9]+$ && $stop_line -lt $delete_line ]] || {
     printf 'FAIL: teardown must stop test slot before destructive cleanup\n' >&2

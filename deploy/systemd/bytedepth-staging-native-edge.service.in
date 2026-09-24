@@ -1,0 +1,19 @@
+[Unit]
+Description=ByteDepth staging native internal edge
+Requires=bytedepth-staging-native-app.service
+After=bytedepth-staging-native-app.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+ExecStartPre=/usr/sbin/nginx -t -c /etc/bytedepth/staging-native-nginx.conf
+ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 12 --retry-delay 2 --retry-connrefused http://127.0.0.1:__APP_PORT__/version
+ExecStart=/usr/sbin/nginx -c /etc/bytedepth/staging-native-nginx.conf -g 'daemon on; master_process on;'
+ExecReload=/usr/sbin/nginx -c /etc/bytedepth/staging-native-nginx.conf -s reload
+ExecStop=/usr/sbin/nginx -c /etc/bytedepth/staging-native-nginx.conf -s quit
+Restart=on-failure
+RestartSec=5s
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

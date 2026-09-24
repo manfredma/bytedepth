@@ -60,7 +60,8 @@ for unit in mysql.service redis.service meilisearch.service; do
 done
 
 if rg -n -i 'docker|compose|STAGING_MAVEN_IMAGE|prewarm-production-maven-cache' \
-    "$ROOT/deploy" --glob '*.sh' --glob '*.yml' --glob '*.yaml' --glob '*.service' >/dev/null; then
+    "$ROOT/deploy" --glob '*.sh' --glob '*.yml' --glob '*.yaml' --glob '*.service' \
+    --glob '!migrate-staging-docker-to-native.sh' >/dev/null; then
     printf 'Runtime/deployment scripts still contain Docker-only runtime contracts.\n' >&2
     exit 1
 fi

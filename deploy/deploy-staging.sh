@@ -21,6 +21,7 @@ readonly STAGING_SSH_OPTIONS=(-i "$STAGING_SSH_KEY" -o IdentitiesOnly=yes -o Bat
 source "$SOURCE_ROOT/deploy/lib/artifact.sh"
 source "$SOURCE_ROOT/deploy/lib/timing.sh"
 source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
+source "$SOURCE_ROOT/deploy/lib/staging-native-target.sh"
 
 require_named_ref() {
     local ref="$1"
@@ -53,9 +54,16 @@ require_staging_host_configuration() {
         return 1
     }
     remote_command='set -Eeuo pipefail
-test -f /etc/bytedepth/application.env
-grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/application.env
-grep -Fqx BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn /etc/bytedepth/application.env'
+if test -r /etc/bytedepth/staging-native.conf && grep -Fqx BYTEDEPTH_NATIVE_STACK_MODE=parallel /etc/bytedepth/staging-native.conf; then
+  test -r /etc/bytedepth/staging-native.env
+  test -r /etc/bytedepth/staging-native-meilisearch.env
+  grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/staging-native.env
+  grep -Fqx BYTEDEPTH_NATIVE_STACK_MODE=parallel /etc/bytedepth/staging-native.conf
+else
+  test -r /etc/bytedepth/application.env
+  grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/application.env
+  grep -Fqx BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn /etc/bytedepth/application.env
+fi'
     ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "$remote_command"
 }
 
@@ -65,8 +73,13 @@ deploy_external_artifact() {
     ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "install -d -m 0700 '$remote_dir'"
     scp "${STAGING_SSH_OPTIONS[@]}" \
         "$artifact_dir/app.jar" "$artifact_dir/artifact.manifest" "$STAGING_USER@$STAGING_HOST:$remote_dir/"
-    printf -v remote_command 'cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh --artifact %q --manifest %q %q' \
-        "$remote_dir/app.jar" "$remote_dir/artifact.manifest" "$ref"
+    printf -v remote_command 'set -Eeuo pipefail
+cd /opt/bytedepth
+test -z "$(git status --short --untracked-files=no)"
+git fetch --force --no-recurse-submodules origin %q
+git checkout --detach %q
+sudo ./deploy/deploy-staging.sh --artifact %q --manifest %q %q' \
+        "$ref" "$commit" "$remote_dir/app.jar" "$remote_dir/artifact.manifest" "$ref"
     ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "$remote_command"
 }
 
@@ -78,6 +91,9 @@ run_remote_install() {
 
 run_locked_install() {
     local ref="$1" jar="$2" manifest="$3" commit timing_file deployment_started_at
+    load_staging_native_target
+    export BYTEDEPTH_APP_SERVICE="$BYTEDEPTH_STAGING_APP_SERVICE"
+    export BYTEDEPTH_HEALTH_URL="$BYTEDEPTH_STAGING_HEALTH_URL"
     commit="$(artifact_manifest_value commit "$manifest")"
     timing_file="$TIMING_DIR/$commit"
     [[ "$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value=$2} END {print value}' /etc/bytedepth-deploy.conf 2>/dev/null || true)" == staging ]] || {
@@ -101,10 +117,10 @@ run_locked_install() {
         fi
         if [[ -n "$previous_release_path" ]]; then
             restore_current_release "$previous_release_path" || return 1
-            systemctl restart bytedepth-app.service || return 1
-            systemctl reload nginx.service || return 1
+            systemctl restart "$BYTEDEPTH_STAGING_APP_SERVICE" || return 1
+            systemctl reload "$BYTEDEPTH_STAGING_EDGE_SERVICE" || return 1
         else
-            systemctl stop bytedepth-app.service || return 1
+            systemctl stop "$BYTEDEPTH_STAGING_APP_SERVICE" || return 1
         fi
     }
     fail_deployment() {
@@ -118,15 +134,33 @@ run_locked_install() {
         exit 1
     }
 
-    if ! record_timed_phase "$timing_file" native_service_install ./deploy/bootstrap-ops-deploy.sh; then
+    native_bootstrap_command() {
+        if [[ "$BYTEDEPTH_STAGING_RUNTIME_MODE" == host-native-parallel ]]; then
+            ./deploy/install-staging-native-stack.sh
+        else
+            ./deploy/bootstrap-ops-deploy.sh
+        fi
+    }
+    if ! record_timed_phase "$timing_file" native_service_install native_bootstrap_command; then
         fail_deployment native_service_install
     fi
     backup_database_preflight() {
         local backup_dir="$STATE_DIR/backups"
+        local -a mysql_args=()
         install -d -o root -g root -m 0700 "$backup_dir"
         command -v mysqldump >/dev/null
-        mysqladmin --protocol=socket ping >/dev/null
-        mysqldump --protocol=socket --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"
+        if [[ "$BYTEDEPTH_STAGING_RUNTIME_MODE" == host-native-parallel ]]; then
+            [[ -r /etc/bytedepth/staging-native-mysql-admin.cnf ]] || {
+                printf 'Refusing: native staging MySQL admin defaults are missing.\n' >&2
+                return 1
+            }
+            mysql_args+=(--defaults-extra-file=/etc/bytedepth/staging-native-mysql-admin.cnf)
+            mysqladmin "${mysql_args[@]}" --host=127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" ping >/dev/null
+            mysqldump "${mysql_args[@]}" --host=127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"
+        else
+            mysqladmin --protocol=socket ping >/dev/null
+            mysqldump --protocol=socket --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"
+        fi
         chmod 0600 "$backup_dir/mysql-$commit.sql"
     }
     if ! record_timed_phase "$timing_file" database_backup_preflight backup_database_preflight; then
@@ -139,13 +173,13 @@ run_locked_install() {
         fail_deployment release_switch
     fi
     release_switched=1
-    if ! record_timed_phase "$timing_file" app_restart systemctl restart bytedepth-app.service; then
+    if ! record_timed_phase "$timing_file" app_restart systemctl restart "$BYTEDEPTH_STAGING_APP_SERVICE"; then
         fail_deployment app_restart
     fi
     if ! record_timed_phase "$timing_file" app_health verify_running_release "$commit"; then
         fail_deployment app_health
     fi
-    if ! record_timed_phase "$timing_file" nginx_reload systemctl reload nginx.service; then
+    if ! record_timed_phase "$timing_file" nginx_reload systemctl reload "$BYTEDEPTH_STAGING_EDGE_SERVICE"; then
         fail_deployment nginx_reload
     fi
     install -d -m 0700 "$STATE_DIR"

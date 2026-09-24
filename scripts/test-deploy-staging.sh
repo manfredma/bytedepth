@@ -16,7 +16,11 @@ for contract in \
     'scp' \
     'install_release_artifact' \
     'switch_current_release' \
-    'systemctl restart bytedepth-app.service' \
+    'BYTEDEPTH_STAGING_APP_SERVICE' \
+    'BYTEDEPTH_STAGING_EDGE_SERVICE' \
+    'load_staging_native_target' \
+    'git fetch --force --no-recurse-submodules origin' \
+    'git checkout --detach' \
     'verify_running_release' \
     'BYTEDEPTH_REMOTE_INSTALL=1' \
     'BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS' \

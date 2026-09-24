@@ -3,15 +3,17 @@ set -euo pipefail
 umask 077
 # shellcheck source=deploy/lib/staging-test-slot.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/staging-test-slot.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/staging-native-target.sh"
 
 [[ $EUID == 0 ]] || { slot_die 'run as root'; exit 1; }
+load_staging_native_target
 [[ ${BYTEDEPTH_DEPLOY_MODE:-} == staging && ${BYTEDEPTH_TEST_SLOT_LOCK_HELD:-} == 1 ]] || { slot_die 'staging mode and deployment-test lock are required'; exit 1; }
 [[ $# == 4 && $1 == --run-id && $3 == --manifest ]] || { slot_die 'usage: --run-id RUN_ID --manifest PATH'; exit 1; }
 run_id="$2"; manifest="$4"
 validate_run_id "$run_id"
 state_dir="${BYTEDEPTH_TEST_STATE_DIR:?}"
 slot_root_directory "$state_dir"
-slot_root_directory /data/images-test
+slot_root_directory "$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT"
 [[ $manifest == "$state_dir/$run_id/manifest" && ! -e $manifest && ! -L $manifest ]] || { slot_die 'manifest path is not a fresh run in state directory'; exit 1; }
 [[ ${BYTEDEPTH_TEST_CANDIDATE_SHA:-} =~ ^[0-9a-f]{40}$ ]] || { slot_die 'candidate SHA required'; exit 1; }
 [[ ${BYTEDEPTH_TEST_STAGING_REDIS_DB:-} =~ ^[0-9]+$ && ${BYTEDEPTH_TEST_IT_REDIS_DB:-} =~ ^[0-9]+$ && ${BYTEDEPTH_TEST_E2E_REDIS_DB:-} =~ ^[0-9]+$ ]] || { slot_die 'explicit Redis DB assignments required'; exit 1; }
@@ -27,17 +29,17 @@ validate_fixture "$BYTEDEPTH_TEST_FIXTURE"
 REDISCLI_AUTH="$(< "$BYTEDEPTH_TEST_REDIS_SECRET_FILE")"; export REDISCLI_AUTH
 BYTEDEPTH_TEST_MEILI_API_KEY="$(< "$BYTEDEPTH_TEST_MEILI_SECRET_FILE")"; export BYTEDEPTH_TEST_MEILI_API_KEY
 [[ -n $REDISCLI_AUTH && -n $BYTEDEPTH_TEST_MEILI_API_KEY && $REDISCLI_AUTH != *$'\n'* && $BYTEDEPTH_TEST_MEILI_API_KEY != *$'\n'* ]] || { slot_die 'invalid service secrets'; exit 1; }
-BYTEDEPTH_TEST_MEILI_URL="${BYTEDEPTH_TEST_MEILI_URL:-http://127.0.0.1:7700}"
-[[ $BYTEDEPTH_TEST_MEILI_URL == http://127.0.0.1:7700 ]] || { slot_die 'Meili must use local endpoint'; exit 1; }
+BYTEDEPTH_TEST_MEILI_URL="${BYTEDEPTH_TEST_MEILI_URL:-http://127.0.0.1:$BYTEDEPTH_STAGING_MEILI_PORT}"
+[[ $BYTEDEPTH_TEST_MEILI_URL == "http://127.0.0.1:$BYTEDEPTH_STAGING_MEILI_PORT" ]] || { slot_die 'Meili must use local endpoint'; exit 1; }
 export BYTEDEPTH_TEST_MEILI_URL
-redis_config="$(redis-cli CONFIG GET databases)"
+redis_config="$(slot_redis_cli CONFIG GET databases)"
 capacity="$(printf '%s\n' "$redis_config" | tail -1)"
 require_redis_capacity "$capacity" "$BYTEDEPTH_TEST_STAGING_REDIS_DB" "$BYTEDEPTH_TEST_IT_REDIS_DB" "$BYTEDEPTH_TEST_E2E_REDIS_DB"
 export BYTEDEPTH_TEST_REDIS_CAPACITY="$capacity"
 
 run_dir="$(dirname "$manifest")"
 [[ ! -e $run_dir && ! -L $run_dir ]] || { slot_die 'run directory already exists'; exit 1; }
-image_root="/data/images-test/$run_id"
+image_root="$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT/$run_id"
 [[ ! -e $image_root && ! -L $image_root ]] || { slot_die 'test image run directory already exists'; exit 1; }
 provision_complete=0
 run_dir_created=0
@@ -120,7 +122,7 @@ for profile in it e2e; do
     status="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index")" || { slot_die 'Meili preflight failed'; exit 1; }
     [[ $status == 404 ]] || { slot_die 'run index exists or Meili preflight failed'; exit 1; }
 done
-if systemctl is-active --quiet bytedepth-app.service; then slot_die 'staging app must be stopped before provisioning'; exit 1; fi
+if systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE"; then slot_die 'staging app must be stopped before provisioning'; exit 1; fi
 mkdir -m 0700 "$run_dir"
 run_dir_created=1
 slot_root_directory "$run_dir"
@@ -151,13 +153,17 @@ for profile in it e2e; do
         *) slot_die "unsupported test profile: $profile"; exit 1 ;;
     esac
     env_file="$run_dir/staging-$profile.env"
-    image_dir="/data/images-test/$run_id/$profile"
+    image_dir="$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT/$run_id/$profile"
     assert_not_staging_resource directory "$image_dir" "$run_id"
     [[ ! -e $image_dir && ! -L $image_dir ]] || { slot_die 'test image directory already exists'; exit 1; }
     mkdir "$image_dir"
     chmod 0700 "$image_dir"
-    printf 'BYTEDEPTH_ENVIRONMENT=staging\nBYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn\nBYTEDEPTH_SITE_URL=https://staging-bytedepth.bytedepth.cn\nSPRING_PROFILES_ACTIVE=staging-%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_URL=jdbc:mysql://127.0.0.1:3306/%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_USERNAME=%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_PASSWORD=%s\nBYTEDEPTH_STAGING_%s_REDIS_HOST=127.0.0.1\nBYTEDEPTH_STAGING_%s_REDIS_PORT=6379\nBYTEDEPTH_STAGING_%s_REDIS_DATABASE=%s\nBYTEDEPTH_STAGING_%s_REDIS_PASSWORD=%s\nBYTEDEPTH_STAGING_%s_REDIS_SESSION_NAMESPACE=%s\nBYTEDEPTH_STAGING_%s_REDIS_KEY_NAMESPACE=%s\nBYTEDEPTH_STAGING_%s_SEARCH_INDEX=%s\nBYTEDEPTH_STAGING_%s_SEARCH_API_KEY=%s\nBYTEDEPTH_STAGING_%s_UPLOAD_IMAGE_DIR=%s\n' \
-        "$profile" "$upper" "$db" "$upper" "$user" "$upper" "$password" "$upper" "$upper" "$upper" "$redis_db" "$upper" "$REDISCLI_AUTH" "$upper" "$namespace" "$upper" "$namespace" "$upper" "$index" "$upper" '__PENDING_SCOPED_KEY__' "$upper" "$image_dir" > "$env_file"
+    printf 'BYTEDEPTH_ENVIRONMENT=staging\nBYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn\nBYTEDEPTH_SITE_URL=https://staging-bytedepth.bytedepth.cn\nSERVER_PORT=%s\nSPRING_PROFILES_ACTIVE=staging-%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_URL=jdbc:mysql://127.0.0.1:%s/%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_USERNAME=%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_PASSWORD=%s\nBYTEDEPTH_STAGING_%s_REDIS_HOST=127.0.0.1\nBYTEDEPTH_STAGING_%s_REDIS_PORT=%s\nBYTEDEPTH_STAGING_%s_REDIS_DATABASE=%s\nBYTEDEPTH_STAGING_%s_REDIS_PASSWORD=%s\nBYTEDEPTH_STAGING_%s_REDIS_SESSION_NAMESPACE=%s\nBYTEDEPTH_STAGING_%s_REDIS_KEY_NAMESPACE=%s\nBYTEDEPTH_STAGING_%s_SEARCH_URL=http://127.0.0.1:%s\nBYTEDEPTH_STAGING_%s_SEARCH_INDEX=%s\nBYTEDEPTH_STAGING_%s_SEARCH_API_KEY=%s\nBYTEDEPTH_STAGING_%s_UPLOAD_IMAGE_DIR=%s\n' \
+        "$BYTEDEPTH_STAGING_APP_PORT" "$profile" "$upper" "$BYTEDEPTH_STAGING_MYSQL_PORT" "$db" \
+        "$upper" "$user" "$upper" "$password" "$upper" "$upper" "$BYTEDEPTH_STAGING_REDIS_PORT" \
+        "$upper" "$redis_db" "$upper" "$REDISCLI_AUTH" "$upper" "$namespace" "$upper" "$namespace" \
+        "$upper" "$BYTEDEPTH_STAGING_MEILI_PORT" "$upper" "$index" "$upper" '__PENDING_SCOPED_KEY__' \
+        "$upper" "$image_dir" > "$env_file"
     chmod 0600 "$env_file"
 done
 printf 'run_id=%s\ncandidate_sha=%s\nmode=staging\nit_db=%s\nit_user=%s\nit_index=%s\nit_namespace=%s\nit_redis_db=%s\nit_key_uid=%s\ne2e_db=%s\ne2e_user=%s\ne2e_index=%s\ne2e_namespace=%s\ne2e_redis_db=%s\ne2e_key_uid=%s\napp_port=8080\nit_env=%s\ne2e_env=%s\n' \
