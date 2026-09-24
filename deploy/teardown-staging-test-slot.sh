@@ -57,7 +57,7 @@ for profile in it e2e; do
         rm -r -- "$image_dir" || failed=1
     fi
 done
-[[ $(staging_resource_digest "$BYTEDEPTH_TEST_STAGING_REDIS_DB") == "$(< "$baseline")" ]] || failed=1
+verify_staging_resource_baseline "$BYTEDEPTH_TEST_STAGING_REDIS_DB" "$baseline" || failed=1
 systemctl start bytedepth-app.service || failed=1
 systemctl is-active --quiet bytedepth-app.service || failed=1
 if (( failed != 0 )); then slot_die 'cleanup or staging restoration failed; preserving manifest'; exit 1; fi

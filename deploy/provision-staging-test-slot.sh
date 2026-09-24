@@ -108,7 +108,7 @@ slot_root_directory "$run_dir"
 mkdir -m 0700 "$image_root"
 image_root_created=1
 slot_root_directory "$image_root"
-staging_resource_digest "$BYTEDEPTH_TEST_STAGING_REDIS_DB" > "$run_dir/staging-baseline"
+staging_resource_snapshot "$BYTEDEPTH_TEST_STAGING_REDIS_DB" > "$run_dir/staging-baseline"
 chmod 0600 "$run_dir/staging-baseline"
 it_password="$(openssl rand -hex 24)"
 e2e_password="$(openssl rand -hex 24)"
@@ -156,12 +156,13 @@ for profile in it e2e; do
         *) slot_die "unsupported test profile: $profile"; exit 1 ;;
     esac
     key_payload="$(jq -nc --arg uid "$key_uid" --arg index "$index" '{uid:$uid,name:"bytedepth staging test slot",actions:["*"],indexes:[$index],expiresAt:null}')"
-    scoped_key="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "$key_payload" "$BYTEDEPTH_TEST_MEILI_URL/keys" | jq -er '.key')"
-    [[ $scoped_key =~ ^[A-Za-z0-9_-]+$ ]] || { slot_die 'invalid scoped Meili key'; exit 1; }
+    key_response="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "$key_payload" "$BYTEDEPTH_TEST_MEILI_URL/keys")" || { slot_die 'Meili key creation failed'; exit 1; }
     case "$profile" in
         it) it_key_created=1 ;;
         e2e) e2e_key_created=1 ;;
     esac
+    scoped_key="$(printf '%s' "$key_response" | jq -er '.key')"
+    [[ $scoped_key =~ ^[A-Za-z0-9_-]+$ ]] || { slot_die 'invalid scoped Meili key'; exit 1; }
     env_file="$run_dir/staging-$profile.env"
     env_tmp="$(mktemp "$run_dir/.staging-$profile.XXXXXX")"
     while IFS= read -r line; do
@@ -182,22 +183,24 @@ for profile in it e2e; do
         e2e) e2e_db_created=1 ;;
     esac
     grant_db="${db//_/\\_}"
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'; GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
-    grants="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SHOW GRANTS FOR '$user'@'localhost'")"
-    expected_grant_fragment="\`$grant_db\`.*"
-    [[ $grants == *"$expected_grant_fragment"* && $grants != *' ON *.* TO '* ]] || { slot_die 'test database grant is broader than the manifest database'; exit 1; }
+    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'"
     case "$profile" in
         it) it_user_created=1 ;;
         e2e) e2e_user_created=1 ;;
     esac
+    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
+    grants="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SHOW GRANTS FOR '$user'@'localhost'")"
+    expected_grant_fragment="\`$grant_db\`.*"
+    [[ $grants == *"$expected_grant_fragment"* && $grants != *' ON *.* TO '* ]] || { slot_die 'test database grant is broader than the manifest database'; exit 1; }
     MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" < "$BYTEDEPTH_TEST_FIXTURE"
     [[ $(MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" --batch --skip-column-names -e 'SELECT DATABASE()') == "$db" ]] || { slot_die 'MySQL connection did not select test DB'; exit 1; }
-    task="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "{\"uid\":\"$index\",\"primaryKey\":\"id\"}" "$BYTEDEPTH_TEST_MEILI_URL/indexes" | jq -er '.taskUid')"
-    meili_wait_task "$task"
+    index_response="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "{\"uid\":\"$index\",\"primaryKey\":\"id\"}" "$BYTEDEPTH_TEST_MEILI_URL/indexes")" || { slot_die 'Meili index creation failed'; exit 1; }
     case "$profile" in
         it) it_index_created=1 ;;
         e2e) e2e_index_created=1 ;;
     esac
+    task="$(printf '%s' "$index_response" | jq -er '.taskUid')"
+    meili_wait_task "$task"
     task="$(printf '%s' "$settings" | curl -fsS -X PATCH -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' --data-binary @- "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index/settings" | jq -er '.taskUid')"
     meili_wait_task "$task"
     [[ $(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index" | jq -er '.uid') == "$index" ]] || { slot_die 'Meili index identity mismatch'; exit 1; }
