@@ -87,31 +87,51 @@ build_release_artifact() {
     local release_ref="$2"
     local commit="$3"
     local output_dir="$4"
-    local build_log jar built_at sha version build_properties
+    local build_log jar built_at sha version build_properties maven_status candidate
 
     validate_artifact_ref "$release_ref" || return 1
     [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || return 1
     install -d -m 0700 "$output_dir"
     build_properties="$source_root/bytedepth-start/src/main/resources/bytedepth-build.properties"
-    version="$(sed -n 's@^[[:space:]]*<version>\([^<]*\)</version>[[:space:]]*$@\1@p' "$source_root/pom.xml" | head -n 1)"
+    version="$(awk '
+        /^[[:space:]]*<version>[^<]*<\/version>[[:space:]]*$/ {
+            line = $0
+            sub(/^[[:space:]]*<version>/, "", line)
+            sub(/<\/version>[[:space:]]*$/, "", line)
+            print line
+            exit
+        }
+    ' "$source_root/pom.xml")"
     install -d "$(dirname "$build_properties")"
     printf 'version=%s\ncommitId=%s\nbuiltAt=%s\n' "$version" "$commit" "${BYTEDEPTH_BUILT_AT:-$(date -u +%FT%TZ)}" > "$build_properties"
     build_log="$(mktemp)"
     # RETURN runs after the function-local scope has ended under some bash
     # versions. Keep cleanup safe with nounset enabled.
     trap '[[ -z "${build_log:-}" ]] || rm -f -- "$build_log"' RETURN
+    set +e
     (
         cd "$source_root" || return 1
         ./mvnw clean install -DskipTests -Dsort.skip=true
         ./mvnw verify -DskipTests -Dsort.skip=true
     ) 2>&1 | tee "$build_log"
+    maven_status="${PIPESTATUS[0]}"
+    set -e
+    [[ "$maven_status" -eq 0 ]] || {
+        printf 'Release artifact Maven build failed with status %s.\n' "$maven_status" >&2
+        return "$maven_status"
+    }
     if declare -F warning_policy_check_file >/dev/null 2>&1; then
         warning_policy_check_file "$build_log"
     elif rg -n -i '(^|[^A-Za-z])WARN(ING)?([^A-Za-z]|$)' "$build_log" >/dev/null; then
         printf 'Artifact build emitted WARNING.\n' >&2
         return 1
     fi
-    jar="$(find "$source_root/bytedepth-start/target" -maxdepth 1 -type f -name '*.jar' ! -name '*original*' -print -quit)"
+    jar=''
+    for candidate in "$source_root/bytedepth-start/target"/*.jar; do
+        [[ -f "$candidate" && "$candidate" != *original* ]] || continue
+        jar="$candidate"
+        break
+    done
     [[ -n "$jar" && -f "$jar" ]] || { printf 'Release JAR was not produced.\n' >&2; return 1; }
     install -m 0644 "$jar" "$output_dir/app.jar"
     built_at="$(date -u +%FT%TZ)"

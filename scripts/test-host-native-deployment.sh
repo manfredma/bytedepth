@@ -17,6 +17,8 @@ for function_name in validate_release_tag validate_artifact_manifest install_rel
 done
 
 rg -q 'mvnw clean install -DskipTests -Dsort.skip=true' "$ARTIFACT"
+rg -q 'PIPESTATUS\[0\]' "$ARTIFACT"
+rg -q 'Release artifact Maven build failed' "$ARTIFACT"
 rg -q 'sha256sum|shasum -a 256' "$ARTIFACT"
 rg -q 'trap .*build_log:-.*\|\| rm -f --.*RETURN' "$ARTIFACT"
 if rg -n 'find .*target.*\|[[:space:]]*sort[[:space:]]*\|[[:space:]]*head' "$ARTIFACT" >/dev/null; then
