@@ -86,7 +86,8 @@ sudo ./deploy/deploy-staging.sh --artifact %q --manifest %q %q' \
 run_remote_install() {
     [[ "${EUID}" -eq 0 ]] || { printf 'Internal staging installation requires root.\n' >&2; exit 1; }
     install -d -o root -g root -m 0700 "$STATE_DIR" "$TIMING_DIR"
-    exec env BYTEDEPTH_REMOTE_INSTALL=1 flock -x "$LOCK_FILE" "$0" --lock-held "$5" "$2" "$4"
+    local ref="$1" jar="$2" manifest="$3"
+    exec env BYTEDEPTH_REMOTE_INSTALL=1 flock -x "$LOCK_FILE" "$0" --lock-held "$ref" "$jar" "$manifest"
 }
 
 run_locked_install() {
