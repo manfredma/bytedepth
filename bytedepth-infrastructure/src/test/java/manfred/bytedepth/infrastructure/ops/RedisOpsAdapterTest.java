@@ -32,14 +32,13 @@ class RedisOpsAdapterTest {
         when(connection.serverCommands().info()).thenReturn(properties);
         when(connection.keyCommands().scan(any(ScanOptions.class))).thenAnswer(invocation -> {
             ScanOptions options = invocation.getArgument(0);
-            return cursor(options.getPattern().startsWith(RedisOpsAdapter.POST_VIEW_PREFIX)
+            return cursor(options.getPattern().contains(RedisOpsAdapter.POST_VIEW_PREFIX)
                     ? List.of("pv:post:1".getBytes(), "pv:post:2".getBytes())
                     : List.of("bytedepth:session:a".getBytes()));
         });
         executeCallbacksAgainst(template, connection);
 
-        OpsRedisStatusDTO status = new RedisOpsAdapter(template, new RedisKeyNamespace(""),
-                "bytedepth:session:v2").inspect();
+        OpsRedisStatusDTO status = new RedisOpsAdapter(template, new RedisKeyNamespace("")).inspect();
 
         assertEquals("1.5M", status.usedMemoryHuman());
         assertEquals(2, status.connectedClients());
@@ -58,8 +57,7 @@ class RedisOpsAdapterTest {
         when(connection.keyCommands().scan(any(ScanOptions.class))).thenReturn(emptyCursor);
         executeCallbacksAgainst(template, connection);
 
-        OpsRedisStatusDTO status = new RedisOpsAdapter(template, new RedisKeyNamespace(""),
-                "bytedepth:session:v2").inspect();
+        OpsRedisStatusDTO status = new RedisOpsAdapter(template, new RedisKeyNamespace("")).inspect();
 
         assertEquals("2M", status.usedMemoryHuman());
         assertEquals(7, status.connectedClients());
@@ -76,8 +74,7 @@ class RedisOpsAdapterTest {
         when(connection.keyCommands().scan(any(ScanOptions.class))).thenReturn(emptyCursor);
         executeCallbacksAgainst(template, connection);
 
-        OpsRedisStatusDTO status = new RedisOpsAdapter(template, new RedisKeyNamespace(""),
-                "bytedepth:session:v2").inspect();
+        OpsRedisStatusDTO status = new RedisOpsAdapter(template, new RedisKeyNamespace("")).inspect();
 
         assertEquals("0B", status.usedMemoryHuman());
         assertEquals(0, status.connectedClients());
@@ -104,13 +101,12 @@ class RedisOpsAdapterTest {
         when(connection.keyCommands().scan(any(ScanOptions.class))).thenAnswer(invocation -> cursor(List.of()));
         executeCallbacksAgainst(template, connection);
 
-        new RedisOpsAdapter(template, new RedisKeyNamespace("bytedepth:it:r1:"),
-                "bytedepth:it:r1:bytedepth:session:v2").inspect();
+        new RedisOpsAdapter(template, new RedisKeyNamespace("bytedepth:it:r1:")).inspect();
 
         ArgumentCaptor<ScanOptions> options = ArgumentCaptor.forClass(ScanOptions.class);
         verify(connection.keyCommands(), org.mockito.Mockito.times(2)).scan(options.capture());
         assertEquals("bytedepth:it:r1:pv:post:*", options.getAllValues().get(0).getPattern());
-        assertEquals("bytedepth:it:r1:bytedepth:session:v2:*", options.getAllValues().get(1).getPattern());
+        assertEquals("bytedepth:it:r1:bytedepth:session:*", options.getAllValues().get(1).getPattern());
     }
 
     @SuppressWarnings("unchecked")

@@ -50,6 +50,15 @@ class RedisRateLimitAdapterIT {
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException("System property bytedepth.it.redis.port must be a number", exception);
         }
+        String database = requireNonBlank(System.getProperty("bytedepth.it.redis.database"),
+                "bytedepth.it.redis.database");
+        try {
+            properties.setDatabase(Integer.parseInt(database));
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("System property bytedepth.it.redis.database must be a number", exception);
+        }
+        properties.setKeyNamespace(requireNonBlank(System.getProperty("bytedepth.it.redis.key-namespace"),
+                "bytedepth.it.redis.key-namespace"));
         return properties;
     }
 
@@ -60,14 +69,14 @@ class RedisRateLimitAdapterIT {
         uri.setAuthentication(properties.getPassword());
         RedisClient cleanupClient = RedisClient.create(uri);
         try (StatefulRedisConnection<String, String> connection = cleanupClient.connect()) {
-            connection.sync().del(redisKey(rule, identity));
+            connection.sync().del(redisKey(properties, rule, identity));
         } finally {
             cleanupClient.shutdown();
         }
     }
 
-    private static String redisKey(String rule, String identity) {
-        return KEY_PREFIX + rule + ":" + sha256(identity);
+    private static String redisKey(RateLimitRedisProperties properties, String rule, String identity) {
+        return properties.getKeyNamespace() + KEY_PREFIX + rule + ":" + sha256(identity);
     }
 
     private static String sha256(String value) {
