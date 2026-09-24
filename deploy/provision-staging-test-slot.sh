@@ -41,6 +41,8 @@ image_root="/data/images-test/$run_id"
 [[ ! -e $image_root && ! -L $image_root ]] || { slot_die 'test image run directory already exists'; exit 1; }
 provision_complete=0
 resources_created=0
+run_dir_created=0
+image_root_created=0
 provision_cleanup() {
     if (( provision_complete != 0 )); then
         return
@@ -49,11 +51,11 @@ provision_cleanup() {
         "$(dirname "${BASH_SOURCE[0]}")/teardown-staging-test-slot.sh" --manifest "$manifest" || slot_die 'partial provision cleanup failed; manifest retained'
         return
     fi
-    if [[ -d $run_dir && ! -L $run_dir ]]; then
+    if (( run_dir_created != 0 )) && [[ -d $run_dir && ! -L $run_dir ]]; then
         rm -r -- "$run_dir" || slot_die 'partial local test state cleanup failed'
     fi
     image_root="/data/images-test/$run_id"
-    if [[ -d $image_root && ! -L $image_root ]]; then
+    if (( image_root_created != 0 )) && [[ -d $image_root && ! -L $image_root ]]; then
         rm -r -- "$image_root" || slot_die 'partial image directory cleanup failed'
     fi
 }
@@ -69,8 +71,10 @@ for profile in it e2e; do
 done
 if systemctl is-active --quiet bytedepth-app.service; then slot_die 'staging app must be stopped before provisioning'; exit 1; fi
 mkdir -m 0700 "$run_dir"
+run_dir_created=1
 slot_root_directory "$run_dir"
 mkdir -m 0700 "$image_root"
+image_root_created=1
 slot_root_directory "$image_root"
 staging_resource_digest "$BYTEDEPTH_TEST_STAGING_REDIS_DB" > "$run_dir/staging-baseline"
 chmod 0600 "$run_dir/staging-baseline"

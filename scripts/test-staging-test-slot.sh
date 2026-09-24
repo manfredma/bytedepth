@@ -61,6 +61,7 @@ INSERT INTO category (id, name) VALUES (1, 'fixture');
 INSERT INTO admin (id, password_hash) VALUES (1, '$argon2id$v=19$m=1$fixture');
 USE bytedepth;
 DELETE FROM article;
+INSERT INTO \`bytedepth-\`.\`article\` VALUES (2);
 UNSAFE_FIXTURE
 fail_without_calls 'fixture database switch or destructive SQL' bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/unsafe-fixture.sql"
 

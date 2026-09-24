@@ -86,7 +86,7 @@ validate_fixture() {
         rg -qi "INSERT[[:space:]]+INTO[[:space:]]+.*$token" "$fixture" || { slot_die "fixture lacks $token insert"; return 1; }
     done
     rg -q '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || { slot_die 'fixture lacks administrator password hash'; return 1; }
-    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|TABLE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`?[a-z0-9_]+`?[[:space:]]*\.)' "$fixture"; then
+    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|TABLE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`[^`]+`[[:space:]]*\.[[:space:]]*`)|(`?[a-z0-9_-]+`?[[:space:]]*\.)' "$fixture"; then
         slot_die 'fixture contains unsafe SQL or qualified production tables'
         return 1
     fi
