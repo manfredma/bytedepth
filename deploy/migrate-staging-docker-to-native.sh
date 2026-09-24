@@ -125,10 +125,10 @@ initialize_native_mysql() {
         rmdir -- "$data_dir"
         chown mysql:mysql "$BYTEDEPTH_NATIVE_ROOT"
         if ! mysqld --initialize-insecure --user=mysql --datadir="$data_dir" --log-error="$data_dir/error.log" --lower-case-table-names=1; then
-            chown root:mysql "$BYTEDEPTH_NATIVE_ROOT"
+            chown root:root "$BYTEDEPTH_NATIVE_ROOT"
             return 1
         fi
-        chown root:mysql "$BYTEDEPTH_NATIVE_ROOT"
+        chown root:root "$BYTEDEPTH_NATIVE_ROOT"
         chown mysql:mysql "$data_dir"
     fi
 }
