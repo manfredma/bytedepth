@@ -216,10 +216,30 @@ migrate_redis() {
     systemctl is-active --quiet "$BYTEDEPTH_STAGING_REDIS_SERVICE"
 }
 
+ensure_meilisearch_runtime() {
+    if [[ ! -x /lib/ld-musl-x86_64.so.1 ]]; then
+        command -v apt-get >/dev/null || {
+            printf 'Refusing: musl loader is missing and apt-get is unavailable.\n' >&2
+            return 1
+        }
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends musl
+    fi
+    install -d -o root -g root -m 0755 /usr/lib/x86_64-linux-musl
+    if [[ ! -r /usr/lib/x86_64-linux-musl/libgcc_s.so.1 ]]; then
+        docker exec "$DOCKER_MEILI" /bin/sh -c 'cat /usr/lib/libgcc_s.so.1' \
+            > /tmp/libgcc_s.musl.so.1
+        install -o root -g root -m 0644 /tmp/libgcc_s.musl.so.1 \
+            /usr/lib/x86_64-linux-musl/libgcc_s.so.1
+        rm -f /tmp/libgcc_s.musl.so.1
+    fi
+}
+
 migrate_meilisearch() {
     local meili_key task status snapshot docker_meili_version
     meili_key="$(env_value "$DOT_ENV" MEILI_MASTER_KEY)"
     [[ -n "$meili_key" ]] || return 1
+    ensure_meilisearch_runtime
     if [[ ! -x /usr/local/bin/meilisearch ]]; then
         docker_meili_version="$(docker exec "$DOCKER_MEILI" /bin/meilisearch --version)"
         if [[ "$docker_meili_version" == *'1.7.6'* ]]; then

@@ -24,7 +24,7 @@
 
 ## 3. 主机初始化
 
-目标主机必须预先安装固定版本的 Java 25、MySQL 8、Redis 7、Meilisearch 1.7、Nginx、curl、rsync、jq、openssl 和 systemd。应用账号、数据账号和服务目录由初始化脚本创建。
+目标主机必须预先安装固定版本的 Java 25、MySQL 8、Redis 7、Meilisearch 1.7、Nginx、curl、rsync、jq、openssl 和 systemd。Meilisearch 1.7 的 Linux 二进制还需要 musl loader 及对应的 `libgcc_s.so.1`；staging Docker→原生迁移脚本会自动安装 musl，并从现有 Meilisearch 容器提取匹配的 musl 运行库。应用账号、数据账号和服务目录由初始化脚本创建。
 
 在目标主机的 /opt/bytedepth 执行：
 
