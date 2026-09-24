@@ -101,7 +101,17 @@ initialize_native_mysql() {
     local data_dir="$BYTEDEPTH_NATIVE_ROOT/mysql"
     if [[ ! -f "$data_dir/auto.cnf" ]]; then
         systemctl stop "$BYTEDEPTH_STAGING_MYSQL_SERVICE" 2>/dev/null || true
+        [[ -d "$data_dir" && ! -L "$data_dir" ]] || {
+            printf 'Refusing: native MySQL data path is not a real directory.\n' >&2
+            return 1
+        }
+        [[ -z "$(find "$data_dir" -mindepth 1 -maxdepth 1 -print -quit)" ]] || {
+            printf 'Refusing: native MySQL data path is not empty.\n' >&2
+            return 1
+        }
+        rmdir -- "$data_dir"
         mysqld --initialize-insecure --user=mysql --datadir="$data_dir"
+        chown mysql:mysql "$data_dir"
     fi
 }
 
