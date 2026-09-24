@@ -35,6 +35,7 @@
 - 外部服务 API 先用 `curl`/`redis-cli` 确认实际响应格式；Meilisearch snapshot 是宿主文件，导入必须限时并验证 `data.ms` 和服务健康。
 - staging、集成测试和 E2E 使用共享锁；测试资源按 `run_id` 隔离。资源状态不确定时保留 manifest 和资源，禁止自动删除未知对象，但必须尝试恢复 staging 应用并报告人工恢复入口。
 - 部署和测试输出统一捕获并扫描未登记的 `WARNING`/`WARN`；不能以“不是本次引入”为由放行。
+- 宿主机构建脚本在 `set -u` 下清理临时日志时，`RETURN` trap 不得直接引用可能已失效的函数局部变量；必须使用安全默认值，并由部署契约检查固定该约束。
 - 发布 SSH 必须显式指定已存在的 known_hosts；生产使用 `StrictHostKeyChecking=yes`，staging 也使用同样的显式主机密钥校验。
 - 生产版本确认需要 sudo 读取 root-only 的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/current/artifact.manifest` 交叉核对。
 

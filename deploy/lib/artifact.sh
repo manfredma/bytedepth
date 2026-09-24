@@ -96,7 +96,9 @@ build_release_artifact() {
     install -d "$(dirname "$build_properties")"
     printf 'version=%s\ncommitId=%s\nbuiltAt=%s\n' "$version" "$commit" "${BYTEDEPTH_BUILT_AT:-$(date -u +%FT%TZ)}" > "$build_properties"
     build_log="$(mktemp)"
-    trap 'rm -f "$build_log"' RETURN
+    # RETURN runs after the function-local scope has ended under some bash
+    # versions. Keep cleanup safe with nounset enabled.
+    trap 'rm -f "${build_log:-}"' RETURN
     (
         cd "$source_root" || return 1
         ./mvnw clean install -DskipTests -Dsort.skip=true
