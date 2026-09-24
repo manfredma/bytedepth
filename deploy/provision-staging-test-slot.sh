@@ -190,10 +190,11 @@ for profile in it e2e; do
     esac
     mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
     grants="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SHOW GRANTS FOR '$user'@'localhost'")"
-    expected_grant_pattern="^GRANT ALL PRIVILEGES ON \`$grant_db\`\.\* TO '$user'@'localhost'(;)?$"
-    expected_usage_pattern="^GRANT USAGE ON \*\.\* TO '$user'@'localhost'(;)?$"
+    expected_grant_line="GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
+    expected_usage_line="GRANT USAGE ON *.* TO '$user'@'localhost'"
     while IFS= read -r grant; do
-        [[ -z $grant || $grant =~ $expected_grant_pattern || $grant =~ $expected_usage_pattern ]] || {
+        grant="${grant%;}"
+        [[ -z $grant || $grant == "$expected_grant_line" || $grant == "$expected_usage_line" ]] || {
             slot_die 'test database grant is broader than the manifest database'
             exit 1
         }
