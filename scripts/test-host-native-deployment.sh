@@ -22,6 +22,7 @@ rg -q 'resolve_java_25' "$ARTIFACT"
 rg -q 'JAVA_HOME="\$java_25_home"' "$ARTIFACT"
 rg -q 'PIPESTATUS\[0\]' "$ARTIFACT"
 rg -q 'Release artifact Maven build failed' "$ARTIFACT"
+rg -q 'readlink -- "\$current_link"' "$ARTIFACT"
 rg -q 'sha256sum|shasum -a 256' "$ARTIFACT"
 rg -q 'trap .*build_log:-.*\|\| rm -f --.*RETURN' "$ARTIFACT"
 if rg -n 'find .*target.*\|[[:space:]]*sort[[:space:]]*\|[[:space:]]*head' "$ARTIFACT" >/dev/null; then

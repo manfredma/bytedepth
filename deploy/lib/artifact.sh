@@ -53,9 +53,13 @@ switch_current_release() {
     local release_dir="$release_root/$release_ref"
     local temporary_link="${current_link}.new.$$"
 
-    [[ -d "$release_dir" && -f "$release_dir/app.jar" ]] || return 1
+    [[ -d "$release_dir" && -f "$release_dir/app.jar" && "$release_dir" != "$current_link" ]] || return 1
     ln -s "$release_dir" "$temporary_link"
     mv -Tf "$temporary_link" "$current_link"
+    [[ "$(readlink -- "$current_link")" == "$release_dir" ]] || {
+        printf 'Refusing: current release link does not target the requested release.\n' >&2
+        return 1
+    }
 }
 
 current_release_path() {

@@ -35,6 +35,7 @@
 - 外部服务 API 先用 `curl`/`redis-cli` 确认实际响应格式；Meilisearch snapshot 是宿主文件，导入必须限时并验证 `data.ms` 和服务健康。
 - staging 原生部署通过 SSH 的普通用户执行预检，但 `/etc/bytedepth/staging-native.*` 和应用环境文件必须保持 root-only 权限；预检只能用 `sudo -n` 做可读性和关键配置断言，不能为了让普通用户直接读取而放宽凭据权限。
 - systemd 启动 Meilisearch 时必须显式设置与数据目录匹配的 `WorkingDirectory`；导入快照要使用独立的空目录，验证健康和索引后再复制到正式数据目录。否则相对路径会落到仓库根目录，或旧配置/残留数据库会让导入失败并污染工作区。
+- 发布切换 current 软链接后必须立即校验 `readlink` 的目标等于本次 release 目录；自引用链接会让 systemd 在 `CHDIR` 阶段以 `Too many levels of symbolic links` 失败，edge 也会因依赖未启动而无法 reload。
 - staging 制品构建在 `set -o pipefail`、macOS 和 Java 25 环境下都必须保持失败可见：不要依赖 GNU-only `find` 参数或会触发 SIGPIPE 的 `grep -q`，Maven 与 `tee` 的退出码要显式读取，候选 SHA 的 stdout 只能输出 SHA，门禁日志输出到 stderr。
 - staging、集成测试和 E2E 使用共享锁；测试资源按 `run_id` 隔离。资源状态不确定时保留 manifest 和资源，禁止自动删除未知对象，但必须尝试恢复 staging 应用并报告人工恢复入口。
 - 部署和测试输出统一捕获并扫描未登记的 `WARNING`/`WARN`；不能以“不是本次引入”为由放行。
