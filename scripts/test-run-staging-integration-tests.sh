@@ -74,6 +74,8 @@ assert_runner_uses_manifest_transaction() {
         return 1
     fi
     rg -q 'BYTEDEPTH_STAGING_IT_REDIS_PASSWORD' "$RUNNER"
+    rg -q 'require_memory_headroom' "$RUNNER"
+    rg -q 'MINIMUM_MEMORY_AVAILABLE_KIB=524288' "$RUNNER"
 }
 
 assert_evidence_contract() {

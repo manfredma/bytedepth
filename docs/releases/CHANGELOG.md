@@ -20,7 +20,9 @@
 - 修复 staging native app 重启后 edge 被 systemd 停止、导致部署阶段直接 reload 失败的问题。
 - 修复 MySQL 8.4 `SHOW GRANTS` 账户名格式与 staging 测试槽预期不一致，导致合法的单数据库授权被错误拒绝的问题。
 - 修复 staging 测试槽使用隔离 MySQL 用户连接时遗漏 native 端口、错误回退到 3306 的问题。
+- 修复 staging 集成测试在低内存宿主机上仍启动 Maven、导致远程 SSH/HTTPS 无响应的问题；runner 现在在停止 staging app 前检查至少 512 MiB 可用内存。
 - 修正 staging 隔离测试 fixture 校验器误拒绝 Flyway `V1__...sql` 脚本名的问题，避免合法 schema history 被误判为生产库限定表名。
+- 约束 staging 隔离 fixture 的 DDL 外键顺序，避免外键引用尚未创建的表导致 fixture 导入失败。
 - 修正 staging root-only 输入的 Linux 文件 uid/mode 校验，避免 GNU `stat -f` 被误当成 BSD 文件属性查询。
 - 修正 native staging 隔离测试图片根目录权限，避免初始化为应用用户所有导致测试资源前置校验拒绝。
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。

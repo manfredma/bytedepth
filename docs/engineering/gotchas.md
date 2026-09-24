@@ -20,6 +20,7 @@
 - **staging 门禁先预检、后执行**：部署、集成测试与 E2E 在单机上互斥，重复运行的时间主要来自镜像构建和启动浏览器，不应在 staging 上逐个猜测前提。先在本机用 runner 的 fake/fixture 测试验证脚本逻辑；首次 staging 运行前一次性确认部署 SHA、服务健康、可用磁盘、固定浏览器路径和真实 E2E 数据。失败时保存日志并只针对第一个可复现错误修复，修复先通过离线脚本测试，再重跑 staging。不要因猜测缺浏览器而安装系统 Chromium，也不要依赖会被数据同步清除的固定文章 slug。
 - **移动端文章 E2E 等待正文初始化**：staging 的长文章在移动 Chromium 下可能在 Playwright `goto(..., {waitUntil: 'commit'})` 后超过默认 5 秒才完成 HTML 流式传输；批注测试必须使用显式 15 秒的 `data-bd-annotation-ready` 等待超时，并保留固定 staging E2E 复验，不能把该时序失败误判为业务脚本异常。
 - **集成测试资源必须有界**：同一 staging test slot 内的多个 `*IT` 类共享本次 run 的隔离 MySQL、Redis 和 Meilisearch 资源；runner 退出时必须执行 teardown。资源身份不确定时保留 manifest 并报警，不能盲删。
+- **集成测试 fixture 的 DDL 顺序必须可独立执行**：测试槽在已完成 Flyway 的隔离库上直接导入 fixture；fixture 中的外键不能引用尚未创建的表。若合成 fixture 不需要复刻该约束，应省略测试专用外键，并由应用迁移负责正式 schema 约束；不能把初始化失败留给远程 staging 才发现。
 - **测试 fixture 校验不能把 Flyway 元数据误判为限定表名**：fixture 可以包含 `flyway_schema_history` 的脚本名（例如 `V1__init_tables.sql`），限定表名检查只能针对 `INSERT INTO`/`CREATE TABLE` 的表名位置，不能对整份 SQL 文本做“任意标识符后跟点号”的匹配。对应回归用例固定带 `.sql` 脚本名的合法 fixture，并继续拒绝真正的 `库名.表名`。
 - **root-only 文件权限检查必须兼容 Linux 与 macOS**：staging 使用 GNU `stat -c`，本机 macOS 使用 BSD `stat -f`；辅助函数必须先尝试 GNU 格式、失败后回退 BSD 格式。不能反过来，因为 GNU `stat -f` 会成功输出文件系统信息而不是文件 uid/mode，造成合法凭据被拒绝。
 - **隔离测试图片根目录必须由 root 私有持有**：`images-test` 只是 root 创建/销毁按 `run_id` 划分的测试目录，安装时固定为 root/0700，不能 chown 给应用用户或复用生产图片目录；测试槽位使用的具体目录由 provision manifest 约束。
@@ -41,6 +42,7 @@
 - 发布切换 current 软链接后必须立即校验 `readlink` 的目标等于本次 release 目录；自引用链接会让 systemd 在 `CHDIR` 阶段以 `Too many levels of symbolic links` 失败，edge 也会因依赖未启动而无法 reload。
 - staging 制品构建在 `set -o pipefail`、macOS 和 Java 25 环境下都必须保持失败可见：不要依赖 GNU-only `find` 参数或会触发 SIGPIPE 的 `grep -q`，Maven 与 `tee` 的退出码要显式读取，候选 SHA 的 stdout 只能输出 SHA，门禁日志输出到 stderr。
 - staging、集成测试和 E2E 使用共享锁；测试资源按 `run_id` 隔离。资源状态不确定时保留 manifest 和资源，禁止自动删除未知对象，但必须尝试恢复 staging 应用并报告人工恢复入口。
+- staging 集成测试启动 Maven 前必须检查宿主机 `MemAvailable` 至少 512 MiB；磁盘空间通过不代表 Java/Maven 有足够调度资源。资源不足时应在停止 staging app 前 fail-fast，避免测试把 SSH/HTTPS 服务拖入不可响应状态。
 - 部署和测试输出统一捕获并扫描未登记的 `WARNING`/`WARN`；不能以“不是本次引入”为由放行。
 - 宿主机构建脚本在 `set -u` 下清理临时日志时，`RETURN` trap 不得直接引用可能已失效的函数局部变量；必须使用安全默认值，并由部署契约检查固定该约束。
 - 发布 SSH 必须显式指定已存在的 known_hosts；生产使用 `StrictHostKeyChecking=yes`，staging 也使用同样的显式主机密钥校验。
