@@ -37,6 +37,8 @@ export BYTEDEPTH_TEST_REDIS_CAPACITY="$capacity"
 
 run_dir="$(dirname "$manifest")"
 [[ ! -e $run_dir && ! -L $run_dir ]] || { slot_die 'run directory already exists'; exit 1; }
+image_root="/data/images-test/$run_id"
+[[ ! -e $image_root && ! -L $image_root ]] || { slot_die 'test image run directory already exists'; exit 1; }
 provision_complete=0
 resources_created=0
 provision_cleanup() {
@@ -68,8 +70,6 @@ done
 if systemctl is-active --quiet bytedepth-app.service; then slot_die 'staging app must be stopped before provisioning'; exit 1; fi
 mkdir -m 0700 "$run_dir"
 slot_root_directory "$run_dir"
-image_root="/data/images-test/$run_id"
-[[ ! -e $image_root && ! -L $image_root ]] || { slot_die 'test image run directory already exists'; exit 1; }
 mkdir -m 0700 "$image_root"
 slot_root_directory "$image_root"
 staging_resource_digest "$BYTEDEPTH_TEST_STAGING_REDIS_DB" > "$run_dir/staging-baseline"
@@ -140,7 +140,7 @@ for profile in it e2e; do
     esac
     mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE DATABASE \`$db\`"
     mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'; GRANT ALL PRIVILEGES ON \`$db\`.* TO '$user'@'localhost'"
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" "$db" < "$BYTEDEPTH_TEST_FIXTURE"
+    MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" < "$BYTEDEPTH_TEST_FIXTURE"
     [[ $(MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" --batch --skip-column-names -e 'SELECT DATABASE()') == "$db" ]] || { slot_die 'MySQL connection did not select test DB'; exit 1; }
     task="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "{\"uid\":\"$index\",\"primaryKey\":\"id\"}" "$BYTEDEPTH_TEST_MEILI_URL/indexes" | jq -er '.taskUid')"
     meili_wait_task "$task"

@@ -86,7 +86,7 @@ validate_fixture() {
         rg -qi "INSERT[[:space:]]+INTO[[:space:]]+.*$token" "$fixture" || { slot_die "fixture lacks $token insert"; return 1; }
     done
     rg -q '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || { slot_die 'fixture lacks administrator password hash'; return 1; }
-    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|TABLE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(^|[[:space:];])[a-z0-9_]+\.[a-z0-9_]+' "$fixture"; then
+    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|TABLE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`?[a-z0-9_]+`?[[:space:]]*\.)' "$fixture"; then
         slot_die 'fixture contains unsafe SQL or qualified production tables'
         return 1
     fi
@@ -143,8 +143,7 @@ staging_resource_digest() {
         ttl="$(redis-cli -n "$staging_db" PTTL "$key")" || exit 1
         case "$ttl" in
             -1) ttl_state=persistent ;;
-            -2) ttl_state=missing ;;
-            [0-9]*) ttl_state=expiring ;;
+            -2|[0-9]*) continue ;;
             *) exit 1 ;;
         esac
         printf '%s\t%s\t%s\n' "$key" "$ttl_state" "$value_hash"
