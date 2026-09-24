@@ -87,10 +87,17 @@ build_release_artifact() {
     local release_ref="$2"
     local commit="$3"
     local output_dir="$4"
-    local build_log jar built_at sha version build_properties maven_status candidate
+    local build_log jar built_at sha version build_properties maven_status candidate java_25_home
 
     validate_artifact_ref "$release_ref" || return 1
     [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || return 1
+    # shellcheck disable=SC1091
+    source "$source_root/scripts/lib/java-25.sh"
+    java_25_home="$(resolve_java_25)"
+    [[ -n "$java_25_home" && -x "$java_25_home/bin/java" ]] || {
+        printf 'Java 25 is required to build a release artifact.\n' >&2
+        return 1
+    }
     install -d -m 0700 "$output_dir"
     build_properties="$source_root/bytedepth-start/src/main/resources/bytedepth-build.properties"
     version="$(awk '
@@ -111,8 +118,8 @@ build_release_artifact() {
     set +e
     (
         cd "$source_root" || return 1
-        ./mvnw clean install -DskipTests -Dsort.skip=true
-        ./mvnw verify -DskipTests -Dsort.skip=true
+        JAVA_HOME="$java_25_home" ./mvnw clean install -DskipTests -Dsort.skip=true
+        JAVA_HOME="$java_25_home" ./mvnw verify -DskipTests -Dsort.skip=true
     ) 2>&1 | tee "$build_log"
     maven_status="${PIPESTATUS[0]}"
     set -e

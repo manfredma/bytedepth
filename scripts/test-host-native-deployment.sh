@@ -17,6 +17,9 @@ for function_name in validate_release_tag validate_artifact_manifest install_rel
 done
 
 rg -q 'mvnw clean install -DskipTests -Dsort.skip=true' "$ARTIFACT"
+rg -q 'source "\$source_root/scripts/lib/java-25.sh"' "$ARTIFACT"
+rg -q 'resolve_java_25' "$ARTIFACT"
+rg -q 'JAVA_HOME="\$java_25_home"' "$ARTIFACT"
 rg -q 'PIPESTATUS\[0\]' "$ARTIFACT"
 rg -q 'Release artifact Maven build failed' "$ARTIFACT"
 rg -q 'sha256sum|shasum -a 256' "$ARTIFACT"
