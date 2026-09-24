@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly ROOT
 readonly NGINX_ROOT="$ROOT/deploy/nginx/staging-root.conf"
 readonly NGINX_TEMPLATE="$ROOT/deploy/nginx/staging.conf.template"
-readonly STAGING_COMPOSE="$ROOT/deploy/docker-compose.staging.yml"
+readonly STAGING_DEPLOY="$ROOT/deploy/deploy-staging.sh"
 readonly NAV_TEMPLATE="$ROOT/bytedepth-start/src/main/resources/templates/fragments/nav.html"
 readonly HEAD_TEMPLATE="$ROOT/bytedepth-start/src/main/resources/templates/fragments/pwa-head.html"
 readonly PLAYWRIGHT_CONFIG="$ROOT/playwright.config.mjs"
@@ -20,8 +21,10 @@ grep -Fq 'X-Robots-Tag "noindex, nofollow, noarchive" always' "$NGINX_TEMPLATE"
 grep -Fq 'Referrer-Policy "no-referrer" always' "$NGINX_TEMPLATE"
 grep -Fq 'if ($host != ${BYTEDEPTH_DOMAIN})' "$NGINX_TEMPLATE"
 grep -Fq 'staging-bytedepth.bytedepth.cn' "$E2E_RUNNER"
-grep -Fq 'BYTEDEPTH_ENVIRONMENT: staging' "$STAGING_COMPOSE"
-grep -Fq 'BYTEDEPTH_SITE_URL: https://bytedepth.cn' "$STAGING_COMPOSE"
+grep -Fq 'BYTEDEPTH_ENVIRONMENT=staging' "$STAGING_DEPLOY"
+grep -Fq 'BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn' "$STAGING_DEPLOY"
+grep -Fq 'Requires=bytedepth-app.service' "$ROOT/deploy/systemd/nginx.service"
+grep -Fq '127.0.0.1:8080' "$ROOT/deploy/nginx/staging.conf.template"
 grep -Fq 'th:if="${environment != '\''staging'\''}"' "$NAV_TEMPLATE"
 grep -Fq 'th:if="${environment != '\''staging'\''}"' "$HEAD_TEMPLATE"
 grep -Fq 'name="robots"' "$HEAD_TEMPLATE"

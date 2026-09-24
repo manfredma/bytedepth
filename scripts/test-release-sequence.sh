@@ -4,7 +4,8 @@ set -Eeuo pipefail
 # Contract test for the single frozen-candidate release path.  The rule must
 # remain documented and the release gate must continue binding evidence to the
 # exact main SHA after the candidate is fast-forwarded.
-readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
 readonly RELEASE_DOC="$SOURCE_ROOT/docs/releases/README.md"
 readonly PIPELINE_DOC="$SOURCE_ROOT/docs/engineering/unified-release-pipeline.md"
 readonly AGENTS_DOC="$SOURCE_ROOT/AGENTS.md"
@@ -25,7 +26,8 @@ prepare_line="$(grep -nF '验收通过后只能将候选分支 fast-forward 合�
 grep -Fq '冻结与验收规则（强制）' "$AGENTS_DOC"
 grep -Fq 'scripts/test-release-sequence.sh' "$AGENTS_DOC"
 grep -Fq '部署 `main`、未修改 Changelog 的候选或验收后追加提交均必须拒绝' "$AGENTS_DOC"
-grep -Fq 'readonly HEAD_SHA=' "$PREPARE_RELEASE"
+grep -Fq 'HEAD_SHA="$(git rev-parse HEAD)"' "$PREPARE_RELEASE"
+grep -Fq 'readonly HEAD_SHA' "$PREPARE_RELEASE"
 grep -Fq 'commit" != "commit=$HEAD_SHA' "$PREPARE_RELEASE"
 
 printf 'Release sequencing contract passed.\n'

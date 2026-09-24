@@ -39,7 +39,8 @@ if [[ ! -r "$SSH_KNOWN_HOSTS" ]]; then
 fi
 readonly SSH_OPTS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes \
     -o UserKnownHostsFile="$SSH_KNOWN_HOSTS" -o StrictHostKeyChecking=yes)
-readonly TEMP_DIR="$(mktemp -d /tmp/bytedepth-staging-cert.XXXXXX)"
+TEMP_DIR="$(mktemp -d /tmp/bytedepth-staging-cert.XXXXXX)"
+readonly TEMP_DIR
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
 if [[ ! -r "$LEGACY_CERT_DIR/fullchain.pem" || ! -r "$LEGACY_CERT_DIR/privkey.pem" ]]; then
@@ -117,8 +118,10 @@ fi
 
 readonly BACKUP_DIR="$TEMP_DIR/backup"
 install -d -o root -g root -m 0700 "$CERT_DIR" "$BACKUP_DIR"
-readonly FULLCHAIN_TARGET="$(readlink -f "$CERT_DIR/fullchain.pem" 2>/dev/null || printf '%s' "$CERT_DIR/fullchain.pem")"
-readonly PRIVKEY_TARGET="$(readlink -f "$CERT_DIR/privkey.pem" 2>/dev/null || printf '%s' "$CERT_DIR/privkey.pem")"
+FULLCHAIN_TARGET="$(readlink -f "$CERT_DIR/fullchain.pem" 2>/dev/null || printf '%s' "$CERT_DIR/fullchain.pem")"
+readonly FULLCHAIN_TARGET
+PRIVKEY_TARGET="$(readlink -f "$CERT_DIR/privkey.pem" 2>/dev/null || printf '%s' "$CERT_DIR/privkey.pem")"
+readonly PRIVKEY_TARGET
 if [[ -e "$FULLCHAIN_TARGET" ]]; then cp -- "$FULLCHAIN_TARGET" "$BACKUP_DIR/fullchain.pem"; fi
 if [[ -e "$PRIVKEY_TARGET" ]]; then cp -- "$PRIVKEY_TARGET" "$BACKUP_DIR/privkey.pem"; fi
 atomic_replace_file() {
@@ -144,13 +147,13 @@ atomic_replace_file "$TEMP_DIR/privkey.pem" "$PRIVKEY_TARGET" 0600
 # while the legacy hostname redirects to production.
 install -o root -g root -m 0644 "$(dirname "$0")/nginx/staging-edge-certificate.conf" "$EDGE_CONFIG"
 install -o root -g root -m 0644 "$(dirname "$0")/nginx/staging-legacy-production-entry.conf" "$LEGACY_EDGE_CONFIG"
-if ! docker exec bytedepth-nginx-1 nginx -t; then
+if ! nginx -t; then
     restore_certificate
     exit 1
 fi
-if ! docker exec bytedepth-nginx-1 nginx -s reload; then
+if ! systemctl reload nginx.service; then
     restore_certificate
-    docker exec bytedepth-nginx-1 nginx -s reload || true
+    systemctl reload nginx.service || true
     exit 1
 fi
 printf 'Synchronized %s certificate to the production edge.\n' "$CERT_NAME"

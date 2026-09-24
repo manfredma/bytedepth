@@ -8,9 +8,9 @@ if [[ "${EUID}" -ne 0 ]]; then
     exit 1
 fi
 
-readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly HISTORY_FILE=/var/lib/bytedepth-deploy/release-history
 readonly BASE_URL=https://bytedepth.cn
+readonly CURRENT_MANIFEST=/opt/bytedepth/current/artifact.manifest
 readonly TAG="${1:-}"
 readonly CURL_OPTIONS=(
     --fail
@@ -37,11 +37,17 @@ expected_commit="$(awk -F= -v tag="$TAG" '
     printf 'Refusing: %s has no recorded production deployment.\n' "$TAG" >&2
     exit 1
 }
-actual_commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-parse HEAD)"
+actual_commit="$(awk -F= '$1 == "commit" {print $2; exit}' "$CURRENT_MANIFEST" 2>/dev/null || true)"
 [[ "$actual_commit" == "$expected_commit" ]] || {
-    printf 'Refusing: checkout does not match recorded deployment for %s.\n' "$TAG" >&2
+    printf 'Refusing: current artifact does not match recorded deployment for %s.\n' "$TAG" >&2
     exit 1
 }
+systemctl is-active --quiet bytedepth-app.service || {
+    printf 'Refusing: bytedepth-app.service is not active.\n' >&2
+    exit 1
+}
+curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused \
+    --connect-timeout 10 "$BASE_URL/version" | grep -F "$expected_commit" >/dev/null
 
 request() {
     curl "${CURL_OPTIONS[@]}" "$BASE_URL$1" >/dev/null
@@ -67,11 +73,10 @@ column_path="$(sed -n 's/.*href="\(\/columns\/[a-z0-9-]*\)".*/\1/p' <<< "$column
 request "$post_path"
 request "$column_path"
 
-# Application logs are checked through the project wrapper so deployment mode
-# and compose topology cannot be guessed incorrectly.
+# Application logs are checked through the fixed native systemd service.
 log_file="$(mktemp)"
 trap 'rm -f "$log_file"' EXIT
-"$SOURCE_ROOT/deploy/ctl.sh" logs bytedepth-app --tail=300 > "$log_file" 2>&1
+journalctl -u bytedepth-app.service -n 300 --no-pager > "$log_file" 2>&1
 if grep -Eqi '\bWARN(ING)?\b|\bERROR\b' "$log_file"; then
     printf 'Refusing: production application logs contain WARNING or ERROR.\n' >&2
     exit 1

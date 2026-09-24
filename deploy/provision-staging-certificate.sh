@@ -9,18 +9,13 @@ fi
 
 readonly CERT_NAME=staging-bytedepth.bytedepth.cn
 readonly CERT_DIR="/etc/letsencrypt/live/$CERT_NAME"
-readonly NGINX_CONTAINER=bytedepth-nginx-1
-readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
 readonly DEPLOY_HOOK_SOURCE="$SOURCE_ROOT/deploy/nginx/reload-nginx-deploy-hook.sh"
 readonly DEPLOY_HOOK=/etc/letsencrypt/renewal-hooks/deploy/reload-bytedepth-nginx.sh
 
-if docker container inspect "$NGINX_CONTAINER" >/dev/null 2>&1; then
-    readonly CERTBOT_PRE_HOOK="docker stop $NGINX_CONTAINER || true"
-    readonly CERTBOT_POST_HOOK="docker start $NGINX_CONTAINER"
-else
-    readonly CERTBOT_PRE_HOOK=true
-    readonly CERTBOT_POST_HOOK=true
-fi
+readonly CERTBOT_PRE_HOOK='systemctl stop nginx.service || true'
+readonly CERTBOT_POST_HOOK='systemctl start nginx.service'
 
 if [[ ! -r "$DEPLOY_HOOK_SOURCE" ]]; then
     printf 'Missing versioned Certbot deploy hook: %s\n' "$DEPLOY_HOOK_SOURCE" >&2
@@ -64,12 +59,6 @@ if [[ -z "$certificate_public_key" || "$certificate_public_key" != "$private_key
     exit 1
 fi
 
-if docker container inspect "$NGINX_CONTAINER" >/dev/null 2>&1 \
-    && [[ "$(docker inspect --format '{{.State.Running}}' "$NGINX_CONTAINER")" == 'true' ]]; then
-    docker exec "$NGINX_CONTAINER" nginx -t
-    docker exec "$NGINX_CONTAINER" nginx -s reload
-else
-    printf 'Provisioned %s certificate; Nginx reload will run after the container is created.\n' "$CERT_NAME"
-    exit 0
-fi
+nginx -t
+systemctl reload nginx.service
 printf 'Provisioned %s certificate and renewal hook.\n' "$CERT_NAME"

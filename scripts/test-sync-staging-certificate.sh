@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly ROOT
 readonly SCRIPT="$ROOT/deploy/sync-staging-certificate-to-production.sh"
 readonly LEGACY_SCRIPT="$ROOT/deploy/provision-production-edge-staging-certificate.sh"
 readonly STAGING_SCRIPT="$ROOT/deploy/provision-staging-certificate.sh"
@@ -39,7 +40,7 @@ for contract in \
     'sha256sum' \
     'subjectAltName' \
     'nginx -t' \
-    'nginx -s reload'; do
+    'systemctl reload nginx.service'; do
     rg -F -- "$contract" "$SCRIPT" "$EDGE_CONFIG" "$LEGACY_EDGE_CONFIG" >/dev/null || {
         printf 'Missing staging certificate sync contract: %s\n' "$contract" >&2
         exit 1
@@ -53,11 +54,11 @@ for contract in \
     '--pre-hook' \
     '--post-hook' \
     'renewal-hooks/deploy' \
-    'docker container inspect' \
+    'systemctl stop nginx.service' \
     'checkend 2592000' \
     'openssl pkey' \
     'nginx -t' \
-    'nginx -s reload'; do
+    'systemctl reload nginx.service'; do
     rg -F -- "$contract" "$STAGING_SCRIPT" >/dev/null || {
         printf 'Missing staging certificate provisioning contract: %s\n' "$contract" >&2
         exit 1

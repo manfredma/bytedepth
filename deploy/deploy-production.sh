@@ -6,60 +6,66 @@ if [[ "${EUID}" -ne 0 ]]; then
     printf 'BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" ./deploy/deploy-production-remote.sh vX.Y.Z\n' >&2
     exit 1
 fi
+if [[ $# -ne 5 || "${1:-}" != --artifact || "${3:-}" != --manifest ]]; then
+    printf 'Usage: sudo ./deploy/deploy-production.sh --artifact JAR --manifest MANIFEST vX.Y.Z\n' >&2
+    exit 2
+fi
 
-readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
 readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly STATE_DIR=/var/lib/bytedepth-deploy
 readonly HISTORY_FILE="$STATE_DIR/release-history"
-readonly GIT_REMOTE_URL=git@github.com:manfredma/bytedepth.git
-readonly TAG="${1:-}"
+readonly TAG="$5"
+readonly JAR="$2"
+readonly MANIFEST="$4"
 
-if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-    printf 'Release tag must use stable SemVer, for example v1.2.3\n' >&2
+source "$SOURCE_ROOT/deploy/lib/artifact.sh"
+
+validate_release_tag "$TAG" || { printf 'Release tag must use stable SemVer.\n' >&2; exit 1; }
+[[ -f "$JAR" && -f "$MANIFEST" ]] || { printf 'Uploaded artifact or manifest is missing.\n' >&2; exit 1; }
+[[ "$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value=$2} END {print value}' "$CONFIG_FILE" 2>/dev/null || true)" == production ]] || {
+    printf 'Refusing deployment: BYTEDEPTH_DEPLOY_MODE must be production.\n' >&2
     exit 1
-fi
-
-git_cmd() { git -c safe.directory="$SOURCE_ROOT" "$@"; }
-cd "$SOURCE_ROOT"
-
-if [[ "$(git_cmd remote get-url origin)" != "$GIT_REMOTE_URL" ]]; then
-    printf 'Refusing deployment: origin must be %s\n' "$GIT_REMOTE_URL" >&2
+}
+validate_artifact_manifest "$MANIFEST" "$JAR" || { printf 'Refusing deployment: invalid artifact manifest.\n' >&2; exit 1; }
+[[ "$(artifact_manifest_value release_ref "$MANIFEST")" == "$TAG" ]] || {
+    printf 'Refusing deployment: manifest tag does not match requested tag.\n' >&2
     exit 1
-fi
+}
 
-deploy_ssh_key="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_SSH_KEY" {value=$2} END {print value}' "$CONFIG_FILE" 2>/dev/null || true)"
-if [[ -z "$deploy_ssh_key" || ! -r "$deploy_ssh_key" ]]; then
-    printf 'Refusing deployment: BYTEDEPTH_DEPLOY_SSH_KEY is missing or unreadable\n' >&2
+git_cmd() { git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" "$@"; }
+[[ "$(git_cmd cat-file -t "refs/tags/$TAG" 2>/dev/null || true)" == tag ]] || {
+    printf 'Refusing deployment: %s must be an annotated tag on this host.\n' "$TAG" >&2
     exit 1
-fi
-
-GIT_SSH_COMMAND="ssh -i $deploy_ssh_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
-    git_cmd fetch --force --no-recurse-submodules origin "refs/tags/$TAG:refs/tags/$TAG"
-
-if [[ "$(git_cmd cat-file -t "refs/tags/$TAG" 2>/dev/null || true)" != "tag" ]]; then
-    printf 'Refusing deployment: %s must be an annotated tag\n' "$TAG" >&2
+}
+commit="$(artifact_manifest_value commit "$MANIFEST")"
+[[ "$(git_cmd rev-parse "$TAG^{commit}")" == "$commit" ]] || {
+    printf 'Refusing deployment: artifact commit does not match annotated tag.\n' >&2
     exit 1
-fi
+}
 
-commit="$(git_cmd rev-parse "$TAG^{commit}")"
-pom_version="$(git_cmd show "$commit:pom.xml" | sed -n 's@^[[:space:]]*<version>\([^<]*\)</version>[[:space:]]*$@\1@p' | head -n 1)"
-if [[ "$pom_version" != "${TAG#v}" || "$pom_version" == *-SNAPSHOT ]]; then
-    printf 'Refusing deployment: tag %s and Maven version %s do not match\n' "$TAG" "$pom_version" >&2
-    exit 1
-fi
-
-install -d -m 0700 "$STATE_DIR"
+install -d -o root -g root -m 0700 "$STATE_DIR"
 touch "$HISTORY_FILE"
 chmod 0600 "$HISTORY_FILE"
-if grep -Fqx "version=$TAG" "$HISTORY_FILE"; then
-    printf 'Refusing deployment: %s was already deployed on this node\n' "$TAG" >&2
+grep -Fqx "version=$TAG" "$HISTORY_FILE" && {
+    printf 'Refusing deployment: %s was already deployed on this node.\n' "$TAG" >&2
     exit 1
-fi
+}
 
-git_cmd checkout --detach "$commit"
-./deploy/prewarm-production-maven-cache.sh "$SOURCE_ROOT"
 ./deploy/bootstrap-ops-deploy.sh
+backup_dir="$STATE_DIR/backups"
+install -d -o root -g root -m 0700 "$backup_dir"
+mysqladmin --protocol=socket ping >/dev/null
+mysqldump --protocol=socket --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"
+chmod 0600 "$backup_dir/mysql-$commit.sql"
 
-printf 'version=%s\ncommit=%s\ndeployed_at=%s\n---\n' \
-    "$TAG" "$commit" "$(date -u +%FT%TZ)" >> "$HISTORY_FILE"
-printf 'Deployed %s (%s)\n' "$TAG" "$commit"
+install_release_artifact "$TAG" "$JAR" "$MANIFEST"
+switch_current_release "$TAG"
+systemctl restart bytedepth-app.service
+verify_running_release "$commit"
+systemctl reload nginx.service
+
+printf 'version=%s\ncommit=%s\nartifact_sha256=%s\ndeployed_at=%s\n---\n' \
+    "$TAG" "$commit" "$(artifact_manifest_value sha256 "$MANIFEST")" "$(date -u +%FT%TZ)" >> "$HISTORY_FILE"
+printf 'Deployed %s (%s) using native artifact.\n' "$TAG" "$commit"

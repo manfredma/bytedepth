@@ -1,26 +1,31 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly ROOT
 readonly SCRIPT="$ROOT/deploy/deploy-production.sh"
 
 [[ -x "$SCRIPT" ]] || { printf 'Expected executable production deploy script.\n' >&2; exit 1; }
-rg -F 'must be an annotated tag' "$SCRIPT" >/dev/null
-rg -F 'tag %s and Maven version' "$SCRIPT" >/dev/null
-rg -F 'was already deployed on this node' "$SCRIPT" >/dev/null
-rg -F './deploy/bootstrap-ops-deploy.sh' "$SCRIPT" >/dev/null
-rg -F './deploy/prewarm-production-maven-cache.sh "$SOURCE_ROOT"' "$SCRIPT" >/dev/null
-test -x "$ROOT/deploy/prewarm-production-maven-cache.sh"
-rg -F 'maven:3.9.11-eclipse-temurin-25' "$ROOT/deploy/prewarm-production-maven-cache.sh" >/dev/null
+for contract in \
+    'must be an annotated tag' \
+    'was already deployed on this node' \
+    '--artifact JAR --manifest MANIFEST' \
+    'validate_artifact_manifest' \
+    'install_release_artifact' \
+    'switch_current_release' \
+    'systemctl restart bytedepth-app.service' \
+    'verify_running_release' \
+    'systemctl reload nginx.service'; do
+    rg -F -- "$contract" "$SCRIPT" >/dev/null || {
+        printf 'Missing production deployment contract: %s\n' "$contract" >&2
+        exit 1
+    }
+done
+if rg -n -i 'docker|compose|prewarm-production-maven-cache|mvn ' "$SCRIPT" >/dev/null; then
+    printf 'Production host deployment must not build with Docker or Maven.\n' >&2
+    exit 1
+fi
 grep -Fq 'This is a production-host-only script' "$SCRIPT"
 grep -Fq 'deploy-production-remote.sh' "$SCRIPT"
-if rg -Fq 'Run this script with sudo: sudo ./deploy/deploy-production.sh' "$SCRIPT"; then
-    printf 'Production host script must not suggest local sudo execution.\n' >&2
-    exit 1
-fi
-if [[ -e "$ROOT/deploy/deploy-release.sh" ]]; then
-    printf 'Legacy deploy-release.sh must not remain after production script standardization.\n' >&2
-    exit 1
-fi
 
 printf 'Production deployment contract passed.\n'

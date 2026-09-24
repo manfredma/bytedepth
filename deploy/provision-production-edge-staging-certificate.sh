@@ -10,8 +10,8 @@ fi
 
 readonly CERT_NAME=staging.bytedepth.cn
 readonly CERT_DIR="/etc/letsencrypt/live/$CERT_NAME"
-readonly NGINX_CONTAINER=bytedepth-nginx-1
-readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
 readonly EDGE_CONFIG_SOURCE="$SOURCE_ROOT/deploy/nginx/staging-legacy-production-entry.conf"
 readonly EDGE_CONFIG=/opt/nginx-conf.d/staging-legacy-production-entry.conf
 
@@ -28,8 +28,8 @@ certbot certonly \
     --register-unsafely-without-email \
     --keep-until-expiring \
     --cert-name "$CERT_NAME" \
-    --pre-hook "docker stop $NGINX_CONTAINER || true" \
-    --post-hook "docker start $NGINX_CONTAINER" \
+    --pre-hook 'systemctl stop nginx.service || true' \
+    --post-hook 'systemctl start nginx.service' \
     -d "$CERT_NAME"
 
 san_names="$(openssl x509 -in "$CERT_DIR/fullchain.pem" -noout -ext subjectAltName 2>/dev/null || true)"
@@ -55,6 +55,6 @@ if [[ -z "$certificate_public_key" || "$certificate_public_key" != "$private_key
 fi
 
 install -o root -g root -m 0644 "$EDGE_CONFIG_SOURCE" "$EDGE_CONFIG"
-docker exec "$NGINX_CONTAINER" nginx -t
-docker exec "$NGINX_CONTAINER" nginx -s reload
+nginx -t
+systemctl reload nginx.service
 printf 'Provisioned %s certificate on the production edge.\n' "$CERT_NAME"

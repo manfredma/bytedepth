@@ -11,47 +11,52 @@ readonly POLL_TIMEOUT_SECONDS=3600
 readonly TAG="${1:-}"
 readonly SSH_KEY="${BYTEDEPTH_PRODUCTION_SSH_KEY:-}"
 readonly KNOWN_HOSTS_FILE="${BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS:-${HOME}/.ssh/known_hosts}"
-
-if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-    printf 'Release tag must use stable SemVer, for example v1.2.3\n' >&2
-    exit 1
-fi
-if [[ -z "$SSH_KEY" || ! -r "$SSH_KEY" ]]; then
-    printf 'BYTEDEPTH_PRODUCTION_SSH_KEY must name a readable SSH private key.\n' >&2
-    exit 1
-fi
-if [[ ! -r "$KNOWN_HOSTS_FILE" ]]; then
-    printf 'BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS must name a readable known_hosts file.\n' >&2
-    exit 1
-fi
-
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
 readonly REMOTE_LOG="/tmp/bytedepth-production-${TAG}.log"
 readonly SSH_TARGET="$PRODUCTION_USER@$PRODUCTION_HOST"
 readonly SSH_OPTIONS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE" -o StrictHostKeyChecking=yes)
-readonly LOG_SNAPSHOT_FILE="$(mktemp)"
-trap 'rm -f "$LOG_SNAPSHOT_FILE"' EXIT
-source "$(cd "$(dirname "$0")" && pwd)/lib/warning-policy.sh"
+LOG_SNAPSHOT_FILE="$(mktemp)"
+readonly LOG_SNAPSHOT_FILE
+trap 'rm -rf "$ARTIFACT_DIR" "$CHECKOUT_DIR" "$LOG_SNAPSHOT_FILE"' EXIT
+
+source "$SOURCE_ROOT/deploy/lib/artifact.sh"
+source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
+
+validate_release_tag "$TAG" || { printf 'Release tag must use stable SemVer, for example v1.2.3\n' >&2; exit 1; }
+[[ -r "$SSH_KEY" ]] || { printf 'BYTEDEPTH_PRODUCTION_SSH_KEY must name a readable SSH private key.\n' >&2; exit 1; }
+[[ -r "$KNOWN_HOSTS_FILE" ]] || { printf 'BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS must name a readable known_hosts file.\n' >&2; exit 1; }
 
 remote() {
     ssh "${SSH_OPTIONS[@]}" "$SSH_TARGET" "$@"
 }
 
+ARTIFACT_DIR="$(mktemp -d)"
+readonly ARTIFACT_DIR
+CHECKOUT_DIR="$(mktemp -d)"
+readonly CHECKOUT_DIR
+
+git_ssh_command="ssh -i $SSH_KEY -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile=$KNOWN_HOSTS_FILE -o StrictHostKeyChecking=yes"
+GIT_SSH_COMMAND="$git_ssh_command" git -C "$SOURCE_ROOT" fetch --force --no-recurse-submodules origin "refs/tags/$TAG:refs/tags/$TAG"
+[[ "$(git -C "$SOURCE_ROOT" cat-file -t "refs/tags/$TAG" 2>/dev/null || true)" == tag ]] || {
+    printf 'Refusing deployment: %s must be an annotated tag.\n' "$TAG" >&2
+    exit 1
+}
+commit="$(git -C "$SOURCE_ROOT" rev-parse "$TAG^{commit}")"
+pom_version="$(git -C "$SOURCE_ROOT" show "$commit:pom.xml" | sed -n 's@^[[:space:]]*<version>\\([^<]*\\)</version>[[:space:]]*$@\\1@p' | head -n 1)"
+[[ "$pom_version" == "${TAG#v}" && "$pom_version" != *-SNAPSHOT ]] || {
+    printf 'Refusing deployment: tag and Maven version do not match.\n' >&2
+    exit 1
+}
+git -C "$SOURCE_ROOT" archive "$commit" | tar -x -C "$CHECKOUT_DIR"
+build_release_artifact "$CHECKOUT_DIR" "$TAG" "$commit" "$ARTIFACT_DIR"
+
 printf 'Checking production deployment target %s...\n' "$SSH_TARGET"
 preflight_output="$(remote "set -Eeuo pipefail
 test -d '$REMOTE_ROOT'
 sudo -n true
-if sudo -n grep -Fqx 'version=$TAG' '$RELEASE_HISTORY' 2>/dev/null; then
-    printf 'DEPLOYED\\n'
-    exit 20
-fi
-if sudo -n awk -F= '\$1 == \"state\" {state=\$2} \$1 == \"version\" {version=\$2} END {if (state == \"RUNNING\" && version == \"$TAG\") exit 0; exit 1}' '$DEPLOY_STATUS' 2>/dev/null; then
-    printf 'BUSY\\n'
-    exit 21
-fi
-if sudo -n pgrep -af '[d]eploy-production.sh $TAG' >/dev/null 2>&1; then
-    printf 'BUSY\\n'
-    exit 21
-fi
+if sudo -n grep -Fqx 'version=$TAG' '$RELEASE_HISTORY' 2>/dev/null; then printf 'DEPLOYED\\n'; exit 20; fi
+if sudo -n awk -F= '\$1 == \"state\" {state=\$2} \$1 == \"version\" {version=\$2} END {if (state == \"RUNNING\" && version == \"$TAG\") exit 0; exit 1}' '$DEPLOY_STATUS' 2>/dev/null; then printf 'BUSY\\n'; exit 21; fi
 printf 'READY\\n'")" || {
     status=$?
     case "$status" in
@@ -61,14 +66,13 @@ printf 'READY\\n'")" || {
     esac
     exit 1
 }
+[[ "$preflight_output" == *READY* ]] || { printf 'Refusing: production preflight did not become ready.\n' >&2; exit 1; }
 
-if [[ "$preflight_output" != *READY* ]]; then
-    printf 'Refusing: production preflight did not become ready.\n' >&2
-    exit 1
-fi
-
+remote_artifact="/tmp/bytedepth-production-$TAG"
+remote "$(printf 'install -d -m 0700 %q' "$remote_artifact")"
+scp "${SSH_OPTIONS[@]}" "$ARTIFACT_DIR/app.jar" "$ARTIFACT_DIR/artifact.manifest" "$SSH_TARGET:$remote_artifact/"
 printf 'Starting detached production deployment for %s; log: %s\n' "$TAG" "$REMOTE_LOG"
-remote "cd '$REMOTE_ROOT' && sudo -n nohup ./deploy/deploy-production.sh '$TAG' >'$REMOTE_LOG' 2>&1 </dev/null & echo \$!" >/dev/null
+remote "cd '$REMOTE_ROOT' && sudo -n nohup ./deploy/deploy-production.sh --artifact '$remote_artifact/app.jar' --manifest '$remote_artifact/artifact.manifest' '$TAG' >'$REMOTE_LOG' 2>&1 </dev/null & echo \$!" >/dev/null
 
 started_at="$(date +%s)"
 while :; do
@@ -77,15 +81,15 @@ while :; do
         exit 1
     }
     printf '%s\n' "$log_snapshot" > "$LOG_SNAPSHOT_FILE"
-    if ! warning_policy_check_file "$LOG_SNAPSHOT_FILE" >/dev/null; then
+    if ! warning_policy_check_file "$LOG_SNAPSHOT_FILE"; then
         printf '%s\n' "$log_snapshot" >&2
-        printf 'Refusing: production deployment log contains an unallowlisted WARNING; remote log: %s\n' "$REMOTE_LOG" >&2
+        printf 'Refusing: production deployment log contains an unallowlisted WARNING.\n' >&2
         exit 1
     fi
     if remote "sudo -n grep -Fqx 'version=$TAG' '$RELEASE_HISTORY'" >/dev/null 2>&1; then
         break
     fi
-    if ! remote "sudo -n pgrep -af '[d]eploy-production.sh $TAG' >/dev/null 2>&1"; then
+    if ! remote "sudo -n pgrep -af '[d]eploy-production.sh --artifact.*$TAG' >/dev/null 2>&1"; then
         printf '%s\n' "$log_snapshot" >&2
         printf 'Production deployment failed before recording %s; remote log: %s\n' "$TAG" "$REMOTE_LOG" >&2
         exit 1
@@ -100,4 +104,4 @@ done
 
 printf 'Production deploy recorded %s. Running read-only verification...\n' "$TAG"
 remote "cd '$REMOTE_ROOT' && sudo -n ./scripts/verify-production-release.sh '$TAG'"
-printf 'Production deployment and verification passed for %s. Remote log: %s\n' "$TAG" "$REMOTE_LOG"
+printf 'Production deployment and verification passed for %s.\n' "$TAG"

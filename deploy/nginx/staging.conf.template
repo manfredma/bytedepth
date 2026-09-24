@@ -1,7 +1,6 @@
 # staging server 配置（由 envsubst 处理 ${BYTEDEPTH_DOMAIN}）。
 # 此文件被 include 在 http{} 内（由 staging-root.conf 的 http 块引入），
 # 因此只含 server 块，不能有 events/http 块。
-# resolver 在 staging-root.conf 的 http 块中已声明。
 
 # HTTP -> HTTPS 跳转（仅 staging 域名）
 server {
@@ -51,8 +50,7 @@ server {
     }
 
     location / {
-        set $app_upstream bytedepth-app:8080;
-        proxy_pass http://$app_upstream;
+        proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

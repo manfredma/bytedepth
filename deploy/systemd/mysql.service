@@ -1,0 +1,23 @@
+[Unit]
+Description=ByteDepth MySQL data service
+After=local-fs.target network.target
+Before=bytedepth-app.service
+
+[Service]
+Type=notify
+User=mysql
+Group=mysql
+ExecStart=/usr/sbin/mysqld --datadir=/data/mysql --bind-address=127.0.0.1 --port=3306
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=120s
+TimeoutStopSec=60s
+LimitNOFILE=65536
+ReadWritePaths=/data/mysql
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

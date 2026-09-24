@@ -5,7 +5,7 @@ readonly DEPLOY_ROOT=/opt/bytedepth
 readonly STATE_DIR=/var/lib/bytedepth-deploy
 readonly STATE_FILE="$STATE_DIR/status"
 readonly LOG_FILE=/var/log/bytedepth-deploy.log
-readonly GIT_REMOTE_URL=git@github.com:manfredma/bytedepth.git
+readonly ARTIFACT_ROOT=/opt/bytedepth/incoming
 
 write_state() {
     local state="$1"
@@ -24,26 +24,23 @@ mkdir -p "$STATE_DIR"
 touch "$LOG_FILE"
 exec >> "$LOG_FILE" 2>&1
 
-cd "$DEPLOY_ROOT"
-git_cmd() { git -c safe.directory="$DEPLOY_ROOT" "$@"; }
-current_commit="$(git_cmd rev-parse --short HEAD)"
-origin_url="$(git_cmd remote get-url origin)"
-if [[ "$origin_url" != "$GIT_REMOTE_URL" ]]; then
-    printf 'Refusing deployment because origin is %s, expected %s\n' "$origin_url" "$GIT_REMOTE_URL"
-    write_state FAILED "" "$current_commit"
-    exit 1
-fi
 release_tag="${BYTEDEPTH_RELEASE_TAG:-}"
 if [[ ! "$release_tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
     printf 'Refusing deployment because BYTEDEPTH_RELEASE_TAG is invalid\n'
-    write_state FAILED "" "$current_commit"
+    write_state FAILED "" ""
     exit 1
 fi
-write_state RUNNING "$release_tag" "$current_commit"
+artifact_dir="$ARTIFACT_ROOT/$release_tag"
+if [[ ! -f "$artifact_dir/app.jar" || ! -f "$artifact_dir/artifact.manifest" ]]; then
+    printf 'Refusing deployment because no pre-uploaded artifact exists for %s\n' "$release_tag"
+    write_state FAILED "$release_tag" ""
+    exit 1
+fi
+write_state RUNNING "$release_tag" ""
 
-if ./deploy/deploy-production.sh "$release_tag"; then
-    write_state SUCCESS "$release_tag" "$(git_cmd rev-parse --short HEAD)"
+if "$DEPLOY_ROOT/deploy/deploy-production.sh" --artifact "$artifact_dir/app.jar" --manifest "$artifact_dir/artifact.manifest" "$release_tag"; then
+    write_state SUCCESS "$release_tag" "$(awk -F= '$1 == "commit" {print $2; exit}' "$artifact_dir/artifact.manifest")"
 else
-    write_state FAILED "$release_tag" "$(git_cmd rev-parse --short HEAD)"
+    write_state FAILED "$release_tag" "$(awk -F= '$1 == "commit" {print $2; exit}' "$artifact_dir/artifact.manifest")"
     exit 1
 fi

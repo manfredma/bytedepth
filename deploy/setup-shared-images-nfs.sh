@@ -41,14 +41,24 @@ case "$role" in
         if ! mountpoint -q "$MOUNT_DIR"; then
             mount "$MOUNT_DIR"
         fi
-        install -d -m 0755 /etc/systemd/system/docker.service.d
-        cat > /etc/systemd/system/docker.service.d/bytedepth-images.conf <<'EOF'
+        install -d -m 0755 /etc/systemd/system
+        cat > /etc/systemd/system/bytedepth-images.mount <<EOF
 [Unit]
-RequiresMountsFor=/mnt/bytedepth-images
-After=remote-fs.target
+Description=ByteDepth shared image mount
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What=$peer_ip:$IMAGE_DIR
+Where=$MOUNT_DIR
+Type=nfs4
+Options=rw,_netdev,nofail
+
+[Install]
+WantedBy=multi-user.target
 EOF
         systemctl daemon-reload
-        systemctl restart docker
+        systemctl enable --now bytedepth-images.mount
         mountpoint -q "$MOUNT_DIR"
         findmnt -no SOURCE,FSTYPE,TARGET "$MOUNT_DIR"
         ;;

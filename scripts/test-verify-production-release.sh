@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly ROOT
 readonly SCRIPT="$ROOT/scripts/verify-production-release.sh"
 
 [[ -x "$SCRIPT" ]] || { printf 'Expected executable production verifier.\n' >&2; exit 1; }
 rg -F 'https://bytedepth.cn' "$SCRIPT" >/dev/null
 rg -F 'release-history' "$SCRIPT" >/dev/null
-rg -F 'git -c safe.directory' "$SCRIPT" >/dev/null
-rg -F 'deploy/ctl.sh' "$SCRIPT" >/dev/null
-if ! rg -F 'logs bytedepth-app --tail=300' "$SCRIPT" >/dev/null; then
-    printf 'Production verification must query the project-prefixed bytedepth-app service.\n' >&2
+rg -F '/opt/bytedepth/current/artifact.manifest' "$SCRIPT" >/dev/null
+rg -F 'systemctl is-active --quiet bytedepth-app.service' "$SCRIPT" >/dev/null
+if ! rg -F 'journalctl -u bytedepth-app.service -n 300' "$SCRIPT" >/dev/null; then
+    printf 'Production verification must query the native bytedepth-app systemd service.\n' >&2
     exit 1
 fi
 rg -F -- '--fail' "$SCRIPT" >/dev/null
@@ -32,8 +33,8 @@ if rg -F 'logs app --tail=300' "$SCRIPT" >/dev/null; then
     printf 'Production verification must use the project-prefixed bytedepth-app service.\n' >&2
     exit 1
 fi
-if rg -F 'docker compose' "$SCRIPT" >/dev/null; then
-    printf 'Production verification must use deploy/ctl.sh rather than bare Compose.\n' >&2
+if rg -F 'deploy/ctl.sh' "$SCRIPT" >/dev/null || rg -F 'docker compose' "$SCRIPT" >/dev/null; then
+    printf 'Production verification must use native systemd and journald.\n' >&2
     exit 1
 fi
 

@@ -1,0 +1,23 @@
+[Unit]
+Description=ByteDepth Meilisearch data service
+After=local-fs.target network.target
+Before=bytedepth-app.service
+
+[Service]
+Type=simple
+User=meilisearch
+Group=meilisearch
+EnvironmentFile=-/etc/bytedepth/meilisearch.env
+ExecStart=/usr/local/bin/meilisearch --config-file-path /etc/meilisearch.toml --db-path /data/meilisearch --http-addr 127.0.0.1:7700
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=60s
+TimeoutStopSec=30s
+LimitNOFILE=65536
+ReadWritePaths=/data/meilisearch
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

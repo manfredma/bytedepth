@@ -6,7 +6,8 @@ if [[ "${EUID}" -ne 0 ]]; then
     exit 1
 fi
 
-readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
 readonly GIT_REMOTE_URL=git@github.com:manfredma/bytedepth.git
 
 require_ssh_origin() {
@@ -21,16 +22,15 @@ require_ssh_origin() {
 cd "$SOURCE_ROOT"
 git_cmd() { git -c safe.directory="$SOURCE_ROOT" "$@"; }
 require_ssh_origin
-export BYTEDEPTH_COMMIT_ID="$(git_cmd rev-parse HEAD)"
-export BYTEDEPTH_BUILT_AT="$(date -u +%FT%TZ)"
+BYTEDEPTH_COMMIT_ID="$(git_cmd rev-parse HEAD)"
+export BYTEDEPTH_COMMIT_ID
+BYTEDEPTH_BUILT_AT="$(date -u +%FT%TZ)"
+export BYTEDEPTH_BUILT_AT
 
-# 安装部署 Socket（远程触发部署的 systemd 通道）。所有模式都安装：
-# 生产用于远程触发 Tag 部署；staging 作为测试环境同样安装，以便验证该通道。
-# Socket 触发的 bytedepth-deploy-socket 只接受 SemVer Tag（正则校验），不接受任意 ref。
+# 安装宿主机服务、数据目录和部署 Socket。应用 JAR 由外部构建机提供，
+# 本脚本不构建 Maven 项目，也不启动任何容器。
 ./deploy/install-host-service.sh
-
-# compose 文件选择与 NFS 挂载检查统一由 ctl.sh 按部署模式处理。
-# --remove-orphans 清理旧 service 名残留容器（如 service 改名后旧容器不再属于当前 compose project）。
-./deploy/ctl.sh up --build -d --remove-orphans
-./deploy/ctl.sh up -d --force-recreate nginx
-./deploy/ctl.sh ps
+systemctl start mysql.service redis.service meilisearch.service
+systemctl is-active --quiet mysql.service
+systemctl is-active --quiet redis.service
+systemctl is-active --quiet meilisearch.service
