@@ -48,6 +48,7 @@
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。
 - systemd 的 `Requires=` 会在 staging app 重启时停止依赖它的 native edge；edge 停止时不能直接 `reload`，部署流程必须先确认并启动 edge，再执行 reload。
 - MySQL 8.4 的 `SHOW GRANTS` 会把账户名规范化为反引号形式，即使 `CREATE USER` 使用了字符串字面量；staging 测试槽必须按实际 canonical grant 格式校验，不能用单引号或转义数据库下划线误判合法授权。
+- staging 测试槽的管理员连接 defaults 文件包含 native MySQL 端口，但使用隔离用户导入 fixture 和校验 `SELECT DATABASE()` 时仍必须显式传入 `BYTEDEPTH_STAGING_MYSQL_PORT`；否则 MySQL 客户端会回退到 3306。
 
 ## 原生测试槽位（critical）
 

@@ -248,8 +248,8 @@ for profile in it e2e; do
         fi
     done <<< "$grants"
     [[ $expected_grant_count == 1 ]] || { slot_die 'exact test database grant is missing or duplicated'; exit 1; }
-    MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" < "$BYTEDEPTH_TEST_FIXTURE"
-    [[ $(MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" --batch --skip-column-names -e 'SELECT DATABASE()') == "$db" ]] || { slot_die 'MySQL connection did not select test DB'; exit 1; }
+    MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" "$db" < "$BYTEDEPTH_TEST_FIXTURE"
+    [[ $(MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" "$db" --batch --skip-column-names -e 'SELECT DATABASE()') == "$db" ]] || { slot_die 'MySQL connection did not select test DB'; exit 1; }
     index_task=''
     case "$profile" in
         it) it_index_created=1 ;;
