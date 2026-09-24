@@ -32,7 +32,7 @@ bytedepth 当前在生产和 staging 的单机节点上通过 Docker Compose 运
 
 | 内容 | 唯一权威位置 | 本次必须调整的内容 |
 |------|--------------|--------------------|
-| 部署、停机迁移、回滚、证书、数据同步 | `deploy/README.md` | 从 Compose 操作手册改为宿主机原生操作手册；保留迁移期回退说明，不再把 Compose 作为正常运行方式 |
+| 部署、停机迁移、回滚、证书、数据同步 | `deploy/README.md` | 从 Compose 操作手册改为宿主机原生操作手册；保留上一份原生 release 和数据备份回退说明，不保留 Compose 操作路径 |
 | 版本、Tag、发布、证据和回滚版本 | `docs/releases/README.md` | 改为外部构建 JAR、SHA 绑定、staging 证据、Tag 发布和 systemd 切换流程 |
 | 跨项目质量与发布基线 | `docs/engineering/unified-release-pipeline.md` | 改写部署入口、产物流转、staging integration/E2E 和生产发布门禁 |
 | 项目知识库导航 | `docs/README.md` | 增加宿主机运行时、迁移设计、部署与发布文档的入口和交叉链接 |
@@ -274,7 +274,7 @@ run-local-quality
 | `deploy/run-staging-integration-tests.sh` | 在 Maven 容器/Testcontainers 中运行集成测试 | 默认连接 staging 原生服务的隔离数据库/schema、Redis DB/前缀和 Meili index；若保留一次性容器，必须明确为测试工具而非运行时依赖，并单独标注资源预算 |
 | `scripts/verify-production-release.sh` | 检查 Compose 容器和 Docker 运行状态 | 检查 Tag、JAR SHA、systemd active 状态、监听端口、`/version`、健康探针和日志门禁 |
 
-现有 Docker 运行时脚本不能通过“暂时不调用”来视为完成；要么删除，要么改为 fail-closed 的迁移/回滚专用脚本，并在静态检查中声明用途。
+所有 Docker 部署资产必须在本次实现中删除或由宿主机实现替换，不能通过“暂时不调用”来视为完成。迁移和回滚只使用宿主机脚本、systemd、上一份 JAR 和已验证备份；项目中不保留 Compose 回退脚本。
 
 ## 数据迁移与停机切换
 
@@ -294,13 +294,13 @@ run-local-quality
 
 1. 取得迁移锁，停止部署、同步和定时任务。
 2. 记录所有 Docker 容器、镜像、端口、数据目录 owner 和版本。
-3. 停止应用和中间件 Compose 服务，确认 80/443/3306/6379/7700 已释放。
+3. 停止当前 Docker 运行时服务，确认 80/443/3306/6379/7700 已释放；这只是一次性迁移动作，项目实施后不保留 Docker 停止/启动脚本。
 4. 安装固定版本宿主机软件和 systemd unit。
 5. 检查数据格式、版本兼容性和目录权限；不满足时从备份恢复到原生服务专用目录。
 6. 启动 MySQL、Redis、Meilisearch，逐项执行健康检查和只读查询。
 7. 启动 Java 应用，执行 Flyway，并确认应用连接的是本节点原生服务。
 8. 启动或 reload Nginx，执行完整 staging 集成、E2E 和只读回归。
-9. 验收窗口内保留 Docker 配置、镜像和回滚备份，不立即卸载 Docker。
+9. 验收窗口内保留原始数据备份、配置备份和上一份可启动原生 release；不把 Docker 配置或镜像作为回滚条件。
 
 ### 定时任务、同步和证书
 
@@ -320,13 +320,13 @@ run-local-quality
 - Nginx 回滚：恢复上一份配置并 reload；
 - 中间件回滚：停止原生服务，按已验证的备份恢复；不得让 Docker 和原生服务同时使用同一数据目录；
 - 数据库迁移回滚：只允许在 schema 兼容且已验证的情况下回退代码；不执行未经验证的逆向 Flyway；
-- 原生迁移验收失败时，优先恢复 Docker Compose 基线，再分析问题。
+- 原生迁移验收失败时，使用已验证的原生上一版本、配置备份和数据备份脚本恢复；如果数据服务尚未完成接管，则停止迁移并保持服务停机，不能重新引入项目 Compose 回退路径。
 
 ## 迁移阶段与验收
 
 ### 阶段 1：实现和静态门禁
 
-新增 host-only 部署入口、systemd unit 模板、配置校验、备份/恢复脚本、资源和端口检查。补充单元测试、脚本契约测试和零 WARNING 检查。所有变更必须先有 `CHANGELOG.md` 的 `Unreleased` 条目。
+新增 host-only 部署入口、systemd unit 模板、配置校验、备份/恢复脚本、资源和端口检查；同时删除 `Dockerfile`、`.dockerignore`、Compose 文件、Compose 控制入口、目标机 Maven 预热脚本和 Docker 专用测试契约。补充单元测试、脚本契约测试和零 WARNING 检查。所有变更必须先有 `CHANGELOG.md` 的 `Unreleased` 条目。
 
 同时完成知识库和发布流程改造：`deploy/README.md`、`docs/releases/README.md`、`docs/engineering/unified-release-pipeline.md`、`docs/README.md`、`docs/engineering/gotchas.md`、`AGENTS.md` 和相关脚本契约必须在首次 staging 迁移前同步更新。文档链接检查和部署入口检查必须纳入本地质量门禁。
 
@@ -345,13 +345,13 @@ run-local-quality
 
 在 175 使用同一版本、同一套已验证脚本和已确认备份执行迁移。生产只接受新的 annotated Tag；迁移后完成版本、SNI、搜索、图片、数据库连接、Redis、Meilisearch 和日志回归。
 
-### 阶段 4：稳定观察与清理
+### 阶段 4：稳定观察
 
-至少完成一个发布周期的运行观察后，才评估删除 Docker 镜像、Compose 配置和旧运行时。清理必须是独立、可恢复的变更，不能与首次原生迁移绑定。
+至少完成一个发布周期的运行观察，确认原生服务、发布、回滚、同步、证书和测试槽位稳定。Docker 部署脚本和 Compose 文件已在实现阶段删除，不作为后续清理事项。
 
 ### 阶段 5：迁移后收口
 
-稳定观察通过后，才可以在单独变更中：删除 Compose 运行时脚本和镜像构建路径、卸载不再需要的 Docker 运行依赖、更新 ADR 状态为 Accepted、移除迁移回退开关。此阶段仍需保留可验证的数据备份和上一 JAR 回滚能力。
+稳定观察通过后，在单独变更中更新 ADR 状态为 Accepted，移除迁移专用开关。此阶段仍需保留可验证的数据备份和上一 JAR 回滚能力；不恢复任何 Docker 部署资产。
 
 ## 自动化门禁
 
