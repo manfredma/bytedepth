@@ -54,7 +54,7 @@ ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
 rm -rf "$evidence_dir"
 ```
 
-每份记录必须分别为 `staging-integration` 或 `staging-e2e`，并严格包含 `commit=<完整 40 位 SHA>`、对应的 `command=`、UTC `timestamp=` 和 `result=passed`；不得包含凭据。以上命令示例发布 `1.2.3`，下一开发版本为 `1.2.4-SNAPSHOT`：
+每份记录必须分别为 `staging-integration` 或 `staging-e2e`，严格包含 `commit=<完整 40 位 SHA>`、对应的 `command=`、UTC `timestamp=`、`result=passed`、`runtime_mode=host-native`、`run_id=`、`test_resource_manifest_sha=<64 位 SHA256>` 和 `cleanup=result=passed`；不得包含凭据。以上命令示例发布 `1.2.3`，下一开发版本为 `1.2.4-SNAPSHOT`：
 
 ```bash
 evidence_dir="$(mktemp -d)"

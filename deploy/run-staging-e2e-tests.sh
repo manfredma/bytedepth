@@ -138,7 +138,8 @@ cleanup_slot() {
             "$SLOT_TEARDOWN" --manifest "$manifest"; then
             cleanup_status=1
         fi
-    elif (( app_stopped != 0 )); then
+    fi
+    if (( app_stopped != 0 )) && ! systemctl is-active --quiet bytedepth-app.service; then
         systemctl start bytedepth-app.service || cleanup_status=1
         systemctl is-active --quiet bytedepth-app.service || cleanup_status=1
     fi

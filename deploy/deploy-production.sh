@@ -19,6 +19,10 @@ readonly HISTORY_FILE="$STATE_DIR/release-history"
 readonly TAG="$5"
 readonly JAR="$2"
 readonly MANIFEST="$4"
+readonly DEPLOY_LOCK=/var/lock/bytedepth-production-deploy.lock
+
+exec 9>"$DEPLOY_LOCK"
+flock -n 9 || { printf 'Refusing deployment: another production deployment is running.\n' >&2; exit 1; }
 
 source "$SOURCE_ROOT/deploy/lib/artifact.sh"
 
@@ -53,6 +57,29 @@ grep -Fqx "version=$TAG" "$HISTORY_FILE" && {
     exit 1
 }
 
+previous_release_path="$(current_release_path)"
+release_switched=0
+rollback_release() {
+    if (( release_switched == 0 )); then
+        return 0
+    fi
+    if [[ -n "$previous_release_path" ]]; then
+        restore_current_release "$previous_release_path" || return 1
+        systemctl restart bytedepth-app.service || return 1
+        systemctl reload nginx.service || return 1
+    else
+        systemctl stop bytedepth-app.service || return 1
+    fi
+}
+fail_deployment() {
+    local reason="$1"
+    printf 'Production deployment failed during %s.\n' "$reason" >&2
+    if ! rollback_release; then
+        printf 'Refusing: production deployment failed and native rollback also failed.\n' >&2
+    fi
+    exit 1
+}
+
 ./deploy/bootstrap-ops-deploy.sh
 backup_dir="$STATE_DIR/backups"
 install -d -o root -g root -m 0700 "$backup_dir"
@@ -61,10 +88,11 @@ mysqldump --protocol=socket --all-databases --single-transaction --routines --ev
 chmod 0600 "$backup_dir/mysql-$commit.sql"
 
 install_release_artifact "$TAG" "$JAR" "$MANIFEST"
-switch_current_release "$TAG"
-systemctl restart bytedepth-app.service
-verify_running_release "$commit"
-systemctl reload nginx.service
+switch_current_release "$TAG" || fail_deployment release_switch
+release_switched=1
+systemctl restart bytedepth-app.service || fail_deployment app_restart
+verify_running_release "$commit" || fail_deployment app_health
+systemctl reload nginx.service || fail_deployment nginx_reload
 
 printf 'version=%s\ncommit=%s\nartifact_sha256=%s\ndeployed_at=%s\n---\n' \
     "$TAG" "$commit" "$(artifact_manifest_value sha256 "$MANIFEST")" "$(date -u +%FT%TZ)" >> "$HISTORY_FILE"

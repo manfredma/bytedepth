@@ -1,6 +1,7 @@
 # ADR-0008: 统一生产远程部署入口与 staging 独立域名隔离
 
 - **状态**: Proposed
+- **运行时说明**：生产入口和 staging 域名约束仍有效；其上下文中的旧容器运行时由 [ADR-0016](0016-host-native-runtime-deployment.md) supersede。
 - **日期**: 2026-09-16
 - **决策者**: 项目所有者
 

@@ -15,6 +15,8 @@ readonly STATE_DIR=/var/lib/bytedepth-staging
 readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
 readonly HISTORY_FILE="$STATE_DIR/deploy-history"
 readonly TIMING_DIR="$STATE_DIR/timing"
+readonly STAGING_KNOWN_HOSTS="${BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS:-}"
+readonly STAGING_SSH_OPTIONS=(-i "$STAGING_SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile="$STAGING_KNOWN_HOSTS" -o StrictHostKeyChecking=yes)
 
 source "$SOURCE_ROOT/deploy/lib/artifact.sh"
 source "$SOURCE_ROOT/deploy/lib/timing.sh"
@@ -45,31 +47,32 @@ build_candidate() {
 
 require_staging_host_configuration() {
     local remote_command
+    [[ -n "$STAGING_KNOWN_HOSTS" && -r "$STAGING_KNOWN_HOSTS" ]] || {
+        printf 'Refusing: BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS must name a readable known_hosts file.\n' >&2
+        return 1
+    }
     remote_command='set -Eeuo pipefail
 test -f /etc/bytedepth/application.env
 grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/application.env
 grep -Fqx BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn /etc/bytedepth/application.env'
-    ssh -i "$STAGING_SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes \
-        -o StrictHostKeyChecking=accept-new "$STAGING_USER@$STAGING_HOST" "$remote_command"
+    ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "$remote_command"
 }
 
 deploy_external_artifact() {
     local ref="$1" artifact_dir="$2" commit="$3" remote_dir="/tmp/bytedepth-staging-$3" remote_command
     require_staging_host_configuration
-    ssh -i "$STAGING_SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
-        "$STAGING_USER@$STAGING_HOST" "install -d -m 0700 '$remote_dir'"
-    scp -i "$STAGING_SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+    ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "install -d -m 0700 '$remote_dir'"
+    scp "${STAGING_SSH_OPTIONS[@]}" \
         "$artifact_dir/app.jar" "$artifact_dir/artifact.manifest" "$STAGING_USER@$STAGING_HOST:$remote_dir/"
     printf -v remote_command 'cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh --artifact %q --manifest %q %q' \
         "$remote_dir/app.jar" "$remote_dir/artifact.manifest" "$ref"
-    ssh -i "$STAGING_SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
-        "$STAGING_USER@$STAGING_HOST" "$remote_command"
+    ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "$remote_command"
 }
 
 run_remote_install() {
     [[ "${EUID}" -eq 0 ]] || { printf 'Internal staging installation requires root.\n' >&2; exit 1; }
     install -d -o root -g root -m 0700 "$STATE_DIR" "$TIMING_DIR"
-    exec flock -x "$LOCK_FILE" "$0" --lock-held "$5" "$2" "$4"
+    exec env BYTEDEPTH_REMOTE_INSTALL=1 flock -x "$LOCK_FILE" "$0" --lock-held "$5" "$2" "$4"
 }
 
 run_locked_install() {
@@ -82,13 +85,40 @@ run_locked_install() {
     }
     validate_artifact_manifest "$manifest" "$jar" || { printf 'Refusing: uploaded artifact failed manifest validation.\n' >&2; exit 1; }
     [[ "$(artifact_manifest_value release_ref "$manifest")" == "$ref" ]] || { printf 'Refusing: artifact reference does not match candidate reference.\n' >&2; exit 1; }
-    require_staging_host_configuration
+    if [[ "${BYTEDEPTH_REMOTE_INSTALL:-0}" != 1 ]]; then
+        require_staging_host_configuration
+    fi
     initialize_timing_file "$timing_file" "$commit"
     deployment_started_at="$(timing_now_epoch_ms)"
+    previous_release_path="$(current_release_path)"
+    release_switched=0
     rm -f "$STATE_DIR/test-history/staging-integration" "$STATE_DIR/test-history/staging-e2e"
 
+    rollback_release() {
+        if (( release_switched == 0 )); then
+            return 0
+        fi
+        if [[ -n "$previous_release_path" ]]; then
+            restore_current_release "$previous_release_path" || return 1
+            systemctl restart bytedepth-app.service || return 1
+            systemctl reload nginx.service || return 1
+        else
+            systemctl stop bytedepth-app.service || return 1
+        fi
+    }
+    fail_deployment() {
+        local phase="$1"
+        record_timing_phase "$timing_file" "$phase" failed "$deployment_started_at" "$(timing_now_epoch_ms)"
+        record_timing_phase "$timing_file" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"
+        if ! rollback_release; then
+            printf 'Refusing: deployment failed and native rollback also failed.\n' >&2
+            exit 1
+        fi
+        exit 1
+    }
+
     if ! record_timed_phase "$timing_file" native_service_install ./deploy/bootstrap-ops-deploy.sh; then
-        record_timing_phase "$timing_file" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"; exit 1
+        fail_deployment native_service_install
     fi
     backup_database_preflight() {
         local backup_dir="$STATE_DIR/backups"
@@ -99,22 +129,23 @@ run_locked_install() {
         chmod 0600 "$backup_dir/mysql-$commit.sql"
     }
     if ! record_timed_phase "$timing_file" database_backup_preflight backup_database_preflight; then
-        record_timing_phase "$timing_file" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"; exit 1
+        fail_deployment database_backup_preflight
     fi
     if ! record_timed_phase "$timing_file" artifact_install install_release_artifact "$ref" "$jar" "$manifest"; then
-        record_timing_phase "$timing_file" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"; exit 1
+        fail_deployment artifact_install
     fi
     if ! record_timed_phase "$timing_file" release_switch switch_current_release "$ref"; then
-        record_timing_phase "$timing_file" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"; exit 1
+        fail_deployment release_switch
     fi
+    release_switched=1
     if ! record_timed_phase "$timing_file" app_restart systemctl restart bytedepth-app.service; then
-        record_timing_phase "$timing_file" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"; exit 1
+        fail_deployment app_restart
     fi
     if ! record_timed_phase "$timing_file" app_health verify_running_release "$commit"; then
-        record_timing_phase "$timing_file" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"; exit 1
+        fail_deployment app_health
     fi
     if ! record_timed_phase "$timing_file" nginx_reload systemctl reload nginx.service; then
-        record_timing_phase "$timing_file" deployment_total failed "$deployment_started_at" "$(timing_now_epoch_ms)"; exit 1
+        fail_deployment nginx_reload
     fi
     install -d -m 0700 "$STATE_DIR"
     printf 'ref=%s\ncommit=%s\ndeployed_at=%s\n---\n' "$ref" "$commit" "$(date -u +%FT%TZ)" >> "$HISTORY_FILE"

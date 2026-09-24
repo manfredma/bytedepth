@@ -1,6 +1,6 @@
 # 架构概览
 
-bytedepth 是 Spring Boot 多模块博客，使用 Thymeleaf 服务端渲染，内容可由 Obsidian 笔记同步导入。生产为数据节点单机拓扑，staging 预发环境独立部署；具体部署流程以 [部署手册](../../deploy/README.md) 为准。
+bytedepth 是 Spring Boot 多模块博客，使用 Thymeleaf 服务端渲染，内容可由 Obsidian 笔记同步导入。生产为数据节点单机拓扑，staging 预发环境独立部署；运行时由宿主机 systemd 管理 Java 25 应用与 MySQL、Redis、Meilisearch、Nginx，具体部署流程以 [部署手册](../../deploy/README.md) 为准。
 
 ## 技术边界
 
@@ -8,6 +8,7 @@ bytedepth 是 Spring Boot 多模块博客，使用 Thymeleaf 服务端渲染，�
 - Spring Boot、Spring Security、Thymeleaf。
 - MyBatis-Plus + MySQL；Redis 用于会话与业务能力；MeiliSearch 用于搜索。
 - Flyway 管理数据库迁移。
+- 应用以外部构建的不可变 JAR 发布，systemd 通过 `current` 软链接切换版本；staging 集成测试和 E2E 使用按 `run_id` 隔离的资源槽位与 `staging-it`/`staging-e2e` Spring Profile。
 
 ## 模块和依赖方向
 

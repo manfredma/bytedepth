@@ -25,13 +25,14 @@ fi
 ensure_service_account bytedepth bytedepth
 ensure_service_account meilisearch meilisearch
 install -d -o root -g root -m 0755 \
-    "$TARGET_ROOT" /var/lib/bytedepth-deploy /opt/bytedepth /opt/bytedepth/releases \
-    /etc/bytedepth /etc/bytedepth/secrets /data/images
+    "$TARGET_ROOT" /var/lib/bytedepth-deploy /var/lib/bytedepth-staging/test-slots \
+    /opt/bytedepth /opt/bytedepth/releases /etc/bytedepth /etc/bytedepth/secrets \
+    /data/images /data/images-test
 install -d -o mysql -g mysql -m 0750 /data/mysql
 install -d -o redis -g redis -m 0750 /data/redis
 install -d -o meilisearch -g meilisearch -m 0750 /data/meilisearch
 
-for unit in bytedepth-app.service mysql.service redis.service meilisearch.service nginx.service; do
+for unit in bytedepth-app.service bytedepth-test-slot.service mysql.service redis.service meilisearch.service nginx.service; do
     install -o root -g root -m 0644 "$SOURCE_ROOT/deploy/systemd/$unit" "/etc/systemd/system/$unit"
 done
 install -m 0755 "$SOURCE_ROOT/deploy/bin/bytedepth-deploy-socket" "$TARGET_ROOT/bytedepth-deploy-socket"

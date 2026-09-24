@@ -4,7 +4,7 @@
 
 ## 为什么分为 workflow 与受控主机脚本
 
-GitHub `quality` workflow 只运行无凭据、无外部进程的质量门禁：Java 25、Maven Wrapper、项目 lockfile 安装、单元测试、前端测试/lint、覆盖率和静态自动化约束。它在 PR、`main` push，以及 `feat/**`、`fix/**`、`docs/**` 开发分支 push 时运行；开发分支 push 是合并前检查的正常触发路径，不能访问 SSH、staging/生产环境文件、数据库、Docker、共享浏览器或部署锁。
+GitHub `quality` workflow 只运行无凭据、无外部进程的质量门禁：Java 25、Maven Wrapper、项目 lockfile 安装、单元测试、前端测试/lint、覆盖率和静态自动化约束。它在 PR、`main` push，以及 `feat/**`、`fix/**`、`docs/**` 开发分支 push 时运行；开发分支 push 是合并前检查的正常触发路径，不能访问 SSH、staging/生产环境文件、数据库、共享浏览器或部署锁。
 
 staging 是唯一跨进程集成与 E2E 环境；生产操作只在受控主机执行。两类操作分离，避免把生产权限交给普通 CI runner。
 
@@ -17,8 +17,8 @@ staging 只有一条发布路径：在首次 staging 部署前确定版本并冻
 1. 功能分支先完成 `CHANGELOG.md` 的 `Unreleased` 条目，再运行 `scripts/run-local-quality.sh`；缺少条目时门禁失败。
 2. PR 的 `.github/workflows/quality.yml` 通过。
 3. 在首次 staging 部署前于候选分支冻结正式 Changelog，再吸收远程最新 `main`，通过 Changelog 门禁后部署候选分支：`deploy/deploy-staging.sh <branch-or-tag>`；候选 ref 必须相对 `origin/main` 修改 `docs/releases/CHANGELOG.md`，部署 `main` 会被拒绝。
-4. `deploy/bootstrap-staging-runtime.sh --ensure` 确认共享运行时，只有失配才预热。
-5. 运行 staging 集成与 E2E；两份 evidence 必须绑定冻结候选完整 SHA。
+4. `deploy/bootstrap-ops-deploy.sh` 确认宿主机 systemd 服务和数据目录；应用 JAR 由外部构建后传输，目标主机不构建发布包。
+5. 运行 staging 集成与 E2E；两份 evidence 必须绑定冻结候选完整 SHA、host-native runtime 和本次隔离资源 manifest。
 6. 所有者完成 staging 验收；纯交付基础设施改动审阅 PR 与自动证据即可。
 7. 验收通过后只能将候选分支 fast-forward 合并到 `main`，校验完整 SHA 未变化，再立即执行 `scripts/prepare-release.sh <release> <next-snapshot>`，校验 evidence、工作区、Changelog、覆盖率及 Tag 唯一性，创建 annotated Tag；禁止追加会改变 SHA 的发布元数据。
 8. 验收失败才允许修改代码或 Changelog；修改后旧 SHA evidence 作废，必须重新冻结、部署和验证。
@@ -33,7 +33,7 @@ staging 只有一条发布路径：在首次 staging 部署前确定版本并冻
 - `scripts/check-staging-checklist.sh`
 - `.github/workflows/quality.yml`
 - `deploy/deploy-staging.sh`
-- `deploy/bootstrap-staging-runtime.sh --ensure`
+- `deploy/bootstrap-ops-deploy.sh`
 - `deploy/run-staging-integration-tests.sh`
 - `deploy/run-staging-e2e-tests.sh`
 - `scripts/prepare-release.sh`

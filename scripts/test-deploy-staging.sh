@@ -18,6 +18,8 @@ for contract in \
     'switch_current_release' \
     'systemctl restart bytedepth-app.service' \
     'verify_running_release' \
+    'BYTEDEPTH_REMOTE_INSTALL=1' \
+    'BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS' \
     'staging-bytedepth.bytedepth.cn'; do
     rg -F -- "$contract" "$SCRIPT" >/dev/null || {
         printf 'Missing staging deployment contract: %s\n' "$contract" >&2

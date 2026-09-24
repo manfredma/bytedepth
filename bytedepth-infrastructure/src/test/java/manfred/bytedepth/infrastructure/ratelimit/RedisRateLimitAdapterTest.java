@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.ConsumptionProbe;
 import io.github.bucket4j.distributed.BucketProxy;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
@@ -95,7 +96,10 @@ class RedisRateLimitAdapterTest {
         RemoteBucketBuilder<byte[]> builder = mock(RemoteBucketBuilder.class);
         BucketProxy bucket = mock(BucketProxy.class);
         when(manager.builder()).thenReturn(builder);
-        when(builder.build(any(byte[].class), any(Supplier.class))).thenReturn(bucket);
+        when(builder.build(any(byte[].class), any(Supplier.class))).thenAnswer(invocation -> {
+            invocation.<Supplier<BucketConfiguration>>getArgument(1).get();
+            return bucket;
+        });
         when(bucket.tryConsumeAndReturnRemaining(1))
                 .thenReturn(ConsumptionProbe.consumed(0, 0), ConsumptionProbe.rejected(0, 2_000_000, 0));
         proxyManagerField().set(adapter, manager);

@@ -19,12 +19,15 @@ done
 rg -q 'mvnw clean install -DskipTests -Dsort.skip=true' "$ARTIFACT"
 rg -q 'sha256sum|shasum -a 256' "$ARTIFACT"
 rg -q 'install_release_artifact|switch_current_release' "$STAGING"
+rg -q 'restore_current_release|rollback' "$STAGING"
 rg -q 'systemctl restart bytedepth-app.service' "$STAGING"
 rg -q 'base_url/version' "$ARTIFACT"
 rg -q 'artifact|app\.jar' "$PRODUCTION"
 rg -q 'deploy-production\.sh' "$REMOTE"
 rg -q 'UserKnownHostsFile=' "$REMOTE"
 rg -q 'StrictHostKeyChecking=yes' "$REMOTE"
+rg -q 'DEPLOY_LOCK=/var/lock/bytedepth-production-deploy.lock|flock -n 9' "$PRODUCTION"
+rg -q 'restore_current_release|rollback' "$PRODUCTION"
 if rg -q 'docker|compose|mvn ' "$REMOTE" "$PRODUCTION"; then
     printf 'Native deployment entrypoints must not invoke Docker, Compose, or bare Maven.\n' >&2
     exit 1

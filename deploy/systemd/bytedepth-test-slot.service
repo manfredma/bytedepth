@@ -17,6 +17,7 @@ WorkingDirectory=/opt/bytedepth/current
 ExecStartPre=/bin/sh -c '! /bin/systemctl is-active --quiet bytedepth-app.service'
 ExecStartPre=/usr/bin/test -r ${BYTEDEPTH_TEST_SLOT_JAR}
 ExecStartPre=/usr/bin/test -n ${BYTEDEPTH_TEST_SLOT_SHA256}
+ExecStartPre=/bin/sh -c 'test "$(/usr/bin/sha256sum "$BYTEDEPTH_TEST_SLOT_JAR" | /usr/bin/cut -d " " -f1)" = "$BYTEDEPTH_TEST_SLOT_SHA256"'
 ExecStart=/usr/lib/jvm/java-25-openjdk-amd64/bin/java -jar ${BYTEDEPTH_TEST_SLOT_JAR}
 Restart=on-failure
 RestartSec=3s

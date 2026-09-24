@@ -1,6 +1,7 @@
 # ADR-0003: 可观测且隔离的交付流水线
 
 - **状态**: Accepted
+- **运行时说明**：本 ADR 的 evidence、锁和 CI 边界仍有效；原测试运行时和资源拓扑由 [ADR-0016](0016-host-native-runtime-deployment.md) supersede。
 - **日期**: 2026-09-12
 - **决策者**: 项目所有者
 

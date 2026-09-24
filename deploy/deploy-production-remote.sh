@@ -10,12 +10,14 @@ readonly POLL_INTERVAL_SECONDS=10
 readonly POLL_TIMEOUT_SECONDS=3600
 readonly TAG="${1:-}"
 readonly SSH_KEY="${BYTEDEPTH_PRODUCTION_SSH_KEY:-}"
-readonly KNOWN_HOSTS_FILE="${BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS:-${HOME}/.ssh/known_hosts}"
+readonly KNOWN_HOSTS_FILE="${BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS:-}"
 SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SOURCE_ROOT
 readonly REMOTE_LOG="/tmp/bytedepth-production-${TAG}.log"
 readonly SSH_TARGET="$PRODUCTION_USER@$PRODUCTION_HOST"
 readonly SSH_OPTIONS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE" -o StrictHostKeyChecking=yes)
+ARTIFACT_DIR=""
+CHECKOUT_DIR=""
 LOG_SNAPSHOT_FILE="$(mktemp)"
 readonly LOG_SNAPSHOT_FILE
 trap 'rm -rf "$ARTIFACT_DIR" "$CHECKOUT_DIR" "$LOG_SNAPSHOT_FILE"' EXIT
@@ -25,7 +27,7 @@ source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 
 validate_release_tag "$TAG" || { printf 'Release tag must use stable SemVer, for example v1.2.3\n' >&2; exit 1; }
 [[ -r "$SSH_KEY" ]] || { printf 'BYTEDEPTH_PRODUCTION_SSH_KEY must name a readable SSH private key.\n' >&2; exit 1; }
-[[ -r "$KNOWN_HOSTS_FILE" ]] || { printf 'BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS must name a readable known_hosts file.\n' >&2; exit 1; }
+[[ -n "$KNOWN_HOSTS_FILE" && -r "$KNOWN_HOSTS_FILE" ]] || { printf 'BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS must name a readable known_hosts file.\n' >&2; exit 1; }
 
 remote() {
     ssh "${SSH_OPTIONS[@]}" "$SSH_TARGET" "$@"

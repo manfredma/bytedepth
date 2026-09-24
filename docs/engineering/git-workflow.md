@@ -19,7 +19,7 @@
 6. **创建生产版本**：从干净 `main` 运行 `scripts/prepare-release.sh` 创建新 SemVer annotated Tag。
 7. **生产部署**：部署该 Tag（不接受 `main`、分支、裸 commit 或已部署 Tag）。
 
-> 纯后端、无界面影响的改动，可跳过 staging 验收直接 PR 合并；但后端改动仍建议在 staging 验证 Flyway/Compose/Nginx/Redis 等运维层面（本机测试无法覆盖）。
+> 纯后端、无界面影响的改动，可按发布规则判断是否需要完整 staging 验收；需要时必须在 staging 验证 Flyway、Nginx、Redis 和原生 systemd 服务等运维层面（本机测试无法覆盖）。
 
 ## 强制约束
 

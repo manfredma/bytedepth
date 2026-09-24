@@ -41,8 +41,8 @@ install_release_artifact() {
     [[ "${EUID}" -eq 0 ]] || { printf 'Artifact installation requires root.\n' >&2; return 1; }
     validate_artifact_ref "$release_ref" || { printf 'Invalid release reference.\n' >&2; return 1; }
     validate_artifact_manifest "$manifest" "$jar" || { printf 'Invalid artifact manifest.\n' >&2; return 1; }
-    install -d -o bytedepth -g bytedepth -m 0755 "$release_dir"
-    install -o bytedepth -g bytedepth -m 0644 "$jar" "$release_dir/app.jar"
+    install -d -o root -g root -m 0755 "$release_dir"
+    install -o root -g root -m 0644 "$jar" "$release_dir/app.jar"
     install -o root -g root -m 0600 "$manifest" "$release_dir/artifact.manifest"
 }
 
@@ -55,6 +55,21 @@ switch_current_release() {
 
     [[ -d "$release_dir" && -f "$release_dir/app.jar" ]] || return 1
     ln -s "$release_dir" "$temporary_link"
+    mv -Tf "$temporary_link" "$current_link"
+}
+
+current_release_path() {
+    local current_link="${BYTEDEPTH_CURRENT_LINK:-/opt/bytedepth/current}"
+    readlink -f -- "$current_link" 2>/dev/null || true
+}
+
+restore_current_release() {
+    local previous_path="$1"
+    local current_link="${BYTEDEPTH_CURRENT_LINK:-/opt/bytedepth/current}"
+    local temporary_link="${current_link}.rollback.$$"
+
+    [[ -d "$previous_path" && -f "$previous_path/app.jar" && ! -L "$previous_path/app.jar" ]] || return 1
+    ln -s "$previous_path" "$temporary_link"
     mv -Tf "$temporary_link" "$current_link"
 }
 

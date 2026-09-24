@@ -7,6 +7,9 @@
 ### Changed
 
 - v2.25.2 发布后，主线进入 `2.25.3-SNAPSHOT` 开发周期。
+- 运行时部署迁移为宿主机原生 systemd 服务，应用通过不可变 JAR、SHA256 manifest 和原子 `current` 软链接发布；staging/生产不再依赖容器运行时。
+- staging 集成测试和 E2E 使用 `staging-it`/`staging-e2e` Spring Profile 及按 `run_id` 隔离的 MySQL、Redis、Meilisearch 和图片资源，测试结束后自动清理并恢复 staging 应用。
+- 发布 evidence 增加 `runtime_mode`、`run_id`、测试资源 manifest SHA 和 cleanup 结果，旧格式 evidence 不再可用于创建 Release Tag。
 - 文章顶层代码块统一使用可复制、带行号、可展开/收起的代码组件；未标注语言时显示中性的 `Code`，不杜撰文件名。
 - 显式 `tabs:` 代码继续使用多语言 Tab，每个面板独立维护语法高亮、行号、复制和展开/收起状态；显式 `fold` 才默认收起。
 - 代码块组件兼容 Obsidian Codeblock Customizer 的 `group`/`tab` 元数据（支持 `:` 与 `=` 参数形式及省略 `tab` 时的语言名回退），同时保留既有 `tabs` 格式；同步前校验同组代码块的连续性和重复有效页签。
