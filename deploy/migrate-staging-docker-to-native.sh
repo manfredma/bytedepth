@@ -97,6 +97,19 @@ native_mysql_tcp_exec() {
     mysql --defaults-extra-file="$MYSQL_ADMIN" "$@"
 }
 
+wait_for_native_mysql() {
+    for _ in {1..60}; do
+        if [[ -f "$MYSQL_ADMIN" ]]; then
+            native_mysql_tcp_exec --batch --skip-column-names -e 'SELECT 1' >/dev/null 2>&1 && return 0
+        elif mysqladmin --protocol=socket --socket=/run/bytedepth-staging-native/mysql.sock -uroot ping >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 1
+    done
+    printf 'Refusing: native MySQL did not become ready.\n' >&2
+    return 1
+}
+
 initialize_native_mysql() {
     local data_dir="$BYTEDEPTH_NATIVE_ROOT/mysql"
     if [[ ! -f "$data_dir/auto.cnf" ]]; then
@@ -173,13 +186,19 @@ migrate_mysql() {
     initialize_native_mysql
     systemctl start "$BYTEDEPTH_STAGING_MYSQL_SERVICE"
     systemctl is-active --quiet "$BYTEDEPTH_STAGING_MYSQL_SERVICE"
-    native_mysql_socket_exec -e 'DROP DATABASE IF EXISTS bytedepth; CREATE DATABASE bytedepth CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
-    native_mysql_socket_exec < "$OLD_MYSQL_DUMP"
     escaped_password="$(sql_escape "$db_password")"
-    native_mysql_socket_exec -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$escaped_password'; CREATE USER IF NOT EXISTS 'bytedepth'@'localhost' IDENTIFIED BY '$escaped_password'; ALTER USER 'bytedepth'@'localhost' IDENTIFIED BY '$escaped_password'; GRANT ALL PRIVILEGES ON bytedepth.* TO 'bytedepth'@'localhost'; FLUSH PRIVILEGES;"
-    printf '[client]\nhost=127.0.0.1\nport=%s\nuser=root\npassword=%s\nprotocol=tcp\n' "$BYTEDEPTH_STAGING_MYSQL_PORT" "$db_password" > "$MYSQL_ADMIN"
-    chown root:root "$MYSQL_ADMIN"
-    chmod 0600 "$MYSQL_ADMIN"
+    wait_for_native_mysql
+    if [[ -f "$MYSQL_ADMIN" ]]; then
+        native_mysql_tcp_exec -e 'DROP DATABASE IF EXISTS bytedepth; CREATE DATABASE bytedepth CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
+        native_mysql_tcp_exec < "$OLD_MYSQL_DUMP"
+    else
+        native_mysql_socket_exec -e 'DROP DATABASE IF EXISTS bytedepth; CREATE DATABASE bytedepth CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
+        native_mysql_socket_exec < "$OLD_MYSQL_DUMP"
+        native_mysql_socket_exec -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$escaped_password'; CREATE USER IF NOT EXISTS 'bytedepth'@'localhost' IDENTIFIED BY '$escaped_password'; ALTER USER 'bytedepth'@'localhost' IDENTIFIED BY '$escaped_password'; GRANT ALL PRIVILEGES ON bytedepth.* TO 'bytedepth'@'localhost'; FLUSH PRIVILEGES;"
+        printf '[client]\nhost=127.0.0.1\nport=%s\nuser=root\npassword=%s\nprotocol=tcp\n' "$BYTEDEPTH_STAGING_MYSQL_PORT" "$db_password" > "$MYSQL_ADMIN"
+        chown root:root "$MYSQL_ADMIN"
+        chmod 0600 "$MYSQL_ADMIN"
+    fi
     native_mysql_tcp_exec --batch --skip-column-names -e 'SELECT 1' >/dev/null
 }
 
