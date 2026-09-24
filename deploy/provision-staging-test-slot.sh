@@ -56,7 +56,6 @@ slot_root_directory "$run_dir"
 staging_resource_digest "$BYTEDEPTH_TEST_STAGING_REDIS_DB" > "$run_dir/staging-baseline"
 chmod 0600 "$run_dir/staging-baseline"
 it_password="$(openssl rand -hex 24)"
-# shellcheck disable=SC2034 # selected through profile-specific indirect expansion
 e2e_password="$(openssl rand -hex 24)"
 it_db="bytedepth_it_$run_id"; e2e_db="bytedepth_e2e_$run_id"
 it_user="bd_it_$run_id"; e2e_user="bd_e2e_$run_id"
@@ -66,16 +65,24 @@ it_key_uid="$(uuidgen | tr '[:upper:]' '[:lower:]')"
 e2e_key_uid="$(uuidgen | tr '[:upper:]' '[:lower:]')"
 for profile in it e2e; do
     upper="${profile^^}"
-    db_var="${profile}_db"; user_var="${profile}_user"; password_var="${profile}_password"
-    index_var="${profile}_index"; namespace_var="${profile}_namespace"
-    redis_db_var="BYTEDEPTH_TEST_${upper}_REDIS_DB"
+    case "$profile" in
+        it)
+            db="$it_db"; user="$it_user"; password="$it_password"
+            index="$it_index"; namespace="$it_namespace"; redis_db="$BYTEDEPTH_TEST_IT_REDIS_DB"
+            ;;
+        e2e)
+            db="$e2e_db"; user="$e2e_user"; password="$e2e_password"
+            index="$e2e_index"; namespace="$e2e_namespace"; redis_db="$BYTEDEPTH_TEST_E2E_REDIS_DB"
+            ;;
+        *) slot_die "unsupported test profile: $profile"; exit 1 ;;
+    esac
     env_file="$run_dir/staging-$profile.env"
     image_dir="/data/images-test/$run_id/$profile"
     assert_not_staging_resource directory "$image_dir" "$run_id"
     mkdir -p "$image_dir"
     chmod 0700 "$image_dir"
     printf 'SPRING_PROFILES_ACTIVE=staging-%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_URL=jdbc:mysql://127.0.0.1:3306/%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_USERNAME=%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_PASSWORD=%s\nBYTEDEPTH_STAGING_%s_REDIS_DATABASE=%s\nBYTEDEPTH_STAGING_%s_REDIS_PASSWORD=%s\nBYTEDEPTH_STAGING_%s_REDIS_SESSION_NAMESPACE=%s\nBYTEDEPTH_STAGING_%s_REDIS_KEY_NAMESPACE=%s\nBYTEDEPTH_STAGING_%s_SEARCH_INDEX=%s\nBYTEDEPTH_STAGING_%s_SEARCH_API_KEY=%s\nBYTEDEPTH_STAGING_%s_UPLOAD_IMAGE_DIR=%s\n' \
-        "$profile" "$upper" "${!db_var}" "$upper" "${!user_var}" "$upper" "${!password_var}" "$upper" "${!redis_db_var}" "$upper" "$REDISCLI_AUTH" "$upper" "${!namespace_var}" "$upper" "${!namespace_var}" "$upper" "${!index_var}" "$upper" '__PENDING_SCOPED_KEY__' "$upper" "$image_dir" > "$env_file"
+        "$profile" "$upper" "$db" "$upper" "$user" "$upper" "$password" "$upper" "$redis_db" "$upper" "$REDISCLI_AUTH" "$upper" "$namespace" "$upper" "$namespace" "$upper" "$index" "$upper" '__PENDING_SCOPED_KEY__' "$upper" "$image_dir" > "$env_file"
     chmod 0600 "$env_file"
 done
 printf 'run_id=%s\ncandidate_sha=%s\nmode=staging\nit_db=%s\nit_user=%s\nit_index=%s\nit_namespace=%s\nit_redis_db=%s\nit_key_uid=%s\ne2e_db=%s\ne2e_user=%s\ne2e_index=%s\ne2e_namespace=%s\ne2e_redis_db=%s\ne2e_key_uid=%s\napp_port=8080\nit_env=%s\ne2e_env=%s\n' \
@@ -95,8 +102,12 @@ trap provision_cleanup EXIT
 settings="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/settings")"
 [[ $(printf '%s' "$settings" | jq -r '.searchableAttributes | type') == array && $(printf '%s' "$settings" | jq -r '.filterableAttributes | type') == array && $(printf '%s' "$settings" | jq -r '.sortableAttributes | type') == array ]] || { slot_die 'production index settings unavailable'; exit 1; }
 for profile in it e2e; do
-    index_var="${profile}_index"; uid_var="${profile}_key_uid"
-    key_payload="$(jq -nc --arg uid "${!uid_var}" --arg index "${!index_var}" '{uid:$uid,name:"bytedepth staging test slot",actions:["*"],indexes:[$index],expiresAt:null}')"
+    case "$profile" in
+        it) index="$it_index"; key_uid="$it_key_uid" ;;
+        e2e) index="$e2e_index"; key_uid="$e2e_key_uid" ;;
+        *) slot_die "unsupported test profile: $profile"; exit 1 ;;
+    esac
+    key_payload="$(jq -nc --arg uid "$key_uid" --arg index "$index" '{uid:$uid,name:"bytedepth staging test slot",actions:["*"],indexes:[$index],expiresAt:null}')"
     scoped_key="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "$key_payload" "$BYTEDEPTH_TEST_MEILI_URL/keys" | jq -er '.key')"
     [[ $scoped_key =~ ^[A-Za-z0-9_-]+$ ]] || { slot_die 'invalid scoped Meili key'; exit 1; }
     env_file="$run_dir/staging-$profile.env"
@@ -108,16 +119,20 @@ for profile in it e2e; do
     mv -f "$env_tmp" "$env_file"
 done
 for profile in it e2e; do
-    db_var="${profile}_db"; user_var="${profile}_user"; password_var="${profile}_password"; index_var="${profile}_index"
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE DATABASE \`${!db_var}\`"
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '${!user_var}'@'localhost' IDENTIFIED BY '${!password_var}'; GRANT ALL PRIVILEGES ON \`${!db_var}\`.* TO '${!user_var}'@'localhost'"
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" "${!db_var}" < "$BYTEDEPTH_TEST_FIXTURE"
-    [[ $(MYSQL_PWD="${!password_var}" mysql -u "${!user_var}" -h 127.0.0.1 "${!db_var}" --batch --skip-column-names -e 'SELECT DATABASE()') == "${!db_var}" ]] || { slot_die 'MySQL connection did not select test DB'; exit 1; }
-    task="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "{\"uid\":\"${!index_var}\",\"primaryKey\":\"id\"}" "$BYTEDEPTH_TEST_MEILI_URL/indexes" | jq -er '.taskUid')"
+    case "$profile" in
+        it) db="$it_db"; user="$it_user"; password="$it_password"; index="$it_index" ;;
+        e2e) db="$e2e_db"; user="$e2e_user"; password="$e2e_password"; index="$e2e_index" ;;
+        *) slot_die "unsupported test profile: $profile"; exit 1 ;;
+    esac
+    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE DATABASE \`$db\`"
+    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'; GRANT ALL PRIVILEGES ON \`$db\`.* TO '$user'@'localhost'"
+    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" "$db" < "$BYTEDEPTH_TEST_FIXTURE"
+    [[ $(MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" --batch --skip-column-names -e 'SELECT DATABASE()') == "$db" ]] || { slot_die 'MySQL connection did not select test DB'; exit 1; }
+    task="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "{\"uid\":\"$index\",\"primaryKey\":\"id\"}" "$BYTEDEPTH_TEST_MEILI_URL/indexes" | jq -er '.taskUid')"
     meili_wait_task "$task"
-    task="$(printf '%s' "$settings" | curl -fsS -X PATCH -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' --data-binary @- "$BYTEDEPTH_TEST_MEILI_URL/indexes/${!index_var}/settings" | jq -er '.taskUid')"
+    task="$(printf '%s' "$settings" | curl -fsS -X PATCH -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' --data-binary @- "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index/settings" | jq -er '.taskUid')"
     meili_wait_task "$task"
-    [[ $(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/${!index_var}" | jq -er '.uid') == "${!index_var}" ]] || { slot_die 'Meili index identity mismatch'; exit 1; }
+    [[ $(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index" | jq -er '.uid') == "$index" ]] || { slot_die 'Meili index identity mismatch'; exit 1; }
 done
 provision_complete=1
 trap - EXIT

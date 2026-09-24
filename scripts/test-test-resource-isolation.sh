@@ -35,7 +35,15 @@ printf 'bytedepth:it:%s:sample\n' "$run_id" > "$tmp/keys"
 export FAKE_KEYS="$tmp/keys"
 # External Redis is replaced at the CLI boundary; the scan/delete arguments
 # still come from the real library.
-printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" "redis-cli $*" >> "$FAKE_CALLS"' 'if [[ " $* " == *" --scan "* ]]; then' '    test ! -s "$FAKE_KEYS" || cat "$FAKE_KEYS"' 'elif [[ " $* " == *" DEL "* ]]; then' '    : > "$FAKE_KEYS"' 'fi' > "$tmp/bin/redis-cli"
+cat > "$tmp/bin/redis-cli" <<'FAKE_REDIS'
+#!/usr/bin/env bash
+printf '%s\n' "redis-cli $*" >> "$FAKE_CALLS"
+if [[ " $* " == *" --scan "* ]]; then
+    test ! -s "$FAKE_KEYS" || cat "$FAKE_KEYS"
+elif [[ " $* " == *" DEL "* ]]; then
+    : > "$FAKE_KEYS"
+fi
+FAKE_REDIS
 chmod +x "$tmp/bin/redis-cli"
 bash -c 'source "$1"; redis_scan_delete 14 "bytedepth:it:$2:" "$2"' _ "$slot" "$run_id"
 [[ ! -s "$FAKE_KEYS" ]] || { printf 'FAIL: namespaced Redis key survived cleanup\n' >&2; exit 1; }
