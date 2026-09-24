@@ -61,6 +61,8 @@ provision_cleanup() {
         return
     fi
     if (( state_uncertain != 0 )); then
+        printf 'state_uncertain=1\n' > "$(dirname "$manifest")/state-uncertain"
+        chmod 0600 "$(dirname "$manifest")/state-uncertain"
         slot_die 'provision state is uncertain; preserving manifest and all resources for manual recovery'
         return 1
     fi

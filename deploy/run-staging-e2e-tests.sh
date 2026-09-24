@@ -12,14 +12,159 @@ readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
 readonly RUNTIME_MANIFEST=/var/lib/bytedepth-staging/runtime/manifest
 readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
 readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
+readonly TEST_STATE_DIR=/var/lib/bytedepth-staging/test-slots
+readonly SLOT_PROVISION=/opt/bytedepth/deploy/provision-staging-test-slot.sh
+readonly SLOT_TEARDOWN=/opt/bytedepth/deploy/teardown-staging-test-slot.sh
+readonly SLOT_SERVICE=bytedepth-test-slot.service
+readonly SLOT_ENV=/run/bytedepth/staging-e2e.env
+readonly SLOT_RUNTIME_DIR=/run/bytedepth
+readonly SLOT_JAR=/opt/bytedepth/current/app.jar
 readonly E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn
 # Shared Chromium is provisioned at the host level by root maintenance.
 readonly CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
-readonly WORK_DIR="$(mktemp -d)"
+source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
+WORK_DIR="$(mktemp -d)"
+readonly WORK_DIR
 readonly E2E_LOG="$WORK_DIR/playwright.log"
-trap 'rm -rf "$WORK_DIR"' EXIT
+manifest=""
+run_id=""
+tested_commit=""
+app_stopped=0
+test_slot_started=0
+cleanup_done=0
+cleanup_result=failed
+
+redact_secrets() {
+    local line secret
+    local -a secrets=(
+        "${BYTEDEPTH_TEST_MEILI_API_KEY:-}"
+        "${BYTEDEPTH_STAGING_E2E_PASSWORD:-}"
+        "${BYTEDEPTH_STAGING_E2E_DATASOURCE_PASSWORD:-}"
+        "${BYTEDEPTH_STAGING_E2E_REDIS_PASSWORD:-}"
+    )
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        for secret in "${secrets[@]}"; do
+            [[ -n "$secret" ]] && line="${line//"$secret"/[REDACTED]}"
+        done
+        printf '%s\n' "$line"
+    done
+}
+
+load_resource_credentials() {
+    local redis_capacity
+
+    for required in \
+        BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE \
+        BYTEDEPTH_TEST_REDIS_SECRET_FILE \
+        BYTEDEPTH_TEST_MEILI_SECRET_FILE \
+        BYTEDEPTH_TEST_FIXTURE \
+        BYTEDEPTH_TEST_FIXTURE_SHA256_FILE \
+        BYTEDEPTH_TEST_STAGING_REDIS_DB \
+        BYTEDEPTH_TEST_IT_REDIS_DB \
+        BYTEDEPTH_TEST_E2E_REDIS_DB; do
+        [[ -n "${!required:-}" ]] || {
+            printf 'Refusing: %s must be explicitly injected; no temporary credential is allowed.\n' "$required" >&2
+            return 1
+        }
+    done
+    for required in \
+        "$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" \
+        "$BYTEDEPTH_TEST_REDIS_SECRET_FILE" \
+        "$BYTEDEPTH_TEST_MEILI_SECRET_FILE" \
+        "$BYTEDEPTH_TEST_FIXTURE" \
+        "$BYTEDEPTH_TEST_FIXTURE_SHA256_FILE"; do
+        slot_root_private "$required" || return 1
+    done
+    REDISCLI_AUTH="$(< "$BYTEDEPTH_TEST_REDIS_SECRET_FILE")"
+    export REDISCLI_AUTH
+    BYTEDEPTH_TEST_MEILI_API_KEY="$(< "$BYTEDEPTH_TEST_MEILI_SECRET_FILE")"
+    export BYTEDEPTH_TEST_MEILI_API_KEY
+    BYTEDEPTH_TEST_MEILI_URL="${BYTEDEPTH_TEST_MEILI_URL:-http://127.0.0.1:7700}"
+    [[ "$BYTEDEPTH_TEST_MEILI_URL" == http://127.0.0.1:7700 ]] || return 1
+    export BYTEDEPTH_TEST_MEILI_URL
+    redis_capacity="$(redis-cli CONFIG GET databases | tail -n 1)"
+    [[ "$redis_capacity" =~ ^[0-9]+$ ]] || return 1
+    export BYTEDEPTH_TEST_REDIS_CAPACITY="$redis_capacity"
+}
+
+load_manifest_env() {
+    local env_file="$1" key value
+    [[ -f "$env_file" && ! -L "$env_file" ]] || return 1
+    slot_root_private "$env_file" || return 1
+    while IFS='=' read -r key value || [[ -n "$key" ]]; do
+        [[ "$key" =~ ^[A-Z][A-Z0-9_]*$ && -n "$value" ]] || return 1
+        export "$key=$value"
+    done < "$env_file"
+}
+
+prepare_test_slot_environment() {
+    local e2e_env jar sha
+
+    e2e_env="$(slot_manifest_value "$manifest" e2e_env)"
+    load_manifest_env "$e2e_env"
+    [[ "${SPRING_PROFILES_ACTIVE:-}" == staging-e2e ]] || {
+        printf 'Refusing: provisioned E2E environment did not select staging-e2e.\n' >&2
+        return 1
+    }
+    jar="$SLOT_JAR"
+    [[ -r "$jar" ]] || {
+        printf 'Refusing: deployed test-slot JAR is unavailable.\n' >&2
+        return 1
+    }
+    sha="$(sha256sum "$jar" | awk '{print $1}')"
+    [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || return 1
+    install -d -o root -g root -m 0755 "$SLOT_RUNTIME_DIR"
+    install -o root -g root -m 0600 "$e2e_env" "$SLOT_ENV"
+    printf 'BYTEDEPTH_TEST_SLOT_JAR=%s\nBYTEDEPTH_TEST_SLOT_SHA256=%s\n' "$jar" "$sha" >> "$SLOT_ENV"
+}
+
+stop_test_slot() {
+    if systemctl is-active --quiet "$SLOT_SERVICE"; then
+        systemctl stop "$SLOT_SERVICE" || return 1
+    fi
+    ! systemctl is-active --quiet "$SLOT_SERVICE"
+}
+
+cleanup_slot() {
+    local cleanup_status=0
+
+    if [[ -n "$manifest" && -f "$manifest" ]]; then
+        if [[ -f "$(dirname "$manifest")/state-uncertain" ]]; then
+            printf 'Refusing: test resource state is uncertain; preserving manifest and resources.\n' >&2
+            cleanup_status=1
+        elif ! BYTEDEPTH_TEST_SLOT_LOCK_HELD=1 BYTEDEPTH_DEPLOY_MODE=staging \
+            "$SLOT_TEARDOWN" --manifest "$manifest"; then
+            cleanup_status=1
+        fi
+    elif (( app_stopped != 0 )); then
+        systemctl start bytedepth-app.service || cleanup_status=1
+        systemctl is-active --quiet bytedepth-app.service || cleanup_status=1
+    fi
+    rm -f -- "$SLOT_ENV"
+    cleanup_done=1
+    if (( cleanup_status == 0 )); then
+        cleanup_result=passed
+        return 0
+    fi
+    cleanup_result=failed
+    return 1
+}
+
+on_exit() {
+    local status=$?
+
+    if (( test_slot_started != 0 )); then
+        stop_test_slot || status=1
+    fi
+    if (( cleanup_done == 0 )); then
+        cleanup_slot || status=1
+    fi
+    rm -rf -- "$WORK_DIR"
+    exit "$status"
+}
+trap on_exit EXIT
 
 # Deployment, integration tests and E2E share this lock so an evidence record
 # can only be written for a stable deployed checkout.
@@ -68,7 +213,7 @@ discover_e2e_post_slug() {
 }
 
 write_evidence() {
-    local tested_commit="$1"
+    local tested_commit="$1" manifest_sha="$2"
     local evidence_tmp
 
     if [[ "$(read_checked_out_commit)" != "$tested_commit" ]]; then
@@ -79,8 +224,8 @@ write_evidence() {
 
     install -d -o root -g root -m 0700 "$EVIDENCE_DIR"
     evidence_tmp="$(mktemp "$EVIDENCE_DIR/.staging-e2e.XXXXXX")"
-    printf 'commit=%s\ncommand=run-staging-e2e-tests\ntimestamp=%s\nresult=passed\n' \
-        "$tested_commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$evidence_tmp"
+    printf 'commit=%s\ncommand=run-staging-e2e-tests\ntimestamp=%s\nresult=passed\nruntime_mode=host-native\nrun_id=%s\ntest_resource_manifest_sha=%s\ncleanup=result=passed\n' \
+        "$tested_commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$run_id" "$manifest_sha" > "$evidence_tmp"
     install -o root -g root -m 0600 "$evidence_tmp" "$EVIDENCE_DIR/staging-e2e"
     rm -f "$evidence_tmp"
 }
@@ -100,6 +245,7 @@ invalidate_evidence
 tested_commit="$(read_checked_out_commit)"
 require_deployed_commit "$tested_commit"
 require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
+load_resource_credentials
 
 if [[ ! -x "$CHROMIUM_EXECUTABLE" ]]; then
     printf 'Refusing: staging Chromium executable is unavailable at %s\n' "$CHROMIUM_EXECUTABLE" >&2
@@ -107,6 +253,40 @@ if [[ ! -x "$CHROMIUM_EXECUTABLE" ]]; then
 fi
 
 cd "$SOURCE_ROOT"
+run_id="$(date -u +%Y%m%d_%H%M%S)_$(openssl rand -hex 4)"
+manifest="$TEST_STATE_DIR/$run_id/manifest"
+export BYTEDEPTH_TEST_STATE_DIR="$TEST_STATE_DIR"
+export BYTEDEPTH_TEST_CANDIDATE_SHA="$tested_commit"
+export BYTEDEPTH_TEST_SLOT_LOCK_HELD=1
+export BYTEDEPTH_DEPLOY_MODE=staging
+install -d -o root -g root -m 0700 "$TEST_STATE_DIR"
+systemctl stop bytedepth-app.service
+app_stopped=1
+if systemctl is-active --quiet bytedepth-app.service; then
+    printf 'Refusing: staging app remained active; E2E resources were not provisioned.\n' >&2
+    exit 1
+fi
+"$SLOT_PROVISION" --run-id "$run_id" --manifest "$manifest"
+require_manifest "$manifest"
+export BYTEDEPTH_TEST_MANIFEST="$manifest"
+manifest_sha="$(shasum -a 256 "$manifest" | awk '{print $1}')"
+[[ "$manifest_sha" =~ ^[0-9a-f]{64}$ ]] || {
+    printf 'Refusing: unable to digest the E2E resource manifest.\n' >&2
+    exit 1
+}
+prepare_test_slot_environment
+systemctl start "$SLOT_SERVICE"
+test_slot_started=1
+for attempt in {1..30}; do
+    if systemctl is-active --quiet "$SLOT_SERVICE" && curl --fail --silent --show-error "$E2E_BASE_URL/version" >/dev/null; then
+        break
+    fi
+    if [[ "$attempt" == 30 ]]; then
+        printf 'Refusing: native E2E test slot did not become healthy.\n' >&2
+        exit 1
+    fi
+    sleep 1
+done
 e2e_post_slug="$(discover_e2e_post_slug)"
 export E2E_BASE_URL
 if ! E2E_POST_SLUG="$e2e_post_slug" \
@@ -123,5 +303,12 @@ if ! warning_policy_check_file "$E2E_LOG"; then
     exit 1
 fi
 
-write_evidence "$tested_commit"
+stop_test_slot
+test_slot_started=0
+cleanup_slot
+[[ "$cleanup_result" == passed ]] || {
+    printf 'Refusing: E2E resource cleanup or staging restoration failed.\n' >&2
+    exit 1
+}
+write_evidence "$tested_commit" "$manifest_sha"
 printf 'Staging E2E tests passed.\n'

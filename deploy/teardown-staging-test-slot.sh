@@ -21,6 +21,10 @@ for profile in it e2e; do
 done
 baseline="$(dirname "$manifest")/staging-baseline"
 slot_root_private "$baseline"
+if [[ -e "$(dirname "$manifest")/state-uncertain" ]]; then
+    slot_die 'provision state is uncertain; refusing destructive cleanup until manual recovery'
+    exit 1
+fi
 REDISCLI_AUTH="$(< "$BYTEDEPTH_TEST_REDIS_SECRET_FILE")"; export REDISCLI_AUTH
 BYTEDEPTH_TEST_MEILI_API_KEY="$(< "$BYTEDEPTH_TEST_MEILI_SECRET_FILE")"; export BYTEDEPTH_TEST_MEILI_API_KEY
 BYTEDEPTH_TEST_MEILI_URL="${BYTEDEPTH_TEST_MEILI_URL:-http://127.0.0.1:7700}"

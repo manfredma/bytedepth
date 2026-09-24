@@ -112,6 +112,8 @@ grep -Fqx "        slot_die 'provision state is uncertain; preserving manifest a
     printf 'FAIL: uncertain provision state must be preserved without destructive cleanup\n' >&2
     exit 1
 }
+rg -q 'state-uncertain' "$root/deploy/teardown-staging-test-slot.sh"
+rg -q 'refusing destructive cleanup until manual recovery' "$root/deploy/teardown-staging-test-slot.sh"
 
 grep -Fqx 'if systemctl is-active --quiet bytedepth-test-slot.service; then' <(sed -n '25,45p' "$root/deploy/teardown-staging-test-slot.sh") || {
     printf 'FAIL: teardown must stop the optional E2E test slot only when it exists and is active\n' >&2

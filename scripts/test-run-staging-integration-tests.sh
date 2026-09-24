@@ -69,6 +69,7 @@ assert_runner_uses_manifest_transaction() {
     rg -q '\./mvnw -o -Pstaging-integration verify' "$RUNNER"
     rg -q 'trap on_exit EXIT' "$RUNNER"
     rg -q 'cleanup_slot' "$RUNNER"
+    rg -q 'state-uncertain' "$RUNNER"
     if rg -n -- '-Dbytedepth\.it\.(redis|mysql)|-Dspring\.datasource|TESTCONTAINERS' "$RUNNER"; then
         return 1
     fi

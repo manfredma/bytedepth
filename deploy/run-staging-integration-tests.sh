@@ -157,7 +157,10 @@ cleanup_slot() {
     local cleanup_status=0
 
     if [[ -n "$manifest" && -f "$manifest" ]]; then
-        if ! BYTEDEPTH_TEST_SLOT_LOCK_HELD=1 BYTEDEPTH_DEPLOY_MODE=staging \
+        if [[ -f "$(dirname "$manifest")/state-uncertain" ]]; then
+            printf 'Refusing: test resource state is uncertain; preserving manifest and resources.\n' >&2
+            cleanup_status=1
+        elif ! BYTEDEPTH_TEST_SLOT_LOCK_HELD=1 BYTEDEPTH_DEPLOY_MODE=staging \
             "$SLOT_TEARDOWN" --manifest "$manifest"; then
             cleanup_status=1
         fi

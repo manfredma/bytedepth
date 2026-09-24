@@ -30,3 +30,14 @@
 - 影响：Maven 可以在有效模型存在问题时仍返回 0，带 Javassist `tools.jar` WARNING 的预热被记录为 `passed`，随后继续执行 Docker 构建和 Compose rollout；这违反项目的零 WARNING 发布规则。
 - 后续方向：统一 Maven 输出捕获、敏感信息脱敏和 WARNING 扫描逻辑；任何预热阶段的告警都必须在 Compose rollout 前失败。
 - 验收条件：使用可重复的模拟 Maven WARNING 验证脚本在 runtime preflight 阶段失败，且失败时不执行 `bootstrap-ops-deploy.sh`，不生成可复用的 runtime manifest 或 staging passed evidence。
+
+## TD-0003：测试 Profile 名称混合了部署环境与测试类型
+
+- 状态：`Open`
+- 发现日期：2026-09-24
+- 范围：Spring Profile 命名、staging 测试槽位配置和部署环境标识；不改变 IT/E2E 的资源隔离边界。
+- 现状：当前使用 `staging-it` 和 `staging-e2e` 表示“在 staging 执行的 IT/E2E 隔离配置”。其中 `staging` 表示部署环境，`it`/`e2e` 表示测试类型，两个概念被合并在同一个 Profile 名称中。
+- 影响：名称容易让维护者误以为 `staging-e2e` 是 staging 业务运行配置，或误以为 E2E 只能属于 staging；在未来增加 production 只读回归、preview 或其他测试环境时，Profile、环境变量和资源目录的语义会变得不清晰。
+- 根因：早期设计直接以执行位置命名测试 Profile，没有把“部署环境”“测试类型”“测试资源槽位”三个维度分开表达。
+- 后续方向：评估将 Spring Profile 拆为测试类型 Profile（例如 `test-it`、`test-e2e`），同时通过 `BYTEDEPTH_ENVIRONMENT=staging` 表达部署环境；资源路径继续使用 `staging/test-slots/<run-id>/<type>`，避免丢失环境边界。迁移时必须保持现有 `staging-it`/`staging-e2e` 兼容窗口，并同步更新 systemd、测试 runner、发布证据和自动检查。
+- 验收条件：Profile 名称只表达测试类型，部署环境由独立环境变量表达；生产默认配置不会激活测试 Profile；staging IT/E2E 的数据库、Redis、Meilisearch、上传目录和证据绑定行为保持不变；全量单元、集成和 E2E 验收通过后再关闭本条技术债。
