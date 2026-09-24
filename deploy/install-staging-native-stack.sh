@@ -61,6 +61,14 @@ chown bytedepth:bytedepth "$native_root/images-test"
 install -d -o root -g root -m 0700 /etc/bytedepth
 install -d -o root -g root -m 0755 /etc/apparmor.d/local
 
+# Redis warns and background persistence can fail when the kernel disables
+# memory overcommit. Make this native-service prerequisite explicit and
+# persistent instead of accepting the warning in deployment output.
+printf '%s\n' 'vm.overcommit_memory = 1' > /etc/sysctl.d/99-bytedepth-staging-native.conf
+chmod 0644 /etc/sysctl.d/99-bytedepth-staging-native.conf
+chown root:root /etc/sysctl.d/99-bytedepth-staging-native.conf
+sysctl -w vm.overcommit_memory=1 >/dev/null
+
 render_unit() {
     local source="$1" target="$2"
     sed \
