@@ -32,6 +32,7 @@ for contract in \
 done
 rg -q 'check-staging-changelog-change.sh.*>&2' "$SCRIPT"
 rg -q 'check-release-readiness.sh.*>&2' "$SCRIPT"
+rg -q 'sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging' "$SCRIPT"
 if rg -n -i 'docker|compose|docker_build_and_rollout|bootstrap-staging-runtime|mvn ' "$SCRIPT" >/dev/null; then
     printf 'Staging deployment must build externally and install a native artifact.\n' >&2
     exit 1

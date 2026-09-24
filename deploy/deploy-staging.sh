@@ -54,15 +54,15 @@ require_staging_host_configuration() {
         return 1
     }
     remote_command='set -Eeuo pipefail
-if test -r /etc/bytedepth/staging-native.conf && grep -Fqx BYTEDEPTH_NATIVE_STACK_MODE=parallel /etc/bytedepth/staging-native.conf; then
-  test -r /etc/bytedepth/staging-native.env
-  test -r /etc/bytedepth/staging-native-meilisearch.env
-  grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/staging-native.env
-  grep -Fqx BYTEDEPTH_NATIVE_STACK_MODE=parallel /etc/bytedepth/staging-native.conf
+if sudo -n test -r /etc/bytedepth/staging-native.conf && sudo -n grep -Fqx BYTEDEPTH_NATIVE_STACK_MODE=parallel /etc/bytedepth/staging-native.conf; then
+  sudo -n test -r /etc/bytedepth/staging-native.env
+  sudo -n test -r /etc/bytedepth/staging-native-meilisearch.env
+  sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/staging-native.env
+  sudo -n grep -Fqx BYTEDEPTH_NATIVE_STACK_MODE=parallel /etc/bytedepth/staging-native.conf
 else
-  test -r /etc/bytedepth/application.env
-  grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/application.env
-  grep -Fqx BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn /etc/bytedepth/application.env
+  sudo -n test -r /etc/bytedepth/application.env
+  sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/application.env
+  sudo -n grep -Fqx BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn /etc/bytedepth/application.env
 fi'
     ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "$remote_command"
 }
