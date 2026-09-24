@@ -269,7 +269,38 @@ migrate_meilisearch() {
     systemctl stop "$BYTEDEPTH_STAGING_MEILI_SERVICE" 2>/dev/null || true
     rm -rf -- "$BYTEDEPTH_NATIVE_ROOT/meilisearch"/*
     install -d -o meilisearch -g meilisearch -m 0750 "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
-    timeout 600 /usr/local/bin/meilisearch --import-snapshot "$OLD_MEILI_SNAPSHOT" --db-path "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
+    local import_log import_pid import_status
+    import_log="$(mktemp "$STATE_DIR/meilisearch-import.XXXXXX")"
+    /usr/local/bin/meilisearch --import-snapshot "$OLD_MEILI_SNAPSHOT" \
+        --db-path "$BYTEDEPTH_NATIVE_ROOT/meilisearch" >"$import_log" 2>&1 &
+    import_pid=$!
+    for _ in {1..600}; do
+        if ! kill -0 "$import_pid" 2>/dev/null; then
+            wait "$import_pid" || true
+            printf 'Refusing: Meilisearch snapshot import exited before the posts index became available.\n' >&2
+            return 1
+        fi
+        if curl --fail --silent --show-error http://127.0.0.1:7700/health >/dev/null \
+            && curl --fail --silent --show-error http://127.0.0.1:7700/indexes/posts >/dev/null; then
+            kill -TERM "$import_pid"
+            set +e
+            wait "$import_pid"
+            import_status=$?
+            set -e
+            [[ "$import_status" -eq 0 || "$import_status" -eq 143 ]] || {
+                printf 'Refusing: Meilisearch snapshot import did not stop cleanly.\n' >&2
+                return 1
+            }
+            break
+        fi
+        sleep 1
+    done
+    if kill -0 "$import_pid" 2>/dev/null; then
+        kill -TERM "$import_pid" 2>/dev/null || true
+        wait "$import_pid" || true
+        printf 'Refusing: Meilisearch snapshot import exceeded 600 seconds.\n' >&2
+        return 1
+    fi
     chown -R meilisearch:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
     systemctl start "$BYTEDEPTH_STAGING_MEILI_SERVICE"
     systemctl is-active --quiet "$BYTEDEPTH_STAGING_MEILI_SERVICE"
