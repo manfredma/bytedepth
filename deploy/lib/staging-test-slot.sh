@@ -136,10 +136,11 @@ write_resource_digest() {
 }
 
 staging_resource_snapshot() {
-    local staging_db="$1" redis_snapshot meili_stats key value_hash ttl ttl_state
+    local staging_db="$1" redis_snapshot meili_stats key key_id value_hash ttl ttl_state
     [[ $staging_db =~ ^[0-9]+$ && $staging_db != "$BYTEDEPTH_TEST_IT_REDIS_DB" && $staging_db != "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'invalid staging Redis DB'; return; }
     redis_snapshot="$(redis-cli -n "$staging_db" --scan | LC_ALL=C sort | while IFS= read -r key; do
         [[ -n $key ]] || continue
+        key_id="$(printf '%s' "$key" | shasum -a 256 | awk '{print $1}')" || exit 1
         value_hash="$(redis-cli -n "$staging_db" --raw DUMP "$key" | shasum -a 256 | awk '{print $1}')" || exit 1
         ttl="$(redis-cli -n "$staging_db" PTTL "$key")" || exit 1
         case "$ttl" in
@@ -148,7 +149,7 @@ staging_resource_snapshot() {
             [0-9]*) ttl_state=expiring ;;
             *) exit 1 ;;
         esac
-        printf 'redis:%s\t%s\t%s\n' "$key" "$ttl_state" "$value_hash"
+        printf 'redis:%s\t%s\t%s\n' "$key_id" "$ttl_state" "$value_hash"
     done)" || return
     meili_stats="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/stats" | jq -cS .)" || return
     printf '%s\n' "$redis_snapshot"

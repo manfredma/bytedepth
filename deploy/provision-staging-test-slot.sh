@@ -190,12 +190,14 @@ for profile in it e2e; do
     esac
     mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
     grants="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SHOW GRANTS FOR '$user'@'localhost'")"
-    expected_grant_fragment="\`$grant_db\`.*"
-    [[ $grants == *"$expected_grant_fragment"* ]] || { slot_die 'test database grant does not match the manifest database'; exit 1; }
-    global_grants="$(printf '%s\n' "$grants" | rg -i ' ON \*\.\* TO ' || true)"
+    expected_grant_pattern="^GRANT ALL PRIVILEGES ON \`$grant_db\`\.\* TO '$user'@'localhost'(;)?$"
+    expected_usage_pattern="^GRANT USAGE ON \*\.\* TO '$user'@'localhost'(;)?$"
     while IFS= read -r grant; do
-        [[ -z $grant || $grant =~ ^GRANT[[:space:]]+USAGE[[:space:]]+ON[[:space:]]+\*\.\*[[:space:]]+TO[[:space:]] ]] || { slot_die 'test database grant is broader than the manifest database'; exit 1; }
-    done <<< "$global_grants"
+        [[ -z $grant || $grant =~ $expected_grant_pattern || $grant =~ $expected_usage_pattern ]] || {
+            slot_die 'test database grant is broader than the manifest database'
+            exit 1
+        }
+    done <<< "$grants"
     MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" < "$BYTEDEPTH_TEST_FIXTURE"
     [[ $(MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" --batch --skip-column-names -e 'SELECT DATABASE()') == "$db" ]] || { slot_die 'MySQL connection did not select test DB'; exit 1; }
     index_response="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "{\"uid\":\"$index\",\"primaryKey\":\"id\"}" "$BYTEDEPTH_TEST_MEILI_URL/indexes")" || { slot_die 'Meili index creation failed'; exit 1; }
