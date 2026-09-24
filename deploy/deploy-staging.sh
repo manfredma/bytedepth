@@ -37,8 +37,8 @@ build_candidate() {
     local ref="$1" output_dir="$2" commit checkout
     git -C "$SOURCE_ROOT" fetch --force --no-recurse-submodules origin "$ref" main
     commit="$(git -C "$SOURCE_ROOT" rev-parse 'FETCH_HEAD^{commit}')"
-    bash "$SOURCE_ROOT/scripts/check-staging-changelog-change.sh" --target "$commit" --base origin/main
-    bash "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target "$commit" --base origin/main --mode candidate
+    bash "$SOURCE_ROOT/scripts/check-staging-changelog-change.sh" --target "$commit" --base origin/main >&2
+    bash "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target "$commit" --base origin/main --mode candidate >&2
     checkout="$(mktemp -d)"
     git -C "$SOURCE_ROOT" archive "$commit" | tar -x -C "$checkout"
     BYTEDEPTH_COMMIT_ID="$commit" BYTEDEPTH_BUILT_AT="$(date -u +%FT%TZ)" \
