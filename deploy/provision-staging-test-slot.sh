@@ -22,11 +22,7 @@ for secret in "$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" "$BYTEDEPTH_TEST_REDIS_SECRE
 slot_root_private "$BYTEDEPTH_TEST_FIXTURE"
 expected_sha="$(tr -d '[:space:]' < "$BYTEDEPTH_TEST_FIXTURE_SHA256_FILE")"
 [[ $expected_sha =~ ^[0-9a-f]{64}$ && $(shasum -a 256 "$BYTEDEPTH_TEST_FIXTURE" | awk '{print $1}') == "$expected_sha" ]] || { slot_die 'fixture checksum mismatch'; exit 1; }
-for token in article category admin; do
-    rg -qi "INSERT[[:space:]]+INTO[[:space:]]+.*$token" "$BYTEDEPTH_TEST_FIXTURE" || { slot_die "fixture lacks $token insert"; exit 1; }
-done
-rg -q '\$2[aby]\$|\$argon2(id|i)\$' "$BYTEDEPTH_TEST_FIXTURE" || { slot_die 'fixture lacks administrator password hash'; exit 1; }
-if rg -qi '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|DROP[[:space:]]+(DATABASE|USER)|FLUSHALL|FLUSHDB' "$BYTEDEPTH_TEST_FIXTURE"; then slot_die 'fixture contains forbidden default, production value or destructive SQL'; exit 1; fi
+validate_fixture "$BYTEDEPTH_TEST_FIXTURE"
 
 REDISCLI_AUTH="$(< "$BYTEDEPTH_TEST_REDIS_SECRET_FILE")"; export REDISCLI_AUTH
 BYTEDEPTH_TEST_MEILI_API_KEY="$(< "$BYTEDEPTH_TEST_MEILI_SECRET_FILE")"; export BYTEDEPTH_TEST_MEILI_API_KEY
@@ -41,6 +37,25 @@ export BYTEDEPTH_TEST_REDIS_CAPACITY="$capacity"
 
 run_dir="$(dirname "$manifest")"
 [[ ! -e $run_dir && ! -L $run_dir ]] || { slot_die 'run directory already exists'; exit 1; }
+provision_complete=0
+resources_created=0
+provision_cleanup() {
+    if (( provision_complete != 0 )); then
+        return
+    fi
+    if (( resources_created != 0 )) && [[ -f $manifest ]]; then
+        "$(dirname "${BASH_SOURCE[0]}")/teardown-staging-test-slot.sh" --manifest "$manifest" || slot_die 'partial provision cleanup failed; manifest retained'
+        return
+    fi
+    if [[ -d $run_dir && ! -L $run_dir ]]; then
+        rm -r -- "$run_dir" || slot_die 'partial local test state cleanup failed'
+    fi
+    image_root="/data/images-test/$run_id"
+    if [[ -d $image_root && ! -L $image_root ]]; then
+        rm -r -- "$image_root" || slot_die 'partial image directory cleanup failed'
+    fi
+}
+trap provision_cleanup EXIT
 for profile in it e2e; do
     db="bytedepth_${profile}_$run_id"
     user="bd_${profile}_$run_id"
@@ -79,7 +94,8 @@ for profile in it e2e; do
     env_file="$run_dir/staging-$profile.env"
     image_dir="/data/images-test/$run_id/$profile"
     assert_not_staging_resource directory "$image_dir" "$run_id"
-    mkdir -p "$image_dir"
+    [[ ! -e $image_dir && ! -L $image_dir ]] || { slot_die 'test image directory already exists'; exit 1; }
+    mkdir "$image_dir"
     chmod 0700 "$image_dir"
     printf 'SPRING_PROFILES_ACTIVE=staging-%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_URL=jdbc:mysql://127.0.0.1:3306/%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_USERNAME=%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_PASSWORD=%s\nBYTEDEPTH_STAGING_%s_REDIS_DATABASE=%s\nBYTEDEPTH_STAGING_%s_REDIS_PASSWORD=%s\nBYTEDEPTH_STAGING_%s_REDIS_SESSION_NAMESPACE=%s\nBYTEDEPTH_STAGING_%s_REDIS_KEY_NAMESPACE=%s\nBYTEDEPTH_STAGING_%s_SEARCH_INDEX=%s\nBYTEDEPTH_STAGING_%s_SEARCH_API_KEY=%s\nBYTEDEPTH_STAGING_%s_UPLOAD_IMAGE_DIR=%s\n' \
         "$profile" "$upper" "$db" "$upper" "$user" "$upper" "$password" "$upper" "$redis_db" "$upper" "$REDISCLI_AUTH" "$upper" "$namespace" "$upper" "$namespace" "$upper" "$index" "$upper" '__PENDING_SCOPED_KEY__' "$upper" "$image_dir" > "$env_file"
@@ -89,13 +105,7 @@ printf 'run_id=%s\ncandidate_sha=%s\nmode=staging\nit_db=%s\nit_user=%s\nit_inde
     "$run_id" "$BYTEDEPTH_TEST_CANDIDATE_SHA" "$it_db" "$it_user" "$it_index" "$it_namespace" "$BYTEDEPTH_TEST_IT_REDIS_DB" "$it_key_uid" "$e2e_db" "$e2e_user" "$e2e_index" "$e2e_namespace" "$BYTEDEPTH_TEST_E2E_REDIS_DB" "$e2e_key_uid" "$run_dir/staging-it.env" "$run_dir/staging-e2e.env" > "$manifest"
 chmod 0600 "$manifest"
 require_manifest "$manifest"
-provision_complete=0
-provision_cleanup() {
-    if (( provision_complete == 0 )); then
-        "$(dirname "${BASH_SOURCE[0]}")/teardown-staging-test-slot.sh" --manifest "$manifest" || slot_die 'partial provision cleanup failed; manifest retained'
-    fi
-}
-trap provision_cleanup EXIT
+resources_created=1
 
 # Manifest and environment files exist before external writes, so an interrupted
 # provision can be cleaned by the same strict teardown contract.

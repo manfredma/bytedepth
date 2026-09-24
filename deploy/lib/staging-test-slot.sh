@@ -45,6 +45,17 @@ require_manifest() {
     run_id="$(slot_manifest_value "$file" run_id)"
     validate_run_id "$run_id" || return
     [[ $(slot_manifest_value "$file" candidate_sha) =~ ^[0-9a-f]{40}$ && $(slot_manifest_value "$file" mode) == staging ]] || { slot_die 'invalid candidate SHA or mode'; return; }
+    [[ $(slot_manifest_value "$file" it_db) == "bytedepth_it_$run_id" &&
+        $(slot_manifest_value "$file" it_user) == "bd_it_$run_id" &&
+        $(slot_manifest_value "$file" it_index) == "posts_it_$run_id" &&
+        $(slot_manifest_value "$file" it_namespace) == "bytedepth:it:$run_id:" &&
+        $(slot_manifest_value "$file" e2e_db) == "bytedepth_e2e_$run_id" &&
+        $(slot_manifest_value "$file" e2e_user) == "bd_e2e_$run_id" &&
+        $(slot_manifest_value "$file" e2e_index) == "posts_e2e_$run_id" &&
+        $(slot_manifest_value "$file" e2e_namespace) == "bytedepth:e2e:$run_id:" ]] || {
+        slot_die 'manifest resources are not bound to their profile'
+        return 1
+    }
     for profile in it e2e; do
         for kind in mysql user meili redis; do
             case $kind in
@@ -66,6 +77,19 @@ require_manifest() {
     [[ $(slot_manifest_value "$file" it_redis_db) == 14 && $(slot_manifest_value "$file" e2e_redis_db) == 15 ]] || { slot_die 'invalid reserved Redis DBs'; return; }
     slot_root_directory "$(dirname "$file")" || return
     require_redis_capacity "${BYTEDEPTH_TEST_REDIS_CAPACITY:?}" "${BYTEDEPTH_TEST_STAGING_REDIS_DB:?}" "$(slot_manifest_value "$file" it_redis_db)" "$(slot_manifest_value "$file" e2e_redis_db)"
+}
+
+validate_fixture() {
+    local fixture="$1"
+    [[ -f $fixture && ! -L $fixture ]] || { slot_die 'fixture missing'; return 1; }
+    for token in article category admin; do
+        rg -qi "INSERT[[:space:]]+INTO[[:space:]]+.*$token" "$fixture" || { slot_die "fixture lacks $token insert"; return 1; }
+    done
+    rg -q '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || { slot_die 'fixture lacks administrator password hash'; return 1; }
+    if rg -n -i '(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|TABLE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(^|[[:space:];])[a-z0-9_]+\.(post|article|category|user|users|admin)' "$fixture"; then
+        slot_die 'fixture contains unsafe SQL or qualified production tables'
+        return 1
+    fi
 }
 
 mysql_exec() {
@@ -111,9 +135,15 @@ write_resource_digest() {
 }
 
 staging_resource_digest() {
-    local staging_db="$1" redis_keys meili_stats
+    local staging_db="$1" redis_snapshot meili_stats key value_hash ttl
     [[ $staging_db =~ ^[0-9]+$ && $staging_db != "$BYTEDEPTH_TEST_IT_REDIS_DB" && $staging_db != "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'invalid staging Redis DB'; return; }
-    redis_keys="$(redis-cli -n "$staging_db" --scan | LC_ALL=C sort)" || return
+    redis_snapshot="$(redis-cli -n "$staging_db" --scan | LC_ALL=C sort | while IFS= read -r key; do
+        [[ -n $key ]] || continue
+        value_hash="$(redis-cli -n "$staging_db" --raw DUMP "$key" | shasum -a 256 | awk '{print $1}')" || exit 1
+        ttl="$(redis-cli -n "$staging_db" PTTL "$key")" || exit 1
+        [[ $ttl =~ ^-?[0-9]+$ ]] || exit 1
+        printf '%s\t%s\t%s\n' "$key" "$ttl" "$value_hash"
+    done)" || return
     meili_stats="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/stats" | jq -cS .)" || return
-    printf '%s\n%s\n' "$redis_keys" "$meili_stats" | shasum -a 256 | awk '{print $1}'
+    printf '%s\n%s\n' "$redis_snapshot" "$meili_stats" | shasum -a 256 | awk '{print $1}'
 }

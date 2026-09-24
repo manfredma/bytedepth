@@ -47,4 +47,27 @@ fail_without_calls 'KEYS *' bash -c 'source "$1"; redis_scan_delete 14 "bytedept
 fail_without_calls 'wildcard namespace' bash -c 'source "$1"; redis_scan_delete 14 "*"' _ "$slot"
 # shellcheck disable=SC2016
 fail_without_calls 'missing Redis capacity' bash -c 'source "$1"; require_redis_capacity 8 0 14 15' _ "$slot"
+
+cat > "$tmp/safe-fixture.sql" <<'SAFE_FIXTURE'
+INSERT INTO article (id, title) VALUES (1, 'fixture');
+INSERT INTO category (id, name) VALUES (1, 'fixture');
+INSERT INTO admin (id, password_hash) VALUES (1, '$argon2id$v=19$m=1$fixture');
+SAFE_FIXTURE
+validate_fixture_cmd="source \"\$1\"; validate_fixture \"\$2\""
+bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/safe-fixture.sql"
+cat > "$tmp/unsafe-fixture.sql" <<'UNSAFE_FIXTURE'
+INSERT INTO article (id, title) VALUES (1, 'fixture');
+INSERT INTO category (id, name) VALUES (1, 'fixture');
+INSERT INTO admin (id, password_hash) VALUES (1, '$argon2id$v=19$m=1$fixture');
+USE bytedepth;
+DELETE FROM article;
+UNSAFE_FIXTURE
+fail_without_calls 'fixture database switch or destructive SQL' bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/unsafe-fixture.sql"
+
+stop_line="$(rg -n 'systemctl stop bytedepth-test-slot\.service' "$root/deploy/teardown-staging-test-slot.sh" | cut -d: -f1)"
+delete_line="$(rg -n 'redis_scan_delete|DROP USER|rm -r --' "$root/deploy/teardown-staging-test-slot.sh" | head -1 | cut -d: -f1)"
+[[ $stop_line =~ ^[0-9]+$ && $delete_line =~ ^[0-9]+$ && $stop_line -lt $delete_line ]] || {
+    printf 'FAIL: teardown must stop test slot before destructive cleanup\n' >&2
+    exit 1
+}
 printf 'PASS: staging test slot negative contracts\n'
