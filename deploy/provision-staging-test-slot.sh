@@ -66,11 +66,23 @@ provision_cleanup() {
             e2e) key_uid="$e2e_key_uid"; index="$e2e_index"; db="$e2e_db"; user="$e2e_user"; password="$e2e_password"; key_created=$e2e_key_created; index_created=$e2e_index_created; user_created=$e2e_user_created; db_created=$e2e_db_created ;;
         esac
         if (( index_created != 0 )); then
-            task="$(curl -fsS -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index" | jq -er '.taskUid')" &&
-                meili_wait_task "$task" || cleanup_failed=1
+            delete_body="$(mktemp)"
+            if index_status="$(curl -sS -o "$delete_body" -w '%{http_code}' -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index")"; then
+                if [[ $index_status == 404 ]]; then
+                    :
+                elif [[ $index_status =~ ^2[0-9][0-9] ]]; then
+                    task="$(jq -er '.taskUid' < "$delete_body")" && meili_wait_task "$task" || cleanup_failed=1
+                else
+                    cleanup_failed=1
+                fi
+            else
+                cleanup_failed=1
+            fi
+            rm -f -- "$delete_body"
         fi
         if (( key_created != 0 )); then
-            [[ $(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid") == 204 ]] || cleanup_failed=1
+            key_status="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid")" || key_status=000
+            [[ $key_status == 204 || $key_status == 404 ]] || cleanup_failed=1
         fi
         if (( user_created != 0 )); then
             mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "DROP USER IF EXISTS '$user'@'localhost'" || cleanup_failed=1
@@ -156,13 +168,13 @@ for profile in it e2e; do
         *) slot_die "unsupported test profile: $profile"; exit 1 ;;
     esac
     key_payload="$(jq -nc --arg uid "$key_uid" --arg index "$index" '{uid:$uid,name:"bytedepth staging test slot",actions:["*"],indexes:[$index],expiresAt:null}')"
-    if ! key_response="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "$key_payload" "$BYTEDEPTH_TEST_MEILI_URL/keys")"; then
-        key_response="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid")" || { slot_die 'Meili key creation failed and resource identity is unknown'; exit 1; }
-    fi
     case "$profile" in
         it) it_key_created=1 ;;
         e2e) e2e_key_created=1 ;;
     esac
+    if ! key_response="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "$key_payload" "$BYTEDEPTH_TEST_MEILI_URL/keys")"; then
+        key_response="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid")" || { slot_die 'Meili key creation failed and resource identity is unknown'; exit 1; }
+    fi
     scoped_key="$(printf '%s' "$key_response" | jq -er '.key')"
     [[ $scoped_key =~ ^[A-Za-z0-9_-]+$ ]] || { slot_die 'invalid scoped Meili key'; exit 1; }
     env_file="$run_dir/staging-$profile.env"
@@ -214,18 +226,14 @@ for profile in it e2e; do
     MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" < "$BYTEDEPTH_TEST_FIXTURE"
     [[ $(MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" --batch --skip-column-names -e 'SELECT DATABASE()') == "$db" ]] || { slot_die 'MySQL connection did not select test DB'; exit 1; }
     index_task=''
+    case "$profile" in
+        it) it_index_created=1 ;;
+        e2e) e2e_index_created=1 ;;
+    esac
     if index_response="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "{\"uid\":\"$index\",\"primaryKey\":\"id\"}" "$BYTEDEPTH_TEST_MEILI_URL/indexes")"; then
-        case "$profile" in
-            it) it_index_created=1 ;;
-            e2e) e2e_index_created=1 ;;
-        esac
         index_task="$(printf '%s' "$index_response" | jq -er '.taskUid')" || { slot_die 'Meili index task identity missing'; exit 1; }
     else
         [[ $(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index" | jq -er '.uid') == "$index" ]] || { slot_die 'Meili index creation failed and resource identity is unknown'; exit 1; }
-        case "$profile" in
-            it) it_index_created=1 ;;
-            e2e) e2e_index_created=1 ;;
-        esac
     fi
     [[ -z $index_task ]] || meili_wait_task "$index_task"
     task="$(printf '%s' "$settings" | curl -fsS -X PATCH -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' --data-binary @- "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index/settings" | jq -er '.taskUid')"

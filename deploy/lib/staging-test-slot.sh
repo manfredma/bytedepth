@@ -87,7 +87,7 @@ validate_fixture() {
     done
     rg -q '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || { slot_die 'fixture lacks administrator password hash'; return 1; }
     normalized_fixture="$(tr '\n\r\t' ' ' < "$fixture")"
-    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])\\[!#.]|(^|[[:space:];])(system|delimiter|pager|tee|source|use|connect|status|warnings|nowarning|charset|prompt|rehash|edit|go|print)([[:space:];]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`[^`]*`[[:space:]]*\.)|(`?[a-z0-9_-]+`?[[:space:]]*\.)' <<< "$normalized_fixture"; then
+    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])\\[[:alpha:]!#.]|(^|[[:space:];])(system|delimiter|pager|tee|source|use|connect|status|warnings|nowarning|charset|prompt|rehash|edit|go|print)([[:space:];]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`[^`]*`[[:space:]]*\.)|(`?[a-z0-9_-]+`?[[:space:]]*\.)' <<< "$normalized_fixture"; then
         slot_die 'fixture contains unsafe SQL or qualified production tables'
         return 1
     fi
@@ -136,21 +136,48 @@ write_resource_digest() {
 }
 
 staging_resource_snapshot() {
-    local staging_db="$1" redis_snapshot meili_stats key key_id value_hash ttl ttl_state
+    local staging_db="$1" redis_snapshot meili_stats record key_hex dump_hex ttl ttl_state key_id value_hash scan_file failed
     [[ $staging_db =~ ^[0-9]+$ && $staging_db != "$BYTEDEPTH_TEST_IT_REDIS_DB" && $staging_db != "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'invalid staging Redis DB'; return; }
-    redis_snapshot="$(redis-cli -n "$staging_db" --json --scan | jq -j '.[] , "\u0000"' | while IFS= read -r -d $'\0' key; do
-        [[ -n $key ]] || continue
-        key_id="$(printf '%s' "$key" | shasum -a 256 | awk '{print $1}')" || exit 1
-        value_hash="$(redis-cli -n "$staging_db" --raw DUMP "$key" | shasum -a 256 | awk '{print $1}')" || exit 1
-        ttl="$(redis-cli -n "$staging_db" PTTL "$key")" || exit 1
+    scan_file="$(mktemp)"
+    if ! redis-cli -n "$staging_db" --raw EVAL '
+local function hex(value)
+  local result = {}
+  for i = 1, #value do result[i] = string.format("%02x", string.byte(value, i)) end
+  return table.concat(result)
+end
+local cursor = "0"
+local rows = {}
+repeat
+  local reply = redis.call("SCAN", cursor)
+  cursor = reply[1]
+  for _, key in ipairs(reply[2]) do
+    table.insert(rows, hex(key) .. "\t" .. redis.call("PTTL", key) .. "\t" .. hex(redis.call("DUMP", key) or ""))
+  end
+until cursor == "0"
+return rows
+' 0 > "$scan_file"; then
+        rm -f -- "$scan_file"
+        return 1
+    fi
+    redis_snapshot=''
+    failed=0
+    while IFS= read -r record || [[ -n $record ]]; do
+        [[ $record == *$'\t'*$'\t'* ]] || { failed=1; break; }
+        IFS=$'\t' read -r key_hex ttl dump_hex <<< "$record"
+        [[ -n $dump_hex ]] || { failed=1; break; }
+        key_id="$(printf '%s' "$key_hex" | shasum -a 256 | awk '{print $1}')" || { failed=1; break; }
+        value_hash="$(printf '%s' "$dump_hex" | shasum -a 256 | awk '{print $1}')" || { failed=1; break; }
         case "$ttl" in
             -1) ttl_state=persistent ;;
             -2) continue ;;
             [0-9]*) ttl_state=expiring ;;
-            *) exit 1 ;;
+            *) failed=1; break ;;
         esac
-        printf 'redis:%s\t%s\t%s\t%s\n' "$key_id" "$ttl_state" "$value_hash" "$ttl"
-    done)" || return
+        redis_snapshot+="redis:$key_id"$'\t'"$ttl_state"$'\t'"$value_hash"$'\t'"$ttl"$'\n'
+    done < "$scan_file"
+    rm -f -- "$scan_file"
+    (( failed == 0 )) || { slot_die 'invalid Redis snapshot response'; return 1; }
+    redis_snapshot="${redis_snapshot%$'\n'}"
     meili_stats="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/stats" | jq -cS .)" || return
     printf 'meta\tcaptured_at\t%s\t0\n' "$(date +%s)"
     printf '%s\n' "$redis_snapshot"
