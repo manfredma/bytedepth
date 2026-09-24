@@ -25,10 +25,11 @@ source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 require_named_ref() {
     local ref="$1"
     validate_artifact_ref "$ref" || { printf 'Refusing: candidate ref contains unsafe characters.\n' >&2; exit 1; }
-    git -C "$SOURCE_ROOT" ls-remote --heads --tags origin "$ref" | grep -F . >/dev/null || {
+    if ! git -C "$SOURCE_ROOT" ls-remote --exit-code --heads origin "refs/heads/$ref" >/dev/null 2>&1 \
+        && ! git -C "$SOURCE_ROOT" ls-remote --exit-code --tags origin "refs/tags/$ref" >/dev/null 2>&1; then
         printf 'Refusing: %s is not a named branch or tag on origin.\n' "$ref" >&2
         exit 1
-    }
+    fi
 }
 
 build_candidate() {

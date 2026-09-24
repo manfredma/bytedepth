@@ -30,5 +30,11 @@ if rg -n -i 'docker|compose|docker_build_and_rollout|bootstrap-staging-runtime|m
     printf 'Staging deployment must build externally and install a native artifact.\n' >&2
     exit 1
 fi
+rg -Fq 'ls-remote --exit-code --heads' "$SCRIPT"
+rg -Fq 'ls-remote --exit-code --tags' "$SCRIPT"
+if rg -Fq 'ls-remote --heads --tags' "$SCRIPT"; then
+    printf 'Staging deployment must check remote branches and tags separately.\n' >&2
+    exit 1
+fi
 
 printf 'Staging deployment contract passed.\n'
