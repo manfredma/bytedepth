@@ -6,6 +6,7 @@ import manfred.bytedepth.app.analytics.ViewLogRetentionPolicy;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.springframework.boot.SpringApplication;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.ZoneId;
 
@@ -31,5 +32,13 @@ class BytedepthApplicationTest {
         var policy = new ViewLogRetentionPolicy(7, ZoneId.of("Asia/Shanghai"));
 
         assertNotNull(new BytedepthApplication().archiveViewLogsCmdExe(port, policy));
+    }
+
+    @Test
+    void providesAQualifiedAsyncTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new BytedepthApplication().taskExecutor();
+
+        assertNotNull(executor);
+        assertNotNull(executor.getThreadNamePrefix());
     }
 }

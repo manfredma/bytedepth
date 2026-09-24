@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.NoSuchElementException;
 
@@ -24,7 +25,8 @@ public class GlobalExceptionHandler {
     }
 
     /** 文章不存在 or 已删除 → 404 页面 */
-    @ExceptionHandler({NoSuchElementException.class, ResponseStatusException.class})
+    @ExceptionHandler({NoSuchElementException.class, ResponseStatusException.class,
+            NoResourceFoundException.class})
     public ModelAndView handleNotFound(Exception ex) {
         if (ex instanceof ResponseStatusException rse
                 && rse.getStatusCode() != HttpStatus.NOT_FOUND) {

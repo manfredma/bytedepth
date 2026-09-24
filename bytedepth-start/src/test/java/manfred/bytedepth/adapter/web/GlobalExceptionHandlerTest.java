@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.servlet.ModelAndView;
 
 class GlobalExceptionHandlerTest {
@@ -27,6 +28,18 @@ class GlobalExceptionHandlerTest {
     void rendersNotFoundPageForNotFoundResponseStatus() {
         ModelAndView result = handler.handleNotFound(
                 new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        assertThat(result.getViewName()).isEqualTo("error/404");
+        assertThat(result.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void rendersNotFoundPageForMissingStaticResource() {
+        ModelAndView result = handler.handleNotFound(
+                new NoResourceFoundException(
+                        org.springframework.http.HttpMethod.GET,
+                        "css/images/PTZOptics_powerby.png",
+                        "/css/images/PTZOptics_powerby.png"));
 
         assertThat(result.getViewName()).isEqualTo("error/404");
         assertThat(result.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);

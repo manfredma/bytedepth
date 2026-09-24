@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.time.Clock;
@@ -40,6 +41,16 @@ public class BytedepthApplication {
     ArchiveViewLogsCmdExe archiveViewLogsCmdExe(ViewLogArchivePort archivePort,
                                                 ViewLogRetentionPolicy retentionPolicy) {
         return new ArchiveViewLogsCmdExe(archivePort, retentionPolicy);
+    }
+
+    @Bean(name = "taskExecutor")
+    ThreadPoolTaskExecutor taskExecutor() {
+        var executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("bytedepth-async-");
+        return executor;
     }
 
     @Bean(name = "viewLogArchiveScheduler")
