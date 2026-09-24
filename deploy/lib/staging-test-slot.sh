@@ -87,7 +87,7 @@ validate_fixture() {
     done
     rg -q '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || { slot_die 'fixture lacks administrator password hash'; return 1; }
     normalized_fixture="$(tr '\n\r\t' ' ' < "$fixture")"
-    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])\\[!#.]|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`[^`]*`[[:space:]]*\.)|(`?[a-z0-9_-]+`?[[:space:]]*\.)' <<< "$normalized_fixture"; then
+    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])\\[!#.]|(^|[[:space:];])(system|delimiter|pager|tee|source|use|connect|status|warnings|nowarning|charset|prompt|rehash|edit|go|print)([[:space:];]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`[^`]*`[[:space:]]*\.)|(`?[a-z0-9_-]+`?[[:space:]]*\.)' <<< "$normalized_fixture"; then
         slot_die 'fixture contains unsafe SQL or qualified production tables'
         return 1
     fi
@@ -138,7 +138,7 @@ write_resource_digest() {
 staging_resource_snapshot() {
     local staging_db="$1" redis_snapshot meili_stats key key_id value_hash ttl ttl_state
     [[ $staging_db =~ ^[0-9]+$ && $staging_db != "$BYTEDEPTH_TEST_IT_REDIS_DB" && $staging_db != "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'invalid staging Redis DB'; return; }
-    redis_snapshot="$(redis-cli -n "$staging_db" --scan | LC_ALL=C sort | while IFS= read -r key; do
+    redis_snapshot="$(redis-cli -n "$staging_db" --json --scan | jq -j '.[] , "\u0000"' | while IFS= read -r -d $'\0' key; do
         [[ -n $key ]] || continue
         key_id="$(printf '%s' "$key" | shasum -a 256 | awk '{print $1}')" || exit 1
         value_hash="$(redis-cli -n "$staging_db" --raw DUMP "$key" | shasum -a 256 | awk '{print $1}')" || exit 1
@@ -149,7 +149,7 @@ staging_resource_snapshot() {
             [0-9]*) ttl_state=expiring ;;
             *) exit 1 ;;
         esac
-        printf 'redis:%s\t%s\t%s\n' "$key_id" "$ttl_state" "$value_hash"
+        printf 'redis:%s\t%s\t%s\t%s\n' "$key_id" "$ttl_state" "$value_hash" "$ttl"
     done)" || return
     meili_stats="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/stats" | jq -cS .)" || return
     printf 'meta\tcaptured_at\t%s\t0\n' "$(date +%s)"
@@ -178,7 +178,7 @@ verify_staging_resource_baseline() {
             elapsed = (current_time - baseline_time) * 1000
             for (key in baseline_type) {
                 if (!(key in current_type)) {
-                    if (baseline_type[key] == "expiring") continue
+                    if (baseline_type[key] == "expiring" && baseline_ttl[key] - elapsed <= 10000) continue
                     exit 1
                 }
                 if (baseline_type[key] != current_type[key] || baseline_hash[key] != current_hash[key]) exit 1
