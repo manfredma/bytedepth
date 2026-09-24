@@ -38,6 +38,8 @@ require_text_transition 'apt-get install -y --no-install-recommends musl'
 require_text_transition '/usr/lib/x86_64-linux-musl/libgcc_s.so.1'
 require_text_transition 'docker exec "$DOCKER_MEILI" /bin/meilisearch --version'
 require_text_transition 'docker exec "$DOCKER_MEILI" /bin/sh -c '\''cat /bin/meilisearch'\'''
+require_text_transition 'docker exec "$DOCKER_MEILI" /bin/sh -c '\''curl --fail --silent --show-error -X POST'
+require_text_transition 'command -v jq >/dev/null'
 if rg -n 'docker compose|docker-compose' "$TRANSITION" >/dev/null; then
     printf 'Blue/green transition must not recreate the old Compose stack.\n' >&2
     exit 1

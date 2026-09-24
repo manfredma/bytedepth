@@ -61,6 +61,8 @@ sql_escape() { printf '%s' "$1" | sed "s/'/''/g"; }
 
 require_docker_stack() {
     command -v docker >/dev/null
+    command -v curl >/dev/null
+    command -v jq >/dev/null
     for container in "$DOCKER_MYSQL" "$DOCKER_REDIS" "$DOCKER_MEILI" "$DOCKER_APP" "$DOCKER_NGINX"; do
         docker inspect "$container" >/dev/null
     done
@@ -253,9 +255,9 @@ migrate_meilisearch() {
         rm -f /tmp/meilisearch-1.7.6-linux-amd64
     fi
     /usr/local/bin/meilisearch --version | grep -Fq '1.7.6'
-    task="$(curl --fail --silent --show-error -X POST -H "Authorization: Bearer $meili_key" http://127.0.0.1:7700/snapshots | jq -er '.taskUid')"
+    task="$(docker exec "$DOCKER_MEILI" /bin/sh -c 'curl --fail --silent --show-error -X POST -H "Authorization: Bearer $MEILI_MASTER_KEY" http://127.0.0.1:7700/snapshots' | jq -er '.taskUid')"
     for _ in {1..60}; do
-        status="$(curl --fail --silent --show-error -H "Authorization: Bearer $meili_key" "http://127.0.0.1:7700/tasks/$task" | jq -er '.status')"
+        status="$(docker exec "$DOCKER_MEILI" /bin/sh -c "curl --fail --silent --show-error -H \"Authorization: Bearer \$MEILI_MASTER_KEY\" http://127.0.0.1:7700/tasks/$task" | jq -er '.status')"
         [[ "$status" == succeeded ]] && break
         [[ "$status" == failed ]] && return 1
         sleep 2
