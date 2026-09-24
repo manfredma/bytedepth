@@ -216,7 +216,6 @@ for profile in it e2e; do
         fi
         [[ $db_count == 1 ]] || { slot_die 'database creation was not confirmed'; exit 1; }
     fi
-    grant_db="${db//_/\\_}"
     case "$profile" in
         it) it_user_created=1 ;;
         e2e) e2e_user_created=1 ;;
@@ -229,10 +228,13 @@ for profile in it e2e; do
         fi
         [[ $user_count == 1 ]] || { slot_die 'user creation was not confirmed'; exit 1; }
     fi
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
+    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "GRANT ALL PRIVILEGES ON \`$db\`.* TO '$user'@'localhost'"
     grants="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SHOW GRANTS FOR '$user'@'localhost'")"
-    expected_grant_line="GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
-    expected_usage_line="GRANT USAGE ON *.* TO '$user'@'localhost'"
+    # MySQL 8.4 emits quoted account names with backticks in SHOW GRANTS,
+    # even though CREATE USER accepts SQL string literals. Compare the actual
+    # canonical output so a valid database-scoped grant is not rejected.
+    expected_grant_line="GRANT ALL PRIVILEGES ON \`$db\`.* TO \`$user\`@\`localhost\`"
+    expected_usage_line="GRANT USAGE ON *.* TO \`$user\`@\`localhost\`"
     expected_grant_count=0
     while IFS= read -r grant; do
         grant="${grant%;}"

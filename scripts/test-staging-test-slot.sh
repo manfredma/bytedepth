@@ -150,6 +150,9 @@ done
 
 rg -q 'state_uncertain=1' "$root/deploy/provision-staging-test-slot.sh"
 rg -q 'cleanup_failed=1' "$root/deploy/provision-staging-test-slot.sh"
+rg -Fq 'expected_grant_line="GRANT ALL PRIVILEGES ON \`$db\`.* TO \`$user\`@\`localhost\`"' "$root/deploy/provision-staging-test-slot.sh"
+rg -Fq 'expected_usage_line="GRANT USAGE ON *.* TO \`$user\`@\`localhost\`"' "$root/deploy/provision-staging-test-slot.sh"
+! rg -Fq 'grant_db="${db//_/\\_}"' "$root/deploy/provision-staging-test-slot.sh"
 
 grep -Fqx '    if (( state_uncertain != 0 )); then' <(sed -n '1,90p' "$root/deploy/provision-staging-test-slot.sh") || {
     printf 'FAIL: uncertain provision state must be preserved without destructive cleanup\n' >&2
