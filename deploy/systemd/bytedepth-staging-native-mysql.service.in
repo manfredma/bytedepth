@@ -4,10 +4,10 @@ After=local-fs.target network.target
 Before=bytedepth-staging-native-app.service
 
 [Service]
-Type=notify
+Type=simple
 User=mysql
 Group=mysql
-ExecStart=/usr/sbin/mysqld --datadir=__NATIVE_ROOT__/mysql --bind-address=127.0.0.1 --port=__MYSQL_PORT__ --socket=/run/bytedepth-staging-native/mysql.sock --pid-file=/run/bytedepth-staging-native/mysql.pid --log-error=__NATIVE_ROOT__/mysql/error.log
+ExecStart=/usr/sbin/mysqld --datadir=__NATIVE_ROOT__/mysql --bind-address=127.0.0.1 --port=__MYSQL_PORT__ --socket=/run/bytedepth-staging-native/mysql.sock --pid-file=/run/bytedepth-staging-native/mysql.pid --log-error=__NATIVE_ROOT__/mysql/error.log --lower-case-table-names=1
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5s

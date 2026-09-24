@@ -52,7 +52,7 @@ getent passwd bytedepth >/dev/null || useradd --system --gid bytedepth --home-di
 getent group meilisearch >/dev/null || groupadd --system meilisearch
 getent passwd meilisearch >/dev/null || useradd --system --gid meilisearch --home-dir /nonexistent --shell /usr/sbin/nologin meilisearch
 
-install -d -o root -g root -m 0750 "$native_root" "$native_root/mysql" "$native_root/redis" "$native_root/meilisearch" "$native_root/images" "$native_root/images-test"
+install -d -o root -g mysql -m 0750 "$native_root" "$native_root/mysql" "$native_root/redis" "$native_root/meilisearch" "$native_root/images" "$native_root/images-test"
 chown mysql:mysql "$native_root/mysql"
 chown redis:redis "$native_root/redis"
 chown meilisearch:meilisearch "$native_root/meilisearch"
