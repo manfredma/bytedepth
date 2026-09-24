@@ -33,7 +33,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 证书脚本必须 fail-closed 校验证书有效期、证书/私钥匹配、同步配置与 SSH 私钥权限；生产发布 SSH 必须使用显式且已存在的 `known_hosts`，禁止首次连接自动接受主机密钥。
 - 合并发布时优先使用 Fast-forward；仅当合并后 `main` HEAD 与 staging 已验收候选完整 SHA 完全一致时，才允许复用候选部署和 evidence 并跳过重复 staging 流程；SHA 变化必须重新部署并重新生成两份 evidence。发布脚本的 SHA 校验是最终护栏。
 - 本机只用于开发期的纯单元测试、静态检查和快速反馈，不能作为 E2E、集成或验收依据。单元测试的边界是断网、无外部进程仍可执行：内存数据库、进程内 mock/fake（包括进程内 Redis 实现）均可在本机运行；内存实现本身也是单元测试。连接任何独立进程（包括 Redis、MySQL、Flyway、Docker/Testcontainers、Nginx）的测试属于集成测试，必须在 staging 执行；即使这些服务在本机临时可用，也不得将本机结果作为集成验收依据。本机缺少这些条件时不得卡住功能分支的 staging 部署、测试或验收。
-- 知识沉淀必须写入项目文档（`docs/`、`deploy/`、`AGENTS.md` 等），禁止放入 agent 特有的记忆（如 `~/.claude` 下的 memory 文件）；既有 agent 记忆应迁移到项目文档后删除，不得在 agent 记忆与项目文档间重复维护同一事实。
+- 知识沉淀必须写入项目文档（`docs/`、`deploy/`、`AGENTS.md` 等），禁止放入 agent 特有的记忆（如 `~/.claude` 下的 memory 文件）；既有 agent 记忆应迁移到项目文档后删除，不得在 agent 记忆与项目文档间重复维护同一事实。人与 Agent 的开发、验证和验收职责边界以 [职责边界指南](docs/agent-guides/agent-responsibility-boundary.md) 为唯一权威入口。
 - 架构决策使用版本化 ADR，存于 `docs/architecture/decisions/`。设计 spec 之前先判断是否涉及模块边界、外部接口、长期约束或不易回退的方案取舍；需要时由项目所有者确认，先写 ADR 再写 spec，并随对应 PR 评审，不得事后补录。格式、状态流转和索引见 `docs/architecture/decisions/README.md`。
 
 ## 按需读取

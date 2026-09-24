@@ -21,6 +21,7 @@
 - 新增后台权限或调整授权分层：读 [角色与权限模型](security/rbac.md)。
 - 批注与划线写操作的权限管理：读 [批注写操作权限管理](security/annotation-write-permissions.md)。
 - 构建、测试、覆盖率：读 [Maven 指南](agent-guides/maven.md)。
+- 与 Agent 协作、划分开发与验收职责：读 [人与 Agent 的职责边界](agent-guides/agent-responsibility-boundary.md)。
 - 创建 worktree、分支、PR 与受控发布：读 [Git 工作流](engineering/git-workflow.md)。
 - 新项目接入与执行共同质量、staging、Tag 和生产流程：读 [统一发布流程](engineering/unified-release-pipeline.md)。
 - 同步 Obsidian 笔记：读 [同步指南](agent-guides/obsidian-sync.md)。
