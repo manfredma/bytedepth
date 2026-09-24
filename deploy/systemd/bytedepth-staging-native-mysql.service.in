@@ -8,7 +8,7 @@ Type=notify
 User=mysql
 Group=mysql
 ExecStartPre=/usr/bin/install -d -o mysql -g mysql -m 0750 /run/bytedepth-staging-native
-ExecStart=/usr/sbin/mysqld --datadir=__NATIVE_ROOT__/mysql --bind-address=127.0.0.1 --port=__MYSQL_PORT__ --socket=/run/bytedepth-staging-native/mysql.sock --pid-file=/run/bytedepth-staging-native/mysql.pid
+ExecStart=/usr/sbin/mysqld --datadir=__NATIVE_ROOT__/mysql --bind-address=127.0.0.1 --port=__MYSQL_PORT__ --socket=/run/bytedepth-staging-native/mysql.sock --pid-file=/run/bytedepth-staging-native/mysql.pid --log-error=__NATIVE_ROOT__/mysql/error.log
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5s
