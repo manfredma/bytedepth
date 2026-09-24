@@ -98,7 +98,7 @@ build_release_artifact() {
     build_log="$(mktemp)"
     # RETURN runs after the function-local scope has ended under some bash
     # versions. Keep cleanup safe with nounset enabled.
-    trap 'rm -f "${build_log:-}"' RETURN
+    trap '[[ -z "${build_log:-}" ]] || rm -f -- "$build_log"' RETURN
     (
         cd "$source_root" || return 1
         ./mvnw clean install -DskipTests -Dsort.skip=true
