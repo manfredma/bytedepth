@@ -223,7 +223,7 @@ migrate_meilisearch() {
     if [[ ! -x /usr/local/bin/meilisearch ]]; then
         docker_meili_version="$(docker exec "$DOCKER_MEILI" /bin/meilisearch --version)"
         if [[ "$docker_meili_version" == *'1.7.6'* ]]; then
-            docker cp "$DOCKER_MEILI:/bin/meilisearch" /tmp/meilisearch-1.7.6-linux-amd64
+            docker exec "$DOCKER_MEILI" /bin/sh -c 'cat /bin/meilisearch' > /tmp/meilisearch-1.7.6-linux-amd64
         else
             curl -fL --retry 3 --connect-timeout 10 \
                 https://github.com/meilisearch/meilisearch/releases/download/v1.7.6/meilisearch-linux-amd64 \
