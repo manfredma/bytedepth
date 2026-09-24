@@ -28,9 +28,11 @@ BYTEDEPTH_TEST_MEILI_URL="${BYTEDEPTH_TEST_MEILI_URL:-http://127.0.0.1:7700}"
 export BYTEDEPTH_TEST_MEILI_URL
 
 failed=0
-if ! systemctl stop bytedepth-test-slot.service || systemctl is-active --quiet bytedepth-test-slot.service; then
-    slot_die 'test slot service could not be stopped; refusing destructive cleanup'
-    exit 1
+if systemctl is-active --quiet bytedepth-test-slot.service; then
+    if ! systemctl stop bytedepth-test-slot.service || systemctl is-active --quiet bytedepth-test-slot.service; then
+        slot_die 'test slot service could not be stopped; refusing destructive cleanup'
+        exit 1
+    fi
 fi
 for profile in it e2e; do
     db="$(slot_manifest_value "$manifest" "${profile}_db")"

@@ -11,6 +11,8 @@ readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
 readonly STATE_DIR=/var/lib/bytedepth-staging
 readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
 readonly RUNTIME_MANIFEST="$STATE_DIR/runtime/manifest"
+readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository
+readonly SHARED_MAVEN_LOCK=/opt/shared-maven/repository.lock
 source "$SOURCE_ROOT/deploy/lib/timing.sh"
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"

@@ -60,10 +60,11 @@ provision_cleanup() {
     if (( provision_complete != 0 )); then
         return
     fi
-    cleanup_failed=0
     if (( state_uncertain != 0 )); then
-        cleanup_failed=1
+        slot_die 'provision state is uncertain; preserving manifest and all resources for manual recovery'
+        return 1
     fi
+    cleanup_failed=0
     for profile in it e2e; do
         case "$profile" in
             it) key_uid="$it_key_uid"; index="$it_index"; db="$it_db"; user="$it_user"; password="$it_password"; key_created=$it_key_created; index_created=$it_index_created; user_created=$it_user_created; db_created=$it_db_created ;;
