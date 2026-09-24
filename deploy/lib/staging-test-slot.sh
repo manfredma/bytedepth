@@ -87,7 +87,7 @@ validate_fixture() {
     done
     rg -q '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || { slot_die 'fixture lacks administrator password hash'; return 1; }
     normalized_fixture="$(tr '\n\r\t' ' ' < "$fixture")"
-    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|TABLE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`[^`]+`[[:space:]]*\.[[:space:]]*`)|(`?[a-z0-9_-]+`?[[:space:]]*\.)' <<< "$normalized_fixture"; then
+    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|TABLE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`[^`]*`[[:space:]]*\.)|(`?[a-z0-9_-]+`?[[:space:]]*\.)' <<< "$normalized_fixture"; then
         slot_die 'fixture contains unsafe SQL or qualified production tables'
         return 1
     fi
@@ -148,11 +148,11 @@ staging_resource_snapshot() {
             [0-9]*) ttl_state=expiring ;;
             *) exit 1 ;;
         esac
-        printf '%s\t%s\t%s\n' "$key" "$ttl_state" "$value_hash"
+        printf 'redis:%s\t%s\t%s\n' "$key" "$ttl_state" "$value_hash"
     done)" || return
     meili_stats="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/stats" | jq -cS .)" || return
     printf '%s\n' "$redis_snapshot"
-    printf 'meili\t%s\n' "$(printf '%s' "$meili_stats" | shasum -a 256 | awk '{print $1}')"
+    printf 'meili:index\tpersistent\t%s\n' "$(printf '%s' "$meili_stats" | shasum -a 256 | awk '{print $1}')"
 }
 
 verify_staging_resource_baseline() {
