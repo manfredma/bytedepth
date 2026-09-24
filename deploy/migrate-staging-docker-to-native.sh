@@ -269,7 +269,7 @@ migrate_meilisearch() {
     systemctl stop "$BYTEDEPTH_STAGING_MEILI_SERVICE" 2>/dev/null || true
     rm -rf -- "$BYTEDEPTH_NATIVE_ROOT/meilisearch"/*
     install -d -o meilisearch -g meilisearch -m 0750 "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
-    timeout 180 /usr/local/bin/meilisearch --import-snapshot "$OLD_MEILI_SNAPSHOT" --db-path "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
+    timeout 600 /usr/local/bin/meilisearch --import-snapshot "$OLD_MEILI_SNAPSHOT" --db-path "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
     chown -R meilisearch:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
     systemctl start "$BYTEDEPTH_STAGING_MEILI_SERVICE"
     systemctl is-active --quiet "$BYTEDEPTH_STAGING_MEILI_SERVICE"

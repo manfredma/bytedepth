@@ -40,6 +40,7 @@ require_text_transition 'docker exec "$DOCKER_MEILI" /bin/meilisearch --version'
 require_text_transition 'docker exec "$DOCKER_MEILI" /bin/sh -c '\''cat /bin/meilisearch'\'''
 require_text_transition 'docker exec "$DOCKER_MEILI" /bin/sh -c '\''curl --fail --silent --show-error -X POST'
 require_text_transition 'command -v jq >/dev/null'
+require_text_transition 'timeout 600 /usr/local/bin/meilisearch --import-snapshot'
 if rg -n 'docker compose|docker-compose' "$TRANSITION" >/dev/null; then
     printf 'Blue/green transition must not recreate the old Compose stack.\n' >&2
     exit 1
