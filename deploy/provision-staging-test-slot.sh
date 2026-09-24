@@ -156,7 +156,9 @@ for profile in it e2e; do
         *) slot_die "unsupported test profile: $profile"; exit 1 ;;
     esac
     key_payload="$(jq -nc --arg uid "$key_uid" --arg index "$index" '{uid:$uid,name:"bytedepth staging test slot",actions:["*"],indexes:[$index],expiresAt:null}')"
-    key_response="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "$key_payload" "$BYTEDEPTH_TEST_MEILI_URL/keys")" || { slot_die 'Meili key creation failed'; exit 1; }
+    if ! key_response="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "$key_payload" "$BYTEDEPTH_TEST_MEILI_URL/keys")"; then
+        key_response="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid")" || { slot_die 'Meili key creation failed and resource identity is unknown'; exit 1; }
+    fi
     case "$profile" in
         it) it_key_created=1 ;;
         e2e) e2e_key_created=1 ;;
@@ -177,13 +179,17 @@ for profile in it e2e; do
         e2e) db="$e2e_db"; user="$e2e_user"; password="$e2e_password"; index="$e2e_index" ;;
         *) slot_die "unsupported test profile: $profile"; exit 1 ;;
     esac
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE DATABASE \`$db\`"
+    if ! mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE DATABASE \`$db\`"; then
+        [[ $(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'") == 1 ]] || { slot_die 'database creation failed and resource identity is unknown'; exit 1; }
+    fi
     case "$profile" in
         it) it_db_created=1 ;;
         e2e) e2e_db_created=1 ;;
     esac
     grant_db="${db//_/\\_}"
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'"
+    if ! mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'"; then
+        [[ $(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM mysql.user WHERE user='$user' AND host='localhost'") == 1 ]] || { slot_die 'user creation failed and resource identity is unknown'; exit 1; }
+    fi
     case "$profile" in
         it) it_user_created=1 ;;
         e2e) e2e_user_created=1 ;;
@@ -192,22 +198,36 @@ for profile in it e2e; do
     grants="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SHOW GRANTS FOR '$user'@'localhost'")"
     expected_grant_line="GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
     expected_usage_line="GRANT USAGE ON *.* TO '$user'@'localhost'"
+    expected_grant_count=0
     while IFS= read -r grant; do
         grant="${grant%;}"
-        [[ -z $grant || $grant == "$expected_grant_line" || $grant == "$expected_usage_line" ]] || {
+        if [[ -z $grant ]]; then
+            continue
+        elif [[ $grant == "$expected_grant_line" ]]; then
+            expected_grant_count=$((expected_grant_count + 1))
+        elif [[ $grant != "$expected_usage_line" ]]; then
             slot_die 'test database grant is broader than the manifest database'
             exit 1
-        }
+        fi
     done <<< "$grants"
+    [[ $expected_grant_count == 1 ]] || { slot_die 'exact test database grant is missing or duplicated'; exit 1; }
     MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" < "$BYTEDEPTH_TEST_FIXTURE"
     [[ $(MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" --batch --skip-column-names -e 'SELECT DATABASE()') == "$db" ]] || { slot_die 'MySQL connection did not select test DB'; exit 1; }
-    index_response="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "{\"uid\":\"$index\",\"primaryKey\":\"id\"}" "$BYTEDEPTH_TEST_MEILI_URL/indexes")" || { slot_die 'Meili index creation failed'; exit 1; }
-    case "$profile" in
-        it) it_index_created=1 ;;
-        e2e) e2e_index_created=1 ;;
-    esac
-    task="$(printf '%s' "$index_response" | jq -er '.taskUid')"
-    meili_wait_task "$task"
+    index_task=''
+    if index_response="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "{\"uid\":\"$index\",\"primaryKey\":\"id\"}" "$BYTEDEPTH_TEST_MEILI_URL/indexes")"; then
+        case "$profile" in
+            it) it_index_created=1 ;;
+            e2e) e2e_index_created=1 ;;
+        esac
+        index_task="$(printf '%s' "$index_response" | jq -er '.taskUid')" || { slot_die 'Meili index task identity missing'; exit 1; }
+    else
+        [[ $(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index" | jq -er '.uid') == "$index" ]] || { slot_die 'Meili index creation failed and resource identity is unknown'; exit 1; }
+        case "$profile" in
+            it) it_index_created=1 ;;
+            e2e) e2e_index_created=1 ;;
+        esac
+    fi
+    [[ -z $index_task ]] || meili_wait_task "$index_task"
     task="$(printf '%s' "$settings" | curl -fsS -X PATCH -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' --data-binary @- "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index/settings" | jq -er '.taskUid')"
     meili_wait_task "$task"
     [[ $(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index" | jq -er '.uid') == "$index" ]] || { slot_die 'Meili index identity mismatch'; exit 1; }

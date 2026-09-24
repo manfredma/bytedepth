@@ -87,7 +87,7 @@ validate_fixture() {
     done
     rg -q '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || { slot_die 'fixture lacks administrator password hash'; return 1; }
     normalized_fixture="$(tr '\n\r\t' ' ' < "$fixture")"
-    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|TABLE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`[^`]*`[[:space:]]*\.)|(`?[a-z0-9_-]+`?[[:space:]]*\.)' <<< "$normalized_fixture"; then
+    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])\\[!#.]|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(`[^`]*`[[:space:]]*\.)|(`?[a-z0-9_-]+`?[[:space:]]*\.)' <<< "$normalized_fixture"; then
         slot_die 'fixture contains unsafe SQL or qualified production tables'
         return 1
     fi
@@ -152,8 +152,9 @@ staging_resource_snapshot() {
         printf 'redis:%s\t%s\t%s\n' "$key_id" "$ttl_state" "$value_hash"
     done)" || return
     meili_stats="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/stats" | jq -cS .)" || return
+    printf 'meta\tcaptured_at\t%s\t0\n' "$(date +%s)"
     printf '%s\n' "$redis_snapshot"
-    printf 'meili:index\tpersistent\t%s\n' "$(printf '%s' "$meili_stats" | shasum -a 256 | awk '{print $1}')"
+    printf 'meili:index\tpersistent\t%s\t-1\n' "$(printf '%s' "$meili_stats" | shasum -a 256 | awk '{print $1}')"
 }
 
 verify_staging_resource_baseline() {
@@ -165,15 +166,26 @@ verify_staging_resource_baseline() {
         return 1
     fi
     if ! awk -F '\t' '
-        FNR == NR { baseline_type[$1] = $2; baseline_hash[$1] = $3; next }
-        { current_type[$1] = $2; current_hash[$1] = $3 }
+        FNR == NR {
+            if ($1 == "meta") { baseline_time = $3; next }
+            baseline_type[$1] = $2; baseline_hash[$1] = $3; baseline_ttl[$1] = $4; next
+        }
+        {
+            if ($1 == "meta") { current_time = $3; next }
+            current_type[$1] = $2; current_hash[$1] = $3; current_ttl[$1] = $4
+        }
         END {
+            elapsed = (current_time - baseline_time) * 1000
             for (key in baseline_type) {
                 if (!(key in current_type)) {
                     if (baseline_type[key] == "expiring") continue
                     exit 1
                 }
                 if (baseline_type[key] != current_type[key] || baseline_hash[key] != current_hash[key]) exit 1
+                if (baseline_type[key] == "expiring") {
+                    expected_ttl = baseline_ttl[key] - elapsed
+                    if (current_ttl[key] < expected_ttl - 10000 || current_ttl[key] > expected_ttl + 10000) exit 1
+                }
             }
             for (key in current_type) if (!(key in baseline_type)) exit 1
         }
