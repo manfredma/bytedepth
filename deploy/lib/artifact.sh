@@ -111,7 +111,7 @@ build_release_artifact() {
         printf 'Artifact build emitted WARNING.\n' >&2
         return 1
     fi
-    jar="$(find "$source_root/bytedepth-start/target" -maxdepth 1 -type f -name '*.jar' ! -name '*original*' -print | sort | head -n 1)"
+    jar="$(find "$source_root/bytedepth-start/target" -maxdepth 1 -type f -name '*.jar' ! -name '*original*' -print -quit)"
     [[ -n "$jar" && -f "$jar" ]] || { printf 'Release JAR was not produced.\n' >&2; return 1; }
     install -m 0644 "$jar" "$output_dir/app.jar"
     built_at="$(date -u +%FT%TZ)"

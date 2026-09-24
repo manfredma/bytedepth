@@ -19,6 +19,10 @@ done
 rg -q 'mvnw clean install -DskipTests -Dsort.skip=true' "$ARTIFACT"
 rg -q 'sha256sum|shasum -a 256' "$ARTIFACT"
 rg -q 'trap .*build_log:-.*\|\| rm -f --.*RETURN' "$ARTIFACT"
+if rg -n 'find .*target.*\|[[:space:]]*sort[[:space:]]*\|[[:space:]]*head' "$ARTIFACT" >/dev/null; then
+    printf 'Artifact builder must not use a pipefail-unsafe head pipeline.\n' >&2
+    exit 1
+fi
 rg -q 'install_release_artifact|switch_current_release' "$STAGING"
 rg -q 'restore_current_release|rollback' "$STAGING"
 rg -q 'systemctl restart "\$BYTEDEPTH_STAGING_APP_SERVICE"' "$STAGING"
