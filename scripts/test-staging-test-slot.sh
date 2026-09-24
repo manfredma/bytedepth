@@ -66,6 +66,28 @@ STAT
 chmod +x "$tmp/bin/stat"
 PATH="$tmp/bin:$PATH" bash -c 'source "$1"; slot_root_private "$2"' _ "$slot" "$private_file"
 
+cat > "$tmp/bin/redis-cli" <<'REDIS_EMPTY'
+#!/usr/bin/env bash
+if [[ "$*" == *' EVAL '* ]]; then
+    printf '\n'
+fi
+REDIS_EMPTY
+chmod +x "$tmp/bin/redis-cli"
+cat > "$tmp/bin/curl" <<'CURL_STATS'
+#!/usr/bin/env bash
+printf '%s\n' '{"numberOfDocuments":0,"isIndexing":false,"fieldDistribution":{}}'
+CURL_STATS
+chmod +x "$tmp/bin/curl"
+BYTEDEPTH_TEST_IT_REDIS_DB=14 \
+BYTEDEPTH_TEST_E2E_REDIS_DB=15 \
+BYTEDEPTH_TEST_MEILI_API_KEY=test-key \
+BYTEDEPTH_TEST_MEILI_URL=http://127.0.0.1:17700 \
+    bash -c 'source "$1"; staging_resource_snapshot 0 > "$2"' _ "$slot" "$tmp/empty-snapshot"
+grep -Fq $'meta\tcaptured_at\t' "$tmp/empty-snapshot" || {
+    printf 'FAIL: empty Redis snapshot was not accepted\n' >&2
+    exit 1
+}
+
 cat > "$tmp/safe-fixture.sql" <<'SAFE_FIXTURE'
 INSERT INTO article (id, title) VALUES (1, 'fixture');
 INSERT INTO category (id, name) VALUES (1, 'fixture');

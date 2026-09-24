@@ -16,6 +16,7 @@
 
 ### Fixed
 
+- 修复 staging 测试槽在 Redis 业务库为空时将 `redis-cli --raw` 的空行误判为非法快照的问题。
 - 修正 staging 隔离测试 fixture 校验器误拒绝 Flyway `V1__...sql` 脚本名的问题，避免合法 schema history 被误判为生产库限定表名。
 - 修正 staging root-only 输入的 Linux 文件 uid/mode 校验，避免 GNU `stat -f` 被误当成 BSD 文件属性查询。
 - 修正 native staging 隔离测试图片根目录权限，避免初始化为应用用户所有导致测试资源前置校验拒绝。

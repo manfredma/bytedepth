@@ -173,6 +173,9 @@ return rows
     redis_snapshot=''
     failed=0
     while IFS= read -r record || [[ -n $record ]]; do
+        # redis-cli --raw prints one empty line for an empty Lua array.  An
+        # empty staging DB is valid; it is not a malformed snapshot record.
+        [[ -n $record ]] || continue
         [[ $record == *$'\t'*$'\t'* ]] || { failed=1; break; }
         IFS=$'\t' read -r key_hex ttl dump_hex <<< "$record"
         [[ -n $dump_hex ]] || { failed=1; break; }
