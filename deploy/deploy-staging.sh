@@ -112,6 +112,18 @@ run_locked_install() {
     release_switched=0
     rm -f "$STATE_DIR/test-history/staging-integration" "$STATE_DIR/test-history/staging-e2e"
 
+    ensure_edge_active_and_reload() {
+        # Restarting the app stops a dependent edge unit via systemd's
+        # Requires= relationship.  A stopped edge cannot be reloaded; start
+        # it first, then perform the reload so both the first deploy and
+        # subsequent deploys have the same deterministic path.
+        if ! systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE"; then
+            systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE"
+        fi
+        systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE"
+        systemctl reload "$BYTEDEPTH_STAGING_EDGE_SERVICE"
+    }
+
     rollback_release() {
         if (( release_switched == 0 )); then
             return 0
@@ -119,7 +131,7 @@ run_locked_install() {
         if [[ -n "$previous_release_path" ]]; then
             restore_current_release "$previous_release_path" || return 1
             systemctl restart "$BYTEDEPTH_STAGING_APP_SERVICE" || return 1
-            systemctl reload "$BYTEDEPTH_STAGING_EDGE_SERVICE" || return 1
+            ensure_edge_active_and_reload || return 1
         else
             systemctl stop "$BYTEDEPTH_STAGING_APP_SERVICE" || return 1
         fi
@@ -180,7 +192,7 @@ run_locked_install() {
     if ! record_timed_phase "$timing_file" app_health verify_running_release "$commit"; then
         fail_deployment app_health
     fi
-    if ! record_timed_phase "$timing_file" nginx_reload systemctl reload "$BYTEDEPTH_STAGING_EDGE_SERVICE"; then
+    if ! record_timed_phase "$timing_file" nginx_reload ensure_edge_active_and_reload; then
         fail_deployment nginx_reload
     fi
     install -d -m 0700 "$STATE_DIR"

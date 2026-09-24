@@ -18,6 +18,8 @@ for contract in \
     'switch_current_release' \
     'BYTEDEPTH_STAGING_APP_SERVICE' \
     'BYTEDEPTH_STAGING_EDGE_SERVICE' \
+    'ensure_edge_active_and_reload' \
+    'systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE"' \
     'load_staging_native_target' \
     'git fetch --force --no-recurse-submodules origin' \
     'git checkout --detach' \
