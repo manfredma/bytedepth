@@ -91,7 +91,7 @@ INSERT INTO admin (id, password_hash) VALUES (1, '$argon2id$v=19$m=1$fixture');
 \u
 BACKSLASH_COMMAND_FIXTURE
 fail_without_calls 'mysql backslash client command' bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/backslash-command-fixture.sql"
-for statement in 'RENAME TABLE article TO article_copy;' 'SET GLOBAL max_connections = 100;' 'CALL dangerous_procedure();' 'LOCK TABLES article WRITE;' 'CREATE EVENT dangerous_event ON SCHEDULE EVERY 1 DAY DO DELETE FROM article;' 'LOAD XML LOCAL INFILE "fixture.xml" INTO TABLE article;'; do
+for statement in 'RENAME TABLE article TO article_copy;' 'RENAME USER old_user TO new_user;' 'SET GLOBAL max_connections = 100;' 'SET PERSIST_ONLY max_connections = 100;' 'CALL dangerous_procedure();' 'LOCK TABLES article WRITE;' 'CREATE EVENT dangerous_event ON SCHEDULE EVERY 1 DAY DO DELETE FROM article;' 'LOAD XML LOCAL INFILE "fixture.xml" INTO TABLE article;' 'PREPARE dangerous_statement FROM "DELETE FROM article";' 'EXECUTE dangerous_statement;' 'DEALLOCATE PREPARE dangerous_statement;'; do
     {
         printf '%s\n' "INSERT INTO article (id, title) VALUES (1, 'fixture');"
         printf '%s\n' "INSERT INTO category (id, name) VALUES (1, 'fixture');"
