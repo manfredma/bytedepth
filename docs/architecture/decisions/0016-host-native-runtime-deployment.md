@@ -16,6 +16,12 @@
 
 现有 `/data/mysql`、`/data/redis`、`/data/meilisearch` 和图片目录在完成备份、版本兼容性与权限检查后由宿主机服务接管。迁移先在 staging 停机完成并通过集成、E2E 和只读回归，再迁移生产。
 
+这项决策同时覆盖交付和知识库边界：部署操作仍以 `deploy/README.md` 为唯一权威，版本与 Tag 以 `docs/releases/README.md` 为唯一权威，跨项目门禁以 `docs/engineering/unified-release-pipeline.md` 为权威；`docs/README.md`、`AGENTS.md`、工程陷阱和脚本契约必须同步更新。不能只替换 Compose 文件而保留旧的发布、证据、同步、证书和测试流程。
+
+运行时禁止 Docker/Compose；测试工具是否使用一次性容器不属于运行时架构，默认改为连接 staging 原生服务的隔离测试资源，避免把 Docker 重新变成 staging 验收前提。
+
+集成测试和 E2E 采用串行 test slot，不直接使用 staging 资源：每次 run 创建独立 MySQL 数据库和最小权限账号、Redis 预留 logical DB 加运行级 key namespace、Meilisearch 独立 index；测试应用临时接管 staging URL，完成后由同一编排脚本销毁资源并恢复 staging 应用。只有在逻辑隔离经压测证明不足时，才升级为第二套宿主机中间件服务。
+
 放弃的方案：
 
 - **继续全部使用 Docker Compose**：运行方式稳定，但不能满足当前小资源环境降低容器与构建峰值的目标。
@@ -38,6 +44,8 @@
 - 中间件升级和数据目录接管必须严格校验版本、用户权限和备份恢复能力。
 - 运行时仍然消耗 Java、MySQL、Redis 和 Meilisearch 自身的资源；原生化不会消除这些基础开销。
 - Docker 仍需在迁移验收窗口内保留，以便处理应用和数据回退；验收完成后才能评估卸载。
+- 发布流程需要从“目标机重新构建镜像”改为“外部构建不可变 JAR、传输、SHA 校验和 systemd 切换”，并同步改造 staging/生产 evidence、数据同步、证书、NFS 和集成测试脚本。
+- 项目知识库必须明确运行时、部署、发布和测试的边界；迁移完成前旧 Compose 说明只能作为回退路径，不能继续作为正常操作说明。
 
 ## 假设
 
