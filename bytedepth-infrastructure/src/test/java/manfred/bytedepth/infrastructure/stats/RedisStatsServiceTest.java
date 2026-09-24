@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDateTime;
 import java.util.Iterator;
 import java.util.List;
+import manfred.bytedepth.infrastructure.redis.RedisKeyNamespace;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -35,7 +36,7 @@ class RedisStatsServiceTest {
         when(values.get("pv:post:12")).thenReturn("42");
         when(values.get("pv:post:13")).thenReturn(null);
 
-        new RedisStatsService(redisTemplate, jdbcTemplate).flushToDB();
+        new RedisStatsService(redisTemplate, jdbcTemplate, new RedisKeyNamespace("")).flushToDB();
 
         ArgumentCaptor<ScanOptions> options = ArgumentCaptor.forClass(ScanOptions.class);
         verify(redisTemplate).scan(options.capture());
@@ -57,7 +58,7 @@ class RedisStatsServiceTest {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         when(redisTemplate.opsForValue()).thenReturn(values);
 
-        new RedisStatsService(redisTemplate, jdbcTemplate).increment(100L);
+        new RedisStatsService(redisTemplate, jdbcTemplate, new RedisKeyNamespace("")).increment(100L);
 
         verify(values).increment("pv:post:100");
     }
@@ -72,7 +73,7 @@ class RedisStatsServiceTest {
         when(redisTemplate.opsForValue()).thenReturn(values);
         when(values.get("pv:post:200")).thenReturn(null);
 
-        long count = new RedisStatsService(redisTemplate, jdbcTemplate).getCount(200L);
+        long count = new RedisStatsService(redisTemplate, jdbcTemplate, new RedisKeyNamespace("")).getCount(200L);
 
         assertEquals(0L, count);
     }
@@ -87,9 +88,34 @@ class RedisStatsServiceTest {
         when(redisTemplate.opsForValue()).thenReturn(values);
         when(values.get("pv:post:300")).thenReturn("12345");
 
-        long count = new RedisStatsService(redisTemplate, jdbcTemplate).getCount(300L);
+        long count = new RedisStatsService(redisTemplate, jdbcTemplate, new RedisKeyNamespace("")).getCount(300L);
 
         assertEquals(12345L, count);
+    }
+
+    @Test
+    void namespacedKeysAndFlushScanStayWithinTheRun() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, String> values = mock(ValueOperations.class);
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        when(redisTemplate.opsForValue()).thenReturn(values);
+        Cursor<String> scanCursor = cursor(List.of("bytedepth:it:r1:pv:post:12"));
+        when(redisTemplate.scan(any(ScanOptions.class))).thenReturn(scanCursor);
+        when(values.get("bytedepth:it:r1:pv:post:12")).thenReturn("42");
+        RedisStatsService service = new RedisStatsService(redisTemplate, jdbcTemplate,
+                new RedisKeyNamespace("bytedepth:it:r1:"));
+
+        service.increment(12L);
+        assertEquals(42L, service.getCount(12L));
+        service.flushToDB();
+
+        verify(values).increment("bytedepth:it:r1:pv:post:12");
+        ArgumentCaptor<ScanOptions> options = ArgumentCaptor.forClass(ScanOptions.class);
+        verify(redisTemplate).scan(options.capture());
+        assertEquals("bytedepth:it:r1:pv:post:*", options.getValue().getPattern());
+        verify(jdbcTemplate).update(any(String.class), eq("/posts/12"), eq(42L),
+                any(LocalDateTime.class), eq(42L), any(LocalDateTime.class));
     }
 
     @SuppressWarnings("unchecked")

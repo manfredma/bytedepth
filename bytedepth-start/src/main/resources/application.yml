@@ -12,9 +12,9 @@ spring:
   application:
     name: bytedepth
   datasource:
-    url: jdbc:mysql://localhost:3306/bytedepth?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-    username: root
-    password:
+    url: ${BYTEDEPTH_DATASOURCE_URL:jdbc:mysql://localhost:3306/bytedepth?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${BYTEDEPTH_DATASOURCE_USERNAME:root}
+    password: ${BYTEDEPTH_DATASOURCE_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   flyway:
     locations: classpath:db/migration
@@ -38,13 +38,15 @@ spring:
     redis:
       host: localhost
       port: 6379
+      database: ${BYTEDEPTH_REDIS_DATABASE:0}
+      password: ${BYTEDEPTH_REDIS_PASSWORD:}
   session:
     store-type: redis
     timeout: 60m
     redis:
       # 登录主体类曾调整包路径；升级命名空间可使旧 Redis 会话自然失效，
       # 避免旧序列化数据在请求开始阶段反序列化失败。
-      namespace: bytedepth:session:v2
+      namespace: ${BYTEDEPTH_REDIS_SESSION_NAMESPACE:bytedepth:session:v2}
 
 server:
   port: 8080
@@ -68,6 +70,8 @@ mybatis-plus:
 
 bytedepth:
   environment: ${BYTEDEPTH_ENVIRONMENT:production}
+  redis:
+    key-namespace: ${BYTEDEPTH_REDIS_KEY_NAMESPACE:}
   analytics:
     launch-date: 2026-06-01
     retention-days: 7
@@ -81,10 +85,11 @@ bytedepth:
   site:
     url: ${BYTEDEPTH_SITE_URL:https://bytedepth.cn}
   upload:
-    image-dir: ${user.home}/bytedepth/images
+    image-dir: ${BYTEDEPTH_UPLOAD_IMAGE_DIR:${user.home}/bytedepth/images}
   search:
     url: ${BYTEDEPTH_SEARCH_URL:http://localhost:7700}
     api-key: ${BYTEDEPTH_SEARCH_API_KEY:bytedepth-search-key}
+    index: ${BYTEDEPTH_SEARCH_INDEX:posts}
   geoip:
     # GeoLite2-City.mmdb 路径。留空则 IP 地理解析禁用。
     # 下载：https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
@@ -147,6 +152,7 @@ bytedepth:
       port: ${BYTEDEPTH_RATE_LIMIT_REDIS_PORT:${spring.data.redis.port}}
       password: ${BYTEDEPTH_RATE_LIMIT_REDIS_PASSWORD:${spring.data.redis.password:}}
       database: ${BYTEDEPTH_RATE_LIMIT_REDIS_DATABASE:0}
+      key-namespace: ${BYTEDEPTH_RATE_LIMIT_REDIS_KEY_NAMESPACE:${bytedepth.redis.key-namespace}}
       timeout: ${BYTEDEPTH_RATE_LIMIT_REDIS_TIMEOUT:1s}
     login-ip:
       capacity: 5

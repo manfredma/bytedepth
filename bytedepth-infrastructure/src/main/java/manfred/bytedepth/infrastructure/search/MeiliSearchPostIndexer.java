@@ -18,31 +18,36 @@ import java.util.Map;
 public class MeiliSearchPostIndexer implements PostSearchPort {
 
     private static final Logger log = LoggerFactory.getLogger(MeiliSearchPostIndexer.class);
-    private static final String INDEX = "posts";
-
     private final RestClient restClient;
+    private final String index;
 
     @Autowired
     public MeiliSearchPostIndexer(
             @Value("${bytedepth.search.url}") String url,
-            @Value("${bytedepth.search.api-key}") String apiKey) {
+            @Value("${bytedepth.search.api-key}") String apiKey,
+            @Value("${bytedepth.search.index:posts}") String index) {
         this(RestClient.builder()
                 .baseUrl(url)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                .build());
+                .build(), index);
     }
 
     /** 测试专用构造器：注入已构造的 RestClient，便于单元测试 mock。 */
     MeiliSearchPostIndexer(RestClient restClient) {
+        this(restClient, "posts");
+    }
+
+    MeiliSearchPostIndexer(RestClient restClient, String index) {
         this.restClient = restClient;
+        this.index = index;
     }
 
     @Override
     public void index(PostSearchDoc doc) {
         try {
             restClient.post()
-                    .uri("/indexes/{index}/documents", INDEX)
+                    .uri("/indexes/{index}/documents", index)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(List.of(toMap(doc)))
                     .retrieve()
@@ -56,7 +61,7 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
     public void delete(Long postId) {
         try {
             restClient.delete()
-                    .uri("/indexes/{index}/documents/{id}", INDEX, postId)
+                    .uri("/indexes/{index}/documents/{id}", index, postId)
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {
@@ -70,7 +75,7 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
         try {
             var response = restClient.get()
                     .uri("/indexes/{index}/search?q={q}&limit={limit}&offset={offset}&attributesToHighlight=title,content&attributesToCrop=content:240&highlightPreTag=<em>&highlightPostTag=</em>",
-                            INDEX, query, size, offset)
+                            index, query, size, offset)
                     .retrieve()
                     .body(Map.class);
 

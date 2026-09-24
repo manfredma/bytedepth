@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import manfred.bytedepth.app.analytics.ReadingProgressTokenPort;
 import manfred.bytedepth.domain.stats.PostViewedEvent;
+import manfred.bytedepth.infrastructure.redis.RedisKeyNamespace;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,7 @@ public class RedisReadingProgressTokenAdapter implements ReadingProgressTokenPor
     private static final Duration TOKEN_TTL = Duration.ofHours(24);
 
     private final StringRedisTemplate redisTemplate;
+    private final RedisKeyNamespace namespace;
 
     @Override
     @EventListener
@@ -41,6 +43,6 @@ public class RedisReadingProgressTokenAdapter implements ReadingProgressTokenPor
     }
 
     private String key(String token) {
-        return KEY_PREFIX + token;
+        return namespace.key(KEY_PREFIX, token);
     }
 }

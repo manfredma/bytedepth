@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import manfred.bytedepth.domain.stats.PostViewedEvent;
+import manfred.bytedepth.infrastructure.redis.RedisKeyNamespace;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -26,7 +27,7 @@ class RedisReadingProgressTokenAdapterTest {
         redisTemplate = org.mockito.Mockito.mock(StringRedisTemplate.class);
         values = org.mockito.Mockito.mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(values);
-        adapter = new RedisReadingProgressTokenAdapter(redisTemplate);
+        adapter = new RedisReadingProgressTokenAdapter(redisTemplate, new RedisKeyNamespace(""));
     }
 
     @Test
@@ -55,5 +56,17 @@ class RedisReadingProgressTokenAdapterTest {
                 .thenThrow(new IllegalStateException("redis unavailable"));
 
         assertFalse(adapter.belongsToPost("token-1", 12L));
+    }
+
+    @Test
+    void namespacesIssuedAndLookedUpTokens() {
+        adapter = new RedisReadingProgressTokenAdapter(redisTemplate,
+                new RedisKeyNamespace("bytedepth:it:r1:"));
+        adapter.issue(new PostViewedEvent(12L, null, "203.0.113.1", "agent", null,
+                "token-1", LocalDateTime.now()));
+        when(values.get("bytedepth:it:r1:bytedepth:reading-progress:token-1")).thenReturn("12");
+
+        assertTrue(adapter.belongsToPost("token-1", 12L));
+        verify(values).set("bytedepth:it:r1:bytedepth:reading-progress:token-1", "12", Duration.ofHours(24));
     }
 }

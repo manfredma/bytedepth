@@ -15,6 +15,7 @@ import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import manfred.bytedepth.app.ratelimit.RateLimitDecision;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;
+import manfred.bytedepth.infrastructure.redis.RedisKeyNamespace;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -24,9 +25,11 @@ public class RedisRateLimitAdapter implements RateLimitPort {
     private static final Duration EXPIRATION_SAFETY_MARGIN = Duration.ofMinutes(1);
     private final RedisClient redisClient;
     private final Duration requestTimeout;
+    private final RedisKeyNamespace namespace;
     private volatile ProxyManager<byte[]> proxyManager;
 
     public RedisRateLimitAdapter(RateLimitRedisProperties properties) {
+        namespace = new RedisKeyNamespace(properties.getKeyNamespace());
         RedisURI uri = RedisURI.create(properties.getHost(), properties.getPort());
         uri.setDatabase(properties.getDatabase());
         uri.setTimeout(properties.getTimeout());
@@ -59,7 +62,7 @@ public class RedisRateLimitAdapter implements RateLimitPort {
         }
     }
 
-    private byte[] redisKey(String ruleName, String identity) { return (KEY_PREFIX + ruleName + ":" + sha256(identity)).getBytes(StandardCharsets.UTF_8); }
+    private byte[] redisKey(String ruleName, String identity) { return namespace.key(KEY_PREFIX, ruleName + ":" + sha256(identity)).getBytes(StandardCharsets.UTF_8); }
     private String sha256(String value) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));

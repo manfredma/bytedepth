@@ -3,6 +3,7 @@ package manfred.bytedepth.infrastructure.stats;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import manfred.bytedepth.domain.stats.PostViewCounter;
+import manfred.bytedepth.infrastructure.redis.RedisKeyNamespace;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -19,27 +20,29 @@ public class RedisStatsService implements PostViewCounter {
     private static final String KEY_PREFIX = "pv:post:";
     private final StringRedisTemplate redisTemplate;
     private final JdbcTemplate jdbcTemplate;
+    private final RedisKeyNamespace namespace;
 
     @Override
     public void increment(Long postId) {
-        redisTemplate.opsForValue().increment(KEY_PREFIX + postId);
+        redisTemplate.opsForValue().increment(namespace.key(KEY_PREFIX, postId.toString()));
     }
 
     @Override
     public long getCount(Long postId) {
-        String val = redisTemplate.opsForValue().get(KEY_PREFIX + postId);
+        String val = redisTemplate.opsForValue().get(namespace.key(KEY_PREFIX, postId.toString()));
         return val == null ? 0 : Long.parseLong(val);
     }
 
     @Scheduled(fixedDelay = 300000)
     public void flushToDB() {
         long scanned = 0;
-        ScanOptions options = ScanOptions.scanOptions().match(KEY_PREFIX + "*").count(500).build();
+        String prefix = namespace.prefix(KEY_PREFIX);
+        ScanOptions options = ScanOptions.scanOptions().match(prefix + "*").count(500).build();
         try (Cursor<String> keys = redisTemplate.scan(options)) {
             while (keys.hasNext()) {
                 String key = keys.next();
                 scanned++;
-                String postId = key.substring(KEY_PREFIX.length());
+                String postId = key.substring(prefix.length());
                 String path = "/posts/" + postId;
                 String val = redisTemplate.opsForValue().get(key);
                 if (val == null) continue;

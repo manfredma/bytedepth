@@ -2,6 +2,8 @@ package manfred.bytedepth.infrastructure.ops;
 
 import manfred.bytedepth.app.ops.OpsRedisPort;
 import manfred.bytedepth.app.ops.OpsRedisStatusDTO;
+import manfred.bytedepth.infrastructure.redis.RedisKeyNamespace;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.ScanOptions;
@@ -19,9 +21,14 @@ public class RedisOpsAdapter implements OpsRedisPort {
     static final String SESSION_PREFIX = "bytedepth:session:";
 
     private final StringRedisTemplate redisTemplate;
+    private final RedisKeyNamespace namespace;
+    private final String sessionNamespace;
 
-    public RedisOpsAdapter(StringRedisTemplate redisTemplate) {
+    public RedisOpsAdapter(StringRedisTemplate redisTemplate, RedisKeyNamespace namespace,
+            @Value("${spring.session.redis.namespace:bytedepth:session:v2}") String sessionNamespace) {
         this.redisTemplate = redisTemplate;
+        this.namespace = namespace;
+        this.sessionNamespace = sessionNamespace;
     }
 
     @Override
@@ -33,8 +40,8 @@ public class RedisOpsAdapter implements OpsRedisPort {
                 RedisInfoParser.longValue(info, "connected_clients"),
                 RedisInfoParser.longValue(info, "keyspace_hits"),
                 RedisInfoParser.longValue(info, "keyspace_misses"),
-                scanCount(POST_VIEW_PREFIX),
-                scanCount(SESSION_PREFIX));
+                scanCount(namespace.prefix(POST_VIEW_PREFIX)),
+                scanCount(sessionNamespace + ":"));
     }
 
     private Map<String, String> redisInfo(RedisConnection connection) {

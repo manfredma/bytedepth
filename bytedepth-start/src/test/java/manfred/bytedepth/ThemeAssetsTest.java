@@ -282,8 +282,26 @@ class ThemeAssetsTest {
         String config = classpathText("/application.yml");
 
         assertThat(config)
-                .contains("namespace: bytedepth:session:v2")
+                .contains("namespace: ${BYTEDEPTH_REDIS_SESSION_NAMESPACE:bytedepth:session:v2}")
                 .doesNotContain("namespace: bytedepth:session\n");
+    }
+
+    @Test
+    void runtimeResourcesHaveIndependentEnvironmentOverrides() throws Exception {
+        String config = classpathText("/application.yml");
+
+        assertThat(config)
+                .contains("${BYTEDEPTH_DATASOURCE_URL:jdbc:mysql://localhost:3306/bytedepth")
+                .contains("${BYTEDEPTH_DATASOURCE_USERNAME:root}")
+                .contains("${BYTEDEPTH_DATASOURCE_PASSWORD:}")
+                .contains("database: ${BYTEDEPTH_REDIS_DATABASE:0}")
+                .contains("password: ${BYTEDEPTH_REDIS_PASSWORD:}")
+                .contains("key-namespace: ${BYTEDEPTH_REDIS_KEY_NAMESPACE:}")
+                .contains("database: ${BYTEDEPTH_RATE_LIMIT_REDIS_DATABASE:0}")
+                .contains("key-namespace: ${BYTEDEPTH_RATE_LIMIT_REDIS_KEY_NAMESPACE:${bytedepth.redis.key-namespace}}")
+                .contains("index: ${BYTEDEPTH_SEARCH_INDEX:posts}")
+                .contains("api-key: ${BYTEDEPTH_SEARCH_API_KEY:bytedepth-search-key}")
+                .contains("image-dir: ${BYTEDEPTH_UPLOAD_IMAGE_DIR:${user.home}/bytedepth/images}");
     }
 
     @Test

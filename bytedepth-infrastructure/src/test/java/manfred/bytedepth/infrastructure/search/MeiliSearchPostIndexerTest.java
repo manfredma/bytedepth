@@ -57,13 +57,39 @@ class MeiliSearchPostIndexerTest {
     @Test
     void productionConstructorIsExplicitlyAutowiredWhenTestConstructorExists() throws Exception {
         assertTrue(MeiliSearchPostIndexer.class
-                .getDeclaredConstructor(String.class, String.class)
+                .getDeclaredConstructor(String.class, String.class, String.class)
                 .isAnnotationPresent(Autowired.class));
     }
 
     @Test
     void productionConstructorBuildsConfiguredClient() {
-        assertDoesNotThrow(() -> new MeiliSearchPostIndexer("http://localhost:7700", "test-key"));
+        assertDoesNotThrow(() -> new MeiliSearchPostIndexer("http://localhost:7700", "test-key", "posts_it_r1"));
+    }
+
+    @Test
+    void configuredIndexIsUsedByIndexDeleteAndSearch() {
+        indexer = new MeiliSearchPostIndexer(restClient, "posts_it_r1");
+        IndexStubs indexStubs = stubIndexChain();
+        indexer.index(PostSearchDoc.builder().id(1L).title("T").build());
+        verify(indexStubs.uriSpec()).uri("/indexes/{index}/documents", "posts_it_r1");
+
+        RestClient.RequestHeadersUriSpec<?> deleteSpec = mock(RestClient.RequestHeadersUriSpec.class);
+        RestClient.ResponseSpec deleteResponse = mock(RestClient.ResponseSpec.class);
+        doReturn(deleteSpec).when(restClient).delete();
+        doReturn(deleteSpec).when(deleteSpec).uri(anyString(), any(Object[].class));
+        doReturn(deleteResponse).when(deleteSpec).retrieve();
+        indexer.delete(1L);
+        verify(deleteSpec).uri("/indexes/{index}/documents/{id}", "posts_it_r1", 1L);
+
+        RestClient.RequestHeadersUriSpec<?> searchSpec = mock(RestClient.RequestHeadersUriSpec.class);
+        RestClient.ResponseSpec searchResponse = mock(RestClient.ResponseSpec.class);
+        doReturn(searchSpec).when(restClient).get();
+        doReturn(searchSpec).when(searchSpec).uri(anyString(), any(Object[].class));
+        doReturn(searchResponse).when(searchSpec).retrieve();
+        doReturn(Map.of("hits", List.of())).when(searchResponse).body(Map.class);
+        indexer.search("query", 1, 10);
+        verify(searchSpec).uri(org.mockito.ArgumentMatchers.contains("/indexes/{index}/search"),
+                eq("posts_it_r1"), eq("query"), eq(10), eq(0));
     }
 
     @Nested

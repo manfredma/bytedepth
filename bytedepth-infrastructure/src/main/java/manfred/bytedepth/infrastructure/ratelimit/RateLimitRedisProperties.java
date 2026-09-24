@@ -15,5 +15,6 @@ public class RateLimitRedisProperties {
     private int port = 6379;
     private String password = "";
     private int database;
+    private String keyNamespace = "";
     private Duration timeout = Duration.ofSeconds(1);
 }

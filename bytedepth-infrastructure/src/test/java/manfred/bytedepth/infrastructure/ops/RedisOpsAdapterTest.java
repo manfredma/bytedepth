@@ -1,6 +1,7 @@
 package manfred.bytedepth.infrastructure.ops;
 
 import manfred.bytedepth.app.ops.OpsRedisStatusDTO;
+import manfred.bytedepth.infrastructure.redis.RedisKeyNamespace;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.redis.connection.RedisConnection;
@@ -37,7 +38,8 @@ class RedisOpsAdapterTest {
         });
         executeCallbacksAgainst(template, connection);
 
-        OpsRedisStatusDTO status = new RedisOpsAdapter(template).inspect();
+        OpsRedisStatusDTO status = new RedisOpsAdapter(template, new RedisKeyNamespace(""),
+                "bytedepth:session:v2").inspect();
 
         assertEquals("1.5M", status.usedMemoryHuman());
         assertEquals(2, status.connectedClients());
@@ -56,7 +58,8 @@ class RedisOpsAdapterTest {
         when(connection.keyCommands().scan(any(ScanOptions.class))).thenReturn(emptyCursor);
         executeCallbacksAgainst(template, connection);
 
-        OpsRedisStatusDTO status = new RedisOpsAdapter(template).inspect();
+        OpsRedisStatusDTO status = new RedisOpsAdapter(template, new RedisKeyNamespace(""),
+                "bytedepth:session:v2").inspect();
 
         assertEquals("2M", status.usedMemoryHuman());
         assertEquals(7, status.connectedClients());
@@ -73,7 +76,8 @@ class RedisOpsAdapterTest {
         when(connection.keyCommands().scan(any(ScanOptions.class))).thenReturn(emptyCursor);
         executeCallbacksAgainst(template, connection);
 
-        OpsRedisStatusDTO status = new RedisOpsAdapter(template).inspect();
+        OpsRedisStatusDTO status = new RedisOpsAdapter(template, new RedisKeyNamespace(""),
+                "bytedepth:session:v2").inspect();
 
         assertEquals("0B", status.usedMemoryHuman());
         assertEquals(0, status.connectedClients());
@@ -90,6 +94,23 @@ class RedisOpsAdapterTest {
         ArgumentCaptor<ScanOptions> options = ArgumentCaptor.forClass(ScanOptions.class);
         verify(connection.keyCommands()).scan(options.capture());
         assertEquals("pv:post:*", options.getValue().getPattern());
+    }
+
+    @Test
+    void inspectScansNamespacedPostViewsAndConfiguredSessionNamespace() {
+        StringRedisTemplate template = mock(StringRedisTemplate.class);
+        RedisConnection connection = mock(RedisConnection.class, RETURNS_DEEP_STUBS);
+        when(connection.serverCommands().info()).thenReturn(properties("1M", "1", "0", "0"));
+        when(connection.keyCommands().scan(any(ScanOptions.class))).thenAnswer(invocation -> cursor(List.of()));
+        executeCallbacksAgainst(template, connection);
+
+        new RedisOpsAdapter(template, new RedisKeyNamespace("bytedepth:it:r1:"),
+                "bytedepth:it:r1:bytedepth:session:v2").inspect();
+
+        ArgumentCaptor<ScanOptions> options = ArgumentCaptor.forClass(ScanOptions.class);
+        verify(connection.keyCommands(), org.mockito.Mockito.times(2)).scan(options.capture());
+        assertEquals("bytedepth:it:r1:pv:post:*", options.getAllValues().get(0).getPattern());
+        assertEquals("bytedepth:it:r1:bytedepth:session:v2:*", options.getAllValues().get(1).getPattern());
     }
 
     @SuppressWarnings("unchecked")
