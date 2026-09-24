@@ -8,14 +8,11 @@ import manfred.bytedepth.domain.annotation.PostAnnotation;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.infrastructure.stats.RedisStatsService;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.containers.MySQLContainer;
 
 import java.time.LocalDateTime;
 
@@ -24,20 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @AutoConfigureMockMvc
 class AnnotationContentUpdateIT {
-
-    @ServiceConnection
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
-
-    static {
-        // Testcontainers 1.21.x 的 JUnit 扩展尚未适配 JUnit 6；显式启动保持
-        // Spring ServiceConnection 的真实容器边界，同时避免扩展发出兼容性 WARN。
-        mysql.start();
-    }
-
-    @AfterAll
-    static void stopMySql() {
-        mysql.stop();
-    }
 
     @MockitoBean
     private RedisStatsService redisStatsService;
