@@ -40,16 +40,48 @@ run_dir="$(dirname "$manifest")"
 image_root="/data/images-test/$run_id"
 [[ ! -e $image_root && ! -L $image_root ]] || { slot_die 'test image run directory already exists'; exit 1; }
 provision_complete=0
-resources_created=0
 run_dir_created=0
 image_root_created=0
+it_key_created=0
+e2e_key_created=0
+it_db_created=0
+e2e_db_created=0
+it_user_created=0
+e2e_user_created=0
+it_index_created=0
+e2e_index_created=0
+it_key_uid=''; e2e_key_uid=''
+it_index=''; e2e_index=''
+it_db=''; e2e_db=''
+it_user=''; e2e_user=''
+it_password=''; e2e_password=''
 provision_cleanup() {
     if (( provision_complete != 0 )); then
         return
     fi
-    if (( resources_created != 0 )) && [[ -f $manifest ]]; then
-        "$(dirname "${BASH_SOURCE[0]}")/teardown-staging-test-slot.sh" --manifest "$manifest" || slot_die 'partial provision cleanup failed; manifest retained'
-        return
+    cleanup_failed=0
+    for profile in it e2e; do
+        case "$profile" in
+            it) key_uid="$it_key_uid"; index="$it_index"; db="$it_db"; user="$it_user"; password="$it_password"; key_created=$it_key_created; index_created=$it_index_created; user_created=$it_user_created; db_created=$it_db_created ;;
+            e2e) key_uid="$e2e_key_uid"; index="$e2e_index"; db="$e2e_db"; user="$e2e_user"; password="$e2e_password"; key_created=$e2e_key_created; index_created=$e2e_index_created; user_created=$e2e_user_created; db_created=$e2e_db_created ;;
+        esac
+        if (( index_created != 0 )); then
+            task="$(curl -fsS -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index" | jq -er '.taskUid')" &&
+                meili_wait_task "$task" || cleanup_failed=1
+        fi
+        if (( key_created != 0 )); then
+            [[ $(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid") == 204 ]] || cleanup_failed=1
+        fi
+        if (( user_created != 0 )); then
+            mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "DROP USER IF EXISTS '$user'@'localhost'" || cleanup_failed=1
+        fi
+        if (( db_created != 0 )); then
+            mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "DROP DATABASE IF EXISTS \`$db\`" || cleanup_failed=1
+        fi
+    done
+    if (( cleanup_failed != 0 )); then
+        slot_die 'partial provision cleanup failed; state retained'
+        return 1
     fi
     if (( run_dir_created != 0 )) && [[ -d $run_dir && ! -L $run_dir ]]; then
         rm -r -- "$run_dir" || slot_die 'partial local test state cleanup failed'
@@ -113,8 +145,6 @@ printf 'run_id=%s\ncandidate_sha=%s\nmode=staging\nit_db=%s\nit_user=%s\nit_inde
     "$run_id" "$BYTEDEPTH_TEST_CANDIDATE_SHA" "$it_db" "$it_user" "$it_index" "$it_namespace" "$BYTEDEPTH_TEST_IT_REDIS_DB" "$it_key_uid" "$e2e_db" "$e2e_user" "$e2e_index" "$e2e_namespace" "$BYTEDEPTH_TEST_E2E_REDIS_DB" "$e2e_key_uid" "$run_dir/staging-it.env" "$run_dir/staging-e2e.env" > "$manifest"
 chmod 0600 "$manifest"
 require_manifest "$manifest"
-resources_created=1
-
 # Manifest and environment files exist before external writes, so an interrupted
 # provision can be cleaned by the same strict teardown contract.
 settings="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/settings")"
@@ -128,6 +158,10 @@ for profile in it e2e; do
     key_payload="$(jq -nc --arg uid "$key_uid" --arg index "$index" '{uid:$uid,name:"bytedepth staging test slot",actions:["*"],indexes:[$index],expiresAt:null}')"
     scoped_key="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "$key_payload" "$BYTEDEPTH_TEST_MEILI_URL/keys" | jq -er '.key')"
     [[ $scoped_key =~ ^[A-Za-z0-9_-]+$ ]] || { slot_die 'invalid scoped Meili key'; exit 1; }
+    case "$profile" in
+        it) it_key_created=1 ;;
+        e2e) e2e_key_created=1 ;;
+    esac
     env_file="$run_dir/staging-$profile.env"
     env_tmp="$(mktemp "$run_dir/.staging-$profile.XXXXXX")"
     while IFS= read -r line; do
@@ -143,11 +177,27 @@ for profile in it e2e; do
         *) slot_die "unsupported test profile: $profile"; exit 1 ;;
     esac
     mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE DATABASE \`$db\`"
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'; GRANT ALL PRIVILEGES ON \`$db\`.* TO '$user'@'localhost'"
+    case "$profile" in
+        it) it_db_created=1 ;;
+        e2e) e2e_db_created=1 ;;
+    esac
+    grant_db="${db//_/\\_}"
+    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'; GRANT ALL PRIVILEGES ON \`$grant_db\`.* TO '$user'@'localhost'"
+    grants="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SHOW GRANTS FOR '$user'@'localhost'")"
+    expected_grant_fragment="\`$grant_db\`.*"
+    [[ $grants == *"$expected_grant_fragment"* && $grants != *' ON *.* TO '* ]] || { slot_die 'test database grant is broader than the manifest database'; exit 1; }
+    case "$profile" in
+        it) it_user_created=1 ;;
+        e2e) e2e_user_created=1 ;;
+    esac
     MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" < "$BYTEDEPTH_TEST_FIXTURE"
     [[ $(MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 "$db" --batch --skip-column-names -e 'SELECT DATABASE()') == "$db" ]] || { slot_die 'MySQL connection did not select test DB'; exit 1; }
     task="$(curl -fsS -X POST -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' -d "{\"uid\":\"$index\",\"primaryKey\":\"id\"}" "$BYTEDEPTH_TEST_MEILI_URL/indexes" | jq -er '.taskUid')"
     meili_wait_task "$task"
+    case "$profile" in
+        it) it_index_created=1 ;;
+        e2e) e2e_index_created=1 ;;
+    esac
     task="$(printf '%s' "$settings" | curl -fsS -X PATCH -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" -H 'Content-Type: application/json' --data-binary @- "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index/settings" | jq -er '.taskUid')"
     meili_wait_task "$task"
     [[ $(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index" | jq -er '.uid') == "$index" ]] || { slot_die 'Meili index identity mismatch'; exit 1; }

@@ -64,6 +64,13 @@ DELETE FROM article;
 INSERT INTO \`bytedepth-\`.\`article\` VALUES (2);
 UNSAFE_FIXTURE
 fail_without_calls 'fixture database switch or destructive SQL' bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/unsafe-fixture.sql"
+cat > "$tmp/qualified-fixture.sql" <<'QUALIFIED_FIXTURE'
+INSERT INTO article (id, title) VALUES (1, 'fixture');
+INSERT INTO category (id, name) VALUES (1, 'fixture');
+INSERT INTO admin (id, password_hash) VALUES (1, '$argon2id$v=19$m=1$fixture');
+INSERT INTO `bytedepth-prod`/**/.`article` VALUES (2);
+QUALIFIED_FIXTURE
+fail_without_calls 'fixture qualified database through comment' bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/qualified-fixture.sql"
 
 stop_line="$(rg -n 'systemctl stop bytedepth-test-slot\.service' "$root/deploy/teardown-staging-test-slot.sh" | cut -d: -f1)"
 delete_line="$(rg -n 'redis_scan_delete|DROP USER|rm -r --' "$root/deploy/teardown-staging-test-slot.sh" | head -1 | cut -d: -f1)"
