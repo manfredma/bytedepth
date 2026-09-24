@@ -33,6 +33,8 @@ require_text_transition 'docker exec'
 require_text_transition 'BYTEDEPTH_NATIVE_CLEANUP_ACCEPTED=1'
 require_text_transition '172.18.0.1:$BYTEDEPTH_NATIVE_EDGE_PORT'
 require_text_transition 'native MySQL data path is not empty'
+require_text_transition 'docker exec "$DOCKER_MEILI" /bin/meilisearch --version'
+require_text_transition 'docker cp "$DOCKER_MEILI:/bin/meilisearch"'
 if rg -n 'docker compose|docker-compose' "$TRANSITION" >/dev/null; then
     printf 'Blue/green transition must not recreate the old Compose stack.\n' >&2
     exit 1

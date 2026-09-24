@@ -217,13 +217,18 @@ migrate_redis() {
 }
 
 migrate_meilisearch() {
-    local meili_key task status snapshot
+    local meili_key task status snapshot docker_meili_version
     meili_key="$(env_value "$DOT_ENV" MEILI_MASTER_KEY)"
     [[ -n "$meili_key" ]] || return 1
     if [[ ! -x /usr/local/bin/meilisearch ]]; then
-        curl -fL --retry 3 --connect-timeout 10 \
-            https://github.com/meilisearch/meilisearch/releases/download/v1.7.6/meilisearch-linux-amd64 \
-            -o /tmp/meilisearch-1.7.6-linux-amd64
+        docker_meili_version="$(docker exec "$DOCKER_MEILI" /bin/meilisearch --version)"
+        if [[ "$docker_meili_version" == *'1.7.6'* ]]; then
+            docker cp "$DOCKER_MEILI:/bin/meilisearch" /tmp/meilisearch-1.7.6-linux-amd64
+        else
+            curl -fL --retry 3 --connect-timeout 10 \
+                https://github.com/meilisearch/meilisearch/releases/download/v1.7.6/meilisearch-linux-amd64 \
+                -o /tmp/meilisearch-1.7.6-linux-amd64
+        fi
         install -o root -g root -m 0755 /tmp/meilisearch-1.7.6-linux-amd64 /usr/local/bin/meilisearch
         rm -f /tmp/meilisearch-1.7.6-linux-amd64
     fi
