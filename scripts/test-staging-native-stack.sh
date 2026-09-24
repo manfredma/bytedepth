@@ -30,6 +30,11 @@ rg -q 'BYTEDEPTH_NATIVE_STACK_MODE=parallel' "$INSTALLER"
 rg -q 'BYTEDEPTH_STAGING_APP_SERVICE=bytedepth-staging-native-app.service' "$TARGET_LIB"
 rg -q 'BYTEDEPTH_STAGING_TEST_IMAGE_ROOT="\$BYTEDEPTH_NATIVE_ROOT/images-test"' "$TARGET_LIB"
 rg -q 'native staging ports must not collide' "$INSTALLER"
+rg -q 'install -d -o root -g root -m 0700 "\$native_root/images-test"' "$INSTALLER"
+if rg -q 'chown bytedepth:bytedepth "\$native_root/images-test"' "$INSTALLER"; then
+    printf 'The isolated test image root must remain root-owned and private.\n' >&2
+    exit 1
+fi
 rg -q 'bytedepth-staging-native-mysql.service' "$INSTALLER"
 rg -q 'EnvironmentFile=/etc/bytedepth/staging-native.env' "$UNIT_DIR/bytedepth-staging-native-app.service.in"
 rg -q 'requirepass \$BYTEDEPTH_REDIS_PASSWORD' "$INSTALLER"

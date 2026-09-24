@@ -52,12 +52,12 @@ getent passwd bytedepth >/dev/null || useradd --system --gid bytedepth --home-di
 getent group meilisearch >/dev/null || groupadd --system meilisearch
 getent passwd meilisearch >/dev/null || useradd --system --gid meilisearch --home-dir /nonexistent --shell /usr/sbin/nologin meilisearch
 
-install -d -o root -g root -m 0755 "$native_root" "$native_root/mysql" "$native_root/redis" "$native_root/meilisearch" "$native_root/images" "$native_root/images-test"
+install -d -o root -g root -m 0755 "$native_root" "$native_root/mysql" "$native_root/redis" "$native_root/meilisearch" "$native_root/images"
+install -d -o root -g root -m 0700 "$native_root/images-test"
 chown mysql:mysql "$native_root/mysql"
 chown redis:redis "$native_root/redis"
 chown meilisearch:meilisearch "$native_root/meilisearch"
 chown bytedepth:bytedepth "$native_root/images"
-chown bytedepth:bytedepth "$native_root/images-test"
 install -d -o root -g root -m 0700 /etc/bytedepth
 install -d -o root -g root -m 0755 /etc/apparmor.d/local
 
