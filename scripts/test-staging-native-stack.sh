@@ -44,6 +44,7 @@ rg -q -- '--socket=/run/bytedepth-staging-native/mysql.sock' "$UNIT_DIR/bytedept
 rg -q -- '--log-error=__NATIVE_ROOT__/mysql/error.log' "$UNIT_DIR/bytedepth-staging-native-mysql.service.in"
 rg -q 'ExecStart=/usr/bin/redis-server __NATIVE_ROOT__/redis/redis.conf' "$UNIT_DIR/bytedepth-staging-native-redis.service.in"
 rg -q 'ExecStart=/usr/local/bin/meilisearch.*meilisearch.toml.*__NATIVE_ROOT__/meilisearch.*__MEILI_PORT__' "$UNIT_DIR/bytedepth-staging-native-meilisearch.service.in"
+rg -q 'WorkingDirectory=__NATIVE_ROOT__/meilisearch' "$UNIT_DIR/bytedepth-staging-native-meilisearch.service.in"
 rg -q 'ExecStart=/usr/sbin/nginx.*staging-native-nginx.conf' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 rg -q 'Conflicts=bytedepth-staging-native-app.service' "$UNIT_DIR/bytedepth-staging-native-test-slot.service.in"
 rg -q 'ReadWritePaths=__NATIVE_ROOT__/images-test' "$UNIT_DIR/bytedepth-staging-native-test-slot.service.in"

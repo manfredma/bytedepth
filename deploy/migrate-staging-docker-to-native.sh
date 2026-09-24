@@ -272,8 +272,11 @@ migrate_meilisearch() {
     install -d -o root -g root -m 0700 "$import_dir"
     local import_log import_pid import_status
     import_log="$(mktemp "$STATE_DIR/meilisearch-import.XXXXXX")"
-    /usr/local/bin/meilisearch --import-snapshot "$OLD_MEILI_SNAPSHOT" \
-        --db-path "$import_dir" >"$import_log" 2>&1 &
+    (
+        cd "$import_dir"
+        exec /usr/local/bin/meilisearch --import-snapshot "$OLD_MEILI_SNAPSHOT" \
+            --db-path "$import_dir"
+    ) >"$import_log" 2>&1 &
     import_pid=$!
     for _ in {1..600}; do
         if ! kill -0 "$import_pid" 2>/dev/null; then

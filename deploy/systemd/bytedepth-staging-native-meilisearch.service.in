@@ -7,6 +7,7 @@ Before=bytedepth-staging-native-app.service
 Type=simple
 User=meilisearch
 Group=meilisearch
+WorkingDirectory=__NATIVE_ROOT__/meilisearch
 EnvironmentFile=-/etc/bytedepth/staging-native-meilisearch.env
 ExecStart=/usr/local/bin/meilisearch --config-file-path __NATIVE_ROOT__/meilisearch/meilisearch.toml --db-path __NATIVE_ROOT__/meilisearch --http-addr 127.0.0.1:__MEILI_PORT__
 Restart=on-failure
