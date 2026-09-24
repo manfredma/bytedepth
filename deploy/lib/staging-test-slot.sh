@@ -7,8 +7,9 @@ validate_run_id() {
     [[ ${1:-} =~ ^[0-9]{8}_[0-9]{6}_[a-z0-9]{8}$ ]] || slot_die 'invalid RUN_ID'
 }
 
-slot_stat_uid() { stat -f %u "$1" 2>/dev/null || stat -c %u "$1"; }
-slot_stat_mode() { stat -f %Lp "$1" 2>/dev/null || stat -c %a "$1"; }
+# GNU stat is available on staging/Linux; BSD stat is used on macOS development hosts.
+slot_stat_uid() { stat -c %u "$1" 2>/dev/null || stat -f %u "$1"; }
+slot_stat_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }
 slot_redis_cli() {
     redis-cli -h "${BYTEDEPTH_STAGING_REDIS_HOST:-127.0.0.1}" \
         -p "${BYTEDEPTH_STAGING_REDIS_PORT:-6379}" "$@"

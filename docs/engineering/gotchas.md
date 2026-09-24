@@ -21,6 +21,7 @@
 - **移动端文章 E2E 等待正文初始化**：staging 的长文章在移动 Chromium 下可能在 Playwright `goto(..., {waitUntil: 'commit'})` 后超过默认 5 秒才完成 HTML 流式传输；批注测试必须使用显式 15 秒的 `data-bd-annotation-ready` 等待超时，并保留固定 staging E2E 复验，不能把该时序失败误判为业务脚本异常。
 - **集成测试资源必须有界**：同一 staging test slot 内的多个 `*IT` 类共享本次 run 的隔离 MySQL、Redis 和 Meilisearch 资源；runner 退出时必须执行 teardown。资源身份不确定时保留 manifest 并报警，不能盲删。
 - **测试 fixture 校验不能把 Flyway 元数据误判为限定表名**：fixture 可以包含 `flyway_schema_history` 的脚本名（例如 `V1__init_tables.sql`），限定表名检查只能针对 `INSERT INTO`/`CREATE TABLE` 的表名位置，不能对整份 SQL 文本做“任意标识符后跟点号”的匹配。对应回归用例固定带 `.sql` 脚本名的合法 fixture，并继续拒绝真正的 `库名.表名`。
+- **root-only 文件权限检查必须兼容 Linux 与 macOS**：staging 使用 GNU `stat -c`，本机 macOS 使用 BSD `stat -f`；辅助函数必须先尝试 GNU 格式、失败后回退 BSD 格式。不能反过来，因为 GNU `stat -f` 会成功输出文件系统信息而不是文件 uid/mode，造成合法凭据被拒绝。
 - **后台图表与文章 Mermaid 不依赖外部 CDN**：ECharts 和 Mermaid 必须使用项目内固定版本的静态资源；外部 CDN 的连接重置会让分析页在发起数据请求前中断，或让文章页抛出 `mermaid is not defined`，进而污染无关的 E2E 用例。Mermaid 资源还必须使用 `defer` 并在 DOMContentLoaded 后初始化，避免 2MB 级脚本阻塞批注脚本完成初始化。资源路径、加载方式和模板保护由 `ThemeAssetsTest` 固定检查。
 - 批注桌面端 E2E 点击正文“评注”标签会触发生产代码的平滑滚动；测试在测量划线位置或调用 `window.scrollBy` 前，必须先用即时 `scrollIntoView({behavior: 'auto'})` 取消该动画，否则动画与测试滚动竞争会导致偶发的视口位置断言失败。
 - Maven Release Plugin 会留下 `release.properties` 和 `pom.xml.releaseBackup`。它们是本机事务状态而非项目文件；发布前必须工作区干净，发布成功、失败或中断后在确认不需 rollback 时执行 `release:clean`，并且永不提交这些文件。完整恢复规则见 [发布管理](../releases/README.md)。

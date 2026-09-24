@@ -17,6 +17,7 @@
 ### Fixed
 
 - 修正 staging 隔离测试 fixture 校验器误拒绝 Flyway `V1__...sql` 脚本名的问题，避免合法 schema history 被误判为生产库限定表名。
+- 修正 staging root-only 输入的 Linux 文件 uid/mode 校验，避免 GNU `stat -f` 被误当成 BSD 文件属性查询。
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
 

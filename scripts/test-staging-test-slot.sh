@@ -48,6 +48,24 @@ fail_without_calls 'wildcard namespace' bash -c 'source "$1"; redis_scan_delete 
 # shellcheck disable=SC2016
 fail_without_calls 'missing Redis capacity' bash -c 'source "$1"; require_redis_capacity 8 0 14 15' _ "$slot"
 
+private_file="$tmp/private-file"
+touch "$private_file"
+chmod 0600 "$private_file"
+cat > "$tmp/bin/stat" <<'STAT'
+#!/usr/bin/env bash
+if [[ "$1" == -f ]]; then
+    printf '999\n'
+elif [[ "$1" == -c && "$2" == %u ]]; then
+    printf '0\n'
+elif [[ "$1" == -c && "$2" == %a ]]; then
+    printf '600\n'
+else
+    exit 2
+fi
+STAT
+chmod +x "$tmp/bin/stat"
+PATH="$tmp/bin:$PATH" bash -c 'source "$1"; slot_root_private "$2"' _ "$slot" "$private_file"
+
 cat > "$tmp/safe-fixture.sql" <<'SAFE_FIXTURE'
 INSERT INTO article (id, title) VALUES (1, 'fixture');
 INSERT INTO category (id, name) VALUES (1, 'fixture');
