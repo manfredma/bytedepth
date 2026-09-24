@@ -68,6 +68,10 @@ done
 if systemctl is-active --quiet bytedepth-app.service; then slot_die 'staging app must be stopped before provisioning'; exit 1; fi
 mkdir -m 0700 "$run_dir"
 slot_root_directory "$run_dir"
+image_root="/data/images-test/$run_id"
+[[ ! -e $image_root && ! -L $image_root ]] || { slot_die 'test image run directory already exists'; exit 1; }
+mkdir -m 0700 "$image_root"
+slot_root_directory "$image_root"
 staging_resource_digest "$BYTEDEPTH_TEST_STAGING_REDIS_DB" > "$run_dir/staging-baseline"
 chmod 0600 "$run_dir/staging-baseline"
 it_password="$(openssl rand -hex 24)"

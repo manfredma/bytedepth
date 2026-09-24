@@ -86,7 +86,7 @@ validate_fixture() {
         rg -qi "INSERT[[:space:]]+INTO[[:space:]]+.*$token" "$fixture" || { slot_die "fixture lacks $token insert"; return 1; }
     done
     rg -q '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || { slot_die 'fixture lacks administrator password hash'; return 1; }
-    if rg -n -i '(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|TABLE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(^|[[:space:];])[a-z0-9_]+\.(post|article|category|user|users|admin)' "$fixture"; then
+    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|TABLE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+DATA|INTO[[:space:]]+OUTFILE)([[:space:];]|$)|(^|[[:space:];])[a-z0-9_]+\.[a-z0-9_]+' "$fixture"; then
         slot_die 'fixture contains unsafe SQL or qualified production tables'
         return 1
     fi
@@ -135,14 +135,19 @@ write_resource_digest() {
 }
 
 staging_resource_digest() {
-    local staging_db="$1" redis_snapshot meili_stats key value_hash ttl
+    local staging_db="$1" redis_snapshot meili_stats key value_hash ttl ttl_state
     [[ $staging_db =~ ^[0-9]+$ && $staging_db != "$BYTEDEPTH_TEST_IT_REDIS_DB" && $staging_db != "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'invalid staging Redis DB'; return; }
     redis_snapshot="$(redis-cli -n "$staging_db" --scan | LC_ALL=C sort | while IFS= read -r key; do
         [[ -n $key ]] || continue
         value_hash="$(redis-cli -n "$staging_db" --raw DUMP "$key" | shasum -a 256 | awk '{print $1}')" || exit 1
         ttl="$(redis-cli -n "$staging_db" PTTL "$key")" || exit 1
-        [[ $ttl =~ ^-?[0-9]+$ ]] || exit 1
-        printf '%s\t%s\t%s\n' "$key" "$ttl" "$value_hash"
+        case "$ttl" in
+            -1) ttl_state=persistent ;;
+            -2) ttl_state=missing ;;
+            [0-9]*) ttl_state=expiring ;;
+            *) exit 1 ;;
+        esac
+        printf '%s\t%s\t%s\n' "$key" "$ttl_state" "$value_hash"
     done)" || return
     meili_stats="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/stats" | jq -cS .)" || return
     printf '%s\n%s\n' "$redis_snapshot" "$meili_stats" | shasum -a 256 | awk '{print $1}'
