@@ -59,6 +59,7 @@ chown meilisearch:meilisearch "$native_root/meilisearch"
 chown bytedepth:bytedepth "$native_root/images"
 chown bytedepth:bytedepth "$native_root/images-test"
 install -d -o root -g root -m 0700 /etc/bytedepth
+install -d -o root -g root -m 0755 /etc/apparmor.d/local
 
 render_unit() {
     local source="$1" target="$2"
@@ -110,6 +111,17 @@ printf '%s\n' \
     'protected-mode yes' > /etc/bytedepth/staging-native-redis.conf
 chmod 0600 /etc/bytedepth/staging-native-redis.conf
 chown root:root /etc/bytedepth/staging-native-redis.conf
+
+if command -v apparmor_parser >/dev/null && [[ -f /etc/apparmor.d/usr.sbin.mysqld ]]; then
+    printf '%s\n' \
+        "$native_root/mysql/ r," \
+        "$native_root/mysql/** rwk," \
+        '/run/bytedepth-staging-native/ r,' \
+        '/run/bytedepth-staging-native/** rwk,' > /etc/apparmor.d/local/usr.sbin.mysqld
+    chmod 0644 /etc/apparmor.d/local/usr.sbin.mysqld
+    chown root:root /etc/apparmor.d/local/usr.sbin.mysqld
+    apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld
+fi
 
 printf '%s\n' 'env = "production"' > /etc/bytedepth/staging-native-meilisearch.toml
 chmod 0600 /etc/bytedepth/staging-native-meilisearch.toml
