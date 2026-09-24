@@ -92,8 +92,13 @@ validate_fixture() {
     done
     rg -q '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || { slot_die 'fixture lacks administrator password hash'; return 1; }
     normalized_fixture="$(tr '\n\r\t' ' ' < "$fixture")"
-    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])\\[[:alpha:]!#.]|(^|[[:space:];])(system|delimiter|pager|tee|source|use|connect|status|warnings|nowarning|charset|prompt|rehash|edit|go|print)([[:space:];]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|EVENT|TRIGGER|PROCEDURE|FUNCTION|VIEW|ROLE|TABLESPACE|SERVER|LOGFILE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+(DATA|XML)|INTO[[:space:]]+OUTFILE|RENAME([[:space:]]+(TABLE|USER))?|CALL|LOCK[[:space:]]+TABLES|SET([[:space:]]+(GLOBAL|PERSIST|PERSIST_ONLY|SESSION))?|PREPARE|EXECUTE|DEALLOCATE)([[:space:];]|$)|(`[^`]*`[[:space:]]*\.)|(`?[a-z_][a-z0-9_-]*`?[[:space:]]*\.)' <<< "$normalized_fixture"; then
+    if rg -n -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])\\[[:alpha:]!#.]|(^|[[:space:];])(system|delimiter|pager|tee|source|use|connect|status|warnings|nowarning|charset|prompt|rehash|edit|go|print)([[:space:];]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|EVENT|TRIGGER|PROCEDURE|FUNCTION|VIEW|ROLE|TABLESPACE|SERVER|LOGFILE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+(DATA|XML)|INTO[[:space:]]+OUTFILE|RENAME([[:space:]]+(TABLE|USER))?|CALL|LOCK[[:space:]]+TABLES|SET([[:space:]]+(GLOBAL|PERSIST|PERSIST_ONLY|SESSION))?|PREPARE|EXECUTE|DEALLOCATE)([[:space:];]|$)' <<< "$normalized_fixture"; then
         slot_die 'fixture contains unsafe SQL or qualified production tables'
+        return 1
+    fi
+    if printf '%s\n' "$normalized_fixture" | sed 's/;/;\n/g' \
+        | rg -n -i '^[[:space:]]*(INSERT[[:space:]]+INTO|CREATE[[:space:]]+TABLE)[[:space:]]+[^[:space:];]+[[:space:]]*\.'; then
+        slot_die 'fixture contains qualified production tables'
         return 1
     fi
 }

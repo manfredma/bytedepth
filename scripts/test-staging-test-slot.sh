@@ -55,6 +55,13 @@ INSERT INTO admin (id, password_hash) VALUES (1, '$argon2id$v=19$m=1$fixture');
 SAFE_FIXTURE
 validate_fixture_cmd="source \"\$1\"; validate_fixture \"\$2\""
 bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/safe-fixture.sql"
+cat > "$tmp/flyway-history-fixture.sql" <<'FLYWAY_HISTORY_FIXTURE'
+INSERT INTO article (id, title) VALUES (1, 'fixture');
+INSERT INTO category (id, name) VALUES (1, 'fixture');
+INSERT INTO admin (id, password_hash) VALUES (1, '$argon2id$v=19$m=1$fixture');
+INSERT INTO flyway_schema_history (version, script) VALUES ('1', 'V1__init_tables.sql');
+FLYWAY_HISTORY_FIXTURE
+bash -c "$validate_fixture_cmd" _ "$slot" "$tmp/flyway-history-fixture.sql"
 cat > "$tmp/decimal-fixture.sql" <<'DECIMAL_FIXTURE'
 INSERT INTO article (id, title, score) VALUES (1, 'fixture', 1.23);
 INSERT INTO category (id, name) VALUES (1, 'fixture');
