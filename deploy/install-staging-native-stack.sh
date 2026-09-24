@@ -104,13 +104,13 @@ printf '%s\n' \
     'bind 127.0.0.1' \
     "port $redis_port" \
     "dir $native_root/redis" \
-    'pidfile /run/bytedepth-staging-native/redis.pid' \
+    "pidfile $native_root/redis/redis.pid" \
     'logfile ""' \
     "requirepass $BYTEDEPTH_REDIS_PASSWORD" \
     'appendonly yes' \
     'protected-mode yes' > /etc/bytedepth/staging-native-redis.conf
-chmod 0600 /etc/bytedepth/staging-native-redis.conf
-chown root:root /etc/bytedepth/staging-native-redis.conf
+chmod 0640 /etc/bytedepth/staging-native-redis.conf
+chown root:redis /etc/bytedepth/staging-native-redis.conf
 
 if command -v apparmor_parser >/dev/null && [[ -f /etc/apparmor.d/usr.sbin.mysqld ]]; then
     printf '%s\n' \
@@ -126,8 +126,8 @@ if command -v apparmor_parser >/dev/null && [[ -f /etc/apparmor.d/usr.sbin.mysql
 fi
 
 printf '%s\n' 'env = "production"' > /etc/bytedepth/staging-native-meilisearch.toml
-chmod 0600 /etc/bytedepth/staging-native-meilisearch.toml
-chown root:root /etc/bytedepth/staging-native-meilisearch.toml
+chmod 0640 /etc/bytedepth/staging-native-meilisearch.toml
+chown root:meilisearch /etc/bytedepth/staging-native-meilisearch.toml
 
 printf '%s\n' \
     'events { worker_connections 1024; }' \
