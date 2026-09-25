@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly ROOT
 readonly UNIT_DIR="$ROOT/deploy/systemd"
 readonly INSTALLER="$ROOT/deploy/install-host-service.sh"
+readonly BOOTSTRAP="$ROOT/deploy/bootstrap-staging-runtime.sh"
 
 require_file() {
     [[ -f "$1" ]] || {
@@ -44,6 +45,8 @@ require_text '/data/images-test' "$INSTALLER"
 require_text 'readonly DEPLOY_USER=ubuntu' "$INSTALLER"
 require_text 'getent passwd "$DEPLOY_USER"' "$INSTALLER"
 require_text 'chown -R "$DEPLOY_USER:$DEPLOY_GROUP" "$SOURCE_ROOT"' "$INSTALLER"
+require_text 'org.apache.maven.surefire:surefire-junit-platform:3.2.5' "$BOOTSTRAP"
+require_text 'dependency:get' "$BOOTSTRAP"
 
 require_text 'User=mysql' "$UNIT_DIR/mysql.service"
 require_text 'Type=simple' "$UNIT_DIR/mysql.service"

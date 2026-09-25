@@ -73,6 +73,7 @@
 - staging 运行时脚本不能把本机开发工具当作宿主机依赖；129 未安装 `rg`，测试槽 fixture 校验因此在真实集成测试开始前失败。部署/测试运行路径使用 `grep`、`sed` 等基础工具，`rg` 只允许出现在本机静态契约脚本中。
 - staging native 测试槽的管理员 MySQL defaults 文件只提供凭据，不能假设其中包含端口；所有管理员连接必须通过统一 helper 显式指定 127.0.0.1 和 `BYTEDEPTH_STAGING_MYSQL_PORT`，否则客户端会回退到 3306，并把连接失败误报成资源已存在。
 - 测试槽的 teardown 与 provision 必须共用同一个 native MySQL 端口 helper；只修 provision 会导致测试失败后的清理仍回退 3306，留下数据库、用户和图片资源，并使 staging 恢复被错误标记为失败。
+- `maven-dependency-plugin:go-offline` 不保证解析 Surefire 动态选择的 `surefire-junit-platform` provider；bootstrap 必须显式执行 `dependency:get` 预热该 provider 及其传递依赖，之后 runner 才能在离线仓库中稳定运行。
 - Ubuntu 的 `fs.protected_regular` 会阻止 root 在 sticky `/tmp` 中通过 `>` 覆盖其他用户所有的普通文件；临时文件若由 root 写入，必须在重定向完成后再转移所有权，或使用非 sticky 的项目临时目录。不能为了满足 ubuntu ownership 规则而在写入前 `chown` `/tmp` 文件。
 
 ## 原生测试槽位（critical）

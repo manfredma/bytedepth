@@ -66,6 +66,12 @@ prepare_maven() {
             "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" clean install -DskipTests -Dsort.skip=true
             "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
                 dependency:go-offline -Dsort.skip=true -DincludePlugins=true -DincludePluginDependencies=true -DskipTests
+            # Surefire's JUnit Platform provider is selected dynamically and is
+            # not reliably pulled by go-offline. Resolve it explicitly so the
+            # later offline staging runner cannot fall back to the public mirror.
+            "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" \
+                dependency:get -Dartifact=org.apache.maven.surefire:surefire-junit-platform:3.2.5 \
+                -Dtransitive=true -Dsort.skip=true
             # Surefire/Failsafe select their JUnit runtime dynamically, outside the
             # dependency graph visible to dependency:go-offline.  Resolve that exact
             # runtime without running a test: the impossible selector and the two
