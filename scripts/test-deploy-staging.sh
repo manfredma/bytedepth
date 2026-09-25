@@ -14,6 +14,9 @@ for contract in \
     'check-release-readiness.sh' \
     'build_release_artifact' \
     'scp' \
+    'if ! scp' \
+    'find '\''$remote_dir'\'' -depth -delete' \
+    'trap cleanup_remote_dir EXIT' \
     'install_release_artifact' \
     'switch_current_release' \
     'BYTEDEPTH_STAGING_APP_SERVICE' \

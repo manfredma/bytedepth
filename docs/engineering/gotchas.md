@@ -65,6 +65,7 @@
 - 生产 green 的 MySQL/Redis 运行时依赖必须由安装脚本显式校验并在缺失时安装；MySQL 的 green 健康检查和首次导入必须通过 `MYSQL_PWD` 复用蓝环境 `MYSQL_ROOT_PASSWORD`，不能假设 `root` 支持无密码 TCP 登录。Redis 使用 Ubuntu 原生服务时必须采用 `Type=simple`，并在启动前持久化启用 `vm.overcommit_memory=1`，否则可能出现“已 Ready 但 systemd 超时”或 Redis 告警。
 - 175 生产的公网入口仍由 Docker Nginx 提供，但 native green edge 使用宿主机 nginx 只监听 18081；生产宿主机可能没有 nginx 二进制。green 安装器必须把 `nginx-core` 作为 native 前置依赖，并在安装期间屏蔽 `nginx.service` 的 package maintainer scripts，避免安装过程启动或改写 Docker 80/443 入口；缺少该检查会让 edge 以 `203/EXEC` 失败，而错误只应停留在切流前并保持 Docker blue 可访问。
 - 生产 green edge 以 `ubuntu` 运行时，Nginx 的 `client_body_temp_path`、`proxy_temp_path` 等临时目录必须显式落在 green root，并由安装器以 `ubuntu` 创建；不能依赖发行版默认的 `/var/lib/nginx/*`，否则新宿主机上 native `nginx -t` 会因权限或目录缺失失败。该失败必须发生在 Docker blue 切流前。
+- staging 制品上传使用的 `/tmp/bytedepth-staging-<SHA>` 只允许作为单次传输目录；上传失败和远程安装结束都必须清理它。staging 的 `/tmp` 是独立 tmpfs，历史 JAR 残留会耗尽 tmpfs，即使根分区仍有大量空间也会让 `scp` 写入失败。
 - 生产 green 的 `prepared` 标记只代表数据复制已完成，不代表宿主依赖永久满足；每次发布都必须在检查该标记前重新执行 native stack 安装器/前置依赖复核，否则后续补丁会被旧标记短路，出现“修复已提交但 nginx 仍缺失”的假通过路径。此复核失败必须发生在停止 Docker blue 之前。
 - `systemctl start` 返回不等于 Redis 已经监听端口：`Type=simple` 服务可能仍处于毫秒级启动窗口。生产 green Redis 启动后必须轮询带密码的 `PING`，不能只执行一次 `redis-cli`；否则短暂 `Connection refused` 会在 Docker 仍可用时误判 native 预检失败。
 - 红绿发布的切流前置条件是 green 中间件、应用、edge、版本 SHA 和只读检查全部通过；任何准备或预检失败都必须保持 Docker blue 运行并验证公网仍可访问，禁止通过手工修改远端 tag 脚本绕过不可变发布输入。

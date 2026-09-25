@@ -94,15 +94,22 @@ deploy_external_artifact() {
     local ref="$1" artifact_dir="$2" commit="$3" remote_dir="/tmp/bytedepth-staging-$3" remote_command
     require_staging_host_configuration
     ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "install -d -o ubuntu -g ubuntu -m 0700 '$remote_dir'"
-    scp "${STAGING_SSH_OPTIONS[@]}" \
-        "$artifact_dir/app.jar" "$artifact_dir/artifact.manifest" "$STAGING_USER@$STAGING_HOST:$remote_dir/"
+    if ! scp "${STAGING_SSH_OPTIONS[@]}" \
+        "$artifact_dir/app.jar" "$artifact_dir/artifact.manifest" "$STAGING_USER@$STAGING_HOST:$remote_dir/"; then
+        ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "find '$remote_dir' -depth -delete" || true
+        return 1
+    fi
     printf -v remote_command 'set -Eeuo pipefail
+cleanup_remote_dir() {
+  find %q -depth -delete
+}
+trap cleanup_remote_dir EXIT
 cd /opt/bytedepth
 test -z "$(git status --short --untracked-files=no)"
 git fetch --force --no-recurse-submodules origin %q
 git checkout --detach %q
 sudo ./deploy/deploy-staging.sh --artifact %q --manifest %q %q' \
-        "$ref" "$commit" "$remote_dir/app.jar" "$remote_dir/artifact.manifest" "$ref"
+        "$remote_dir" "$ref" "$commit" "$remote_dir/app.jar" "$remote_dir/artifact.manifest" "$ref"
     ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "$remote_command"
 }
 
