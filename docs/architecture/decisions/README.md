@@ -37,3 +37,4 @@
 | [ADR-0015](0015-obsidian-codeblock-metadata-compatibility.md) | 兼容 Obsidian Codeblock Customizer 的代码块元数据 | Accepted | 2026-09-23 |
 | [ADR-0016](0016-host-native-runtime-deployment.md) | 小资源单机环境采用宿主机原生运行时 | Proposed | 2026-09-24 |
 | [ADR-0017](0017-native-edge-lifecycle-for-test-slot.md) | native edge 与 E2E test slot 解耦生命周期 | Proposed | 2026-09-25 |
+| [ADR-0018](0018-production-red-green-native-cutover.md) | 生产环境采用 native 全栈红绿切换 | Accepted | 2026-09-25 |

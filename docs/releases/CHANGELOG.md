@@ -56,6 +56,27 @@
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
 
+## [v2.25.3] - 2026-09-25
+
+**Tag**：`v2.25.3`（待 `release:prepare` 创建正式 Tag）
+**Commit**：待候选提交冻结后填写
+**部署**：待 staging 与生产验收。
+**回滚基线**：`v2.25.2`
+
+### Changed
+
+- 将 staging 与生产运行时统一为宿主机原生 systemd 部署，使用不可变 JAR、SHA256 manifest 和原子 `current` 软链接。
+- 为 staging 集成测试和 E2E 增加基于 Spring Profile、`run_id` 和资源 manifest 的 MySQL、Redis、Meilisearch 与图片资源隔离及自动清理。
+- 保持多服务宿主机共享 Nginx 边界，测试槽只接管 bytedepth 应用，不影响其他项目。
+
+### Fixed
+
+- 修复 native staging 部署、测试槽、edge 恢复、内存保护、文件归属和生产发布校验中的问题，避免测试结束后公网入口失效或资源越界。
+
+### Tests
+
+- staging 集成测试和全量 E2E 将在正式发布前按当前候选 SHA 重新执行并记录 commit-bound evidence。
+
 ## [v2.25.2] - 2026-09-24
 
 **Tag**：`v2.25.2`
