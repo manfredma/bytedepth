@@ -61,6 +61,17 @@
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
 
+## [v2.25.6] - 2026-09-25
+
+**Tag**：`v2.25.6`（由本次 release:prepare 创建）
+**Commit**：由本次 release:prepare 冻结
+**部署**：staging 集成测试与 E2E 已通过，待生产验收。
+**回滚基线**：`v2.25.2`
+
+### Fixed
+
+- 修复生产 native green Meilisearch 启动后立即健康检查的时序竞态；部署现在在连接被拒绝时继续等待直到服务真正就绪，避免短暂启动窗口被误判为 native 失败。
+
 ## [v2.25.5] - 2026-09-25
 
 **Tag**：`v2.25.5`（待 `release:prepare` 创建正式 Tag）
