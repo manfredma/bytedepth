@@ -60,6 +60,17 @@
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
 
+## [v2.25.5] - 2026-09-25
+
+**Tag**：`v2.25.5`（待 `release:prepare` 创建正式 Tag）
+**Commit**：待候选提交冻结后填写
+**部署**：待 staging 与生产验收。
+**回滚基线**：`v2.25.4`
+
+### Fixed
+
+- 修复生产 native green Redis 使用 `Type=simple` 启动后立即探测端口的时序竞态；部署现在轮询 Redis 鉴权 `PING` 直到真正就绪，避免短暂 `Connection refused` 被误判为 native 失败。
+
 ## [v2.25.4] - 2026-09-25
 
 **Tag**：`v2.25.4`（待 `release:prepare` 创建正式 Tag）
