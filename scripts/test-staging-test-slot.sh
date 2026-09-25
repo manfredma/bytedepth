@@ -183,6 +183,26 @@ grep -Fqx "        slot_die 'provision state is uncertain; preserving manifest a
 rg -q 'state-uncertain' "$root/deploy/teardown-staging-test-slot.sh"
 rg -q 'refusing destructive cleanup until manual recovery' "$root/deploy/teardown-staging-test-slot.sh"
 
+for runner in "$root/deploy/run-staging-integration-tests.sh" "$root/deploy/run-staging-e2e-tests.sh"; do
+    grep -Fq 'systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE"' "$runner" || {
+        printf 'FAIL: %s must restore the native edge after restoring the staging app\n' "$runner" >&2
+        exit 1
+    }
+    grep -Fq 'systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE"' "$runner" || {
+        printf 'FAIL: %s must verify the native edge after cleanup\n' "$runner" >&2
+        exit 1
+    }
+    grep -Fq 'curl --fail --silent --show-error' "$runner" && \
+        grep -Fq 'http://127.0.0.1:${BYTEDEPTH_STAGING_EDGE_PORT}/version' "$runner" || {
+        printf 'FAIL: %s must verify the native edge port after cleanup\n' "$runner" >&2
+        exit 1
+    }
+done
+grep -Fq 'BYTEDEPTH_STAGING_EDGE_PORT=' "$root/deploy/lib/staging-native-target.sh" || {
+    printf 'FAIL: native staging target must expose the isolated edge port to cleanup checks\n' >&2
+    exit 1
+}
+
 grep -Fqx 'if systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then' <(sed -n '35,45p' "$root/deploy/teardown-staging-test-slot.sh") || {
     printf 'FAIL: teardown must stop the optional E2E test slot only when it exists and is active\n' >&2
     exit 1

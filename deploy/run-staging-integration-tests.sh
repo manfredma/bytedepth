@@ -183,6 +183,10 @@ cleanup_slot() {
     if (( app_stopped != 0 )) && ! systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE"; then
         systemctl start "$BYTEDEPTH_STAGING_APP_SERVICE" || cleanup_status=1
         systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE" || cleanup_status=1
+        systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE" || cleanup_status=1
+        systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE" || cleanup_status=1
+        curl --fail --silent --show-error \
+            "http://127.0.0.1:${BYTEDEPTH_STAGING_EDGE_PORT}/version" >/dev/null || cleanup_status=1
     fi
     cleanup_done=1
     if (( cleanup_status == 0 )); then
