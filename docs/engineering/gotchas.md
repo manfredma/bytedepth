@@ -67,6 +67,7 @@
 - 生产 green 的 MySQL/Redis 运行时依赖必须由安装脚本显式校验并在缺失时安装；MySQL 的 green 健康检查和首次导入必须通过 `MYSQL_PWD` 复用蓝环境 `MYSQL_ROOT_PASSWORD`，不能假设 `root` 支持无密码 TCP 登录。Redis 使用 Ubuntu 原生服务时必须采用 `Type=simple`，并在启动前持久化启用 `vm.overcommit_memory=1`，否则可能出现“已 Ready 但 systemd 超时”或 Redis 告警。
 - 175 生产的公网入口仍由 Docker Nginx 提供，但 native green edge 使用宿主机 nginx 只监听 18081；生产宿主机可能没有 nginx 二进制。green 安装器必须把 `nginx-core` 作为 native 前置依赖，并在安装期间屏蔽 `nginx.service` 的 package maintainer scripts，避免安装过程启动或改写 Docker 80/443 入口；缺少该检查会让 edge 以 `203/EXEC` 失败，而错误只应停留在切流前并保持 Docker blue 可访问。
 - 生产 Docker Nginx 的主配置是单文件 bind mount；用 `install` 原子替换宿主文件只会替换 inode，运行中的容器仍可能继续读取旧 inode。生产切流窗口若已由所有者确认同机其他项目无流量，可保留全部 `/opt/nginx-conf.d` 路由并重启 `bytedepth-nginx-1` 让容器重新挂载新文件；重启后必须执行 `nginx -t`，失败时恢复备份文件并再次重启回蓝路由。不能删除共享配置、重建整套 Compose 或误停其他项目的数据服务。
+- Nginx 路由切换在宿主文件替换成功后必须立即设置 `route_changed`；任何临时文件清理、容器重启或渲染配置校验失败都必须进入回滚。回滚缺少备份、停止 green 失败或容器实际加载的 upstream 不等于 blue 时，必须 fail-closed，不能只凭公网偶尔返回 200 就报告恢复成功。
 - 生产 green edge 以 `ubuntu` 运行时，Nginx 的 `client_body_temp_path`、`proxy_temp_path` 等临时目录必须显式落在 green root，并由安装器以 `ubuntu` 创建；不能依赖发行版默认的 `/var/lib/nginx/*`，否则新宿主机上 native `nginx -t` 会因权限或目录缺失失败。该失败必须发生在 Docker blue 切流前。
 - staging 制品上传使用的 `/tmp/bytedepth-staging-<SHA>` 只允许作为单次传输目录；上传失败和远程安装结束都必须清理它。staging 的 `/tmp` 是独立 tmpfs，历史 JAR 残留会耗尽 tmpfs，即使根分区仍有大量空间也会让 `scp` 写入失败。
 - 生产 green 的 `prepared` 标记只代表数据复制已完成，不代表宿主依赖永久满足；每次发布都必须在检查该标记前重新执行 native stack 安装器/前置依赖复核，否则后续补丁会被旧标记短路，出现“修复已提交但 nginx 仍缺失”的假通过路径。此复核失败必须发生在停止 Docker blue 之前。

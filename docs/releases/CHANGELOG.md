@@ -21,6 +21,8 @@
 
 ### Fixed
 
+- 加强生产红绿发布回滚：Nginx 主配置替换后立即记录路由已变更，缺少蓝配置备份、green 停止失败或重启容器实际 upstream 不匹配时均拒绝报告回滚成功，并保留蓝入口故障状态供人工处理。
+
 - 修复合并主分支脚本只写入 `FETCH_HEAD`、未创建候选分支 remote-tracking ref，导致质量通过后合并流程错误中止的问题；现在显式更新 `origin/<branch>` 并由契约测试锁定。
 
 - 修复生产 native green 切流替换 Docker Nginx bind mount 配置后容器继续读取旧 inode、导致切流后公网 502 的问题；切流窗口会重启共享 `bytedepth-nginx-1` 使新路由生效，重启后执行 `nginx -t`，失败时恢复蓝路由。

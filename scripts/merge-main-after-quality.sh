@@ -8,7 +8,7 @@ SHA="$(git rev-parse "origin/$REF")"
 bash scripts/check-staging-changelog-change.sh --target "$SHA" --base origin/main
 bash scripts/check-release-readiness.sh --target "$SHA" --base origin/main --mode candidate
 command -v gh >/dev/null || { echo 'gh is required' >&2; exit 1; }
-for attempt in $(seq 1 120); do
+for _ in $(seq 1 120); do
   run="$(gh run list --repo "$REPO" --workflow quality --commit "$SHA" --limit 1 --json status,conclusion --jq '.[0] // {}')"
   status="$(jq -r '.status // "missing"' <<<"$run")"
   conclusion="$(jq -r '.conclusion // ""' <<<"$run")"

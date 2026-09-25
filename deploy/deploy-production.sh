@@ -130,6 +130,7 @@ backup_blue_route() {
 }
 
 restart_docker_nginx() {
+    local expected_upstream="$1" rendered_config
     if ! docker restart "$DOCKER_NGINX"; then
         printf 'Refusing: shared Docker Nginx could not be restarted after replacing its bind-mounted configuration.\n' >&2
         return 1
@@ -138,12 +139,26 @@ restart_docker_nginx() {
         printf 'Refusing: restarted Docker Nginx failed its configuration check.\n' >&2
         return 1
     fi
+    if ! rendered_config="$(docker exec "$DOCKER_NGINX" nginx -T 2>&1)"; then
+        printf 'Refusing: could not inspect the restarted Docker Nginx configuration.\n' >&2
+        return 1
+    fi
+    if ! printf '%s\n' "$rendered_config" | grep -F "proxy_pass http://$expected_upstream;" >/dev/null; then
+        printf 'Refusing: restarted Docker Nginx did not load the expected upstream: %s.\n' "$expected_upstream" >&2
+        return 1
+    fi
 }
 
 restore_blue_route() {
-    [[ -f "$NGINX_BACKUP" ]] || return 0
-    install -o ubuntu -g ubuntu -m 0644 "$NGINX_BACKUP" "$NGINX_CONFIG"
-    restart_docker_nginx
+    [[ -f "$NGINX_BACKUP" ]] || {
+        printf 'Refusing: Docker blue Nginx backup is missing; cannot claim rollback.\n' >&2
+        return 1
+    }
+    if ! install -o ubuntu -g ubuntu -m 0644 "$NGINX_BACKUP" "$NGINX_CONFIG"; then
+        printf 'Refusing: could not restore the Docker blue Nginx configuration.\n' >&2
+        return 1
+    fi
+    restart_docker_nginx "$BLUE_UPSTREAM"
     route_changed=0
 }
 
@@ -154,10 +169,10 @@ switch_green_route() {
     sed "s#proxy_pass http://$BLUE_UPSTREAM;#proxy_pass http://$GREEN_UPSTREAM;#g" \
         "$NGINX_CONFIG" > "$temp"
     install -o ubuntu -g ubuntu -m 0644 "$temp" "$NGINX_CONFIG"
-    rm -f -- "$temp"
     route_changed=1
+    rm -f -- "$temp"
     grep -Fq "proxy_pass http://$GREEN_UPSTREAM;" "$NGINX_CONFIG" || return 1
-    restart_docker_nginx
+    restart_docker_nginx "$GREEN_UPSTREAM"
 }
 
 verify_blue_public_access() {
@@ -200,11 +215,14 @@ restore_blue_access() {
 }
 
 stop_green_services() {
-    systemctl stop "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE" \
+    if ! systemctl stop "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE" \
         "$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE" \
         "$BYTEDEPTH_PRODUCTION_GREEN_MEILI_SERVICE" \
         "$BYTEDEPTH_PRODUCTION_GREEN_REDIS_SERVICE" \
-        "$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_SERVICE" 2>/dev/null || true
+        "$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_SERVICE" 2>/dev/null; then
+        printf 'Refusing: one or more native green services could not be stopped during rollback.\n' >&2
+        return 1
+    fi
 }
 
 rollback_on_failure() {
@@ -214,7 +232,7 @@ rollback_on_failure() {
             production_green_mark_uncertain || rollback_status=1
         fi
         if [[ -n "${BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE:-}" ]]; then
-            stop_green_services
+            stop_green_services || rollback_status=1
         fi
         if (( rollback_required )); then
             restore_blue_access || rollback_status=1

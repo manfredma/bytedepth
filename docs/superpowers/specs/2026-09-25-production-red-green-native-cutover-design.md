@@ -16,7 +16,7 @@
 | Meilisearch | 17700，独立数据目录和 native unit |
 | 应用 | 18080，systemd 管理的不可变 JAR |
 | edge | 18081，只服务 bytedepth 绿环境 |
-| 公网入口 | 共享 Nginx，仅 reload bytedepth upstream |
+| 公网入口 | 共享 Docker Nginx，切流窗口替换 bytedepth upstream 后重启入口容器并执行 `nginx -t` |
 
 所有新建项目文件、配置、发布制品和迁移状态由 `ubuntu` 持有；服务账号只通过服务组获得数据目录所需写权限。其他项目的端口、容器、数据目录和 Nginx 路由不在本设计范围内。
 
@@ -31,7 +31,7 @@
   -> 进入显式切流窗口：保存蓝路由并短暂停止蓝应用
   -> 最终同步；失败则立即恢复蓝应用和蓝路由
   -> 启动绿全栈并重复健康检查
-  -> nginx -t -> reload bytedepth upstream
+  -> 替换 bytedepth upstream -> 重启共享入口 -> nginx -t
   -> 公网 SNI、版本、页面和日志验收
   -> 保留蓝环境，验收通过后再显式清理
 ```
@@ -54,7 +54,7 @@
 - 本机仍只调用 `deploy/deploy-production-remote.sh vX.Y.Z`，不调用生产内部脚本，不执行本机 sudo。
 - 175 内部脚本负责绿环境安装、迁移锁、状态文件、systemd 启停和 Nginx reload。
 - 生产部署锁必须覆盖初始复制、最终同步和切流，避免同机发布并发。
-- 共享 Nginx 只能执行配置测试和 reload；不重启、停止或重建 Nginx，也不触碰其他项目配置。
+- 普通部署不重启共享 Nginx；本次已确认无同机服务流量的生产切流窗口可重启 `bytedepth-nginx-1` 刷新单文件 bind mount，但必须保留其他项目配置，不能重建整套 Docker 栈。
 - Docker 清理是切流并完成生产验收后的单独显式阶段，不能由失败回退路径自动执行。
 
 ## 验证与测试

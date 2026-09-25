@@ -14,6 +14,7 @@ reset_state() {
     blue_app=running
     shared_nginx=running
     green_services=running
+    nginx_loaded_route=blue
     route_changed=0
     blue_stopped=0
     deployment_succeeded=0
@@ -42,19 +43,20 @@ fake_green_stop() {
     green_services=stopped
 }
 
-fake_nginx_reload() {
-    event nginx-reload
+fake_nginx_restart_and_test() {
+    event nginx-restart
+    nginx_loaded_route="$route"
 }
 
 blue_public_access() {
-    [[ "$route" == blue && "$blue_app" == running && "$shared_nginx" == running ]]
+    [[ "$route" == blue && "$nginx_loaded_route" == blue && "$blue_app" == running && "$shared_nginx" == running ]]
 }
 
 restore_blue_access() {
     if (( route_changed )); then
         route=blue
         route_changed=0
-        fake_nginx_reload
+        fake_nginx_restart_and_test
     fi
     if (( blue_stopped )); then
         fake_docker_start_blue
@@ -86,7 +88,15 @@ run_cutover() {
     green_services=running
     route=green
     route_changed=1
-    if [[ "$failure_stage" == nginx-test || "$failure_stage" == green-public ]]; then
+    if [[ "$failure_stage" == nginx-test ]]; then
+        fake_nginx_restart_and_test
+        nginx_loaded_route=blue
+        fake_green_stop
+        restore_blue_access
+        return 1
+    fi
+    fake_nginx_restart_and_test
+    if [[ "$failure_stage" == green-public ]]; then
         fake_green_stop
         restore_blue_access
         return 1

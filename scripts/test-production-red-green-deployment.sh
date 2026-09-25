@@ -28,6 +28,7 @@ for contract in \
     "docker start \"\$DOCKER_APP\"" \
     "docker exec \"\$DOCKER_NGINX\" nginx -t" \
     'restart_docker_nginx' \
+    'nginx -T' \
     'nginx -t' \
     'verify_blue_public_access' \
     'production_green_mark_uncertain' \
@@ -42,8 +43,11 @@ require_text 'install_release_artifact' "$SCRIPT"
 require_text 'production-green' "$SCRIPT"
 require_text 'release-history' "$SCRIPT"
 require_text 'production_green_prepare()' "$MIGRATION_LIB"
-require_text '"$SOURCE_ROOT/deploy/install-production-green-stack.sh"' "$MIGRATION_LIB"
-require_text 'docker restart "$DOCKER_NGINX"' "$SCRIPT"
+require_text "\"\$SOURCE_ROOT/deploy/install-production-green-stack.sh\"" "$MIGRATION_LIB"
+require_text "docker restart \"\$DOCKER_NGINX\"" "$SCRIPT"
+require_text 'route_changed=1' "$SCRIPT"
+require_text 'restore_blue_route' "$SCRIPT"
+require_text 'Docker blue Nginx backup is missing' "$SCRIPT"
 if rg -n 'docker exec "\$DOCKER_NGINX" nginx -s reload' "$SCRIPT" >/dev/null; then
     printf 'Production cutover must recreate the shared Docker Nginx container after replacing its bind-mounted config.\n' >&2
     exit 1
@@ -81,7 +85,7 @@ require_text 'trap rollback_on_failure EXIT' "$SCRIPT"
 require_text 'if (( route_changed )); then' "$SCRIPT"
 require_text 'if (( blue_stopped )); then' "$SCRIPT"
 require_text 'if (( deployment_succeeded == 0 )); then' "$SCRIPT"
-require_text 'if (( green_prepare_started )) || [[ -e "$GREEN_STATE_DIR/syncing" ]]; then' "$SCRIPT"
+require_text "if (( green_prepare_started )) || [[ -e \"\$GREEN_STATE_DIR/syncing\" ]]; then" "$SCRIPT"
 require_text 'green_prepare_started=1' "$SCRIPT"
 if rg -n -F 'if ! production_green_final_sync; then' "$SCRIPT" >/dev/null; then
     printf 'Final green synchronization must not run in an errexit-suppressed conditional context.\n' >&2
