@@ -156,7 +156,7 @@ SSH 默认不会转发任意环境变量。远程执行时通过 SSH 标准输�
          ./deploy/run-staging-e2e-tests.sh'
     unset staging_e2e_username staging_e2e_password
 
-runner 固定使用公开 staging URL、root 管理的 `/opt/shared-e2e/chrome-linux64/chrome` 和 Playwright ffmpeg。ffmpeg 由 `sudo ./deploy/bootstrap-staging-runtime.sh` 预热并纳入 runtime manifest；runner 不在项目目录下载浏览器或录制工具。它停止 native app，生成 staging-e2e profile 环境，启动 native test-slot，该服务只加载 `/run/bytedepth/staging-native-e2e.env`，内部 edge 保持监听 18081 并将请求转发到 test slot 的 18080；runner 通过公开 `/version` 校验健康，并对健康探测设置连接和总超时。E2E 槽位使用：
+runner 固定使用公开 staging URL、宿主机共享运行时提供的 `/opt/shared-e2e/chrome-linux64/chrome` 和 Playwright ffmpeg。ffmpeg 由 `sudo ./deploy/bootstrap-staging-runtime.sh` 预热并纳入 runtime manifest；runner 不在项目目录下载浏览器或录制工具。它停止 native app，生成 staging-e2e profile 环境，启动 native test-slot，该服务只加载 `/run/bytedepth/staging-native-e2e.env`，内部 edge 保持监听 18081 并将请求转发到 test slot 的 18080；runner 通过公开 `/version` 校验健康，并对健康探测设置连接和总超时。E2E 槽位使用：
 
 - MySQL：bytedepth_e2e_<run_id> 和最小权限用户 bd_e2e_<run_id>；
 - Redis：logical DB 15 与 bytedepth:e2e:<run_id>: namespace；
