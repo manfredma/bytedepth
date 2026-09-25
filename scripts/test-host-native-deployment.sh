@@ -23,6 +23,7 @@ rg -q 'JAVA_HOME="\$java_25_home"' "$ARTIFACT"
 rg -q 'PIPESTATUS\[0\]' "$ARTIFACT"
 rg -q 'Release artifact Maven build failed' "$ARTIFACT"
 rg -q 'readlink -- "\$current_link"' "$ARTIFACT"
+rg -q 'chown -h ubuntu:ubuntu "\$current_link"' "$ARTIFACT"
 rg -q 'sha256sum|shasum -a 256' "$ARTIFACT"
 rg -q 'trap .*build_log:-.*\|\| rm -f --.*RETURN' "$ARTIFACT"
 if rg -n 'find .*target.*\|[[:space:]]*sort[[:space:]]*\|[[:space:]]*head' "$ARTIFACT" >/dev/null; then
@@ -43,10 +44,16 @@ if rg -n 'mysqldump|backup_dir|mysqladmin.*ping' "$PRODUCTION" >/dev/null; then
     printf '普通生产发布不得执行无界全库数据库备份。\n' >&2
     exit 1
 fi
-if rg -q 'docker|compose|mvn ' "$REMOTE" "$PRODUCTION"; then
-    printf 'Native deployment entrypoints must not invoke Docker, Compose, or bare Maven.\n' >&2
+if rg -q 'docker|compose|mvn ' "$REMOTE"; then
+    printf 'Local native deployment entrypoint must not invoke Docker, Compose, or bare Maven.\n' >&2
     exit 1
 fi
+if rg -q 'compose|mvn ' "$PRODUCTION"; then
+    printf 'Production native deployment must not invoke Compose or bare Maven.\n' >&2
+    exit 1
+fi
+rg -q 'docker stop "\$DOCKER_APP"' "$PRODUCTION"
+rg -q 'restore_blue_access' "$PRODUCTION"
 
 for path in \
     "$ROOT/Dockerfile" \

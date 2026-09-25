@@ -22,7 +22,9 @@ LOG_SNAPSHOT_FILE="$(mktemp)"
 readonly LOG_SNAPSHOT_FILE
 trap 'rm -rf "$ARTIFACT_DIR" "$CHECKOUT_DIR" "$LOG_SNAPSHOT_FILE"' EXIT
 
+# shellcheck disable=SC1091
 source "$SOURCE_ROOT/deploy/lib/artifact.sh"
+# shellcheck disable=SC1091
 source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 
 validate_release_tag "$TAG" || { printf 'Release tag must use stable SemVer, for example v1.2.3\n' >&2; exit 1; }
@@ -30,6 +32,7 @@ validate_release_tag "$TAG" || { printf 'Release tag must use stable SemVer, for
 [[ -n "$KNOWN_HOSTS_FILE" && -r "$KNOWN_HOSTS_FILE" ]] || { printf 'BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS must name a readable known_hosts file.\n' >&2; exit 1; }
 
 remote() {
+    # shellcheck disable=SC2029
     ssh "${SSH_OPTIONS[@]}" "$SSH_TARGET" "$@"
 }
 
@@ -69,6 +72,19 @@ printf 'READY\\n'")" || {
     exit 1
 }
 [[ "$preflight_output" == *READY* ]] || { printf 'Refusing: production preflight did not become ready.\n' >&2; exit 1; }
+
+# The host-only deployment script is part of the immutable release input. Do
+# not run an old checkout's orchestration code with a new JAR. This fetch and
+# checkout happen only after duplicate/busy guards, and leave unrelated
+# untracked operator files untouched.
+remote "set -Eeuo pipefail
+cd '$REMOTE_ROOT'
+test -z \"\$(git status --porcelain=v1 --untracked-files=no)\"
+git fetch --force --no-recurse-submodules origin 'refs/tags/$TAG:refs/tags/$TAG'
+test \"\$(git cat-file -t 'refs/tags/$TAG')\" = tag
+git checkout --detach '$TAG'
+test \"\$(git rev-parse HEAD)\" = '$commit'
+printf 'REMOTE_TAG_READY\\n'" >/dev/null
 
 remote_artifact="/tmp/bytedepth-production-$TAG"
 remote "$(printf 'install -d -o ubuntu -g ubuntu -m 0700 %q' "$remote_artifact")"

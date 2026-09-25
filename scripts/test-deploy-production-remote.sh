@@ -14,14 +14,19 @@ grep -Fq 'BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS' "$SCRIPT"
 grep -Fq 'UserKnownHostsFile=' "$SCRIPT"
 grep -Fq 'StrictHostKeyChecking=yes' "$SCRIPT"
 grep -Fq 'scp ' "$SCRIPT"
+grep -Fq "git fetch --force --no-recurse-submodules origin 'refs/tags/\$TAG:refs/tags/\$TAG'" "$SCRIPT"
+grep -Fq "git checkout --detach '\$TAG'" "$SCRIPT"
+grep -Fq "git status --porcelain=v1 --untracked-files=no" "$SCRIPT"
 grep -Fq -- '--artifact' "$SCRIPT"
 grep -Fq -- '--manifest' "$SCRIPT"
 grep -Fq 'verify-production-release.sh' "$SCRIPT"
 grep -Fq 'release-history' "$SCRIPT"
 grep -Fq 'WARNING' "$SCRIPT"
-if rg -n -i 'docker|compose|mvn ' "$SCRIPT" "$HOST_SCRIPT" >/dev/null; then
-    printf 'Production deployment path must not invoke Docker, Compose, or target-host Maven.\n' >&2
+if rg -n -i 'docker|compose|mvn ' "$SCRIPT" >/dev/null; then
+    printf 'Local production deployment wrapper must not invoke Docker, Compose, or Maven.\n' >&2
     exit 1
 fi
+grep -Fq "docker stop \"\$DOCKER_APP\"" "$HOST_SCRIPT"
+grep -Fq 'restore_blue_access' "$HOST_SCRIPT"
 
 printf 'Local production deployment contract passed.\n'

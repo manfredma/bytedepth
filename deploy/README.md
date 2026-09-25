@@ -192,10 +192,10 @@ runner 固定使用公开 staging URL、宿主机共享运行时提供的 `/opt/
 生产状态和回滚基线：
 
     sudo tail -n 40 /var/lib/bytedepth-deploy/release-history
-    sudo readlink -f /opt/bytedepth/current
-    sudo journalctl -u bytedepth-app.service -n 200 --no-pager
+    sudo readlink -f /opt/bytedepth/production-green/current
+    sudo journalctl -u bytedepth-production-green-app.service -n 200 --no-pager
 
-代码回滚只能选择已经验证过的旧原生发布，并先确认数据库迁移兼容。若 schema 不兼容，必须先从对应备份恢复数据，再安装旧 JAR；不能只把软链接指回旧目录。发布中自动回滚仅恢复 current、应用和 Nginx，不能回滚已执行的 Flyway 数据迁移。
+代码回滚只能选择已经验证过的旧原生发布，并先确认数据库迁移兼容。若 schema 不兼容，必须先从对应备份恢复数据，再安装旧 JAR；不能只把软链接指回旧目录。发布中自动回滚仅恢复 green current、Docker 蓝应用和 Nginx 路由，不能回滚已执行的 Flyway 数据迁移。
 
 175 的生产迁移采用红绿流程。当前 Docker 栈是蓝环境；native 绿环境使用 `/data/bytedepth-native-production`、13306/16379/17700/18080/18081 和 `bytedepth-production-green-*` systemd unit。`deploy/migrate-production-docker-to-native.sh prepare` 只能在蓝环境继续提供流量时执行初始复制、安装配置和启动绿中间件；绿环境健康、版本 SHA 和只读回归未通过前，禁止停止、重建或修改 Docker 蓝环境。
 
@@ -208,4 +208,4 @@ runner 固定使用公开 staging URL、宿主机共享运行时提供的 `/opt/
     bash scripts/run-local-quality.sh
     bash scripts/check-staging-checklist.sh
 
-在 staging 真实运行集成测试和 E2E，并在项目所有者验收后才合并 main。创建 Release Tag 前，prepare-release.sh 必须读取当前 SHA 对应的两份 host-native evidence。发布、合并、回滚和知识库规则分别见 docs/releases/README.md、docs/README.md 和 docs/architecture/decisions/0016-host-native-runtime-deployment.md。
+在 staging 真实运行集成测试和 E2E，并在项目所有者验收后才合并 main。创建 Release Tag 前，prepare-release.sh 必须读取当前 SHA 对应的两份 host-native evidence。发布、合并、回滚和知识库规则分别见 docs/releases/README.md、docs/README.md 和 docs/architecture/decisions/0018-production-red-green-native-cutover.md。

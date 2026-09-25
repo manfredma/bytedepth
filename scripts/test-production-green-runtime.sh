@@ -53,6 +53,10 @@ require_text 'User=ubuntu' "$ROOT/deploy/systemd/bytedepth-production-green-edge
 require_text 'RequiresMountsFor=__GREEN_ROOT__/images' "$ROOT/deploy/systemd/bytedepth-production-green-app.service.in"
 require_text 'EnvironmentFile=/etc/bytedepth/production-green.env' "$ROOT/deploy/systemd/bytedepth-production-green-app.service.in"
 require_text '127.0.0.1:__APP_PORT__' "$ROOT/deploy/systemd/bytedepth-production-green-edge.service.in"
+require_text '/edge/nginx.pid' "$INSTALLER"
+require_text '/edge/error.log' "$INSTALLER"
+require_text 'apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld' "$INSTALLER"
+require_text 'bytedepth-production-green/** rwk' "$INSTALLER"
 
 require_text 'production-green' "$INSTALLER"
 require_text 'ubuntu:ubuntu' "$INSTALLER"

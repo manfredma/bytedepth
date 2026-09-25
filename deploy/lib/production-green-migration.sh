@@ -332,8 +332,10 @@ production_green_final_sync() {
     production_green_mark syncing
     systemctl stop "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE" "$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE" 2>/dev/null || true
     systemctl stop "$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_SERVICE" "$BYTEDEPTH_PRODUCTION_GREEN_REDIS_SERVICE" "$BYTEDEPTH_PRODUCTION_GREEN_MEILI_SERVICE" 2>/dev/null || true
-    rm -rf -- "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/mysql"/* "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/redis"/* \
-        "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/meilisearch"/*
+    find "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/mysql" \
+        "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/redis" \
+        "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/meilisearch" \
+        -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
     production_green_prepare_mysql_dump true
     production_green_initialize_mysql
     production_green_import_mysql

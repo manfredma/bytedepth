@@ -39,6 +39,7 @@ install -d -o ubuntu -g ubuntu -m 0755 \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/mysql" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/redis" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/meilisearch" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/images" \
     "$BYTEDEPTH_PRODUCTION_GREEN_RELEASE_ROOT" \
     "$BYTEDEPTH_PRODUCTION_GREEN_RELEASE_ROOT/releases"
@@ -51,6 +52,20 @@ chmod -R g+rwX \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/redis" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/meilisearch" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/images"
+
+if command -v apparmor_parser >/dev/null && [[ -f /etc/apparmor.d/usr.sbin.mysqld ]]; then
+    install -d -o ubuntu -g ubuntu -m 0755 /etc/apparmor.d/local
+    printf '%s\n' \
+        'capability chown,' \
+        "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/ r," \
+        "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/mysql/ rwk," \
+        "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/mysql/** rwk," \
+        '/run/bytedepth-production-green/ r,' \
+        '/run/bytedepth-production-green/** rwk,' > /etc/apparmor.d/local/usr.sbin.mysqld
+    chmod 0644 /etc/apparmor.d/local/usr.sbin.mysqld
+    chown ubuntu:ubuntu /etc/apparmor.d/local/usr.sbin.mysqld
+    apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld
+fi
 
 chmod 0600 "$ENV_FILE" "$MEILI_ENV_FILE"
 chown ubuntu:ubuntu "$ENV_FILE" "$MEILI_ENV_FILE"
@@ -92,8 +107,11 @@ chown ubuntu:meilisearch "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/meilisearch/meilisear
 
 printf '%s\n' \
     'events { worker_connections 1024; }' \
+    "pid $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/nginx.pid;" \
     'http {' \
     '    include /etc/nginx/mime.types;' \
+    "    error_log $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/error.log warn;" \
+    "    access_log $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/access.log;" \
     "    server { listen $BYTEDEPTH_PRODUCTION_GREEN_EDGE_PORT;" \
     '        location / {' \
     "            proxy_pass http://127.0.0.1:$BYTEDEPTH_PRODUCTION_GREEN_APP_PORT;" \

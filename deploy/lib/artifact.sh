@@ -56,6 +56,7 @@ switch_current_release() {
     [[ -d "$release_dir" && -f "$release_dir/app.jar" && "$release_dir" != "$current_link" ]] || return 1
     ln -s "$release_dir" "$temporary_link"
     mv -Tf "$temporary_link" "$current_link"
+    chown -h ubuntu:ubuntu "$current_link"
     [[ "$(readlink -- "$current_link")" == "$release_dir" ]] || {
         printf 'Refusing: current release link does not target the requested release.\n' >&2
         return 1
@@ -75,6 +76,7 @@ restore_current_release() {
     [[ -d "$previous_path" && -f "$previous_path/app.jar" && ! -L "$previous_path/app.jar" ]] || return 1
     ln -s "$previous_path" "$temporary_link"
     mv -Tf "$temporary_link" "$current_link"
+    chown -h ubuntu:ubuntu "$current_link"
 }
 
 verify_running_release() {

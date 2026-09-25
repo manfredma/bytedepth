@@ -8,10 +8,13 @@ readonly SCRIPT="$ROOT/scripts/verify-production-release.sh"
 [[ -x "$SCRIPT" ]] || { printf 'Expected executable production verifier.\n' >&2; exit 1; }
 rg -F 'https://bytedepth.cn' "$SCRIPT" >/dev/null
 rg -F 'release-history' "$SCRIPT" >/dev/null
-rg -F '/opt/bytedepth/current/artifact.manifest' "$SCRIPT" >/dev/null
-rg -F 'systemctl is-active --quiet bytedepth-app.service' "$SCRIPT" >/dev/null
-if ! rg -F 'journalctl -u bytedepth-app.service -n 300' "$SCRIPT" >/dev/null; then
-    printf 'Production verification must query the native bytedepth-app systemd service.\n' >&2
+rg -F '/opt/bytedepth/production-green/current/artifact.manifest' "$SCRIPT" >/dev/null
+rg -F 'GREEN_APP_SERVICE=bytedepth-production-green-app.service' "$SCRIPT" >/dev/null
+rg -F 'DOCKER_APP=bytedepth-bytedepth-app-1' "$SCRIPT" >/dev/null
+rg -F 'Docker blue application must remain stopped' "$SCRIPT" >/dev/null
+rg -F 'Docker Nginx is not active' "$SCRIPT" >/dev/null
+if ! rg -F 'journalctl -u "$GREEN_APP_SERVICE" -n 300' "$SCRIPT" >/dev/null; then
+    printf 'Production verification must query the native green application systemd service.\n' >&2
     exit 1
 fi
 rg -F -- '--fail' "$SCRIPT" >/dev/null
@@ -30,7 +33,7 @@ if rg -F 'request "/blog${post_path}"' "$SCRIPT" >/dev/null; then
     exit 1
 fi
 if rg -F 'logs app --tail=300' "$SCRIPT" >/dev/null; then
-    printf 'Production verification must use the project-prefixed bytedepth-app service.\n' >&2
+    printf 'Production verification must use the native green systemd service.\n' >&2
     exit 1
 fi
 if rg -F 'deploy/ctl.sh' "$SCRIPT" >/dev/null || rg -F 'docker compose' "$SCRIPT" >/dev/null; then

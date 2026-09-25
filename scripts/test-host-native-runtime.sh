@@ -76,9 +76,14 @@ done
 
 if rg -n -i 'docker|compose|STAGING_MAVEN_IMAGE|prewarm-production-maven-cache' \
     "$ROOT/deploy" --glob '*.sh' --glob '*.yml' --glob '*.yaml' --glob '*.service' \
-    --glob '!migrate-staging-docker-to-native.sh' >/dev/null; then
+    --glob '!migrate-staging-docker-to-native.sh' \
+    --glob '!migrate-production-docker-to-native.sh' \
+    --glob '!production-green-migration.sh' \
+    --glob '!deploy-production.sh' >/dev/null; then
     printf 'Runtime/deployment scripts still contain Docker-only runtime contracts.\n' >&2
     exit 1
 fi
+require_text 'docker stop "$DOCKER_APP"' "$ROOT/deploy/deploy-production.sh"
+require_text 'restore_blue_access' "$ROOT/deploy/deploy-production.sh"
 
 printf 'Host-native runtime contract passed.\n'

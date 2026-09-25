@@ -33,6 +33,8 @@ require_text 'production_green_mark syncing' "$LIB"
 require_text 'blue bytedepth app must be stopped before final sync' "$LIB"
 require_text 'production_green_mark_uncertain' "$SCRIPT"
 require_text 'uncertain' "$LIB"
+require_text "find \"\$BYTEDEPTH_PRODUCTION_GREEN_ROOT/mysql\"" "$LIB"
+require_text '-exec rm -rf -- {} +' "$LIB"
 
 if rg -n 'rm -rf -- /data|rm -rf -- /opt|DROP DATABASE.*mysql|docker compose|docker-compose' "$LIB" >/dev/null; then
     printf 'Production migration contains an unsafe broad cleanup or Compose recreation.\n' >&2
