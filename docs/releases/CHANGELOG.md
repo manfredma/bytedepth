@@ -21,6 +21,8 @@
 
 ### Fixed
 
+- 修复生产 native green 切流替换 Docker Nginx bind mount 配置后容器继续读取旧 inode、导致切流后公网 502 的问题；切流窗口会重启共享 `bytedepth-nginx-1` 使新路由生效，重启后执行 `nginx -t`，失败时恢复蓝路由。
+
 - 修复生产 native green final-sync 清空 MySQL、Redis、Meilisearch 数据目录时误删 Redis/Meilisearch 渲染配置、导致数据同步完成但绿色服务无法启动的问题；清理后会重新安装并渲染完整 native 服务栈，并由回归契约检查固定该顺序。
 
 - 修复生产 native green 安装器未验证目标主机 Java 25、导致 systemd 使用不存在的固定路径并在切流前失败的问题；安装器现在会准备并验证 Java 25，并用实际解析路径渲染应用服务。

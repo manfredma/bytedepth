@@ -129,11 +129,21 @@ backup_blue_route() {
     install -o ubuntu -g ubuntu -m 0600 "$NGINX_CONFIG" "$NGINX_BACKUP"
 }
 
+restart_docker_nginx() {
+    if ! docker restart "$DOCKER_NGINX"; then
+        printf 'Refusing: shared Docker Nginx could not be restarted after replacing its bind-mounted configuration.\n' >&2
+        return 1
+    fi
+    if ! docker exec "$DOCKER_NGINX" nginx -t; then
+        printf 'Refusing: restarted Docker Nginx failed its configuration check.\n' >&2
+        return 1
+    fi
+}
+
 restore_blue_route() {
     [[ -f "$NGINX_BACKUP" ]] || return 0
     install -o ubuntu -g ubuntu -m 0644 "$NGINX_BACKUP" "$NGINX_CONFIG"
-    docker exec "$DOCKER_NGINX" nginx -t
-    docker exec "$DOCKER_NGINX" nginx -s reload
+    restart_docker_nginx
     route_changed=0
 }
 
@@ -147,8 +157,7 @@ switch_green_route() {
     rm -f -- "$temp"
     route_changed=1
     grep -Fq "proxy_pass http://$GREEN_UPSTREAM;" "$NGINX_CONFIG" || return 1
-    docker exec "$DOCKER_NGINX" nginx -t
-    docker exec "$DOCKER_NGINX" nginx -s reload
+    restart_docker_nginx
 }
 
 verify_blue_public_access() {

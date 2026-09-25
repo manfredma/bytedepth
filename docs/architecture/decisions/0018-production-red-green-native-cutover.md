@@ -18,7 +18,7 @@
 - 绿环境使用 `/data/bytedepth-native-production` 独立数据目录、独立端口和带 `bytedepth-production-green-` 前缀的 systemd 服务；不得复用 staging 的目录、端口或 unit。
 - 绿环境完成 MySQL、Redis、Meilisearch、图片和不可变 JAR 的一致性准备后，执行本机健康检查、版本 SHA 校验和只读业务回归。
 - 在允许的短暂停机窗口内停止蓝应用，完成最终数据同步和绿应用启动；数据服务不与蓝环境共用活动数据目录。
-- 只有绿环境验证通过后，才修改 bytedepth 专属 Nginx upstream 并 reload 共享 Nginx。不得重启、替换或停止同机其他项目的服务。
+- 只有绿环境验证通过后，才修改 bytedepth 专属 Nginx upstream；生产切流窗口是否重启共享入口按 [ADR-0019](0019-production-nginx-restart-for-bind-mount.md) 执行。本次维护窗口由项目所有者确认同机其他项目无流量，重启入口容器不改变其他项目配置。
 - 切流后保留蓝环境和迁移前数据作为回退基线；生产验收通过后才允许按显式确认清理旧 Docker bytedepth 容器和旧运行时数据。
 
 native 准备、初始复制、绿环境启动和绿环境预验证阶段不得停止、重建、重配置或切换 Docker 蓝环境；蓝应用、蓝数据服务和蓝 Nginx 路由必须继续可用。只有绿环境预验证通过后才能进入显式切流窗口。切流窗口中的任何失败都必须先恢复 Docker 应用和原 upstream，并通过 Docker 入口回归后才报告失败；native 失败不能把 Docker 入口留在停止、半配置或不可访问状态。
@@ -34,7 +34,7 @@ native 准备、初始复制、绿环境启动和绿环境预验证阶段不得�
 
 ## 后果
 
-正向结果是可以在现网 Docker 仍运行时准备 native 绿环境，并把切流动作限制为 bytedepth 的 upstream reload；失败时不需要重建其他项目或共享 Nginx。代价是生产迁移需要独立数据目录、一致性复制、短暂写入冻结和明确的回退步骤，不能把一次普通应用重启伪装成红绿发布。
+正向结果是可以在现网 Docker 仍运行时准备 native 绿环境，并把切流动作限制在 bytedepth upstream 及明确的入口刷新步骤；失败时仍不删除其他项目配置。代价是生产迁移需要独立数据目录、一致性复制、短暂写入冻结和明确的回退步骤，不能把一次普通应用重启伪装成红绿发布。
 
 ## 验收条件
 

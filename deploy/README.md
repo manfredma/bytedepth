@@ -199,7 +199,7 @@ runner 固定使用公开 staging URL、宿主机共享运行时提供的 `/opt/
 
 175 的生产迁移采用红绿流程。当前 Docker 栈是蓝环境；native 绿环境使用 `/data/bytedepth-native-production`、13306/16379/17700/18080/18081 和 `bytedepth-production-green-*` systemd unit。`deploy/migrate-production-docker-to-native.sh prepare` 只能在蓝环境继续提供流量时执行初始复制、安装配置和启动绿中间件；绿环境健康、版本 SHA 和只读回归未通过前，禁止停止、重建或修改 Docker 蓝环境。
 
-只有绿环境预验证通过后，发布锁才可进入短暂切流窗口：停止蓝 bytedepth 应用、执行 `final-sync`、启动绿应用和 edge、执行 `nginx -t`，再只 reload bytedepth upstream。任一步骤失败都必须恢复原 Docker upstream、启动蓝应用并通过 Docker 公网入口回归；native 失败不能把 Docker 留在停止、半配置或不可访问状态。共享 Nginx 和同机其他项目不得重启、重建或改路由。切流后 Docker 蓝环境和迁移前数据必须保留到生产验收完成；清理是单独的显式阶段。
+只有绿环境预验证通过后，发布锁才可进入短暂切流窗口：停止蓝 bytedepth 应用、执行 `final-sync`、启动绿应用和 edge、替换 bytedepth Nginx 配置并重启 `bytedepth-nginx-1`，然后在重启后的容器内执行 `nginx -t`。本次切流窗口已由项目所有者确认同机其他项目无流量；重启只刷新共享入口容器，必须保留 `/opt/nginx-conf.d` 及其他项目路由，不能删除配置或重建整套 Docker 栈。任一步骤失败都必须恢复原 Docker upstream、重启入口容器、启动蓝应用并通过 Docker 公网入口回归；native 失败不能把 Docker 留在停止、半配置或不可访问状态。切流后 Docker 蓝环境和迁移前数据必须保留到生产验收完成；清理是单独的显式阶段。具体 bind mount 回退规则见 [ADR-0019](../docs/architecture/decisions/0019-production-nginx-restart-for-bind-mount.md)。
 
 ## 10. 发布前门禁
 

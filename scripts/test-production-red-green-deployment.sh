@@ -27,7 +27,7 @@ for contract in \
     "docker stop \"\$DOCKER_APP\"" \
     "docker start \"\$DOCKER_APP\"" \
     "docker exec \"\$DOCKER_NGINX\" nginx -t" \
-    "docker exec \"\$DOCKER_NGINX\" nginx -s reload" \
+    'restart_docker_nginx' \
     'nginx -t' \
     'verify_blue_public_access' \
     'production_green_mark_uncertain' \
@@ -43,6 +43,11 @@ require_text 'production-green' "$SCRIPT"
 require_text 'release-history' "$SCRIPT"
 require_text 'production_green_prepare()' "$MIGRATION_LIB"
 require_text '"$SOURCE_ROOT/deploy/install-production-green-stack.sh"' "$MIGRATION_LIB"
+require_text 'docker restart "$DOCKER_NGINX"' "$SCRIPT"
+if rg -n 'docker exec "\$DOCKER_NGINX" nginx -s reload' "$SCRIPT" >/dev/null; then
+    printf 'Production cutover must recreate the shared Docker Nginx container after replacing its bind-mounted config.\n' >&2
+    exit 1
+fi
 
 if rg -n -i 'docker compose|docker-compose|docker rm|docker system prune|systemctl (stop|restart|disable) nginx' "$SCRIPT" >/dev/null; then
     printf 'Production red-green deployment must not rebuild/remove Docker or stop shared Nginx.\n' >&2
