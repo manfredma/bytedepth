@@ -45,6 +45,8 @@
 - staging、集成测试和 E2E 使用共享锁；测试资源按 `run_id` 隔离。资源状态不确定时保留 manifest 和资源，禁止自动删除未知对象，但必须尝试恢复 staging 应用并报告人工恢复入口。
 - staging 集成测试启动 Maven 前必须检查宿主机 `MemAvailable` 至少 512 MiB；停止 app 前只要求至少 256 MiB，停止 app 后再检查 512 MiB。磁盘空间通过不代表 Java/Maven 有足够调度资源；资源不足时必须在启动 Maven 前 fail-fast，避免测试把 SSH/HTTPS 服务拖入不可响应状态。
 - native staging 中间件必须有 systemd `MemoryMax`：MySQL 512M、Redis 128M、Meilisearch 384M、edge 64M；Redis 同时固定 `maxmemory 64mb` 与 `noeviction`，防止中间件在 2 GiB 宿主机上无限争抢内存。上限是保护阈值，不代表会预留对应内存。中间件重启后必须等待实际端口就绪，不能只检查 systemd active。
+- native MySQL 的数据目录必须使用与初始化时一致的 `lower_case_table_names=1`，并由 systemd 创建 `/run/mysqld` 运行目录；不能只依赖初始化命令或发行版默认 unit，否则重启可能因字典大小写模式不一致或运行目录权限失败。MySQL unit 的关键参数由 `test-host-native-runtime.sh` 固定检查。
+- native Meilisearch 必须由 systemd 显式设置 `WorkingDirectory=/data/meilisearch`；其配置或运行时相对路径不能依赖 systemd 默认工作目录，否则快照导入后重启可能把 `config.toml`、`dumps` 等文件写到不可写目录而启动失败。
 - 部署阶段的数据库备份命令必须显式检查退出码并 `return 1`；被 `if ! record_timed_phase ...` 调用的函数会处于 errexit 抑制上下文，不能依赖 `set -e` 自动传播失败。
 - 部署和测试输出统一捕获并扫描未登记的 `WARNING`/`WARN`；不能以“不是本次引入”为由放行。
 - 宿主机构建脚本在 `set -u` 下清理临时日志时，`RETURN` trap 不得直接引用可能已失效的函数局部变量；必须使用安全默认值，并由部署契约检查固定该约束。

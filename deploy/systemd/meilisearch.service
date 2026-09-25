@@ -8,6 +8,7 @@ Type=simple
 User=meilisearch
 Group=meilisearch
 EnvironmentFile=-/etc/bytedepth/meilisearch.env
+WorkingDirectory=/data/meilisearch
 ExecStart=/usr/local/bin/meilisearch --config-file-path /etc/meilisearch.toml --db-path /data/meilisearch --http-addr 127.0.0.1:7700
 Restart=on-failure
 RestartSec=5s

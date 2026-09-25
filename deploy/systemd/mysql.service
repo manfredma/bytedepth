@@ -4,10 +4,12 @@ After=local-fs.target network.target
 Before=bytedepth-app.service
 
 [Service]
-Type=notify
+Type=simple
 User=mysql
 Group=mysql
-ExecStart=/usr/sbin/mysqld --datadir=/data/mysql --bind-address=127.0.0.1 --port=3306
+RuntimeDirectory=mysqld
+RuntimeDirectoryMode=0755
+ExecStart=/usr/sbin/mysqld --datadir=/data/mysql --bind-address=127.0.0.1 --port=3306 --lower-case-table-names=1
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5s
