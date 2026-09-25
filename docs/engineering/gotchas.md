@@ -62,6 +62,8 @@
 - 生产版本确认直接读取 ubuntu 所有的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/current/artifact.manifest` 交叉核对。
 - 175 生产是多服务宿主机上的 Docker 蓝环境迁移到 native 绿环境，不能套用 129 staging 的 unit、目录或端口。native 准备和预验证阶段不得停止或改写 Docker；只有绿环境通过健康检查后才进入切流窗口。切流或最终同步失败时必须恢复 Docker upstream、启动蓝应用并用公网入口回归，不能把 native 失败留成 Docker 停机或半配置状态。
 - 生产 green 数据复制必须使用 `/data/bytedepth-native-production` 和显式 13306/16379/17700 端口；不能复用 `/data/mysql`、`/data/redis`、`/data/meilisearch` 活动目录，也不能使用无界全库 dump、全 `/data` 删除或重建旧 Docker 运行栈。迁移状态为 `uncertain` 时保留全部资源，禁止自动清理。
+- 生产 green 的 MySQL/Redis 运行时依赖必须由安装脚本显式校验并在缺失时安装；MySQL 的 green 健康检查和首次导入必须通过 `MYSQL_PWD` 复用蓝环境 `MYSQL_ROOT_PASSWORD`，不能假设 `root` 支持无密码 TCP 登录。Redis 使用 Ubuntu 原生服务时必须采用 `Type=simple`，并在启动前持久化启用 `vm.overcommit_memory=1`，否则可能出现“已 Ready 但 systemd 超时”或 Redis 告警。
+- 红绿发布的切流前置条件是 green 中间件、应用、edge、版本 SHA 和只读检查全部通过；任何准备或预检失败都必须保持 Docker blue 运行并验证公网仍可访问，禁止通过手工修改远端 tag 脚本绕过不可变发布输入。
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。
 - native staging edge 不能使用 `Requires=bytedepth-staging-native-app.service` 绑定生命周期：E2E test slot 会临时替代 app 并复用 18080，edge 必须保持在 18081 提供公网转发；只保留 `After=`启动顺序和 `/version` 启动前检查。部署或清理仍必须确认 edge active 后再 reload/写 evidence。
 - staging 集成测试或 E2E 清理时，teardown 可能已经启动 app；外层 runner 仍必须无条件检查并恢复 `bytedepth-staging-native-edge.service` 及其 18081 `/version`，否则会出现 cleanup evidence 通过、共享 Nginx 仍 active 但公网请求 502 的假成功。

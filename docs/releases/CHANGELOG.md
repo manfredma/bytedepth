@@ -17,6 +17,7 @@
 
 ### Fixed
 
+- 修复生产 native green 发布在 Ubuntu 宿主机上的 MySQL 密码健康检查、MySQL 数据目录权限、Redis systemd 就绪类型和 overcommit 前置配置；native 失败时继续保持 Docker blue 可访问。
 - 修复生产远程发布脚本将生产主机 SSH key 错用于 GitHub 拉取、版本解析正则多转义一层导致合法 Tag 被误判，以及本机重复 fetch 不可变 Tag 引发 pack 解包失败的问题；生产 key 现在只用于 175，本机直接使用已校验 Tag。
 - 修复 staging 集成测试和 E2E 清理后只恢复 native app、未恢复内部 edge，导致多服务宿主机共享 Nginx 仍运行但公网 upstream 失效的问题；即使 teardown 已先启动 app，外层 runner 也会无条件恢复并验证 edge。
 - 修复 native edge 与正式 app 绑定生命周期导致 E2E test slot 启动后公网入口 502/健康检查无超时卡住的问题；edge 现在只依赖 app 的启动顺序，E2E 槽位可复用同一内部 edge。

@@ -20,6 +20,45 @@ export BYTEDEPTH_PRODUCTION_GREEN_CONFIG="$CONFIG_FILE"
 source "$SOURCE_ROOT/deploy/lib/production-green-target.sh"
 load_production_green_target
 
+ensure_native_dependencies() {
+    local missing=()
+    command -v mysqld >/dev/null || missing+=(mysqld)
+    command -v mysql >/dev/null || missing+=(mysql)
+    command -v mysqladmin >/dev/null || missing+=(mysqladmin)
+    command -v redis-server >/dev/null || missing+=(redis-server)
+    command -v redis-cli >/dev/null || missing+=(redis-cli)
+    getent passwd mysql >/dev/null || missing+=(mysql-user)
+    getent group mysql >/dev/null || missing+=(mysql-group)
+    getent passwd redis >/dev/null || missing+=(redis-user)
+    getent group redis >/dev/null || missing+=(redis-group)
+    if (( ${#missing[@]} > 0 )); then
+        command -v apt-get >/dev/null || {
+            printf 'Refusing: native MySQL/Redis prerequisites are missing: %s\n' "${missing[*]}" >&2
+            return 1
+        }
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends mysql-server redis-server
+    fi
+    for command_name in mysqld mysql mysqladmin redis-server redis-cli; do
+        command -v "$command_name" >/dev/null || {
+            printf 'Refusing: required native command is unavailable after installation: %s\n' "$command_name" >&2
+            return 1
+        }
+    done
+    for account in mysql redis; do
+        getent passwd "$account" >/dev/null || {
+            printf 'Refusing: required native service account is unavailable: %s\n' "$account" >&2
+            return 1
+        }
+        getent group "$account" >/dev/null || {
+            printf 'Refusing: required native service group is unavailable: %s\n' "$account" >&2
+            return 1
+        }
+    done
+}
+
+ensure_native_dependencies
+
 [[ -r "$ENV_FILE" ]] || {
     printf 'Refusing: %s must be prepared before installing green services.\n' "$ENV_FILE" >&2
     exit 1
@@ -69,6 +108,11 @@ fi
 
 chmod 0600 "$ENV_FILE" "$MEILI_ENV_FILE"
 chown ubuntu:ubuntu "$ENV_FILE" "$MEILI_ENV_FILE"
+
+printf '%s\n' 'vm.overcommit_memory = 1' > /etc/sysctl.d/99-bytedepth-production-native.conf
+chmod 0644 /etc/sysctl.d/99-bytedepth-production-native.conf
+chown ubuntu:ubuntu /etc/sysctl.d/99-bytedepth-production-native.conf
+sysctl -w vm.overcommit_memory=1 >/dev/null
 
 # shellcheck disable=SC1090
 source "$ENV_FILE"

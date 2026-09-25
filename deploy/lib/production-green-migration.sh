@@ -119,8 +119,11 @@ production_green_prepare_mysql_dump() {
 }
 
 production_green_wait_mysql() {
+    local db_password="$1"
     for _ in {1..120}; do
-        if mysqladmin --protocol=tcp --host=127.0.0.1 --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" -uroot ping >/dev/null 2>&1; then
+        if MYSQL_PWD="$db_password" mysqladmin \
+            --protocol=tcp --host=127.0.0.1 --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" \
+            -uroot ping >/dev/null 2>&1; then
             return 0
         fi
         sleep 1
@@ -139,6 +142,7 @@ production_green_initialize_mysql() {
     mysqld --initialize-insecure --user=mysql --datadir="$data_dir" \
         --log-error="$data_dir/error.log" --lower-case-table-names=1
     chown -R ubuntu:mysql "$data_dir"
+    chmod -R g+rwX "$data_dir"
 }
 
 production_green_import_mysql() {
@@ -147,10 +151,11 @@ production_green_import_mysql() {
     db_password="$(production_green_docker_env_value bytedepth-mysql-1 MYSQL_ROOT_PASSWORD)"
     escaped_password="$(production_green_sql_escape "$db_password")"
     systemctl start "$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_SERVICE"
-    production_green_wait_mysql
-    gunzip -c "$dump_file" | mysql --protocol=tcp --host=127.0.0.1 \
-        --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" -uroot
-    mysql --protocol=tcp --host=127.0.0.1 --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" -uroot \
+    production_green_wait_mysql "$db_password"
+    gunzip -c "$dump_file" | MYSQL_PWD="$db_password" mysql --protocol=tcp \
+        --host=127.0.0.1 --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" -uroot
+    MYSQL_PWD="$db_password" mysql --protocol=tcp --host=127.0.0.1 \
+        --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" -uroot \
         -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$escaped_password'; FLUSH PRIVILEGES;"
     printf '[client]\nhost=127.0.0.1\nport=%s\nuser=root\npassword=%s\nprotocol=tcp\n' \
         "$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" "$db_password" > /etc/bytedepth/production-green-mysql.cnf
