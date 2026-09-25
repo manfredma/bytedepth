@@ -147,9 +147,23 @@ run_locked_install() {
         exit 1
     }
 
+    restart_native_middlewares() {
+        local service
+
+        for service in \
+            "$BYTEDEPTH_STAGING_MYSQL_SERVICE" \
+            "$BYTEDEPTH_STAGING_REDIS_SERVICE" \
+            "$BYTEDEPTH_STAGING_MEILI_SERVICE"; do
+            if systemctl is-active --quiet "$service"; then
+                systemctl restart "$service"
+            fi
+        done
+    }
+
     native_bootstrap_command() {
         if [[ "$BYTEDEPTH_STAGING_RUNTIME_MODE" == host-native-parallel ]]; then
             ./deploy/install-staging-native-stack.sh
+            restart_native_middlewares
         else
             ./deploy/bootstrap-ops-deploy.sh
         fi

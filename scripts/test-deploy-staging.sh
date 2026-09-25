@@ -19,6 +19,8 @@ for contract in \
     'BYTEDEPTH_STAGING_APP_SERVICE' \
     'BYTEDEPTH_STAGING_EDGE_SERVICE' \
     'ensure_edge_active_and_reload' \
+    'restart_native_middlewares' \
+    'systemctl restart "$service"' \
     'systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE"' \
     'load_staging_native_target' \
     'git fetch --force --no-recurse-submodules origin' \

@@ -115,6 +115,8 @@ printf '%s\n' \
     "pidfile $native_root/redis/redis.pid" \
     'logfile ""' \
     "requirepass $BYTEDEPTH_REDIS_PASSWORD" \
+    'maxmemory 64mb' \
+    'maxmemory-policy noeviction' \
     'appendonly yes' \
     'protected-mode yes' > "$native_root/redis/redis.conf"
 chmod 0600 "$native_root/redis/redis.conf"

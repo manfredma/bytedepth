@@ -14,6 +14,7 @@ RestartSec=5s
 TimeoutStartSec=30s
 TimeoutStopSec=30s
 LimitNOFILE=65536
+MemoryMax=128M
 ReadWritePaths=__NATIVE_ROOT__/redis
 ProtectSystem=full
 ProtectHome=true

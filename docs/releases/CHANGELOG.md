@@ -21,6 +21,7 @@
 - 修复 MySQL 8.4 `SHOW GRANTS` 账户名格式与 staging 测试槽预期不一致，导致合法的单数据库授权被错误拒绝的问题。
 - 修复 staging 测试槽使用隔离 MySQL 用户连接时遗漏 native 端口、错误回退到 3306 的问题。
 - 修复 staging 集成测试在低内存宿主机上仍启动 Maven、导致远程 SSH/HTTPS 无响应的问题；runner 现在在停止 staging app 前检查至少 512 MiB 可用内存。
+- 为 native staging MySQL、Redis、Meilisearch 和 edge 增加 systemd 内存上限，并为 Redis 增加 64 MiB `maxmemory` 保护，避免中间件无限消耗共享宿主机内存。
 - 修正 staging 隔离测试 fixture 校验器误拒绝 Flyway `V1__...sql` 脚本名的问题，避免合法 schema history 被误判为生产库限定表名。
 - 约束 staging 隔离 fixture 的 DDL 外键顺序，避免外键引用尚未创建的表导致 fixture 导入失败。
 - 修正 staging root-only 输入的 Linux 文件 uid/mode 校验，避免 GNU `stat -f` 被误当成 BSD 文件属性查询。

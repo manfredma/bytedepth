@@ -14,6 +14,7 @@ ExecStop=/usr/sbin/nginx -c /etc/bytedepth/staging-native-nginx.conf -s quit
 Restart=on-failure
 RestartSec=5s
 PrivateTmp=true
+MemoryMax=64M
 
 [Install]
 WantedBy=multi-user.target
