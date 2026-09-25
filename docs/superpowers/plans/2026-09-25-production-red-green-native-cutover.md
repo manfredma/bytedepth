@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - 175 是多服务宿主机；只操作 bytedepth 的绿服务、数据目录和 Nginx upstream，不停止或重建其他项目。
-- 蓝 Docker 栈在绿环境通过健康检查前必须保持运行；切流失败先恢复蓝 upstream，再决定是否保留绿资源。
+- native 准备、初始复制、绿启动和预验证阶段不得停止、重建或修改 Docker 蓝环境；切流窗口失败必须恢复蓝应用、蓝 upstream 并验证 Docker 入口。
 - 绿环境固定使用 `/data/bytedepth-native-production`、13306、16379、17700、18080、18081 及 `bytedepth-production-green-` 服务前缀。
 - 所有远程创建的项目目录、文件、制品、配置和状态归 `ubuntu:ubuntu`；服务账号只获得必要的数据目录组权限。
 - 数据复制必须限定到明确目标，禁止无界全库 dump、密码进入命令行、递归删除 `/data` 或覆盖其他项目资源。
@@ -33,6 +33,7 @@
 - Create: `deploy/systemd/bytedepth-production-green-app.service.in`
 - Create: `deploy/systemd/bytedepth-production-green-edge.service.in`
 - Create: `deploy/lib/production-green-target.sh`
+- Create: `deploy/install-production-green-stack.sh`
 - Modify: `deploy/install-host-service.sh`
 - Test: `scripts/test-production-green-runtime.sh`
 
@@ -59,16 +60,16 @@
 - Modify: `docs/architecture/ubiquitous-language.md`
 
 **Interfaces:**
-- `sudo ./deploy/migrate-production-docker-to-native.sh prepare --release TAG` creates only the green directories/config and performs bounded initial copy while blue remains serving.
-- `sudo ./deploy/migrate-production-docker-to-native.sh final-sync --release TAG` requires the production deployment lock and a stopped blue app, then performs final MySQL/Redis/Meilisearch/image synchronization into green.
-- `sudo ./deploy/migrate-production-docker-to-native.sh verify --release TAG` validates data manifests, service readiness, ownership and no cross-project path use.
-- `sudo ./deploy/migrate-production-docker-to-native.sh rollback --release TAG` only restores the blue route and preserves uncertain green state; it never deletes an uncertain data directory.
+- `sudo ./deploy/migrate-production-docker-to-native.sh prepare` creates only the green directories/config and performs bounded initial copy while blue remains serving.
+- `sudo ./deploy/migrate-production-docker-to-native.sh final-sync` requires the production deployment lock and a stopped blue app, then performs final MySQL/Redis/Meilisearch/image synchronization into green.
+- `sudo ./deploy/migrate-production-docker-to-native.sh verify` validates data manifests, service readiness, ownership and no cross-project path use.
+- `sudo ./deploy/migrate-production-docker-to-native.sh rollback` preserves uncertain green state; the deployment layer restores the blue route and verifies Docker access.
 
 - [ ] **Step 1: Write tests** for command argument validation, Docker container identity, exact source/target paths, lock requirements, blue-app stop requirement for final sync, and uncertain-state preservation.
 - [ ] **Step 2: Run `bash scripts/test-production-green-migration.sh`** and confirm failure.
 - [ ] **Step 3: Implement initial MySQL copy** using an explicit database target and bounded streaming/temporary file behavior; redact credentials and reject arbitrary database names.
 - [ ] **Step 4: Implement Redis snapshot copy, Meilisearch snapshot import/wait, and image copy** with per-resource manifests and fail-closed cleanup.
-- [ ] **Step 5: Implement final-sync state markers** (`prepared`, `syncing`, `verified`, `uncertain`) owned by `ubuntu`, and prevent destructive cleanup when a marker is uncertain.
+- [ ] **Step 5: Implement final-sync state markers** (`prepared`, `syncing`, `verified`, `uncertain`) owned by `ubuntu`; preparation and green preflight must not touch Docker, and destructive cleanup is forbidden when a marker is uncertain.
 - [ ] **Step 6: Add deployment documentation and unified-language entries** for green environment, cutover, final sync, and uncertain state.
 - [ ] **Step 7: Run migration contract tests and shellcheck**, then commit `feat: add production green data synchronization`.
 
@@ -90,8 +91,8 @@
 - [ ] **Step 2: Run `bash scripts/test-production-red-green-deployment.sh`** and confirm failure.
 - [ ] **Step 3: Implement production preflight** that rejects the wrong deploy mode, missing Docker blue services, existing green uncertainty, port collisions, missing green config, or non-ubuntu project paths.
 - [ ] **Step 4: Implement green artifact installation and startup** without changing blue traffic; verify artifact SHA, Tag commit, local green `/version`, all middleware readiness, and application logs.
-- [ ] **Step 5: Implement the short final-sync window**: stop only blue bytedepth app, synchronize data, start green app/edge, and fail without route change if any step fails.
-- [ ] **Step 6: Implement Nginx route cutover/rollback** through the host-mounted bytedepth route and shared Nginx reload; preserve every other `server_name` and upstream.
+- [ ] **Step 5: Implement the short final-sync window** only after green preflight passes: save the blue route, stop only the blue bytedepth app, synchronize data, start green app/edge, and on any failure restore blue app plus the original route before returning failure.
+- [ ] **Step 6: Implement Nginx route cutover/rollback** through the host-mounted bytedepth route and shared Nginx reload; preserve every other `server_name` and upstream, and verify the Docker route before reporting native failure.
 - [ ] **Step 7: Update remote polling and production verification** to assert green services, active route, release history, version SHA, stable pages, SNI and no WARNING/ERROR.
 - [ ] **Step 8: Run deployment contract tests and shellcheck**, then commit `feat: deploy production through native green cutover`.
 
@@ -110,7 +111,7 @@
 - The rehearsal uses fake Docker/systemd/Nginx commands and a temporary root; it must prove the state machine can prepare, verify, cut, fail, and restore without touching `/data`, `/etc`, or a real host.
 - Release readiness must reject production deployment unless the green cutover contract and warning policy checks pass.
 
-- [ ] **Step 1: Write fake-host rehearsal cases** for success, green health failure, final-sync failure, `nginx -t` failure, cutover failure, and uncertain cleanup.
+- [ ] **Step 1: Write fake-host rehearsal cases** for success, green health failure, final-sync failure, `nginx -t` failure, cutover failure, and uncertain cleanup; every failure case must assert Docker access remains available or is restored before the script exits.
 - [ ] **Step 2: Run the rehearsal and existing production script tests** to observe failures.
 - [ ] **Step 3: Implement fake-host adapters and guard checks** without weakening real-host validation.
 - [ ] **Step 4: Record the staging migration/OOM/dubious-ownership pitfalls and the production red-green rule** in project docs, including that 175 is not 129.
