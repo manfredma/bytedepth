@@ -56,8 +56,8 @@ for profile in it e2e; do
     if [[ $key_status == 200 ]]; then
         [[ $(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid") == 204 ]] || failed=1
     elif [[ $key_status != 404 ]]; then failed=1; fi
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "DROP USER IF EXISTS '$user'@'localhost'; DROP DATABASE IF EXISTS \`$db\`" || failed=1
-    [[ $(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'") == 0 ]] || failed=1
+    staging_mysql_admin -e "DROP USER IF EXISTS '$user'@'localhost'; DROP DATABASE IF EXISTS \`$db\`" || failed=1
+    [[ $(staging_mysql_admin --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'") == 0 ]] || failed=1
     image_dir="$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT/$run_id/$profile"
     assert_not_staging_resource directory "$image_dir" "$run_id" || failed=1
     if [[ -d $image_dir && ! -L $image_dir ]]; then

@@ -12,6 +12,10 @@ if grep -n -E 'mysql --defaults-extra-file=.*--batch|mysql --defaults-extra-file
     printf 'FAIL: staging test slot admin MySQL commands must use the explicit native port helper\n' >&2
     exit 1
 fi
+if grep -n -E 'mysql --defaults-extra-file=.*--batch|mysql --defaults-extra-file=.*-e' "$root/deploy/teardown-staging-test-slot.sh" >/dev/null; then
+    printf 'FAIL: staging test slot teardown admin MySQL commands must use the explicit native port helper\n' >&2
+    exit 1
+fi
 if grep -Fq 'slot_chown_ubuntu "$scan_file"' "$slot"; then
     printf 'FAIL: Redis snapshot /tmp file must retain creator ownership until redirect completes\n' >&2
     exit 1
