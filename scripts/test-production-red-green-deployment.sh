@@ -58,7 +58,7 @@ prepare_line="$(line_number 'production_green_prepare')"
 preflight_line="$(line_number 'verify_green_preflight')"
 backup_line="$(line_number 'backup_blue_route')"
 blue_stop_line="$(line_number "docker stop \"\$DOCKER_APP\"")"
-final_sync_line="$(line_number 'if ! production_green_final_sync; then')"
+final_sync_line="$(line_number 'production_green_final_sync')"
 route_switch_line="$(line_number 'switch_green_route')"
 rollback_guard_line="$(line_number 'rollback_required=1')"
 [[ -n "$prepare_line" && -n "$preflight_line" && -n "$backup_line" && -n "$blue_stop_line" && \
@@ -76,6 +76,11 @@ require_text 'trap rollback_on_failure EXIT' "$SCRIPT"
 require_text 'if (( route_changed )); then' "$SCRIPT"
 require_text 'if (( blue_stopped )); then' "$SCRIPT"
 require_text 'if (( deployment_succeeded == 0 )); then' "$SCRIPT"
+require_text 'if [[ -e "$GREEN_STATE_DIR/syncing" ]]; then' "$SCRIPT"
+if rg -n -F 'if ! production_green_final_sync; then' "$SCRIPT" >/dev/null; then
+    printf 'Final green synchronization must not run in an errexit-suppressed conditional context.\n' >&2
+    exit 1
+fi
 
 install_stack_line="$(awk '/\"\$SOURCE_ROOT\/deploy\/install-production-green-stack\.sh\"/ { print NR; exit }' "$MIGRATION_LIB")"
 prepared_marker_line="$(awk '/BYTEDEPTH_PRODUCTION_GREEN_STATE_ROOT\/prepared/ { print NR; exit }' "$MIGRATION_LIB")"

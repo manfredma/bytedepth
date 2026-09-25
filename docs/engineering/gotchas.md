@@ -70,6 +70,7 @@
 - 生产 green 主机可能只有 Java 21，即使构建机和 staging 已使用 Java 25；native 安装器必须把 `openjdk-25-jre-headless` 作为依赖准备项，验证实际 `java -version` 后再将解析出的 Java 路径写入 systemd unit。不能把 `/usr/lib/jvm/java-25-openjdk/bin/java` 当作所有 Ubuntu 版本都存在的固定路径；该检查失败必须发生在停止 Docker blue 之前。
 - `systemctl start` 返回不等于 Redis 已经监听端口：`Type=simple` 服务可能仍处于毫秒级启动窗口。生产 green Redis 启动后必须轮询带密码的 `PING`，不能只执行一次 `redis-cli`；否则短暂 `Connection refused` 会在 Docker 仍可用时误判 native 预检失败。
 - 红绿发布的切流前置条件是 green 中间件、应用、edge、版本 SHA 和只读检查全部通过；任何准备或预检失败都必须保持 Docker blue 运行并验证公网仍可访问，禁止通过手工修改远端 tag 脚本绕过不可变发布输入。
+- Bash 中被 `if ! function`、`if function` 或 `function || ...` 调用的函数会处于 `errexit` 抑制上下文；生产 final-sync 不能这样调用，否则 Redis/MySQL/Meilisearch 任一步失败后函数可能继续执行并返回最后一条成功命令，误进入切流。final-sync 必须直接执行，失败由 EXIT trap 标记 `uncertain`、停止 green、恢复 Docker blue 并验证公网入口。
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。
 - native staging edge 不能使用 `Requires=bytedepth-staging-native-app.service` 绑定生命周期：E2E test slot 会临时替代 app 并复用 18080，edge 必须保持在 18081 提供公网转发；只保留 `After=`启动顺序和 `/version` 启动前检查。部署或清理仍必须确认 edge active 后再 reload/写 evidence。
 - staging 集成测试或 E2E 清理时，teardown 可能已经启动 app；外层 runner 仍必须无条件检查并恢复 `bytedepth-staging-native-edge.service` 及其 18081 `/version`，否则会出现 cleanup evidence 通过、共享 Nginx 仍 active 但公网请求 502 的假成功。

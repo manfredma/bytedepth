@@ -200,6 +200,9 @@ stop_green_services() {
 rollback_on_failure() {
     local rollback_status=0
     if (( deployment_succeeded == 0 )); then
+        if [[ -e "$GREEN_STATE_DIR/syncing" ]]; then
+            production_green_mark_uncertain || rollback_status=1
+        fi
         if [[ -n "${BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE:-}" ]]; then
             stop_green_services
         fi
@@ -235,11 +238,7 @@ backup_blue_route
 rollback_required=1
 docker stop "$DOCKER_APP"
 blue_stopped=1
-if ! production_green_final_sync; then
-    production_green_mark_uncertain
-    printf 'Production deployment failed during final green synchronization.\n' >&2
-    exit 1
-fi
+production_green_final_sync
 systemctl start "$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE" "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE"
 production_green_verify
 verify_green_preflight
