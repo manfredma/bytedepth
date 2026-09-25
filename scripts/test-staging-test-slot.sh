@@ -184,6 +184,10 @@ rg -q 'state-uncertain' "$root/deploy/teardown-staging-test-slot.sh"
 rg -q 'refusing destructive cleanup until manual recovery' "$root/deploy/teardown-staging-test-slot.sh"
 
 for runner in "$root/deploy/run-staging-integration-tests.sh" "$root/deploy/run-staging-e2e-tests.sh"; do
+    grep -Fq 'if (( app_stopped != 0 )); then' "$runner" || {
+        printf 'FAIL: %s must restore the native edge even when teardown already started the staging app\n' "$runner" >&2
+        exit 1
+    }
     grep -Fq 'systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE"' "$runner" || {
         printf 'FAIL: %s must restore the native edge after restoring the staging app\n' "$runner" >&2
         exit 1

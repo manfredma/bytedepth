@@ -148,8 +148,10 @@ cleanup_slot() {
             cleanup_status=1
         fi
     fi
-    if (( app_stopped != 0 )) && ! systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE"; then
-        systemctl start "$BYTEDEPTH_STAGING_APP_SERVICE" || cleanup_status=1
+    if (( app_stopped != 0 )); then
+        if ! systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE"; then
+            systemctl start "$BYTEDEPTH_STAGING_APP_SERVICE" || cleanup_status=1
+        fi
         systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE" || cleanup_status=1
         systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE" || cleanup_status=1
         systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE" || cleanup_status=1
