@@ -114,10 +114,10 @@
 | 旧栈（legacy stack） | 迁移前仍保留的旧服务集合，例如旧 Docker 栈或旧 canonical systemd 服务。 | 只用于迁移回退或最终清理；普通部署和测试不得静默回到旧栈。 |
 | 生产蓝环境（production blue） | 175 上当前继续提供生产流量的 Docker bytedepth 应用、数据服务和 bytedepth Nginx 路由。 | native 准备和预验证期间必须保持可用；native 失败时必须恢复或保持蓝环境访问。 |
 | 生产绿环境（production green） | 175 上使用独立目录、端口和 `bytedepth-production-green-*` systemd unit 的完整 native 栈。 | 不得与蓝环境共享活动中间件数据目录；健康、SHA 和只读回归通过后才能切流。 |
-| 切流窗口（cutover window） | 绿环境预验证通过后，保存蓝路由、执行最终同步、切换 bytedepth upstream 并验证公网入口的受控短时操作阶段。 | 只允许操作 bytedepth；任何失败先恢复蓝应用和蓝 upstream，再报告失败。 |
+| 切流窗口（cutover window） | 绿环境预验证通过后，停止旧 Docker Nginx 切断流量、停止蓝应用、重新执行最终数据导入、启动 green 应用/edge/公网 Nginx 并验证公网入口的受控短时操作阶段。 | 旧 Docker Nginx 配置不修改；任何失败先停止新公网 Nginx、启动旧 Docker Nginx 和蓝应用，再报告失败。 |
 | 不确定状态（uncertain state） | 迁移复制、清理或回退的结果无法确认的安全状态。 | 必须保留 manifest、目录和资源，禁止猜测性删除；恢复前先人工确认资源身份和服务状态。 |
 | 内部 edge | native 隔离栈内负责把 18081 转发到应用 18080 的 Nginx 服务 `bytedepth-staging-native-edge.service`。 | 只监听本机隔离端口，不直接承担公网 DNS、TLS 或 80/443 流量。 |
-| 公网入口（public ingress） | 多服务宿主机共享的 Nginx `nginx.service`，负责 80/443、TLS 证书及各项目域名路由；bytedepth 只拥有自己的站点配置。 | 共享 unit 不能依赖某一个项目或固定应用端口；bytedepth 只能校验并 reload，不能接管、重启或覆盖其他项目的入口。 |
+| 公网入口（public ingress） | 当前活跃的 80/443 Nginx 服务；生产切流后是 `bytedepth-production-green-public-nginx.service`，回退时是旧 Docker `bytedepth-nginx-1`。 | 生产切流维护窗口由项目所有者确认同机无流量时允许停旧入口、启新入口；旧 Docker 配置保持不变，不能修改或删除其他项目配置。 |
 | systemd drop-in | 放在某个 unit 的 `.service.d/` 目录中的覆盖片段；systemd 读取主 unit 后再合并其中的同名配置，用于按环境覆盖依赖、启动前检查等少量行为。 | 不是新的服务，也不是复制主 unit；必须明确清空需要替换的多值字段（如 `Requires=`、`ExecStartPre=`），否则旧值会继续生效。 |
 | 运行状态 | 应用、数据库、Redis、搜索等依赖的可用性快照。 | 是观测结果，不是业务领域状态。 |
 | 部署请求 | 要求受控部署某个已发布不可变版本的操作意图。 | 不是已经完成的部署事实；部署规则以 `deploy/README.md` 为准。 |

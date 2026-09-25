@@ -12,10 +12,9 @@ trap 'rm -rf -- "$REHEARSAL_ROOT"' EXIT
 reset_state() {
     route=blue
     blue_app=running
-    shared_nginx=running
+    old_docker_nginx=running
+    new_public_nginx=stopped
     green_services=running
-    nginx_loaded_route=blue
-    route_changed=0
     blue_stopped=0
     deployment_succeeded=0
     : > "$REHEARSAL_ROOT/events"
@@ -38,25 +37,42 @@ fake_docker_start_blue() {
     blue_stopped=0
 }
 
+fake_docker_stop_nginx() {
+    event docker-stop-old-nginx
+    old_docker_nginx=stopped
+}
+
+fake_docker_start_nginx() {
+    event docker-start-old-nginx
+    old_docker_nginx=running
+    route=blue
+}
+
 fake_green_stop() {
     event stop-green
     green_services=stopped
 }
 
-fake_nginx_restart_and_test() {
-    event nginx-restart
-    nginx_loaded_route="$route"
+fake_public_nginx_start() {
+    event start-new-nginx
+    new_public_nginx=running
+}
+
+fake_public_nginx_stop() {
+    event stop-new-nginx
+    new_public_nginx=stopped
 }
 
 blue_public_access() {
-    [[ "$route" == blue && "$nginx_loaded_route" == blue && "$blue_app" == running && "$shared_nginx" == running ]]
+    [[ "$route" == blue && "$blue_app" == running && "$old_docker_nginx" == running && "$new_public_nginx" == stopped ]]
 }
 
 restore_blue_access() {
-    if (( route_changed )); then
-        route=blue
-        route_changed=0
-        fake_nginx_restart_and_test
+    if [[ "$new_public_nginx" == running ]]; then
+        fake_public_nginx_stop
+    fi
+    if [[ "$old_docker_nginx" == stopped ]]; then
+        fake_docker_start_nginx
     fi
     if (( blue_stopped )); then
         fake_docker_start_blue
@@ -74,7 +90,8 @@ run_cutover() {
         return 1
     fi
 
-    event backup-blue-route
+    event green-preflight-passed
+    fake_docker_stop_nginx
     fake_docker_stop_blue
 
     if [[ "$failure_stage" == final-sync ]]; then
@@ -87,15 +104,13 @@ run_cutover() {
     event start-green
     green_services=running
     route=green
-    route_changed=1
     if [[ "$failure_stage" == nginx-test ]]; then
-        fake_nginx_restart_and_test
-        nginx_loaded_route=blue
+        fake_public_nginx_start
         fake_green_stop
         restore_blue_access
         return 1
     fi
-    fake_nginx_restart_and_test
+    fake_public_nginx_start
     if [[ "$failure_stage" == green-public ]]; then
         fake_green_stop
         restore_blue_access
@@ -116,7 +131,8 @@ assert_failed_case_restores_blue() {
         printf 'Docker public access was not restored after %s failure.\n' "$stage" >&2
         exit 1
     }
-    [[ "$route" == blue && "$blue_app" == running && "$green_services" == stopped ]] || {
+    [[ "$route" == blue && "$blue_app" == running && "$green_services" == stopped && \
+        "$old_docker_nginx" == running && "$new_public_nginx" == stopped ]] || {
         printf 'Docker blue state was not restored after %s failure.\n' "$stage" >&2
         exit 1
     }
@@ -133,7 +149,8 @@ done
 grep -Fqx docker-stop-blue "$REHEARSAL_ROOT/events" >/dev/null
 
 run_cutover success
-[[ "$deployment_succeeded" -eq 1 && "$route" == green && "$blue_app" == stopped && "$green_services" == running ]] || {
+[[ "$deployment_succeeded" -eq 1 && "$route" == green && "$blue_app" == stopped && "$green_services" == running && \
+    "$old_docker_nginx" == stopped && "$new_public_nginx" == running ]] || {
     printf 'Successful rehearsal did not leave traffic on green with Docker retained as rollback baseline.\n' >&2
     exit 1
 }

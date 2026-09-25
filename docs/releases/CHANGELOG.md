@@ -21,11 +21,11 @@
 
 ### Fixed
 
-- 加强生产红绿发布回滚：Nginx 主配置替换后立即记录路由已变更，缺少蓝配置备份、green 停止失败或重启容器实际 upstream 不匹配时均拒绝报告回滚成功，并保留蓝入口故障状态供人工处理。
+- 将生产公网 Nginx 纳入 native green 完整迁移：旧 Docker Nginx 配置保持不动，切流先停止旧入口切断流量，再停止蓝应用并重新执行最终数据导入，最后启动独立的 native 公网 Nginx；失败时停止新服务、启动旧 Docker Nginx 和蓝应用回退，避免 bind mount inode 和旧路由修改造成 502。
 
 - 修复合并主分支脚本只写入 `FETCH_HEAD`、未创建候选分支 remote-tracking ref，导致质量通过后合并流程错误中止的问题；现在显式更新 `origin/<branch>` 并由契约测试锁定。
 
-- 修复生产 native green 切流替换 Docker Nginx bind mount 配置后容器继续读取旧 inode、导致切流后公网 502 的问题；切流窗口会重启共享 `bytedepth-nginx-1` 使新路由生效，重启后执行 `nginx -t`，失败时恢复蓝路由。
+- 修复生产 native green 切流仍依赖旧 Docker Nginx reload 的问题；新公网 Nginx 使用独立 systemd unit、配置和临时目录，启动前执行 `nginx -t` 并校验 green 版本。
 
 - 修复生产 native green final-sync 清空 MySQL、Redis、Meilisearch 数据目录时误删 Redis/Meilisearch 渲染配置、导致数据同步完成但绿色服务无法启动的问题；清理后会重新安装并渲染完整 native 服务栈，并由回归契约检查固定该顺序。
 

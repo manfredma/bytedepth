@@ -14,6 +14,7 @@ readonly CONFIG_FILE="${BYTEDEPTH_PRODUCTION_GREEN_CONFIG:-/etc/bytedepth/produc
 readonly ENV_FILE=/etc/bytedepth/production-green.env
 readonly MEILI_ENV_FILE=/etc/bytedepth/production-green-meilisearch.env
 readonly NGINX_CONFIG=/etc/bytedepth/production-green-nginx.conf
+readonly PUBLIC_NGINX_CONFIG=/etc/bytedepth/production-green-public-nginx.conf
 
 export BYTEDEPTH_PRODUCTION_GREEN_CONFIG="$CONFIG_FILE"
 # shellcheck disable=SC1090,SC1091
@@ -145,6 +146,12 @@ install -d -o ubuntu -g ubuntu -m 0755 \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/fastcgi_temp" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/uwsgi_temp" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/scgi_temp" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/client_body_temp" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/proxy_temp" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/fastcgi_temp" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/uwsgi_temp" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/scgi_temp" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/images" \
     "$BYTEDEPTH_PRODUCTION_GREEN_RELEASE_ROOT" \
     "$BYTEDEPTH_PRODUCTION_GREEN_RELEASE_ROOT/releases"
@@ -156,7 +163,8 @@ chmod -R g+rwX \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/mysql" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/redis" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/meilisearch" \
-    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/images"
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/images" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx"
 
 if command -v apparmor_parser >/dev/null && [[ -f /etc/apparmor.d/usr.sbin.mysqld ]]; then
     install -d -o ubuntu -g ubuntu -m 0755 /etc/apparmor.d/local
@@ -240,6 +248,43 @@ printf '%s\n' \
 chmod 0600 "$NGINX_CONFIG"
 chown ubuntu:ubuntu "$NGINX_CONFIG"
 
+printf '%s\n' \
+    'events { worker_connections 1024; }' \
+    "pid $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/nginx.pid;" \
+    'http {' \
+    '    include /etc/nginx/mime.types;' \
+    "    client_body_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/client_body_temp;" \
+    "    proxy_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/proxy_temp;" \
+    "    fastcgi_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/fastcgi_temp;" \
+    "    uwsgi_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/uwsgi_temp;" \
+    "    scgi_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/scgi_temp;" \
+    "    error_log $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/error.log warn;" \
+    "    access_log $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/access.log;" \
+    '    server {' \
+    '        listen 80;' \
+    '        server_name bytedepth.cn www.bytedepth.cn;' \
+    "        return 301 https://\$host\$request_uri;" \
+    '    }' \
+    '    server {' \
+    '        listen 443 ssl;' \
+    '        server_name bytedepth.cn www.bytedepth.cn;' \
+    '        ssl_certificate /etc/letsencrypt/live/bytedepth.cn/fullchain.pem;' \
+    '        ssl_certificate_key /etc/letsencrypt/live/bytedepth.cn/privkey.pem;' \
+    '        ssl_protocols TLSv1.2 TLSv1.3;' \
+    '        ssl_ciphers HIGH:!aNULL:!MD5;' \
+    '        client_max_body_size 10m;' \
+    '        location / {' \
+    "            proxy_pass http://127.0.0.1:$BYTEDEPTH_PRODUCTION_GREEN_EDGE_PORT;" \
+    "            proxy_set_header Host \$host;" \
+    "            proxy_set_header X-Real-IP \$remote_addr;" \
+    "            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;" \
+    '            proxy_set_header X-Forwarded-Proto https;' \
+    '        }' \
+    '    }' \
+    '}' > "$PUBLIC_NGINX_CONFIG"
+chmod 0600 "$PUBLIC_NGINX_CONFIG"
+chown ubuntu:ubuntu "$PUBLIC_NGINX_CONFIG"
+
 render_unit() {
     local source="$1" target="$2"
     sed \
@@ -260,6 +305,7 @@ render_unit "$SOURCE_ROOT/deploy/systemd/bytedepth-production-green-redis.servic
 render_unit "$SOURCE_ROOT/deploy/systemd/bytedepth-production-green-meilisearch.service.in" "$SYSTEMD_DIR/$BYTEDEPTH_PRODUCTION_GREEN_MEILI_SERVICE"
 render_unit "$SOURCE_ROOT/deploy/systemd/bytedepth-production-green-app.service.in" "$SYSTEMD_DIR/$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE"
 render_unit "$SOURCE_ROOT/deploy/systemd/bytedepth-production-green-edge.service.in" "$SYSTEMD_DIR/$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE"
+render_unit "$SOURCE_ROOT/deploy/systemd/bytedepth-production-green-public-nginx.service.in" "$SYSTEMD_DIR/$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE"
 
 systemctl daemon-reload
 systemctl enable \
@@ -267,5 +313,6 @@ systemctl enable \
     "$BYTEDEPTH_PRODUCTION_GREEN_REDIS_SERVICE" \
     "$BYTEDEPTH_PRODUCTION_GREEN_MEILI_SERVICE" \
     "$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE" \
-    "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE"
+    "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE"
 printf 'Installed production green native stack at %s.\n' "$BYTEDEPTH_PRODUCTION_GREEN_ROOT"

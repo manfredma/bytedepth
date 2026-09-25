@@ -16,7 +16,8 @@ readonly GREEN_EDGE_SERVICE=bytedepth-production-green-edge.service
 readonly GREEN_MYSQL_SERVICE=bytedepth-production-green-mysql.service
 readonly GREEN_REDIS_SERVICE=bytedepth-production-green-redis.service
 readonly GREEN_MEILI_SERVICE=bytedepth-production-green-meilisearch.service
-readonly NGINX_CONFIG=/opt/bytedepth/deploy/nginx/nginx.conf
+readonly GREEN_PUBLIC_NGINX_SERVICE=bytedepth-production-green-public-nginx.service
+readonly GREEN_PUBLIC_NGINX_CONFIG=/etc/bytedepth/production-green-public-nginx.conf
 readonly DOCKER_APP=bytedepth-bytedepth-app-1
 readonly DOCKER_NGINX=bytedepth-nginx-1
 readonly TAG="${1:-}"
@@ -50,7 +51,7 @@ actual_commit="$(awk -F= '$1 == "commit" {print $2; exit}' "$CURRENT_MANIFEST" 2
     printf 'Refusing: current artifact does not match recorded deployment for %s.\n' "$TAG" >&2
     exit 1
 }
-for service in "$GREEN_APP_SERVICE" "$GREEN_EDGE_SERVICE" "$GREEN_MYSQL_SERVICE" "$GREEN_REDIS_SERVICE" "$GREEN_MEILI_SERVICE"; do
+for service in "$GREEN_APP_SERVICE" "$GREEN_EDGE_SERVICE" "$GREEN_MYSQL_SERVICE" "$GREEN_REDIS_SERVICE" "$GREEN_MEILI_SERVICE" "$GREEN_PUBLIC_NGINX_SERVICE"; do
     systemctl is-active --quiet "$service" || {
         printf 'Refusing: production green service is not active: %s.\n' "$service" >&2
         exit 1
@@ -60,12 +61,12 @@ done
     printf 'Refusing: Docker blue application must remain stopped after native cutover.\n' >&2
     exit 1
 }
-[[ "$(docker inspect -f '{{.State.Running}}' "$DOCKER_NGINX")" == true ]] || {
-    printf 'Refusing: shared Docker Nginx is not active.\n' >&2
+[[ "$(docker inspect -f '{{.State.Running}}' "$DOCKER_NGINX")" == false ]] || {
+    printf 'Refusing: Docker blue Nginx must remain stopped after native cutover.\n' >&2
     exit 1
 }
-grep -Fq 'proxy_pass http://172.18.0.1:18081;' "$NGINX_CONFIG" || {
-    printf 'Refusing: production Nginx is not routed to the native green edge.\n' >&2
+grep -Fq 'proxy_pass http://127.0.0.1:18081;' "$GREEN_PUBLIC_NGINX_CONFIG" || {
+    printf 'Refusing: native green public Nginx is not routed to the green edge.\n' >&2
     exit 1
 }
 curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused \

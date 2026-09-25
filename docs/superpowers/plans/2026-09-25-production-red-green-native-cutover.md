@@ -4,7 +4,7 @@
 
 **Goal:** 在 175 多服务宿主机上实现可验证、可回退的 native 全栈红绿部署，并通过 129 staging 的完整验收后发布新的生产 Tag。
 
-**Architecture:** 现有 Docker bytedepth 栈作为蓝环境继续提供流量；native 绿环境使用独立数据目录、端口和 systemd unit，先完成数据复制、服务启动和只读校验，再在短暂停机窗口内完成最终同步，替换共享 Nginx 的 bytedepth upstream，重启 `bytedepth-nginx-1` 刷新单文件 bind mount 并执行 `nginx -t`。生产远程入口继续只接受 annotated SemVer Tag，本机不执行生产内部脚本或 sudo。
+**Architecture:** 现有 Docker bytedepth 栈作为蓝环境继续提供流量；native 绿环境使用独立数据目录、端口和 systemd unit，先完成数据复制、服务启动和只读校验，再在短暂停机窗口内停止旧 `bytedepth-nginx-1` 切断流量、停止蓝应用、重新执行最终数据导入，最后启动独立的 native green 公网 Nginx systemd unit 接管 80/443。生产远程入口继续只接受 annotated SemVer Tag，本机不执行生产内部脚本或 sudo。
 
 **Tech Stack:** Bash 5-compatible deployment scripts, systemd, Nginx, MySQL 8, Redis 7, Meilisearch 1.7, Java 25 Spring Boot, Maven Wrapper 3.9.11, shell contract tests.
 
@@ -12,13 +12,13 @@
 
 ## Global Constraints
 
-- 175 是多服务宿主机；只操作 bytedepth 的绿服务、数据目录和 Nginx upstream。项目所有者确认无同机服务流量的生产切流窗口可重启共享 `bytedepth-nginx-1`，但不停止或重建其他项目。
+- 175 是多服务宿主机；只操作 bytedepth 的绿服务、数据目录和公网 Nginx unit。项目所有者确认无同机服务流量的生产切流窗口可停止旧 `bytedepth-nginx-1`，但不删除或重建其他项目资源。
 - native 准备、初始复制、绿启动和预验证阶段不得停止、重建或修改 Docker 蓝环境；切流窗口失败必须恢复蓝应用、蓝 upstream 并验证 Docker 入口。
 - 绿环境固定使用 `/data/bytedepth-native-production`、13306、16379、17700、18080、18081 及 `bytedepth-production-green-` 服务前缀。
 - 所有远程创建的项目目录、文件、制品、配置和状态归 `ubuntu:ubuntu`；服务账号只获得必要的数据目录组权限。
 - 数据复制必须限定到明确目标，禁止无界全库 dump、密码进入命令行、递归删除 `/data` 或覆盖其他项目资源。
 - 生产本机只能执行 `BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" ./deploy/deploy-production-remote.sh vX.Y.Z`。
-- 任何 WARNING、健康检查失败、校验失败、清理失败或共享 Nginx `nginx -t` 失败都必须 fail-closed。
+- 任何 WARNING、健康检查失败、校验失败、清理失败或 green 公网 Nginx `nginx -t` 失败都必须 fail-closed。
 - staging 仍是唯一集成/E2E/验收环境；代码或部署脚本改变后，旧 staging evidence 作废。
 
 ---
@@ -83,15 +83,15 @@
 
 **Interfaces:**
 - `deploy-production.sh --artifact JAR --manifest MANIFEST TAG` performs preflight, installs the immutable JAR into the green release path, prepares/starts green services, verifies local green `/version`, executes the final sync lock protocol, and cuts only bytedepth traffic.
-- The host script saves the Docker upstream, runs `nginx -t` before reload, records the green route, and has an explicit `restore_blue_access` path.
+- The host script leaves the Docker upstream untouched, stops the old Docker Nginx only after green verification, starts the native public Nginx, and has an explicit stop-new/start-old `restore_blue_access` path.
 - The remote wrapper continues to upload only `app.jar` and `artifact.manifest`, polls the remote log under the existing warning policy, and invokes read-only production verification after the release history entry is written.
 
-- [x] **Step 1: Write failing deployment contract tests** for Tag-only input, green service ordering, no default-port reuse, blue-route preservation, `nginx -t` before reload, rollback on health failure, and no other project unit/container operations.
+- [x] **Step 1: Write failing deployment contract tests** for Tag-only input, green service ordering, no default-port reuse, old Docker Nginx preservation, new public Nginx startup, rollback on health failure, and no other project unit/container operations.
 - [x] **Step 2: Run `bash scripts/test-production-red-green-deployment.sh`** and confirm failure.
 - [x] **Step 3: Implement production preflight** that rejects the wrong deploy mode, missing Docker blue services, existing green uncertainty, port collisions, missing green config, or non-ubuntu project paths.
 - [x] **Step 4: Implement green artifact installation and startup** without changing blue traffic; verify artifact SHA, Tag commit, local green `/version`, all middleware readiness, and application logs.
 - [x] **Step 5: Implement the short final-sync window** only after green preflight passes: save the blue route, stop only the blue bytedepth app, synchronize data, start green app/edge, and on any failure restore blue app plus the original route before returning failure.
-- [x] **Step 6: Implement Nginx route cutover/rollback** through the host-mounted bytedepth route and a maintenance-window restart of the shared Docker Nginx; preserve every other `server_name` and upstream, verify the restarted container's rendered route, and restore the Docker route before reporting native failure.
+- [x] **Step 6: Implement Nginx route cutover/rollback** as a complete public Nginx service replacement; leave the old Docker configuration untouched, stop the old container, start the native green public unit, and on failure stop it and start the old container before reporting native failure.
 - [x] **Step 7: Update remote polling and production verification** to assert green services, active route, release history, version SHA, stable pages, SNI and no WARNING/ERROR.
 - [x] **Step 8: Run deployment contract tests and shellcheck**, then commit `feat: deploy production through native green cutover`.
 

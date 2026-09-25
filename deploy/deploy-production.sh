@@ -24,10 +24,6 @@ readonly MANIFEST="$4"
 readonly DEPLOY_LOCK=/var/lock/bytedepth-production-deploy.lock
 readonly DOCKER_APP=bytedepth-bytedepth-app-1
 readonly DOCKER_NGINX=bytedepth-nginx-1
-readonly NGINX_CONFIG="$SOURCE_ROOT/deploy/nginx/nginx.conf"
-readonly NGINX_BACKUP="$GREEN_STATE_DIR/blue-nginx.conf.before-$TAG"
-readonly BLUE_UPSTREAM='127.0.0.1:8080'
-readonly GREEN_UPSTREAM='172.18.0.1:18081'
 readonly PUBLIC_BASE_URL=https://bytedepth.cn
 
 exec 9>"$DEPLOY_LOCK"
@@ -70,10 +66,11 @@ grep -Fqx "version=$TAG" "$HISTORY_FILE" && {
 
 config_changed=0
 blue_stopped=0
-route_changed=0
 deployment_succeeded=0
 rollback_required=0
 green_prepare_started=0
+docker_nginx_stopped=0
+public_nginx_started=0
 
 current_deploy_mode() {
     awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value=$2} END {print value}' "$CONFIG_FILE" 2>/dev/null || true
@@ -105,74 +102,16 @@ prepare_green_config() {
     export BYTEDEPTH_PRODUCTION_GREEN_STATE_ROOT="$GREEN_STATE_DIR"
 }
 
-require_blue_route() {
-    [[ -f "$NGINX_CONFIG" && ! -L "$NGINX_CONFIG" ]] || {
-        printf 'Refusing: Docker Nginx configuration is missing.\n' >&2
-        return 1
-    }
-    grep -Fq "proxy_pass http://$BLUE_UPSTREAM;" "$NGINX_CONFIG" || {
-        printf 'Refusing: bytedepth Docker upstream is not the expected blue route.\n' >&2
-        return 1
-    }
-}
-
 require_blue_stack() {
     production_green_require_blue
     [[ "$(docker inspect -f '{{.State.Running}}' "$DOCKER_APP")" == true ]] || {
         printf 'Refusing: Docker blue application is not running.\n' >&2
         return 1
     }
-    require_blue_route
-}
-
-backup_blue_route() {
-    install -o ubuntu -g ubuntu -m 0600 "$NGINX_CONFIG" "$NGINX_BACKUP"
-}
-
-restart_docker_nginx() {
-    local expected_upstream="$1" rendered_config
-    if ! docker restart "$DOCKER_NGINX"; then
-        printf 'Refusing: shared Docker Nginx could not be restarted after replacing its bind-mounted configuration.\n' >&2
-        return 1
-    fi
-    if ! docker exec "$DOCKER_NGINX" nginx -t; then
-        printf 'Refusing: restarted Docker Nginx failed its configuration check.\n' >&2
-        return 1
-    fi
-    if ! rendered_config="$(docker exec "$DOCKER_NGINX" nginx -T 2>&1)"; then
-        printf 'Refusing: could not inspect the restarted Docker Nginx configuration.\n' >&2
-        return 1
-    fi
-    if ! printf '%s\n' "$rendered_config" | grep -F "proxy_pass http://$expected_upstream;" >/dev/null; then
-        printf 'Refusing: restarted Docker Nginx did not load the expected upstream: %s.\n' "$expected_upstream" >&2
-        return 1
-    fi
-}
-
-restore_blue_route() {
-    [[ -f "$NGINX_BACKUP" ]] || {
-        printf 'Refusing: Docker blue Nginx backup is missing; cannot claim rollback.\n' >&2
+    [[ "$(docker inspect -f '{{.State.Running}}' "$DOCKER_NGINX")" == true ]] || {
+        printf 'Refusing: Docker blue Nginx is not running.\n' >&2
         return 1
     }
-    if ! install -o ubuntu -g ubuntu -m 0644 "$NGINX_BACKUP" "$NGINX_CONFIG"; then
-        printf 'Refusing: could not restore the Docker blue Nginx configuration.\n' >&2
-        return 1
-    fi
-    restart_docker_nginx "$BLUE_UPSTREAM"
-    route_changed=0
-}
-
-switch_green_route() {
-    local temp nginx_dir
-    nginx_dir="$(dirname "$NGINX_CONFIG")"
-    temp="$(mktemp "$nginx_dir/.nginx.green.XXXXXX")"
-    sed "s#proxy_pass http://$BLUE_UPSTREAM;#proxy_pass http://$GREEN_UPSTREAM;#g" \
-        "$NGINX_CONFIG" > "$temp"
-    install -o ubuntu -g ubuntu -m 0644 "$temp" "$NGINX_CONFIG"
-    route_changed=1
-    rm -f -- "$temp"
-    grep -Fq "proxy_pass http://$GREEN_UPSTREAM;" "$NGINX_CONFIG" || return 1
-    restart_docker_nginx "$GREEN_UPSTREAM"
 }
 
 verify_blue_public_access() {
@@ -188,6 +127,7 @@ verify_green_preflight() {
     systemctl is-active --quiet "$BYTEDEPTH_PRODUCTION_GREEN_MEILI_SERVICE"
     systemctl is-active --quiet "$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE"
     systemctl is-active --quiet "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE"
+    nginx -t -c /etc/bytedepth/production-green-public-nginx.conf
     curl --fail --silent --show-error --retry 30 --retry-delay 1 \
         "http://127.0.0.1:$BYTEDEPTH_PRODUCTION_GREEN_APP_PORT/version" \
         | grep -F "$commit" >/dev/null
@@ -198,8 +138,19 @@ verify_green_preflight() {
 
 restore_blue_access() {
     local restore_status=0
-    if (( route_changed )); then
-        restore_blue_route || restore_status=1
+    if (( public_nginx_started )); then
+        if systemctl stop "$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE"; then
+            public_nginx_started=0
+        else
+            restore_status=1
+        fi
+    fi
+    if (( docker_nginx_stopped )); then
+        if docker start "$DOCKER_NGINX"; then
+            docker_nginx_stopped=0
+        else
+            restore_status=1
+        fi
     fi
     if (( blue_stopped )); then
         if docker start "$DOCKER_APP"; then
@@ -211,18 +162,23 @@ restore_blue_access() {
     if ! verify_blue_public_access; then
         restore_status=1
     fi
+    if [[ "$(docker inspect -f '{{.State.Running}}' "$DOCKER_NGINX" 2>/dev/null || true)" != true ]]; then
+        restore_status=1
+    fi
     return "$restore_status"
 }
 
 stop_green_services() {
-    if ! systemctl stop "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE" \
+    if systemctl stop "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE" \
         "$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE" \
         "$BYTEDEPTH_PRODUCTION_GREEN_MEILI_SERVICE" \
         "$BYTEDEPTH_PRODUCTION_GREEN_REDIS_SERVICE" \
-        "$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_SERVICE" 2>/dev/null; then
-        printf 'Refusing: one or more native green services could not be stopped during rollback.\n' >&2
-        return 1
+        "$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_SERVICE" \
+        "$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE" 2>/dev/null; then
+        return 0
     fi
+    printf 'Refusing: one or more native green services could not be stopped during rollback.\n' >&2
+    return 1
 }
 
 rollback_on_failure() {
@@ -263,17 +219,21 @@ production_green_prepare
 systemctl start "$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE" "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE"
 verify_green_preflight
 
-backup_blue_route
 rollback_required=1
-docker stop "$DOCKER_APP"
+docker_nginx_stopped=1
+docker stop "$DOCKER_NGINX"
 blue_stopped=1
+docker stop "$DOCKER_APP"
 production_green_final_sync
 systemctl start "$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE" "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE"
 production_green_verify
 verify_green_preflight
-switch_green_route
-if ! curl --fail --silent --show-error --retry 12 --retry-delay 2 --retry-connrefused \
-    --connect-timeout 10 --max-time 120 "$PUBLIC_BASE_URL/version" | grep -F "$commit" >/dev/null; then
+public_nginx_started=1
+systemctl start "$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE"
+systemctl is-active --quiet "$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE"
+green_public_version="$(curl --fail --silent --show-error --retry 12 --retry-delay 2 --retry-connrefused \
+    --connect-timeout 10 --max-time 120 "$PUBLIC_BASE_URL/version")"
+if [[ "$green_public_version" != *"$commit"* ]]; then
     printf 'Production deployment failed: green public version was not observed.\n' >&2
     exit 1
 fi

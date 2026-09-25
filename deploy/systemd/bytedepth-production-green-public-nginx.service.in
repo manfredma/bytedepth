@@ -1,0 +1,26 @@
+[Unit]
+Description=ByteDepth production green public Nginx
+After=network-online.target bytedepth-production-green-edge.service
+Requires=bytedepth-production-green-edge.service
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=root
+Group=root
+ExecStartPre=/usr/sbin/nginx -t -c /etc/bytedepth/production-green-public-nginx.conf
+ExecStart=/usr/sbin/nginx -c /etc/bytedepth/production-green-public-nginx.conf -g 'daemon on; master_process on;'
+ExecStartPost=/usr/bin/chown -R ubuntu:ubuntu __GREEN_ROOT__/public-nginx
+ExecReload=/usr/sbin/nginx -c /etc/bytedepth/production-green-public-nginx.conf -s reload
+ExecStop=/usr/sbin/nginx -c /etc/bytedepth/production-green-public-nginx.conf -s quit
+ExecStopPost=/usr/bin/chown -R ubuntu:ubuntu __GREEN_ROOT__/public-nginx
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=30s
+TimeoutStopSec=30s
+PrivateTmp=true
+MemoryMax=64M
+ReadWritePaths=__GREEN_ROOT__/public-nginx
+
+[Install]
+WantedBy=multi-user.target

@@ -38,4 +38,4 @@
 | [ADR-0016](0016-host-native-runtime-deployment.md) | 小资源单机环境采用宿主机原生运行时 | Proposed | 2026-09-24 |
 | [ADR-0017](0017-native-edge-lifecycle-for-test-slot.md) | native edge 与 E2E test slot 解耦生命周期 | Proposed | 2026-09-25 |
 | [ADR-0018](0018-production-red-green-native-cutover.md) | 生产环境采用 native 全栈红绿切换 | Accepted | 2026-09-25 |
-| [ADR-0019](0019-production-nginx-restart-for-bind-mount.md) | 生产切流窗口重启 Docker Nginx 刷新 bind mount 配置 | Accepted | 2026-09-25 |
+| [ADR-0019](0019-production-public-nginx-replacement.md) | 生产切流将公网 Nginx 作为 green 服务整体替换 | Accepted | 2026-09-25 |

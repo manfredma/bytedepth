@@ -21,14 +21,13 @@ for contract in \
     'production_green_prepare' \
     'production_green_final_sync' \
     'production_green_verify' \
-    'backup_blue_route' \
-    'restore_blue_route' \
     'docker inspect -f' \
     "docker stop \"\$DOCKER_APP\"" \
     "docker start \"\$DOCKER_APP\"" \
-    "docker exec \"\$DOCKER_NGINX\" nginx -t" \
-    'restart_docker_nginx' \
-    'nginx -T' \
+    "docker stop \"\$DOCKER_NGINX\"" \
+    "docker start \"\$DOCKER_NGINX\"" \
+    'BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE' \
+    'public_nginx_started' \
     'nginx -t' \
     'verify_blue_public_access' \
     'production_green_mark_uncertain' \
@@ -44,17 +43,15 @@ require_text 'production-green' "$SCRIPT"
 require_text 'release-history' "$SCRIPT"
 require_text 'production_green_prepare()' "$MIGRATION_LIB"
 require_text "\"\$SOURCE_ROOT/deploy/install-production-green-stack.sh\"" "$MIGRATION_LIB"
-require_text "docker restart \"\$DOCKER_NGINX\"" "$SCRIPT"
-require_text 'route_changed=1' "$SCRIPT"
-require_text 'restore_blue_route' "$SCRIPT"
-require_text 'Docker blue Nginx backup is missing' "$SCRIPT"
-if rg -n 'docker exec "\$DOCKER_NGINX" nginx -s reload' "$SCRIPT" >/dev/null; then
-    printf 'Production cutover must recreate the shared Docker Nginx container after replacing its bind-mounted config.\n' >&2
+require_text "systemctl start \"\$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE\"" "$SCRIPT"
+require_text "systemctl stop \"\$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE\"" "$SCRIPT"
+if rg -n 'NGINX_CONFIG|NGINX_BACKUP|switch_green_route|restore_blue_route|docker exec "\$DOCKER_NGINX"' "$SCRIPT" >/dev/null; then
+    printf 'Production cutover must replace the complete public Nginx service, not mutate the old Docker Nginx configuration.\n' >&2
     exit 1
 fi
 
 if rg -n -i 'docker compose|docker-compose|docker rm|docker system prune|systemctl (stop|restart|disable) nginx' "$SCRIPT" >/dev/null; then
-    printf 'Production red-green deployment must not rebuild/remove Docker or stop shared Nginx.\n' >&2
+    printf 'Production red-green deployment must not rebuild the Docker stack or control the host nginx service.\n' >&2
     exit 1
 fi
 
@@ -65,24 +62,24 @@ line_number() {
 
 prepare_line="$(line_number 'production_green_prepare')"
 preflight_line="$(line_number 'verify_green_preflight')"
-backup_line="$(line_number 'backup_blue_route')"
 blue_stop_line="$(line_number "docker stop \"\$DOCKER_APP\"")"
 final_sync_line="$(line_number 'production_green_final_sync')"
-route_switch_line="$(line_number 'switch_green_route')"
+old_nginx_stop_line="$(line_number "docker stop \"\$DOCKER_NGINX\"")"
+public_nginx_start_line="$(line_number "systemctl start \"\$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE\"")"
 rollback_guard_line="$(line_number 'rollback_required=1')"
-[[ -n "$prepare_line" && -n "$preflight_line" && -n "$backup_line" && -n "$blue_stop_line" && \
-    -n "$final_sync_line" && -n "$route_switch_line" && -n "$rollback_guard_line" ]] || {
+[[ -n "$prepare_line" && -n "$preflight_line" && -n "$blue_stop_line" && \
+    -n "$final_sync_line" && -n "$old_nginx_stop_line" && -n "$public_nginx_start_line" && \
+    -n "$rollback_guard_line" ]] || {
     printf 'Could not resolve production cutover order.\n' >&2
     exit 1
 }
 (( prepare_line < preflight_line ))
-(( preflight_line < backup_line ))
-(( backup_line < rollback_guard_line ))
-(( rollback_guard_line < blue_stop_line ))
+(( preflight_line < rollback_guard_line ))
+(( rollback_guard_line < old_nginx_stop_line ))
+(( old_nginx_stop_line < blue_stop_line ))
 (( blue_stop_line < final_sync_line ))
-(( final_sync_line < route_switch_line ))
+(( old_nginx_stop_line < public_nginx_start_line ))
 require_text 'trap rollback_on_failure EXIT' "$SCRIPT"
-require_text 'if (( route_changed )); then' "$SCRIPT"
 require_text 'if (( blue_stopped )); then' "$SCRIPT"
 require_text 'if (( deployment_succeeded == 0 )); then' "$SCRIPT"
 require_text "if (( green_prepare_started )) || [[ -e \"\$GREEN_STATE_DIR/syncing\" ]]; then" "$SCRIPT"

@@ -12,7 +12,9 @@ rg -F '/opt/bytedepth/production-green/current/artifact.manifest' "$SCRIPT" >/de
 rg -F 'GREEN_APP_SERVICE=bytedepth-production-green-app.service' "$SCRIPT" >/dev/null
 rg -F 'DOCKER_APP=bytedepth-bytedepth-app-1' "$SCRIPT" >/dev/null
 rg -F 'Docker blue application must remain stopped' "$SCRIPT" >/dev/null
-rg -F 'Docker Nginx is not active' "$SCRIPT" >/dev/null
+rg -F 'Docker blue Nginx must remain stopped' "$SCRIPT" >/dev/null
+rg -F 'GREEN_PUBLIC_NGINX_SERVICE=bytedepth-production-green-public-nginx.service' "$SCRIPT" >/dev/null
+rg -F 'GREEN_PUBLIC_NGINX_CONFIG=/etc/bytedepth/production-green-public-nginx.conf' "$SCRIPT" >/dev/null
 if ! rg -F 'journalctl -u "$GREEN_APP_SERVICE" -n 300' "$SCRIPT" >/dev/null; then
     printf 'Production verification must query the native green application systemd service.\n' >&2
     exit 1
