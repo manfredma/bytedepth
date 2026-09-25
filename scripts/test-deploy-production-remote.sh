@@ -15,6 +15,11 @@ grep -Fq 'UserKnownHostsFile=' "$SCRIPT"
 grep -Fq 'StrictHostKeyChecking=yes' "$SCRIPT"
 grep -Fq 'scp ' "$SCRIPT"
 grep -Fq "git fetch --force --no-recurse-submodules origin 'refs/tags/\$TAG:refs/tags/\$TAG'" "$SCRIPT"
+grep -Fq "pom_version=\"\$(git -C \"\$SOURCE_ROOT\" show \"\$commit:pom.xml\" | sed -n 's@^[[:space:]]*<version>\\([^<]*\\)</version>[[:space:]]*\$@\\1@p' | head -n 1)\"" "$SCRIPT"
+if grep -Fq 'GIT_SSH_COMMAND="$git_ssh_command"' "$SCRIPT"; then
+    printf 'Local GitHub fetch must not use the production host SSH key.\n' >&2
+    exit 1
+fi
 grep -Fq "git checkout --detach '\$TAG'" "$SCRIPT"
 grep -Fq "git status --porcelain=v1 --untracked-files=no" "$SCRIPT"
 grep -Fq -- '--artifact' "$SCRIPT"

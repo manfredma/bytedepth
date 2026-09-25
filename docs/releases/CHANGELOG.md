@@ -17,6 +17,7 @@
 
 ### Fixed
 
+- 修复生产远程发布脚本将生产主机 SSH key 错用于 GitHub 拉取，以及版本解析正则多转义一层导致合法 Tag 被误判的问题；生产 key 现在只用于 175，仓库拉取沿用本机 Git 凭据。
 - 修复 staging 集成测试和 E2E 清理后只恢复 native app、未恢复内部 edge，导致多服务宿主机共享 Nginx 仍运行但公网 upstream 失效的问题；即使 teardown 已先启动 app，外层 runner 也会无条件恢复并验证 edge。
 - 修复 native edge 与正式 app 绑定生命周期导致 E2E test slot 启动后公网入口 502/健康检查无超时卡住的问题；edge 现在只依赖 app 的启动顺序，E2E 槽位可复用同一内部 edge。
 - 修复 edge 已保持 active 时 staging app 重启的就绪竞态；测试清理会先等待 app 的 HTTP `/version`，再等待 edge 的 18081 `/version`，避免把短暂 502 记录为清理失败。

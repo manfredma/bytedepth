@@ -41,14 +41,16 @@ readonly ARTIFACT_DIR
 CHECKOUT_DIR="$(mktemp -d)"
 readonly CHECKOUT_DIR
 
-git_ssh_command="ssh -i $SSH_KEY -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile=$KNOWN_HOSTS_FILE -o StrictHostKeyChecking=yes"
-GIT_SSH_COMMAND="$git_ssh_command" git -C "$SOURCE_ROOT" fetch --force --no-recurse-submodules origin "refs/tags/$TAG:refs/tags/$TAG"
+# The production key is scoped to SSH/SCP against 175.  Do not reuse it for
+# the local GitHub fetch: the operator's Git configuration owns repository
+# authentication and may use a different key or transport.
+git -C "$SOURCE_ROOT" fetch --force --no-recurse-submodules origin "refs/tags/$TAG:refs/tags/$TAG"
 [[ "$(git -C "$SOURCE_ROOT" cat-file -t "refs/tags/$TAG" 2>/dev/null || true)" == tag ]] || {
     printf 'Refusing deployment: %s must be an annotated tag.\n' "$TAG" >&2
     exit 1
 }
 commit="$(git -C "$SOURCE_ROOT" rev-parse "$TAG^{commit}")"
-pom_version="$(git -C "$SOURCE_ROOT" show "$commit:pom.xml" | sed -n 's@^[[:space:]]*<version>\\([^<]*\\)</version>[[:space:]]*$@\\1@p' | head -n 1)"
+pom_version="$(git -C "$SOURCE_ROOT" show "$commit:pom.xml" | sed -n 's@^[[:space:]]*<version>\([^<]*\)</version>[[:space:]]*$@\1@p' | head -n 1)"
 [[ "$pom_version" == "${TAG#v}" && "$pom_version" != *-SNAPSHOT ]] || {
     printf 'Refusing deployment: tag and Maven version do not match.\n' >&2
     exit 1
