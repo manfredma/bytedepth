@@ -14,7 +14,10 @@ grep -Fq 'BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS' "$SCRIPT"
 grep -Fq 'UserKnownHostsFile=' "$SCRIPT"
 grep -Fq 'StrictHostKeyChecking=yes' "$SCRIPT"
 grep -Fq 'scp ' "$SCRIPT"
-grep -Fq "git fetch --force --no-recurse-submodules origin 'refs/tags/\$TAG:refs/tags/\$TAG'" "$SCRIPT"
+if grep -Fq 'git -C "$SOURCE_ROOT" fetch' "$SCRIPT"; then
+    printf 'Local production wrapper must not refetch an already validated release Tag.\n' >&2
+    exit 1
+fi
 grep -Fq "pom_version=\"\$(git -C \"\$SOURCE_ROOT\" show \"\$commit:pom.xml\" | sed -n 's@^[[:space:]]*<version>\\([^<]*\\)</version>[[:space:]]*\$@\\1@p' | head -n 1)\"" "$SCRIPT"
 if grep -Fq 'GIT_SSH_COMMAND="$git_ssh_command"' "$SCRIPT"; then
     printf 'Local GitHub fetch must not use the production host SSH key.\n' >&2

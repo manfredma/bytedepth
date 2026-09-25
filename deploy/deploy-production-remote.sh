@@ -41,10 +41,9 @@ readonly ARTIFACT_DIR
 CHECKOUT_DIR="$(mktemp -d)"
 readonly CHECKOUT_DIR
 
-# The production key is scoped to SSH/SCP against 175.  Do not reuse it for
-# the local GitHub fetch: the operator's Git configuration owns repository
-# authentication and may use a different key or transport.
-git -C "$SOURCE_ROOT" fetch --force --no-recurse-submodules origin "refs/tags/$TAG:refs/tags/$TAG"
+# The release Tag is an immutable, already-validated local input.  The
+# production host fetches and verifies the same annotated Tag below; the local
+# wrapper must not add another GitHub transport dependency before deployment.
 [[ "$(git -C "$SOURCE_ROOT" cat-file -t "refs/tags/$TAG" 2>/dev/null || true)" == tag ]] || {
     printf 'Refusing deployment: %s must be an annotated tag.\n' "$TAG" >&2
     exit 1
