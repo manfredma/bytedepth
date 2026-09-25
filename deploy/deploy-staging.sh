@@ -155,15 +155,39 @@ run_locked_install() {
             "$BYTEDEPTH_STAGING_REDIS_SERVICE" \
             "$BYTEDEPTH_STAGING_MEILI_SERVICE"; do
             if systemctl is-active --quiet "$service"; then
-                systemctl restart "$service"
+                if ! systemctl restart "$service"; then
+                    printf 'Refusing: native middleware restart failed for %s.\n' "$service" >&2
+                    return 1
+                fi
             fi
         done
+    }
+
+    wait_for_native_mysql() {
+        local attempt
+        local mysql_defaults=/etc/bytedepth/staging-native-mysql-admin.cnf
+
+        [[ -r "$mysql_defaults" ]] || {
+            printf 'Refusing: native staging MySQL admin defaults are missing.\n' >&2
+            return 1
+        }
+        for attempt in {1..30}; do
+            if mysqladmin --defaults-extra-file="$mysql_defaults" \
+                --host=127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" ping >/dev/null 2>&1; then
+                return 0
+            fi
+            sleep 1
+        done
+        printf 'Refusing: native staging MySQL did not become ready on port %s.\n' \
+            "$BYTEDEPTH_STAGING_MYSQL_PORT" >&2
+        return 1
     }
 
     native_bootstrap_command() {
         if [[ "$BYTEDEPTH_STAGING_RUNTIME_MODE" == host-native-parallel ]]; then
             ./deploy/install-staging-native-stack.sh
-            restart_native_middlewares
+            restart_native_middlewares || return 1
+            wait_for_native_mysql || return 1
         else
             ./deploy/bootstrap-ops-deploy.sh
         fi
@@ -182,11 +206,23 @@ run_locked_install() {
                 return 1
             }
             mysql_args+=(--defaults-extra-file=/etc/bytedepth/staging-native-mysql-admin.cnf)
-            mysqladmin "${mysql_args[@]}" --host=127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" ping >/dev/null
-            mysqldump "${mysql_args[@]}" --host=127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"
+            if ! mysqladmin "${mysql_args[@]}" --host=127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" ping >/dev/null; then
+                printf 'Refusing: native staging MySQL is not reachable for backup.\n' >&2
+                return 1
+            fi
+            if ! mysqldump "${mysql_args[@]}" --host=127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"; then
+                printf 'Refusing: native staging MySQL backup failed.\n' >&2
+                return 1
+            fi
         else
-            mysqladmin --protocol=socket ping >/dev/null
-            mysqldump --protocol=socket --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"
+            if ! mysqladmin --protocol=socket ping >/dev/null; then
+                printf 'Refusing: staging MySQL is not reachable for backup.\n' >&2
+                return 1
+            fi
+            if ! mysqldump --protocol=socket --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"; then
+                printf 'Refusing: staging MySQL backup failed.\n' >&2
+                return 1
+            fi
         fi
         chmod 0600 "$backup_dir/mysql-$commit.sql"
     }

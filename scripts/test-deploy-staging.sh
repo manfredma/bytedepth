@@ -20,6 +20,7 @@ for contract in \
     'BYTEDEPTH_STAGING_EDGE_SERVICE' \
     'ensure_edge_active_and_reload' \
     'restart_native_middlewares' \
+    'wait_for_native_mysql' \
     'systemctl restart "$service"' \
     'systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE"' \
     'load_staging_native_target' \
@@ -39,6 +40,8 @@ rg -q 'check-release-readiness.sh.*>&2' "$SCRIPT"
 rg -q 'sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging' "$SCRIPT"
 rg -q 'local ref="\$1" jar="\$2" manifest="\$3"' "$SCRIPT"
 rg -q '"\$0" --lock-held "\$ref" "\$jar" "\$manifest"' "$SCRIPT"
+rg -q 'if ! mysqldump .*; then' "$SCRIPT"
+rg -q 'if ! mysqladmin .*; then' "$SCRIPT"
 if rg -n -i 'docker|compose|docker_build_and_rollout|bootstrap-staging-runtime|mvn ' "$SCRIPT" >/dev/null; then
     printf 'Staging deployment must build externally and install a native artifact.\n' >&2
     exit 1
