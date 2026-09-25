@@ -68,6 +68,7 @@
 - staging 制品上传使用的 `/tmp/bytedepth-staging-<SHA>` 只允许作为单次传输目录；上传失败和远程安装结束都必须清理它。staging 的 `/tmp` 是独立 tmpfs，历史 JAR 残留会耗尽 tmpfs，即使根分区仍有大量空间也会让 `scp` 写入失败。
 - 生产 green 的 `prepared` 标记只代表数据复制已完成，不代表宿主依赖永久满足；每次发布都必须在检查该标记前重新执行 native stack 安装器/前置依赖复核，否则后续补丁会被旧标记短路，出现“修复已提交但 nginx 仍缺失”的假通过路径。此复核失败必须发生在停止 Docker blue 之前。
 - 生产 green 主机可能只有 Java 21，即使构建机和 staging 已使用 Java 25；native 安装器必须把 `openjdk-25-jre-headless` 作为依赖准备项，验证实际 `java -version` 后再将解析出的 Java 路径写入 systemd unit。不能把 `/usr/lib/jvm/java-25-openjdk/bin/java` 当作所有 Ubuntu 版本都存在的固定路径；该检查失败必须发生在停止 Docker blue 之前。
+- 生产 green final-sync 会清空 MySQL、Redis、Meilisearch 数据目录；这些目录同时承载渲染后的服务配置，不能清空后直接启动服务。清理完成后必须重新执行 native stack 安装器，再进行数据导入和就绪检查；迁移契约测试必须校验安装器调用位于清理之后，避免出现“数据已同步但 Redis 因缺少 `redis.conf` 未发布”的假成功。
 - `systemctl start` 返回不等于 Redis 已经监听端口：`Type=simple` 服务可能仍处于毫秒级启动窗口。生产 green Redis 启动后必须轮询带密码的 `PING`，不能只执行一次 `redis-cli`；否则短暂 `Connection refused` 会在 Docker 仍可用时误判 native 预检失败。
 - 红绿发布的切流前置条件是 green 中间件、应用、edge、版本 SHA 和只读检查全部通过；任何准备或预检失败都必须保持 Docker blue 运行并验证公网仍可访问，禁止通过手工修改远端 tag 脚本绕过不可变发布输入。
 - Bash 中被 `if ! function`、`if function` 或 `function || ...` 调用的函数会处于 `errexit` 抑制上下文；生产 final-sync 不能这样调用，否则 Redis/MySQL/Meilisearch 任一步失败后函数可能继续执行并返回最后一条成功命令，误进入切流。final-sync 必须直接执行，失败由 EXIT trap 标记 `uncertain`、停止 green、恢复 Docker blue 并验证公网入口。

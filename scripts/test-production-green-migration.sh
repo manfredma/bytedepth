@@ -43,6 +43,17 @@ require_text 'uncertain' "$LIB"
 require_text "find \"\$BYTEDEPTH_PRODUCTION_GREEN_ROOT/mysql\"" "$LIB"
 require_text '-exec rm -rf -- {} +' "$LIB"
 
+final_sync_start="$(rg -n '^production_green_final_sync\(\)' "$LIB" | cut -d: -f1)"
+final_sync_end="$(tail -n +"$final_sync_start" "$LIB" | rg -n '^}$' | head -n 1 | cut -d: -f1)"
+final_sync_end=$((final_sync_start + final_sync_end - 1))
+final_sync_body="$(sed -n "${final_sync_start},${final_sync_end}p" "$LIB")"
+cleanup_line="$(printf '%s\n' "$final_sync_body" | rg -n '^    find ' | cut -d: -f1)"
+stack_install_line="$(printf '%s\n' "$final_sync_body" | rg -n 'install-production-green-stack\.sh' | cut -d: -f1)"
+[[ -n "$cleanup_line" && -n "$stack_install_line" && "$stack_install_line" -gt "$cleanup_line" ]] || {
+    printf 'Final sync must reinstall green service configuration after clearing middleware data directories.\n' >&2
+    exit 1
+}
+
 if rg -n 'rm -rf -- /data|rm -rf -- /opt|DROP DATABASE.*mysql|docker compose|docker-compose' "$LIB" >/dev/null; then
     printf 'Production migration contains an unsafe broad cleanup or Compose recreation.\n' >&2
     exit 1

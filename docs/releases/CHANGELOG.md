@@ -17,6 +17,8 @@
 
 ### Fixed
 
+- 修复生产 native green final-sync 清空 MySQL、Redis、Meilisearch 数据目录时误删 Redis/Meilisearch 渲染配置、导致数据同步完成但绿色服务无法启动的问题；清理后会重新安装并渲染完整 native 服务栈，并由回归契约检查固定该顺序。
+
 - 修复生产 native green 安装器未验证目标主机 Java 25、导致 systemd 使用不存在的固定路径并在切流前失败的问题；安装器现在会准备并验证 Java 25，并用实际解析路径渲染应用服务。
 
 - 修复生产 native green edge 以 `ubuntu` 运行时仍依赖 root 默认 Nginx 临时目录的问题；现在 body、proxy 等临时目录都位于 green root 并由 `ubuntu` 创建，避免 `nginx -t` 在 Docker blue 仍健康时阻断 native 预检。
@@ -64,6 +66,17 @@
 - 固化 SSH 远端命令的引号、反斜杠和 awk `$2` 转义契约，避免多层 shell 解析后出现远端变量展开错误。
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
+
+## [v2.25.13] - 2026-09-25
+
+**Tag**：`v2.25.13`（由本次 release:prepare 创建）
+**Commit**：由本次 release:prepare 冻结
+**部署**：修复生产 native green final-sync 清空中间件目录后丢失 Redis/Meilisearch 配置、导致数据同步完成但绿色服务无法启动的问题。
+**回滚基线**：`v2.25.2`
+
+### Fixed
+
+- 修复生产 native green final-sync 清空 MySQL、Redis、Meilisearch 数据目录后未重新渲染服务配置的问题；清理后会重新安装 native 服务栈，并在切流前验证中间件真正就绪。
 
 ## [v2.25.12] - 2026-09-25
 

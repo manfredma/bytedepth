@@ -375,6 +375,9 @@ production_green_final_sync() {
         "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/redis" \
         "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/meilisearch" \
         -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+    # The cleanup removes both middleware data and their rendered config
+    # files. Re-render the native stack before any service is started again.
+    "$SOURCE_ROOT/deploy/install-production-green-stack.sh"
     production_green_prepare_mysql_dump true
     production_green_initialize_mysql
     production_green_import_mysql
