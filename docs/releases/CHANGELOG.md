@@ -17,6 +17,8 @@
 
 ### Fixed
 
+- 修复生产 native green 安装器未验证目标主机 Java 25、导致 systemd 使用不存在的固定路径并在切流前失败的问题；安装器现在会准备并验证 Java 25，并用实际解析路径渲染应用服务。
+
 - 修复生产 native green edge 以 `ubuntu` 运行时仍依赖 root 默认 Nginx 临时目录的问题；现在 body、proxy 等临时目录都位于 green root 并由 `ubuntu` 创建，避免 `nginx -t` 在 Docker blue 仍健康时阻断 native 预检。
 - 修复 staging 制品上传失败后远端临时 JAR 目录未清理的问题；上传失败和远程安装结束都会删除按候选 SHA 命名的临时目录，避免 `/tmp` 累积旧制品耗尽 tmpfs。
 - 修复生产 native green Meilisearch 启动后立即健康检查的时序竞态；部署现在在连接被拒绝时继续等待直到服务真正就绪，避免短暂启动窗口被误判为 native 失败。
@@ -62,6 +64,17 @@
 - 固化 SSH 远端命令的引号、反斜杠和 awk `$2` 转义契约，避免多层 shell 解析后出现远端变量展开错误。
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
+
+## [v2.25.10] - 2026-09-25
+
+**Tag**：`v2.25.10`（由本次 release:prepare 创建）
+**Commit**：由本次 release:prepare 冻结
+**部署**：修复 v2.25.9 native green 应用因生产主机缺少 Java 25 而在切流前失败的问题。
+**回滚基线**：`v2.25.2`
+
+### Fixed
+
+- 生产 native green 安装器现在会准备并验证 Java 25，并使用目标主机实际解析出的 Java 路径渲染 systemd 应用服务；Java 25 不可用时在 Docker blue 仍提供流量阶段 fail-fast。
 
 ## [v2.25.9] - 2026-09-25
 

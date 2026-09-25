@@ -10,9 +10,9 @@ Type=simple
 User=bytedepth
 Group=bytedepth
 WorkingDirectory=/opt/bytedepth/production-green/current
-Environment=JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+Environment=JAVA_HOME=__JAVA_HOME__
 EnvironmentFile=/etc/bytedepth/production-green.env
-ExecStart=/usr/lib/jvm/java-25-openjdk/bin/java -XX:MaxRAMPercentage=65 -jar /opt/bytedepth/production-green/current/app.jar
+ExecStart=__JAVA_BIN__ -XX:MaxRAMPercentage=65 -jar /opt/bytedepth/production-green/current/app.jar
 Restart=on-failure
 RestartSec=5s
 TimeoutStartSec=120s

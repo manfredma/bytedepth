@@ -67,6 +67,7 @@
 - 生产 green edge 以 `ubuntu` 运行时，Nginx 的 `client_body_temp_path`、`proxy_temp_path` 等临时目录必须显式落在 green root，并由安装器以 `ubuntu` 创建；不能依赖发行版默认的 `/var/lib/nginx/*`，否则新宿主机上 native `nginx -t` 会因权限或目录缺失失败。该失败必须发生在 Docker blue 切流前。
 - staging 制品上传使用的 `/tmp/bytedepth-staging-<SHA>` 只允许作为单次传输目录；上传失败和远程安装结束都必须清理它。staging 的 `/tmp` 是独立 tmpfs，历史 JAR 残留会耗尽 tmpfs，即使根分区仍有大量空间也会让 `scp` 写入失败。
 - 生产 green 的 `prepared` 标记只代表数据复制已完成，不代表宿主依赖永久满足；每次发布都必须在检查该标记前重新执行 native stack 安装器/前置依赖复核，否则后续补丁会被旧标记短路，出现“修复已提交但 nginx 仍缺失”的假通过路径。此复核失败必须发生在停止 Docker blue 之前。
+- 生产 green 主机可能只有 Java 21，即使构建机和 staging 已使用 Java 25；native 安装器必须把 `openjdk-25-jre-headless` 作为依赖准备项，验证实际 `java -version` 后再将解析出的 Java 路径写入 systemd unit。不能把 `/usr/lib/jvm/java-25-openjdk/bin/java` 当作所有 Ubuntu 版本都存在的固定路径；该检查失败必须发生在停止 Docker blue 之前。
 - `systemctl start` 返回不等于 Redis 已经监听端口：`Type=simple` 服务可能仍处于毫秒级启动窗口。生产 green Redis 启动后必须轮询带密码的 `PING`，不能只执行一次 `redis-cli`；否则短暂 `Connection refused` 会在 Docker 仍可用时误判 native 预检失败。
 - 红绿发布的切流前置条件是 green 中间件、应用、edge、版本 SHA 和只读检查全部通过；任何准备或预检失败都必须保持 Docker blue 运行并验证公网仍可访问，禁止通过手工修改远端 tag 脚本绕过不可变发布输入。
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。

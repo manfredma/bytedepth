@@ -20,6 +20,48 @@ export BYTEDEPTH_PRODUCTION_GREEN_CONFIG="$CONFIG_FILE"
 source "$SOURCE_ROOT/deploy/lib/production-green-target.sh"
 load_production_green_target
 
+BYTEDEPTH_PRODUCTION_GREEN_JAVA_HOME=''
+BYTEDEPTH_PRODUCTION_GREEN_JAVA_BIN=''
+
+resolve_java_25() {
+    local candidate version
+
+    candidate="$(readlink -f "$(command -v java 2>/dev/null || true)" 2>/dev/null || true)"
+    if [[ -x "$candidate" ]]; then
+        version="$($candidate -version 2>&1 || true)"
+        if [[ "$version" =~ version[[:space:]]\"25([.\"]|$) ]]; then
+            BYTEDEPTH_PRODUCTION_GREEN_JAVA_BIN="$candidate"
+            BYTEDEPTH_PRODUCTION_GREEN_JAVA_HOME="${candidate%/bin/java}"
+            return 0
+        fi
+    fi
+
+    for candidate in /usr/lib/jvm/*/bin/java; do
+        [[ -x "$candidate" ]] || continue
+        version="$($candidate -version 2>&1 || true)"
+        if [[ "$version" =~ version[[:space:]]\"25([.\"]|$) ]]; then
+            BYTEDEPTH_PRODUCTION_GREEN_JAVA_BIN="$candidate"
+            BYTEDEPTH_PRODUCTION_GREEN_JAVA_HOME="${candidate%/bin/java}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+ensure_java_25() {
+    resolve_java_25 && return 0
+    command -v apt-get >/dev/null || {
+        printf 'Refusing: Java 25 is required for the native green application.\n' >&2
+        return 1
+    }
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openjdk-25-jre-headless
+    resolve_java_25 || {
+        printf 'Refusing: Java 25 is unavailable after installation.\n' >&2
+        return 1
+    }
+}
+
 ensure_native_dependencies() {
     local missing=()
     local nginx_service_masked=0
@@ -75,6 +117,7 @@ ensure_native_dependencies() {
     done
 }
 
+ensure_java_25
 ensure_native_dependencies
 
 [[ -r "$ENV_FILE" ]] || {
@@ -205,6 +248,8 @@ render_unit() {
         -e "s#__REDIS_PORT__#$BYTEDEPTH_PRODUCTION_GREEN_REDIS_PORT#g" \
         -e "s#__MEILI_PORT__#$BYTEDEPTH_PRODUCTION_GREEN_MEILI_PORT#g" \
         -e "s#__APP_PORT__#$BYTEDEPTH_PRODUCTION_GREEN_APP_PORT#g" \
+        -e "s#__JAVA_HOME__#$BYTEDEPTH_PRODUCTION_GREEN_JAVA_HOME#g" \
+        -e "s#__JAVA_BIN__#$BYTEDEPTH_PRODUCTION_GREEN_JAVA_BIN#g" \
         "$source" > "$target"
     chmod 0644 "$target"
     chown ubuntu:ubuntu "$target"

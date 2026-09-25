@@ -24,7 +24,7 @@ native staging 应用服务名是 bytedepth-staging-native-app.service；数据�
 
 ## 3. 主机初始化
 
-目标主机必须预先安装固定版本的 Java 25、MySQL 8、Redis 7、Meilisearch 1.7、Nginx、curl、rsync、jq、openssl 和 systemd。Meilisearch 1.7 的 Linux 二进制还需要 musl loader 及对应的 `libgcc_s.so.1`；staging Docker→原生迁移脚本会自动安装 musl，并从现有 Meilisearch 容器提取匹配的 musl 运行库。应用账号、数据账号和服务目录由初始化脚本创建。
+目标主机必须使用可安装固定版本的 Java 25、MySQL 8、Redis 7、Meilisearch 1.7、Nginx、curl、rsync、jq、openssl 和 systemd 软件源；native green 安装器会在安装服务前验证 Java 25，缺失时安装 `openjdk-25-jre-headless`，无法满足时在 Docker blue 仍提供流量阶段 fail-fast。Meilisearch 1.7 的 Linux 二进制还需要 musl loader 及对应的 `libgcc_s.so.1`；staging Docker→原生迁移脚本会自动安装 musl，并从现有 Meilisearch 容器提取匹配的 musl 运行库。应用账号、数据账号和服务目录由初始化脚本创建。
 
 在目标主机的 /opt/bytedepth 执行（当前 staging 目标为 129；124 旧 Docker 栈不参与本流程）：
 
