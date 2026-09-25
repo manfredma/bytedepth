@@ -132,6 +132,19 @@ production_green_wait_mysql() {
     return 1
 }
 
+production_green_wait_redis() {
+    local redis_password="$1"
+    for _ in {1..30}; do
+        if REDISCLI_AUTH="$redis_password" redis-cli \
+            -h 127.0.0.1 -p "$BYTEDEPTH_PRODUCTION_GREEN_REDIS_PORT" ping >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 1
+    done
+    printf 'Refusing: production green Redis did not become ready.\n' >&2
+    return 1
+}
+
 production_green_initialize_mysql() {
     local data_dir="$BYTEDEPTH_PRODUCTION_GREEN_ROOT/mysql"
     [[ -f "$data_dir/auto.cnf" ]] && return 0
@@ -183,7 +196,7 @@ production_green_prepare_redis_snapshot() {
     rm -rf -- "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/redis/appendonlydir"
     install -o ubuntu -g redis -m 0640 "$snapshot" "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/redis/dump.rdb"
     systemctl start "$BYTEDEPTH_PRODUCTION_GREEN_REDIS_SERVICE"
-    REDISCLI_AUTH="$redis_password" redis-cli -h 127.0.0.1 -p "$BYTEDEPTH_PRODUCTION_GREEN_REDIS_PORT" ping >/dev/null
+    production_green_wait_redis "$redis_password"
 }
 
 production_green_ensure_meilisearch_binary() {
