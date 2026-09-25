@@ -15,7 +15,8 @@ readonly ENV_FILE=/etc/bytedepth/production-green.env
 readonly MEILI_ENV_FILE=/etc/bytedepth/production-green-meilisearch.env
 readonly NGINX_CONFIG=/etc/bytedepth/production-green-nginx.conf
 
-# shellcheck source=deploy/lib/production-green-target.sh
+export BYTEDEPTH_PRODUCTION_GREEN_CONFIG="$CONFIG_FILE"
+# shellcheck disable=SC1090,SC1091
 source "$SOURCE_ROOT/deploy/lib/production-green-target.sh"
 load_production_green_target
 
@@ -96,9 +97,9 @@ printf '%s\n' \
     "    server { listen $BYTEDEPTH_PRODUCTION_GREEN_EDGE_PORT;" \
     '        location / {' \
     "            proxy_pass http://127.0.0.1:$BYTEDEPTH_PRODUCTION_GREEN_APP_PORT;" \
-    '            proxy_set_header Host $host;' \
-    '            proxy_set_header X-Real-IP $remote_addr;' \
-    '            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' \
+    "            proxy_set_header Host \$host;" \
+    "            proxy_set_header X-Real-IP \$remote_addr;" \
+    "            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;" \
     '            proxy_set_header X-Forwarded-Proto https;' \
     '        }' \
     '    }' \
