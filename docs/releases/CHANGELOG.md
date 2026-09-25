@@ -77,6 +77,18 @@
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
 
+## [v2.25.14] - 2026-09-26
+
+**Tag**：`v2.25.14`（由本次 release:prepare 创建）
+**Commit**：由本次 release:prepare 冻结
+**部署**：生产 native green 公网 Nginx 整体替换；切流前停止旧 Docker Nginx，停蓝应用后重新执行最终数据导入，再启动 native 公网 Nginx。
+**回滚基线**：`v2.25.2`
+
+### Fixed
+
+- 生产公网入口改为独立 native green Nginx systemd 服务；旧 Docker Nginx 配置保持不变，切流失败时停止新入口并启动旧入口和蓝应用回退。
+- 修复切流时最终数据导入发生在公网流量停止之前的问题；现在停旧入口、停蓝应用后重新执行 final-sync，确保 green 使用停流后的最新数据。
+
 ## [v2.25.13] - 2026-09-25
 
 **Tag**：`v2.25.13`（由本次 release:prepare 创建）
