@@ -21,6 +21,10 @@ slot_redis_cli() {
     redis-cli -h "${BYTEDEPTH_STAGING_REDIS_HOST:-127.0.0.1}" \
         -p "${BYTEDEPTH_STAGING_REDIS_PORT:-6379}" "$@"
 }
+staging_mysql_admin() {
+    mysql --defaults-extra-file="${BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE:?BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE is required}" \
+        --host=127.0.0.1 --port="${BYTEDEPTH_STAGING_MYSQL_PORT:?BYTEDEPTH_STAGING_MYSQL_PORT is required}" "$@"
+}
 slot_test_image_root() { printf '%s\n' "${BYTEDEPTH_STAGING_TEST_IMAGE_ROOT:-/data/images-test}"; }
 slot_root_private() {
     [[ ! -L $1 && $(slot_stat_user "$1") == ubuntu && $(slot_stat_mode "$1") == 600 ]] || slot_die "not an ubuntu-owned 0600 file: $1"
@@ -115,7 +119,7 @@ mysql_exec() {
     local database="$1" sql="$2" run_id="$3"
     assert_not_staging_resource mysql "$database" "$run_id" || return
     [[ $sql == 'SELECT DATABASE()' ]] || { slot_die 'unsupported SQL in mysql_exec'; return; }
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names "$database" -e "$sql"
+    staging_mysql_admin --batch --skip-column-names "$database" -e "$sql"
 }
 
 redis_scan_delete() {

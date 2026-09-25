@@ -96,10 +96,10 @@ provision_cleanup() {
             [[ $key_status == 204 || $key_status == 404 ]] || cleanup_failed=1
         fi
         if (( user_created != 0 )); then
-            mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "DROP USER IF EXISTS '$user'@'localhost'" || cleanup_failed=1
+            staging_mysql_admin -e "DROP USER IF EXISTS '$user'@'localhost'" || cleanup_failed=1
         fi
         if (( db_created != 0 )); then
-            mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "DROP DATABASE IF EXISTS \`$db\`" || cleanup_failed=1
+            staging_mysql_admin -e "DROP DATABASE IF EXISTS \`$db\`" || cleanup_failed=1
         fi
     done
     if (( cleanup_failed != 0 )); then
@@ -119,8 +119,8 @@ for profile in it e2e; do
     db="bytedepth_${profile}_$run_id"
     user="bd_${profile}_$run_id"
     index="posts_${profile}_$run_id"
-    [[ $(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'") == 0 ]] || { slot_die 'run database already exists'; exit 1; }
-    [[ $(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM mysql.user WHERE user='$user' AND host='localhost'") == 0 ]] || { slot_die 'run user already exists'; exit 1; }
+    [[ $(staging_mysql_admin --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'") == 0 ]] || { slot_die 'run database already exists'; exit 1; }
+    [[ $(staging_mysql_admin --batch --skip-column-names -e "SELECT COUNT(*) FROM mysql.user WHERE user='$user' AND host='localhost'") == 0 ]] || { slot_die 'run user already exists'; exit 1; }
     status="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index")" || { slot_die 'Meili preflight failed'; exit 1; }
     [[ $status == 404 ]] || { slot_die 'run index exists or Meili preflight failed'; exit 1; }
 done
@@ -214,8 +214,8 @@ for profile in it e2e; do
         it) it_db_created=1 ;;
         e2e) e2e_db_created=1 ;;
     esac
-    if ! mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE DATABASE \`$db\`"; then
-        if ! db_count="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'")"; then
+    if ! staging_mysql_admin -e "CREATE DATABASE \`$db\`"; then
+        if ! db_count="$(staging_mysql_admin --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'")"; then
             state_uncertain=1
             slot_die 'database creation failed and resource identity is unknown'
             exit 1
@@ -226,16 +226,16 @@ for profile in it e2e; do
         it) it_user_created=1 ;;
         e2e) e2e_user_created=1 ;;
     esac
-    if ! mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'"; then
-        if ! user_count="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SELECT COUNT(*) FROM mysql.user WHERE user='$user' AND host='localhost'")"; then
+    if ! staging_mysql_admin -e "CREATE USER '$user'@'localhost' IDENTIFIED BY '$password'"; then
+        if ! user_count="$(staging_mysql_admin --batch --skip-column-names -e "SELECT COUNT(*) FROM mysql.user WHERE user='$user' AND host='localhost'")"; then
             state_uncertain=1
             slot_die 'user creation failed and resource identity is unknown'
             exit 1
         fi
         [[ $user_count == 1 ]] || { slot_die 'user creation was not confirmed'; exit 1; }
     fi
-    mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" -e "GRANT ALL PRIVILEGES ON \`$db\`.* TO '$user'@'localhost'"
-    grants="$(mysql --defaults-extra-file="$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" --batch --skip-column-names -e "SHOW GRANTS FOR '$user'@'localhost'")"
+    staging_mysql_admin -e "GRANT ALL PRIVILEGES ON \`$db\`.* TO '$user'@'localhost'"
+    grants="$(staging_mysql_admin --batch --skip-column-names -e "SHOW GRANTS FOR '$user'@'localhost'")"
     # MySQL 8.4 emits quoted account names with backticks in SHOW GRANTS,
     # even though CREATE USER accepts SQL string literals. Compare the actual
     # canonical output so a valid database-scoped grant is not rejected.

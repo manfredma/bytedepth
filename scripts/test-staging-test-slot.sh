@@ -8,6 +8,10 @@ if grep -n -E '(^|[[:space:]])rg([[:space:]]|$)' "$slot" >/dev/null; then
     printf 'FAIL: staging test slot runtime must not require ripgrep on the staging host\n' >&2
     exit 1
 fi
+if grep -n -E 'mysql --defaults-extra-file=.*--batch|mysql --defaults-extra-file=.*-e' "$root/deploy/provision-staging-test-slot.sh" >/dev/null; then
+    printf 'FAIL: staging test slot admin MySQL commands must use the explicit native port helper\n' >&2
+    exit 1
+fi
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 mkdir "$tmp/bin"
