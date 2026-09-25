@@ -4,6 +4,10 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 slot="$root/deploy/lib/staging-test-slot.sh"
 [[ -f "$slot" ]] || { printf 'FAIL: slot library missing\n' >&2; exit 1; }
+if grep -n -E '(^|[[:space:]])rg([[:space:]]|$)' "$slot" >/dev/null; then
+    printf 'FAIL: staging test slot runtime must not require ripgrep on the staging host\n' >&2
+    exit 1
+fi
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 mkdir "$tmp/bin"
