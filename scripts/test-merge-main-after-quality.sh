@@ -4,6 +4,7 @@ set -Eeuo pipefail
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SCRIPT="$SOURCE_ROOT/scripts/merge-main-after-quality.sh"
 
+grep -Fq 'git fetch origin "refs/heads/$REF:refs/remotes/origin/$REF" "refs/heads/main:refs/remotes/origin/main"' "$SCRIPT"
 grep -Fq 'bash scripts/check-staging-changelog-change.sh --target "$SHA" --base origin/main' "$SCRIPT"
 grep -Fq 'bash scripts/check-release-readiness.sh --target "$SHA" --base origin/main --mode candidate' "$SCRIPT"
 changelog_gate_line="$(rg -nF 'bash scripts/check-staging-changelog-change.sh --target "$SHA" --base origin/main' "$SCRIPT" | cut -d: -f1)"

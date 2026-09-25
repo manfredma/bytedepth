@@ -21,6 +21,8 @@
 
 ### Fixed
 
+- 修复合并主分支脚本只写入 `FETCH_HEAD`、未创建候选分支 remote-tracking ref，导致质量通过后合并流程错误中止的问题；现在显式更新 `origin/<branch>` 并由契约测试锁定。
+
 - 修复生产 native green 切流替换 Docker Nginx bind mount 配置后容器继续读取旧 inode、导致切流后公网 502 的问题；切流窗口会重启共享 `bytedepth-nginx-1` 使新路由生效，重启后执行 `nginx -t`，失败时恢复蓝路由。
 
 - 修复生产 native green final-sync 清空 MySQL、Redis、Meilisearch 数据目录时误删 Redis/Meilisearch 渲染配置、导致数据同步完成但绿色服务无法启动的问题；清理后会重新安装并渲染完整 native 服务栈，并由回归契约检查固定该顺序。

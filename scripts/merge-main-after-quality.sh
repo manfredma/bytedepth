@@ -3,7 +3,7 @@ set -Eeuo pipefail
 # Merge a staging-accepted branch to main only after current-SHA GitHub quality passes.
 REF="${1:?Usage: $0 <branch>}"
 REPO="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##')"
-git fetch origin "$REF" main
+git fetch origin "refs/heads/$REF:refs/remotes/origin/$REF" "refs/heads/main:refs/remotes/origin/main"
 SHA="$(git rev-parse "origin/$REF")"
 bash scripts/check-staging-changelog-change.sh --target "$SHA" --base origin/main
 bash scripts/check-release-readiness.sh --target "$SHA" --base origin/main --mode candidate
