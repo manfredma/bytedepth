@@ -45,6 +45,7 @@
 - staging、集成测试和 E2E 使用共享锁；测试资源按 `run_id` 隔离。资源状态不确定时保留 manifest 和资源，禁止自动删除未知对象，但必须尝试恢复 staging 应用并报告人工恢复入口。
 - staging 集成测试启动 Maven 前必须检查宿主机 `MemAvailable` 至少 512 MiB；停止 app 前只要求至少 256 MiB，停止 app 后再检查 512 MiB。磁盘空间通过不代表 Java/Maven 有足够调度资源；资源不足时必须在启动 Maven 前 fail-fast，避免测试把 SSH/HTTPS 服务拖入不可响应状态。
 - native staging 中间件必须有 systemd `MemoryMax`：MySQL 512M、Redis 128M、Meilisearch 384M、edge 64M；Redis 同时固定 `maxmemory 64mb` 与 `noeviction`，防止中间件在 2 GiB 宿主机上无限争抢内存。上限是保护阈值，不代表会预留对应内存。中间件重启后必须等待实际端口就绪，不能只检查 systemd active。
+- 原生 staging 部署不能因缺少 `/etc/bytedepth/staging-native.conf`、`staging-native.env` 或 Meilisearch 环境文件而静默回退到另一运行模式；运行模式必须在任何服务启动、重启或数据库备份前 fail-fast。2026-09-25 的事故已证明，未受限的旧 MySQL 在约 3.6 GiB 主机上增长到约 3.3 GiB 会触发全局 OOM，使 SSH banner、HTTP 和 systemd 同时失去响应。`ubuntu` 所有者策略还必须同时保证服务组对数据文件的写权限，不能只修正 owner/group 而留下 `640` 等不可写模式。
 - native MySQL 的数据目录必须使用与初始化时一致的 `lower_case_table_names=1`，并由 systemd 创建 `/run/mysqld` 运行目录；不能只依赖初始化命令或发行版默认 unit，否则重启可能因字典大小写模式不一致或运行目录权限失败。MySQL unit 的关键参数由 `test-host-native-runtime.sh` 固定检查。
 - native Meilisearch 必须由 systemd 显式设置 `WorkingDirectory=/data/meilisearch`；其配置或运行时相对路径不能依赖 systemd 默认工作目录，否则快照导入后重启可能把 `config.toml`、`dumps` 等文件写到不可写目录而启动失败。
 - 部署阶段的数据库备份命令必须显式检查退出码并 `return 1`；被 `if ! record_timed_phase ...` 调用的函数会处于 errexit 抑制上下文，不能依赖 `set -e` 自动传播失败。

@@ -41,3 +41,14 @@
 - 根因：早期设计直接以执行位置命名测试 Profile，没有把“部署环境”“测试类型”“测试资源槽位”三个维度分开表达。
 - 后续方向：评估将 Spring Profile 拆为测试类型 Profile（例如 `test-it`、`test-e2e`），同时通过 `BYTEDEPTH_ENVIRONMENT=staging` 表达部署环境；资源路径继续使用 `staging/test-slots/<run-id>/<type>`，避免丢失环境边界。迁移时必须保持现有 `staging-it`/`staging-e2e` 兼容窗口，并同步更新 systemd、测试 runner、发布证据和自动检查。
 - 验收条件：Profile 名称只表达测试类型，部署环境由独立环境变量表达；生产默认配置不会激活测试 Profile；staging IT/E2E 的数据库、Redis、Meilisearch、上传目录和证据绑定行为保持不变；全量单元、集成和 E2E 验收通过后再关闭本条技术债。
+
+## TD-0004：宿主机原生部署缺少资源上限与运行模式 fail-fast
+
+- 状态：`Open`
+- 发现日期：2026-09-25
+- 范围：新 staging 宿主机 `129.211.6.82` 的原生部署初始化、MySQL 内存边界、运行模式预检和项目文件权限。
+- 现象：部署候选 `fc102e1f` 期间主机在 SSH banner 和 HTTP 响应阶段失去响应。恢复后内核记录了全局 OOM：`mysql.service` 中的 `mysqld` 被杀掉，峰值约 3.3 GiB，swap 峰值约 1.5 GiB；当时主机总内存约 3.6 GiB。MySQL 数据目录约 281 MB，默认配置显示 `innodb_buffer_pool_size=128M`，因此目前不能把全部增长简单归因于 buffer pool。OOM 时部署还在执行 `mysqldump`，但该进程自身 RSS 约 5.7 MB，不足以解释 3.3 GiB。
+- 伴随问题：新机缺少 `/etc/bytedepth/staging-native.conf`、`staging-native.env` 和 `staging-native-meilisearch.env`，部署脚本因此回退到旧的 `host-native` 服务路径，没有在预检阶段拒绝；原生并行隔离栈并未真正安装。另有 `ubuntu:mysql` 所有权迁移只保留了服务组但未给普通数据文件增加组写权限，OOM 后 MySQL 重启循环并报 `binlog.index: Permission denied`。
+- 已确认根因边界：主机失去响应的直接根因是 MySQL 无资源上限地增长并触发全局 OOM；运行模式配置缺失和 MySQL 数据目录权限契约缺口是部署流程缺陷，放大了故障恢复难度。MySQL 具体是哪一个运行时内存组件持续增长，仍需在隔离、可观测和有上限的复现环境中确认，不能凭当前证据断言是单一配置项或 mysqldump 导致。
+- 后续方向：原生 staging 配置必须在部署前显式校验并 fail-closed，禁止无提示回退到另一运行模式；所有 native MySQL 实例必须有 systemd `MemoryMax` 和启动前内存余量检查；`ubuntu` 作为所有者时，服务组写入能力必须由目录/文件权限契约和自动测试同时保证；补充 MySQL RSS、cgroup、buffer pool、连接数、临时表和备份阶段指标，复现并定位具体增长来源；部署脚本必须在数据库备份前阻止并发/残留的旧栈资源争抢。
+- 验收条件：缺少 native parallel 配置时部署在任何服务操作前失败；MySQL、Redis、Meilisearch 和应用的 cgroup 上限与当前主机总内存预算可计算且自动检查通过；`ubuntu` 所有权与服务组写权限同时通过；模拟 OOM/内存不足时 SSH、systemd 和 Nginx 不被拖入不可响应；在 staging 完整部署、集成测试和 E2E 通过，并保留 commit-bound evidence。
