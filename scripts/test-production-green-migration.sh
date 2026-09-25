@@ -27,8 +27,10 @@ require_text 'mysqldump -uroot --databases bytedepth --single-transaction --quic
 require_text 'gzip -1' "$LIB"
 require_text 'production_green_wait_mysql' "$LIB"
 require_text 'production_green_wait_redis' "$LIB"
-require_text 'MYSQL_PWD="$db_password" mysqladmin' "$LIB"
-require_text 'MYSQL_PWD="$db_password" mysql --protocol=tcp' "$LIB"
+require_text 'if mysqladmin \' "$LIB"
+require_text 'MYSQL_PWD="$mysql_password" mysql --protocol=tcp' "$LIB"
+require_text "if MYSQL_PWD='' mysql --protocol=tcp" "$LIB"
+require_text "mysql_password=''" "$LIB"
 require_text 'chmod -R g+rwX "$data_dir"' "$LIB"
 require_text 'redis-cli --rdb' "$LIB"
 require_text 'meilisearch --import-snapshot' "$LIB"
@@ -51,6 +53,10 @@ if rg -n 'docker (stop|rm|restart)|/opt/nginx-conf\.d|nginx -s reload' "$LIB" >/
 fi
 if rg -n 'MYSQL_PWD=.*--password|--password[ =]' "$LIB" >/dev/null; then
     printf 'Production migration places a password in a command-line argument.\n' >&2
+    exit 1
+fi
+if rg -n 'production_green_wait_mysql[[:space:]]+\"\$db_password\"' "$LIB" >/dev/null; then
+    printf 'MySQL readiness must not be coupled to the application password.\n' >&2
     exit 1
 fi
 

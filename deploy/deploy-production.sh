@@ -73,6 +73,7 @@ blue_stopped=0
 route_changed=0
 deployment_succeeded=0
 rollback_required=0
+green_prepare_started=0
 
 current_deploy_mode() {
     awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value=$2} END {print value}' "$CONFIG_FILE" 2>/dev/null || true
@@ -200,7 +201,7 @@ stop_green_services() {
 rollback_on_failure() {
     local rollback_status=0
     if (( deployment_succeeded == 0 )); then
-        if [[ -e "$GREEN_STATE_DIR/syncing" ]]; then
+        if (( green_prepare_started )) || [[ -e "$GREEN_STATE_DIR/syncing" ]]; then
             production_green_mark_uncertain || rollback_status=1
         fi
         if [[ -n "${BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE:-}" ]]; then
@@ -230,6 +231,7 @@ install_release_artifact "$TAG" "$JAR" "$MANIFEST"
 switch_current_release "$TAG"
 
 production_green_require_blue
+green_prepare_started=1
 production_green_prepare
 systemctl start "$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE" "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE"
 verify_green_preflight

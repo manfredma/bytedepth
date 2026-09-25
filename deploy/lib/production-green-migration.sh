@@ -119,9 +119,11 @@ production_green_prepare_mysql_dump() {
 }
 
 production_green_wait_mysql() {
-    local db_password="$1"
     for _ in {1..120}; do
-        if MYSQL_PWD="$db_password" mysqladmin \
+        # mysqladmin ping only checks that the server accepts connections.  It
+        # must not be used as an authentication check: a freshly initialized
+        # green instance intentionally starts with an empty root password.
+        if mysqladmin \
             --protocol=tcp --host=127.0.0.1 --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" \
             -uroot ping >/dev/null 2>&1; then
             return 0
@@ -160,14 +162,33 @@ production_green_initialize_mysql() {
 
 production_green_import_mysql() {
     local dump_file="$BYTEDEPTH_PRODUCTION_GREEN_STATE_ROOT/initial/mysql.sql.gz"
-    local db_password escaped_password
+    local db_password escaped_password mysql_password
     db_password="$(production_green_docker_env_value bytedepth-mysql-1 MYSQL_ROOT_PASSWORD)"
     escaped_password="$(production_green_sql_escape "$db_password")"
     systemctl start "$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_SERVICE"
-    production_green_wait_mysql "$db_password"
-    gunzip -c "$dump_file" | MYSQL_PWD="$db_password" mysql --protocol=tcp \
+    production_green_wait_mysql
+
+    # A new datadir is initialized with an empty root password, while a
+    # reusable prepared datadir already has the blue password.  Authenticate
+    # explicitly before importing so both states are handled deterministically
+    # and a successful mysqladmin ping cannot mask an auth failure.
+    mysql_password="$db_password"
+    if ! MYSQL_PWD="$mysql_password" mysql --protocol=tcp \
+        --host=127.0.0.1 --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" -uroot \
+        -e 'SELECT 1' >/dev/null 2>&1; then
+        if MYSQL_PWD='' mysql --protocol=tcp \
+            --host=127.0.0.1 --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" -uroot \
+            -e 'SELECT 1' >/dev/null 2>&1; then
+            mysql_password=''
+        else
+            printf 'Refusing: production green MySQL rejected both configured and bootstrap root credentials.\n' >&2
+            return 1
+        fi
+    fi
+
+    gunzip -c "$dump_file" | MYSQL_PWD="$mysql_password" mysql --protocol=tcp \
         --host=127.0.0.1 --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" -uroot
-    MYSQL_PWD="$db_password" mysql --protocol=tcp --host=127.0.0.1 \
+    MYSQL_PWD="$mysql_password" mysql --protocol=tcp --host=127.0.0.1 \
         --port="$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_PORT" -uroot \
         -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$escaped_password'; FLUSH PRIVILEGES;"
     printf '[client]\nhost=127.0.0.1\nport=%s\nuser=root\npassword=%s\nprotocol=tcp\n' \

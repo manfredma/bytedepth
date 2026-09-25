@@ -74,6 +74,9 @@
 
 ### Fixed
 
+- 修复生产 native green MySQL 初始化后使用 `mysqladmin ping` 误判认证成功、导致数据库导入失败的问题；迁移现在区分服务就绪与 root 凭据校验，兼容空密码 bootstrap 和已有 green 数据目录，并在导入后显式设置蓝环境密码。
+- 修复生产 native green 准备阶段失败后仍保留 `prepared` 标记、下一次发布复用不完整数据的问题；只要 green 准备或预检启动过但发布未完成，就保留 `uncertain` 状态并阻止后续自动复用。
+
 - 修复生产红绿发布在 final-sync 失败时因 Bash `errexit` 在 `if ! function` 条件上下文中被抑制、错误继续切流的问题；final-sync 现在直接执行，失败会保留不确定状态、停止 green 并恢复 Docker blue，禁止 native 失败影响线上访问。
 
 ## [v2.25.10] - 2026-09-25

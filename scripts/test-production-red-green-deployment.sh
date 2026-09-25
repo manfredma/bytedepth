@@ -76,7 +76,8 @@ require_text 'trap rollback_on_failure EXIT' "$SCRIPT"
 require_text 'if (( route_changed )); then' "$SCRIPT"
 require_text 'if (( blue_stopped )); then' "$SCRIPT"
 require_text 'if (( deployment_succeeded == 0 )); then' "$SCRIPT"
-require_text 'if [[ -e "$GREEN_STATE_DIR/syncing" ]]; then' "$SCRIPT"
+require_text 'if (( green_prepare_started )) || [[ -e "$GREEN_STATE_DIR/syncing" ]]; then' "$SCRIPT"
+require_text 'green_prepare_started=1' "$SCRIPT"
 if rg -n -F 'if ! production_green_final_sync; then' "$SCRIPT" >/dev/null; then
     printf 'Final green synchronization must not run in an errexit-suppressed conditional context.\n' >&2
     exit 1
