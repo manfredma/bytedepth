@@ -52,6 +52,9 @@
 - 部署和测试输出统一捕获并扫描未登记的 `WARNING`/`WARN`；不能以“不是本次引入”为由放行。
 - 宿主机构建脚本在 `set -u` 下清理临时日志时，`RETURN` trap 不得直接引用可能已失效的函数局部变量；必须使用安全默认值，并由部署契约检查固定该约束。
 - 发布 SSH 必须显式指定已存在的 known_hosts；生产使用 `StrictHostKeyChecking=yes`，staging 也使用同样的显式主机密钥校验。
+- SSH 远端预检不要在传给 `ssh` 的多行字符串中嵌套 `bash -c`、单引号或双引号；本地 shell、SSH 远端 shell、`sudo` 和目标 shell 会重复解析，容易把参数拆成 `-r: command not found` 或产生未闭合引号。只做可读性检查时使用无嵌套的 `sudo cat <file> >/dev/null 2>&1`，复杂远端逻辑应改为显式 stdin 脚本，并由契约测试禁止旧写法。
+- 对 `ubuntu:ubuntu`、0600 的项目配置，不能把 `sudo test -r <file>` 当作跨主机可移植的唯一检查；本次 129 预检中该形式出现假失败，而 `sudo cat >/dev/null` 正常。权限、所有权和内容校验要分别执行，不能因检查命令异常而切换部署方案。
+- 部署命令被中断或失败后，先检查并停止处于 `activating/auto-restart` 的 native app，再重试；不得把失败重启循环留在后台，否则会持续消耗内存并污染下一次预检。重试前必须重新校验 unit、端口、`/version` 和 deploy history。
 - 生产版本确认直接读取 ubuntu 所有的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/current/artifact.manifest` 交叉核对。
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。
 - systemd 的 `Requires=` 会在 staging app 重启时停止依赖它的 native edge；edge 停止时不能直接 `reload`，部署流程必须先确认并启动 edge，再执行 reload。
