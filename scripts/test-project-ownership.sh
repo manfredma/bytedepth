@@ -47,10 +47,12 @@ for file in "${SERVER_SCRIPTS[@]}"; do
 done
 
 require_text 'ensure_project_tree_ownership' "$DEPLOY_DIR/install-host-service.sh"
+require_text 'ensure_service_group_write_access' "$DEPLOY_DIR/install-host-service.sh"
+require_text 'chmod -R g+rwX' "$DEPLOY_DIR/install-host-service.sh"
 require_text 'chown -R "$DEPLOY_USER:$DEPLOY_GROUP" "$SOURCE_ROOT"' "$DEPLOY_DIR/install-host-service.sh"
 require_text 'install -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" -m 0644' "$DEPLOY_DIR/install-host-service.sh"
 require_text 'install -d -o ubuntu -g ubuntu -m 0700' "$DEPLOY_DIR/deploy-production-remote.sh"
-require_text 'install -o ubuntu -g redis -m 0640' "$DEPLOY_DIR/sync-prod-to-staging.sh"
+require_text 'install -o ubuntu -g redis -m 0660' "$DEPLOY_DIR/sync-prod-to-staging.sh"
 require_text 'chown -R ubuntu:bytedepth' "$DEPLOY_DIR/migrate-staging-docker-to-native.sh"
 require_text 'staging_ensure_ubuntu_owner "$WORK_DIR"' "$DEPLOY_DIR/run-staging-integration-tests.sh"
 require_text 'staging_ensure_ubuntu_owner "$WORK_DIR"' "$DEPLOY_DIR/run-staging-e2e-tests.sh"

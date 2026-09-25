@@ -29,19 +29,27 @@ for contract in \
     'verify_running_release' \
     'BYTEDEPTH_REMOTE_INSTALL=1' \
     'BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS' \
+    'staging-native-meilisearch.env' \
+    'Refusing: staging native parallel configuration is incomplete.' \
     'staging-bytedepth.bytedepth.cn'; do
     rg -F -- "$contract" "$SCRIPT" >/dev/null || {
         printf 'Missing staging deployment contract: %s\n' "$contract" >&2
         exit 1
     }
 done
+if rg -n -F '/etc/bytedepth/application.env' "$SCRIPT" >/dev/null; then
+    printf 'Staging deployment must not silently fall back to the legacy runtime when native parallel configuration is missing.\n' >&2
+    exit 1
+fi
 rg -q 'check-staging-changelog-change.sh.*>&2' "$SCRIPT"
 rg -q 'check-release-readiness.sh.*>&2' "$SCRIPT"
 rg -q 'sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging' "$SCRIPT"
 rg -q 'local ref="\$1" jar="\$2" manifest="\$3"' "$SCRIPT"
 rg -q '"\$0" --lock-held "\$ref" "\$jar" "\$manifest"' "$SCRIPT"
-rg -q 'if ! mysqldump .*; then' "$SCRIPT"
-rg -q 'if ! mysqladmin .*; then' "$SCRIPT"
+if rg -n 'mysqldump|backup_database_preflight|/backups' "$SCRIPT" >/dev/null; then
+    printf '普通 staging 部署不得执行全库数据库备份。\n' >&2
+    exit 1
+fi
 if rg -n -i 'docker|compose|docker_build_and_rollout|bootstrap-staging-runtime|mvn ' "$SCRIPT" >/dev/null; then
     printf 'Staging deployment must build externally and install a native artifact.\n' >&2
     exit 1

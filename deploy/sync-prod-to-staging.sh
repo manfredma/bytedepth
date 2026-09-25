@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 生产(175)到 staging(124) 的宿主机数据同步：MySQL、Redis、Meilisearch 和图片。
+# 生产到 staging native 隔离栈的数据同步：MySQL、Redis、Meilisearch 和图片。
 set -Eeuo pipefail
 
 if [[ "${EUID}" -ne 0 ]]; then
@@ -15,6 +15,9 @@ readonly LOG=/var/log/bytedepth/sync-prod-to-staging.log
 readonly LOCK_FILE=/var/lock/bytedepth-sync.lock
 readonly SSH_KNOWN_HOSTS=/root/.ssh/known_hosts
 readonly SOURCE_MYSQL_CNF=/etc/bytedepth/mysql-source.cnf
+readonly STAGING_NATIVE_CONF=/etc/bytedepth/staging-native.conf
+readonly STAGING_NATIVE_MYSQL_CNF=/etc/bytedepth/staging-native-mysql-admin.cnf
+readonly STAGING_NATIVE_ROOT=/data/bytedepth-native-staging
 
 [[ -r "$SYNC_CONF" ]] || { printf 'Missing %s.\n' "$SYNC_CONF" >&2; exit 1; }
 [[ -f "$SYNC_CONF" && "$(stat -c '%U:%G:%a' "$SYNC_CONF")" == 'ubuntu:ubuntu:600' ]] || {
@@ -46,10 +49,13 @@ trap 'log "同步异常退出"' ERR
 staging_exec() { ssh "${SSH_OPTS[@]}" "$STAGING_USER" "$1"; }
 staging_send() { scp "${SSH_OPTS[@]}" "$1" "$STAGING_USER:$2"; }
 
+log "校验 staging native 隔离栈..."
+staging_exec "set -Eeuo pipefail; test -r '$STAGING_NATIVE_CONF'; . '$STAGING_NATIVE_CONF'; test \"\${BYTEDEPTH_NATIVE_STACK_MODE:-}\" = parallel; test \"\${BYTEDEPTH_NATIVE_ROOT:-}\" = '$STAGING_NATIVE_ROOT'; test -r '$STAGING_NATIVE_MYSQL_CNF'; for unit in bytedepth-staging-native-mysql.service bytedepth-staging-native-redis.service bytedepth-staging-native-meilisearch.service bytedepth-staging-native-app.service bytedepth-staging-native-edge.service; do systemctl cat \"\$unit\" >/dev/null; done; for unit in mysql.service redis.service meilisearch.service bytedepth-app.service nginx.service; do ! systemctl is-active --quiet \"\$unit\"; done"
+
 log "同步 staging 证书到生产边缘..."
 "$SOURCE_ROOT/deploy/sync-staging-certificate-to-production.sh"
 log "停止 staging 应用..."
-staging_exec 'sudo systemctl stop bytedepth-app.service' || true
+staging_exec 'sudo systemctl stop bytedepth-staging-native-edge.service bytedepth-staging-native-app.service'
 
 dump="$(mktemp /tmp/bytedepth-sync-XXXX.sql)"
 chown ubuntu:ubuntu "$dump"
@@ -58,7 +64,7 @@ log "MySQL 导出与导入..."
 mysqldump --defaults-extra-file="$SOURCE_MYSQL_CNF" --single-transaction --quick \
     --routines --events --triggers --no-tablespaces bytedepth > "$dump"
 staging_send "$dump" /tmp/bytedepth-sync.sql
-staging_exec 'sudo mysql --defaults-extra-file=/etc/bytedepth/mysql-target.cnf -e "DROP DATABASE IF EXISTS bytedepth; CREATE DATABASE bytedepth CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" && sudo mysql --defaults-extra-file=/etc/bytedepth/mysql-target.cnf bytedepth < /tmp/bytedepth-sync.sql && sudo rm -f /tmp/bytedepth-sync.sql'
+staging_exec "set -Eeuo pipefail; sudo mysql --defaults-extra-file='$STAGING_NATIVE_MYSQL_CNF' -e 'DROP DATABASE IF EXISTS bytedepth; CREATE DATABASE bytedepth CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'; sudo mysql --defaults-extra-file='$STAGING_NATIVE_MYSQL_CNF' bytedepth < /tmp/bytedepth-sync.sql; sudo rm -f /tmp/bytedepth-sync.sql"
 rm -f "$dump"
 
 log "Redis 导出与导入..."
@@ -68,7 +74,7 @@ chmod 600 "$redis_dump"
 REDISCLI_AUTH="${REDIS_PASSWORD:?REDIS_PASSWORD must be set}" redis-cli -h 127.0.0.1 -p 6379 --rdb "$redis_dump" >/dev/null
 staging_send "$redis_dump" /tmp/bytedepth-sync.rdb
 rm -f "$redis_dump"
-staging_exec 'sudo systemctl stop redis.service && sudo rm -rf /data/redis/dump.rdb /data/redis/appendonlydir && sudo install -o ubuntu -g redis -m 0640 /tmp/bytedepth-sync.rdb /data/redis/dump.rdb && sudo rm -f /tmp/bytedepth-sync.rdb && sudo systemctl start redis.service'
+staging_exec "set -Eeuo pipefail; sudo systemctl stop bytedepth-staging-native-redis.service; sudo rm -rf '$STAGING_NATIVE_ROOT/redis/dump.rdb' '$STAGING_NATIVE_ROOT/redis/appendonlydir'; sudo install -o ubuntu -g redis -m 0660 /tmp/bytedepth-sync.rdb '$STAGING_NATIVE_ROOT/redis/dump.rdb'; sudo chmod -R g+rwX '$STAGING_NATIVE_ROOT/redis'; sudo rm -f /tmp/bytedepth-sync.rdb; sudo systemctl start bytedepth-staging-native-redis.service"
 
 log "Meilisearch 创建并传输 snapshot..."
 meili_url="${BYTEDEPTH_SEARCH_URL:-http://127.0.0.1:7700}"
@@ -83,13 +89,13 @@ done
 snapshot="$(find /data/meilisearch/snapshots -maxdepth 1 -type f -name '*.snapshot' -print | sort | tail -n 1)"
 [[ -n "$snapshot" ]] || { printf 'Meilisearch snapshot file was not found.\n' >&2; exit 1; }
 staging_send "$snapshot" /tmp/bytedepth-sync.snapshot
-staging_exec 'sudo systemctl stop meilisearch.service && sudo rm -rf /data/meilisearch/data.ms && sudo timeout 120 /usr/local/bin/meilisearch --import-snapshot /tmp/bytedepth-sync.snapshot --db-path /data/meilisearch/data.ms && sudo rm -f /tmp/bytedepth-sync.snapshot && sudo systemctl start meilisearch.service'
+staging_exec "set -Eeuo pipefail; sudo systemctl stop bytedepth-staging-native-meilisearch.service; sudo rm -rf '$STAGING_NATIVE_ROOT/meilisearch-import'; sudo install -d -o ubuntu -g meilisearch -m 0770 '$STAGING_NATIVE_ROOT/meilisearch-import'; sudo timeout 300 /usr/local/bin/meilisearch --import-snapshot /tmp/bytedepth-sync.snapshot --db-path '$STAGING_NATIVE_ROOT/meilisearch-import'; sudo rm -rf '$STAGING_NATIVE_ROOT/meilisearch'; sudo install -d -o ubuntu -g meilisearch -m 0770 '$STAGING_NATIVE_ROOT/meilisearch'; sudo cp -a '$STAGING_NATIVE_ROOT/meilisearch-import'/. '$STAGING_NATIVE_ROOT/meilisearch/'; printf '%s\\n' 'env = \"production\"' | sudo tee '$STAGING_NATIVE_ROOT/meilisearch/meilisearch.toml' >/dev/null; sudo chown -R ubuntu:meilisearch '$STAGING_NATIVE_ROOT/meilisearch'; sudo chmod -R g+rwX '$STAGING_NATIVE_ROOT/meilisearch'; sudo rm -rf '$STAGING_NATIVE_ROOT/meilisearch-import'; sudo rm -f /tmp/bytedepth-sync.snapshot; sudo systemctl start bytedepth-staging-native-meilisearch.service"
 
 log "图片同步..."
-rsync -avz --delete --rsync-path="sudo rsync" -e "ssh ${SSH_OPTS[*]}" /data/images/ "$STAGING_USER:/data/images/"
+rsync -avz --delete --rsync-path="sudo rsync" -e "ssh ${SSH_OPTS[*]}" /data/images/ "$STAGING_USER:$STAGING_NATIVE_ROOT/images/"
 
 log "恢复 staging 应用并验证..."
-staging_exec 'sudo systemctl start bytedepth-app.service && sudo systemctl reload nginx.service'
+staging_exec 'sudo systemctl start bytedepth-staging-native-app.service bytedepth-staging-native-edge.service'
 sleep 15
 http_code="$(staging_exec "curl -ksS -o /dev/null -w '%{http_code}' 'https://staging-bytedepth.bytedepth.cn/'")"
 [[ "$http_code" == 200 ]] || { printf 'staging returned HTTP %s.\n' "$http_code" >&2; exit 1; }

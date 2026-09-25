@@ -39,6 +39,10 @@ rg -q 'UserKnownHostsFile=' "$REMOTE"
 rg -q 'StrictHostKeyChecking=yes' "$REMOTE"
 rg -q 'DEPLOY_LOCK=/var/lock/bytedepth-production-deploy.lock|flock -n 9' "$PRODUCTION"
 rg -q 'restore_current_release|rollback' "$PRODUCTION"
+if rg -n 'mysqldump|backup_dir|mysqladmin.*ping' "$PRODUCTION" >/dev/null; then
+    printf '普通生产发布不得执行无界全库数据库备份。\n' >&2
+    exit 1
+fi
 if rg -q 'docker|compose|mvn ' "$REMOTE" "$PRODUCTION"; then
     printf 'Native deployment entrypoints must not invoke Docker, Compose, or bare Maven.\n' >&2
     exit 1

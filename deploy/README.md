@@ -80,7 +80,7 @@ install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数
     test -r "$BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS" -a -r "$BYTEDEPTH_SSH_KEY"
     ./deploy/deploy-staging.sh feat/host-native-runtime
 
-脚本会执行：构建并扫描 WARNING → 上传 JAR/manifest → 锁定 staging → 备份 MySQL → 安装发布 → 原子切换 current → 重启应用 → /version 校验完整 SHA → reload Nginx → 清除旧 evidence。切换后的健康检查失败会恢复切换前的 current；若旧发布不存在，则保持停机并报告，禁止伪造成功。
+脚本会执行：构建并扫描 WARNING → 上传 JAR/manifest → 锁定 staging → 校验 native parallel 配置、旧栈已停止和可用内存 → 安装发布 → 原子切换 current → 重启应用 → /version 校验完整 SHA → reload Nginx → 清除旧 evidence。普通代码部署不执行全库 MySQL dump；数据迁移或不兼容数据库迁移必须走单独的、受资源约束的备份流程。切换后的健康检查失败会恢复切换前的 current；若旧发布不存在，则保持停机并报告，禁止伪造成功。
 
 验收部署版本：
 

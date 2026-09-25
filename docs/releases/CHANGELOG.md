@@ -30,6 +30,9 @@
 - 修正 native 主机初始化后的项目文件归属：代码工作区、`.git`、发布目录、JAR、配置、日志和测试资源统一交给 `ubuntu`，服务进程仅通过服务组写入数据，避免 staging 部署因 Git ownership 或 `.git/FETCH_HEAD` 权限失败。
 - 修正 staging 项目文件归属校验，统一验证 `ubuntu` 所有并兼容 Linux/macOS 的 `stat` 实现，避免 GNU `stat -f` 被误当成 BSD 文件属性查询。
 - 修正 native staging 隔离测试图片根目录权限，避免初始化为应用用户所有导致测试资源前置校验拒绝。
+- 移除普通 staging/生产代码部署中的无界全库 MySQL dump；部署现在必须 fail-fast 校验 native parallel 配置、旧栈停止状态和可用内存，数据迁移备份与代码发布流程分离。
+- 修正 native 数据目录权限：项目文件继续由 `ubuntu` 持有，同时为 MySQL、Redis、Meilisearch 和应用服务组保留必要的读写权限；修正 native Redis/Meilisearch 配置文件的服务组读取权限。
+- 修正 staging 部署计时在 GNU `date` 下误把纳秒拼接为毫秒的问题，避免生成虚假的超长部署耗时。
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
 

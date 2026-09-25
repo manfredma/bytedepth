@@ -52,12 +52,21 @@ getent passwd bytedepth >/dev/null || useradd --system --gid bytedepth --home-di
 getent group meilisearch >/dev/null || groupadd --system meilisearch
 getent passwd meilisearch >/dev/null || useradd --system --gid meilisearch --home-dir /nonexistent --shell /usr/sbin/nologin meilisearch
 
+ensure_service_group_write_access() {
+    local path="$1"
+    chmod -R g+rwX "$path"
+}
+
 install -d -o ubuntu -g ubuntu -m 0775 "$native_root" "$native_root/mysql" "$native_root/redis" "$native_root/meilisearch" "$native_root/images"
 install -d -o ubuntu -g ubuntu -m 0770 "$native_root/images-test"
 chown ubuntu:mysql "$native_root/mysql"
 chown ubuntu:redis "$native_root/redis"
 chown ubuntu:meilisearch "$native_root/meilisearch"
 chown ubuntu:bytedepth "$native_root/images"
+ensure_service_group_write_access "$native_root/mysql"
+ensure_service_group_write_access "$native_root/redis"
+ensure_service_group_write_access "$native_root/meilisearch"
+ensure_service_group_write_access "$native_root/images"
 install -d -o ubuntu -g ubuntu -m 0770 /etc/bytedepth
 if [[ ! -d /etc/apparmor.d/local ]]; then
     install -d -o ubuntu -g ubuntu -m 0775 /etc/apparmor.d/local
@@ -122,7 +131,7 @@ printf '%s\n' \
     'maxmemory-policy noeviction' \
     'appendonly yes' \
     'protected-mode yes' > "$native_root/redis/redis.conf"
-chmod 0600 "$native_root/redis/redis.conf"
+chmod 0640 "$native_root/redis/redis.conf"
 chown ubuntu:redis "$native_root/redis/redis.conf"
 
 if command -v apparmor_parser >/dev/null && [[ -f /etc/apparmor.d/usr.sbin.mysqld ]]; then
@@ -139,7 +148,7 @@ if command -v apparmor_parser >/dev/null && [[ -f /etc/apparmor.d/usr.sbin.mysql
 fi
 
 printf '%s\n' 'env = "production"' > "$native_root/meilisearch/meilisearch.toml"
-chmod 0600 "$native_root/meilisearch/meilisearch.toml"
+chmod 0640 "$native_root/meilisearch/meilisearch.toml"
 chown ubuntu:meilisearch "$native_root/meilisearch/meilisearch.toml"
 
 printf '%s\n' \

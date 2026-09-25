@@ -200,10 +200,11 @@ migrate_mysql() {
         native_mysql_socket_exec -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$escaped_password'; CREATE USER IF NOT EXISTS 'bytedepth'@'localhost' IDENTIFIED BY '$escaped_password'; ALTER USER 'bytedepth'@'localhost' IDENTIFIED BY '$escaped_password'; GRANT ALL PRIVILEGES ON bytedepth.* TO 'bytedepth'@'localhost'; FLUSH PRIVILEGES;"
         printf '[client]\nhost=127.0.0.1\nport=%s\nuser=root\npassword=%s\nprotocol=tcp\n' "$BYTEDEPTH_STAGING_MYSQL_PORT" "$db_password" > "$MYSQL_ADMIN"
         chown ubuntu:ubuntu "$MYSQL_ADMIN"
-    chown ubuntu:ubuntu "$MYSQL_ADMIN"
+        chown ubuntu:ubuntu "$MYSQL_ADMIN"
         chmod 0600 "$MYSQL_ADMIN"
     fi
     native_mysql_tcp_exec --batch --skip-column-names -e 'SELECT 1' >/dev/null
+    chmod -R g+rwX "$BYTEDEPTH_NATIVE_ROOT/mysql"
 }
 
 migrate_redis() {
@@ -217,6 +218,7 @@ migrate_redis() {
     rm -f -- "$BYTEDEPTH_NATIVE_ROOT/redis/dump.rdb"
     rm -rf -- "$BYTEDEPTH_NATIVE_ROOT/redis/appendonlydir"
     install -o ubuntu -g redis -m 0640 "$OLD_REDIS_DUMP" "$BYTEDEPTH_NATIVE_ROOT/redis/dump.rdb"
+    chmod -R g+rwX "$BYTEDEPTH_NATIVE_ROOT/redis"
     systemctl start "$BYTEDEPTH_STAGING_REDIS_SERVICE"
     systemctl is-active --quiet "$BYTEDEPTH_STAGING_REDIS_SERVICE"
 }
@@ -318,6 +320,7 @@ migrate_meilisearch() {
     chown ubuntu:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
     chmod 0600 "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
     chown -R ubuntu:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
+    chmod -R g+rwX "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
     systemctl start "$BYTEDEPTH_STAGING_MEILI_SERVICE"
     systemctl is-active --quiet "$BYTEDEPTH_STAGING_MEILI_SERVICE"
 }
@@ -325,6 +328,7 @@ migrate_meilisearch() {
 migrate_images() {
     rsync -a --delete /data/images/ "$BYTEDEPTH_STAGING_IMAGE_ROOT/"
     chown -R ubuntu:bytedepth "$BYTEDEPTH_STAGING_IMAGE_ROOT"
+    chmod -R g+rwX "$BYTEDEPTH_STAGING_IMAGE_ROOT"
 }
 
 prepare() {

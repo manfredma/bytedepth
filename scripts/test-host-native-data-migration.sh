@@ -60,7 +60,14 @@ require_text() {
 
 require_text 'mysqldump' "$ROOT/deploy/sync-prod-to-staging.sh"
 require_text 'redis-cli' "$ROOT/deploy/sync-prod-to-staging.sh"
-require_text 'systemctl stop redis.service' "$ROOT/deploy/sync-prod-to-staging.sh"
+require_text 'BYTEDEPTH_NATIVE_STACK_MODE' "$ROOT/deploy/sync-prod-to-staging.sh"
+require_text 'bytedepth-staging-native-redis.service' "$ROOT/deploy/sync-prod-to-staging.sh"
+require_text 'staging-native-mysql-admin.cnf' "$ROOT/deploy/sync-prod-to-staging.sh"
+require_text '/data/bytedepth-native-staging' "$ROOT/deploy/sync-prod-to-staging.sh"
+if rg -n "systemctl (stop|start) (mysql|redis|meilisearch|bytedepth-app|nginx)\.service|mysql-target\.cnf|/data/redis/(dump|appendonly)|/data/meilisearch/data\.ms" "$ROOT/deploy/sync-prod-to-staging.sh" >/dev/null; then
+    printf 'Production-to-staging sync must not target the retired canonical staging stack.\n' >&2
+    exit 1
+fi
 require_text 'meilisearch --import-snapshot' "$ROOT/deploy/sync-prod-to-staging.sh"
 require_text '--delete' "$ROOT/deploy/sync-prod-to-staging.sh"
 require_text 'openssl x509 -checkend' "$ROOT/deploy/provision-staging-certificate.sh"

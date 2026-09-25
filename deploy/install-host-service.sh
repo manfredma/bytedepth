@@ -19,6 +19,11 @@ ensure_service_account() {
     fi
 }
 
+ensure_service_group_write_access() {
+    local path="$1"
+    chmod -R g+rwX "$path"
+}
+
 ensure_deployment_checkout_ownership() {
     getent passwd "$DEPLOY_USER" >/dev/null || {
         printf 'Required deployment user is missing: %s\n' "$DEPLOY_USER" >&2
@@ -38,6 +43,9 @@ ensure_project_tree_ownership() {
     chown -R "$DEPLOY_USER:mysql" /data/mysql
     chown -R "$DEPLOY_USER:redis" /data/redis
     chown -R "$DEPLOY_USER:meilisearch" /data/meilisearch
+    ensure_service_group_write_access /data/mysql
+    ensure_service_group_write_access /data/redis
+    ensure_service_group_write_access /data/meilisearch
 }
 
 if [[ "${EUID}" -ne 0 ]]; then

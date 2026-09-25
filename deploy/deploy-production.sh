@@ -82,12 +82,6 @@ fail_deployment() {
 }
 
 ./deploy/bootstrap-ops-deploy.sh
-backup_dir="$STATE_DIR/backups"
-    install -d -o ubuntu -g ubuntu -m 0700 "$backup_dir"
-mysqladmin --protocol=socket ping >/dev/null
-mysqldump --protocol=socket --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"
-chown ubuntu:ubuntu "$backup_dir/mysql-$commit.sql"
-chmod 0600 "$backup_dir/mysql-$commit.sql"
 
 install_release_artifact "$TAG" "$JAR" "$MANIFEST"
 switch_current_release "$TAG" || fail_deployment release_switch

@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 
 timing_now_epoch_ms() {
-    date -u +%s%3N
+    local epoch_ns
+    epoch_ns="$(date -u +%s%N)"
+    if [[ "$epoch_ns" =~ ^[0-9]{19}$ ]]; then
+        printf '%s\n' "${epoch_ns:0:13}"
+    else
+        printf '%s000\n' "$(date -u +%s)"
+    fi
 }
 
 timing_ensure_ubuntu_owner() {

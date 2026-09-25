@@ -32,6 +32,8 @@ rg -q 'BYTEDEPTH_STAGING_TEST_IMAGE_ROOT="\$BYTEDEPTH_NATIVE_ROOT/images-test"' 
 rg -q 'native staging ports must not collide' "$INSTALLER"
 rg -q 'install -d -o ubuntu -g ubuntu -m 0770 "\$native_root/images-test"' "$INSTALLER"
 rg -q 'chown ubuntu:bytedepth "\$native_root/images"' "$INSTALLER"
+rg -q 'ensure_service_group_write_access' "$INSTALLER"
+rg -q 'chmod -R g\+rwX' "$INSTALLER"
 rg -q 'bytedepth-staging-native-mysql.service' "$INSTALLER"
 rg -q 'EnvironmentFile=/etc/bytedepth/staging-native.env' "$UNIT_DIR/bytedepth-staging-native-app.service.in"
 rg -q 'requirepass \$BYTEDEPTH_REDIS_PASSWORD' "$INSTALLER"

@@ -54,16 +54,29 @@ require_staging_host_configuration() {
         return 1
     }
     remote_command='set -Eeuo pipefail
-if sudo -n test -r /etc/bytedepth/staging-native.conf && sudo -n grep -Fqx BYTEDEPTH_NATIVE_STACK_MODE=parallel /etc/bytedepth/staging-native.conf; then
-  sudo -n test -r /etc/bytedepth/staging-native.env
-  sudo -n test -r /etc/bytedepth/staging-native-meilisearch.env
-  sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/staging-native.env
-  sudo -n grep -Fqx BYTEDEPTH_NATIVE_STACK_MODE=parallel /etc/bytedepth/staging-native.conf
-else
-  sudo -n test -r /etc/bytedepth/application.env
-  sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/application.env
-  sudo -n grep -Fqx BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn /etc/bytedepth/application.env
-fi'
+if ! sudo -n test -r /etc/bytedepth/staging-native.conf \
+  || ! sudo -n test -r /etc/bytedepth/staging-native.env \
+  || ! sudo -n test -r /etc/bytedepth/staging-native-meilisearch.env \
+  || ! sudo -n grep -Fqx BYTEDEPTH_NATIVE_STACK_MODE=parallel /etc/bytedepth/staging-native.conf \
+  || ! sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/staging-native.env \
+  || ! sudo -n grep -Fqx BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn /etc/bytedepth/staging-native.env; then
+  printf "%s\\n" "Refusing: staging native parallel configuration is incomplete." >&2
+  exit 1
+fi
+for unit in bytedepth-staging-native-mysql.service bytedepth-staging-native-redis.service bytedepth-staging-native-meilisearch.service bytedepth-staging-native-app.service bytedepth-staging-native-edge.service; do
+  sudo -n systemctl cat "$unit" >/dev/null
+done
+for legacy_unit in mysql.service redis.service meilisearch.service bytedepth-app.service nginx.service; do
+  if sudo -n systemctl is-active --quiet "$legacy_unit"; then
+    printf "%s\\n" "Refusing: legacy staging service is still active: $legacy_unit" >&2
+    exit 1
+  fi
+done
+available_kib="$(sudo -n awk "/^MemAvailable:/ {print \\$2}" /proc/meminfo)"
+[[ "$available_kib" =~ ^[0-9]+$ && "$available_kib" -ge 524288 ]] || {
+  printf "%s\\n" "Refusing: staging host has less than 512 MiB available before deployment." >&2
+  exit 1
+}'
     ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "$remote_command"
 }
 
@@ -194,42 +207,6 @@ run_locked_install() {
     }
     if ! record_timed_phase "$timing_file" native_service_install native_bootstrap_command; then
         fail_deployment native_service_install
-    fi
-    backup_database_preflight() {
-        local backup_dir="$STATE_DIR/backups"
-        local -a mysql_args=()
-        install -d -o ubuntu -g ubuntu -m 0700 "$backup_dir"
-        command -v mysqldump >/dev/null
-        if [[ "$BYTEDEPTH_STAGING_RUNTIME_MODE" == host-native-parallel ]]; then
-            [[ -r /etc/bytedepth/staging-native-mysql-admin.cnf ]] || {
-                printf 'Refusing: native staging MySQL admin defaults are missing.\n' >&2
-                return 1
-            }
-            mysql_args+=(--defaults-extra-file=/etc/bytedepth/staging-native-mysql-admin.cnf)
-            if ! mysqladmin "${mysql_args[@]}" --host=127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" ping >/dev/null; then
-                printf 'Refusing: native staging MySQL is not reachable for backup.\n' >&2
-                return 1
-            fi
-            if ! mysqldump "${mysql_args[@]}" --host=127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"; then
-                printf 'Refusing: native staging MySQL backup failed.\n' >&2
-                return 1
-            fi
-            chown ubuntu:ubuntu "$backup_dir/mysql-$commit.sql"
-        else
-            if ! mysqladmin --protocol=socket ping >/dev/null; then
-                printf 'Refusing: staging MySQL is not reachable for backup.\n' >&2
-                return 1
-            fi
-            if ! mysqldump --protocol=socket --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"; then
-                printf 'Refusing: staging MySQL backup failed.\n' >&2
-                return 1
-            fi
-            chown ubuntu:ubuntu "$backup_dir/mysql-$commit.sql"
-        fi
-        chmod 0600 "$backup_dir/mysql-$commit.sql"
-    }
-    if ! record_timed_phase "$timing_file" database_backup_preflight backup_database_preflight; then
-        fail_deployment database_backup_preflight
     fi
     if ! record_timed_phase "$timing_file" artifact_install install_release_artifact "$ref" "$jar" "$manifest"; then
         fail_deployment artifact_install
