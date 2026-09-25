@@ -161,7 +161,9 @@ staging_resource_snapshot() {
     local staging_db="$1" redis_snapshot meili_stats record key_hex dump_hex ttl ttl_state key_id value_hash scan_file failed
     [[ $staging_db =~ ^[0-9]+$ && $staging_db != "$BYTEDEPTH_TEST_IT_REDIS_DB" && $staging_db != "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'invalid staging Redis DB'; return; }
     scan_file="$(mktemp)"
-    slot_chown_ubuntu "$scan_file"
+    # Keep the /tmp file owned by its creating process until the shell has finished redirecting
+    # Redis output into it. Ubuntu's protected_regular policy rejects a root
+    # overwrite of a non-root file in the sticky /tmp directory.
     if ! slot_redis_cli -n "$staging_db" --raw EVAL '
 local function hex(value)
   local result = {}
