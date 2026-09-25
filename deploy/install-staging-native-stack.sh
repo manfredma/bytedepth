@@ -13,6 +13,7 @@ readonly CONFIG_FILE=/etc/bytedepth/staging-native.conf
 readonly ENV_FILE=/etc/bytedepth/staging-native.env
 readonly MEILI_ENV_FILE=/etc/bytedepth/staging-native-meilisearch.env
 readonly SYSTEMD_DIR=/etc/systemd/system
+readonly PUBLIC_NGINX_CONF=/etc/nginx/conf.d/bytedepth-staging.conf
 
 [[ -r "$CONFIG_FILE" ]] || {
     printf 'Refusing: %s is missing; native staging ports and paths must be explicit.\n' "$CONFIG_FILE" >&2
@@ -68,6 +69,7 @@ ensure_service_group_write_access "$native_root/redis"
 ensure_service_group_write_access "$native_root/meilisearch"
 ensure_service_group_write_access "$native_root/images"
 install -d -o ubuntu -g ubuntu -m 0770 /etc/bytedepth
+install -d -o ubuntu -g ubuntu -m 0755 /var/www/certbot
 if [[ ! -d /etc/apparmor.d/local ]]; then
     install -d -o ubuntu -g ubuntu -m 0775 /etc/apparmor.d/local
 fi
@@ -167,6 +169,22 @@ printf '%s\n' \
     '}' > /etc/bytedepth/staging-native-nginx.conf
 chmod 0600 /etc/bytedepth/staging-native-nginx.conf
 chown ubuntu:ubuntu /etc/bytedepth/staging-native-nginx.conf
+
+[[ "${BYTEDEPTH_DOMAIN:-}" == staging-bytedepth.bytedepth.cn ]] || {
+    printf 'Refusing: native staging domain must be staging-bytedepth.bytedepth.cn.\n' >&2
+    exit 1
+}
+sed \
+    -e "s#__BYTEDEPTH_DOMAIN__#$BYTEDEPTH_DOMAIN#g" \
+    -e "s#__NATIVE_EDGE_PORT__#$edge_port#g" \
+    "$SOURCE_ROOT/deploy/nginx/staging-native-public.conf.template" > "$PUBLIC_NGINX_CONF"
+chmod 0644 "$PUBLIC_NGINX_CONF"
+chown ubuntu:ubuntu "$PUBLIC_NGINX_CONF"
+nginx -t
+systemctl is-active --quiet nginx.service || {
+    printf 'Refusing: shared nginx.service must already be active; native staging must not take over the shared ingress.\n' >&2
+    exit 1
+}
 
 systemctl daemon-reload
 systemctl enable bytedepth-staging-native-mysql.service bytedepth-staging-native-redis.service bytedepth-staging-native-meilisearch.service bytedepth-staging-native-app.service bytedepth-staging-native-edge.service

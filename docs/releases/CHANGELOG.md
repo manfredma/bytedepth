@@ -33,6 +33,11 @@
 - 移除普通 staging/生产代码部署中的无界全库 MySQL dump；部署现在必须 fail-fast 校验 native parallel 配置、旧栈停止状态和可用内存，数据迁移备份与代码发布流程分离。
 - 修正 native 数据目录权限：项目文件继续由 `ubuntu` 持有，同时为 MySQL、Redis、Meilisearch 和应用服务组保留必要的读写权限；修正 native Redis/Meilisearch 配置文件的服务组读取权限。
 - 修正 staging 部署计时在 GNU `date` 下误把纳秒拼接为毫秒的问题，避免生成虚假的超长部署耗时。
+- 修复 native staging 只启动 18081 内部 edge、但公网 Nginx 仍停留在旧 8080 upstream 导致域名超时的问题；安装器现在生成并校验宿主 80/443 公网入口，部署健康后自动启用并 reload `nginx.service`。
+- 修复多服务宿主机上共享 `nginx.service` 被错误绑定到单个项目的问题；共享 unit 现在不依赖 bytedepth，native staging 只安装自己的站点配置并在 native edge 健康后 reload 公网入口。
+- 补充多服务宿主机约束：staging 默认目标为 129，旧 124 仅保留 Docker；bytedepth 不得替换、重启或停用共享 Nginx，只能校验自己的站点配置并 reload。
+- 修正 staging 证书续期流程，改用共享 Nginx 的 webroot ACME challenge，不再为申请证书停止整台机器的 80/443 入口。
+- 固化 SSH 远端命令的引号、反斜杠和 awk `$2` 转义契约，避免多层 shell 解析后出现远端变量展开错误。
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
 

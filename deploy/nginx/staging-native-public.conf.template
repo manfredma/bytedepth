@@ -1,34 +1,24 @@
-# staging server 配置（由 envsubst 处理 ${BYTEDEPTH_DOMAIN}）。
-# 此文件被 include 在 http{} 内（由 staging-root.conf 的 http 块引入），
-# 因此只含 server 块，不能有 events/http 块。
+# Public staging ingress for the host-native isolated stack.
+# This file is rendered into /etc/nginx/conf.d/bytedepth-staging.conf.
+# The internal native edge listens on __NATIVE_EDGE_PORT__; this public
+# listener owns the DNS-facing 80/443 sockets and the staging certificate.
 
-# HTTP -> HTTPS 跳转（仅 staging 域名）
 server {
     listen 80;
-    server_name ${BYTEDEPTH_DOMAIN};
+    server_name __BYTEDEPTH_DOMAIN__;
     return 301 https://$host$request_uri;
 }
 
-# IP 地址直接 HTTP 访问（不做 HTTPS 跳转）
-server {
-    listen 80 default_server;
-    server_name _;
-    return 444;
-}
-
-# HTTPS
 server {
     listen 443 ssl;
-    server_name ${BYTEDEPTH_DOMAIN};
+    server_name __BYTEDEPTH_DOMAIN__;
 
-    # If this file is selected as a shared-listener fallback, never proxy an
-    # unknown Host or direct-IP request into the staging application.
-    if ($host != ${BYTEDEPTH_DOMAIN}) {
+    if ($host != __BYTEDEPTH_DOMAIN__) {
         return 444;
     }
 
-    ssl_certificate /etc/letsencrypt/live/${BYTEDEPTH_DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${BYTEDEPTH_DOMAIN}/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/__BYTEDEPTH_DOMAIN__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/__BYTEDEPTH_DOMAIN__/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
@@ -55,7 +45,7 @@ server {
     }
 
     location / {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:__NATIVE_EDGE_PORT__;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

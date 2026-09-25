@@ -57,9 +57,12 @@ require_text 'User=meilisearch' "$UNIT_DIR/meilisearch.service"
 require_text 'WorkingDirectory=/data/meilisearch' "$UNIT_DIR/meilisearch.service"
 require_text 'ExecStart=/usr/local/bin/meilisearch --config-file-path /etc/meilisearch.toml' "$UNIT_DIR/meilisearch.service"
 
-require_text 'Requires=bytedepth-app.service' "$UNIT_DIR/nginx.service"
-require_text 'After=bytedepth-app.service' "$UNIT_DIR/nginx.service"
-require_text 'ExecStartPre=/usr/bin/curl --fail' "$UNIT_DIR/nginx.service"
+require_text 'Description=Shared Nginx reverse proxy' "$UNIT_DIR/nginx.service"
+require_text 'After=network-online.target' "$UNIT_DIR/nginx.service"
+if rg -n 'Requires=bytedepth-app\.service|127\.0\.0\.1:8080/version|ExecStartPre=/usr/bin/curl' "$UNIT_DIR/nginx.service" >/dev/null; then
+    printf 'Shared nginx.service must not depend on one project or one application port.\n' >&2
+    exit 1
+fi
 require_text "ExecStart=/usr/sbin/nginx -g 'daemon on; master_process on;'" "$UNIT_DIR/nginx.service"
 
 for unit in mysql.service redis.service meilisearch.service; do

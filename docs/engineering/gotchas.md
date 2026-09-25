@@ -30,7 +30,7 @@
 
 ## 部署
 
-- 生产为单机（175），staging 预发独立部署（124）。staging 候选部署 → 集成测试 → E2E → 所有者验收 → 合并 `main` → 新 Tag 生产发布，完整操作以 [部署手册](../../deploy/README.md) 为准。
+- 生产为单机（175），staging 预发独立部署（129）。旧 124 保留 Docker 运行时，不作为当前 staging 验收入口。staging 候选部署 → 集成测试 → E2E → 所有者验收 → 合并 `main` → 新 Tag 生产发布，完整操作以 [部署手册](../../deploy/README.md) 为准。
 - 服务由 systemd 管理，应用发布使用不可变 JAR、SHA256 manifest 和 `current` 软链接；JAR 由 `ubuntu` 持有并按发布权限安装，运行中的应用不能改写当前发布。
 - `deploy-staging.sh` 和 `deploy-production.sh` 在切换后健康检查或 Nginx reload 失败时尝试恢复旧发布；自动回滚只恢复代码和服务，不回滚已执行的 Flyway 迁移。
 - staging 的数据每周由生产覆盖，会清空 staging 写测试数据。staging 回滚需重新灌入兼容的数据基线再部署旧 JAR，非无风险。
@@ -54,11 +54,15 @@
 - 发布 SSH 必须显式指定已存在的 known_hosts；生产使用 `StrictHostKeyChecking=yes`，staging 也使用同样的显式主机密钥校验。
 - SSH 远端预检不要在传给 `ssh` 的多行字符串中嵌套 `bash -c`、单引号或双引号；本地 shell、SSH 远端 shell、`sudo` 和目标 shell 会重复解析，容易把参数拆成 `-r: command not found` 或产生未闭合引号。只做可读性检查时使用无嵌套的 `sudo cat <file> >/dev/null 2>&1`，复杂远端逻辑应改为显式 stdin 脚本，并由契约测试禁止旧写法。
 - 同一类远端字符串中，awk 的 `$2` 只需要为“本地脚本解析”保留一层反斜杠；多写一层会把 `\\$2` 送到远端，远端在 `set -u` 下展开成未定义的位置参数并报 `bash: $2: unbound variable`。涉及 shell、SSH、awk 的变量时必须用实际远端命令做一次 `set -u` 解析验证。
+- 远端 SSH 命令中的双引号、单引号和反斜杠会分别经过本地 shell、SSH 远端 shell、`sudo` 和目标命令解析；不要把复杂命令继续嵌套进 `bash -c`，也不要为了“保险”重复转义 `$2`、引号或反斜杠。修复后必须用 `bash -n`、实际远端 `set -u` 预检和静态契约测试三重验证，避免本地看似正确、远端却得到不同命令。
 - 对 `ubuntu:ubuntu`、0600 的项目配置，不能把 `sudo test -r <file>` 当作跨主机可移植的唯一检查；本次 129 预检中该形式出现假失败，而 `sudo cat >/dev/null` 正常。权限、所有权和内容校验要分别执行，不能因检查命令异常而切换部署方案。
 - 部署命令被中断或失败后，先检查并停止处于 `activating/auto-restart` 的 native app，再重试；不得把失败重启循环留在后台，否则会持续消耗内存并污染下一次预检。重试前必须重新校验 unit、端口、`/version` 和 deploy history。
 - 生产版本确认直接读取 ubuntu 所有的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/current/artifact.manifest` 交叉核对。
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。
 - systemd 的 `Requires=` 会在 staging app 重启时停止依赖它的 native edge；edge 停止时不能直接 `reload`，部署流程必须先确认并启动 edge，再执行 reload。
+- native staging 的内部 edge（`bytedepth-staging-native-edge.service`，18081）不是公网入口；多服务宿主机的共享 `nginx.service` 监听 80/443，加载 `/etc/nginx/conf.d/bytedepth-staging.conf` 并代理到 18081。只启动内部 edge 或只把旧配置从 8080 改到应用端口，都会导致域名超时/502。部署预检必须同时执行 `nginx -t`、确认 `proxy_pass` 指向 18081、确认共享 Nginx 已 active，并在应用健康后只 reload 公网 Nginx。
+- 共享 `nginx.service` 不能包含 `Requires=bytedepth-app.service` 或访问 8080 的 `ExecStartPre`；那是单服务宿主机的错误耦合，会让其他项目跟随 bytedepth 启停。共享 unit 由宿主初始化流程安装为无项目依赖的通用服务；各项目只安装自己的站点文件，文件归 `ubuntu` 所有，不能覆盖、重启或 disable 共享 Nginx。systemd drop-in 只能作为通用术语，不能用来偷偷删除共享服务的项目依赖。
+- 共享 Nginx 的 ACME 证书续期也不能使用 standalone 后停止 80/443；staging 使用 `/var/www/certbot` webroot，由自己的站点配置提供 `/.well-known/acme-challenge/`，证书更新后只 reload 共享 Nginx。
 - MySQL 8.4 的 `SHOW GRANTS` 会把账户名规范化为反引号形式，即使 `CREATE USER` 使用了字符串字面量；staging 测试槽必须按实际 canonical grant 格式校验，不能用单引号或转义数据库下划线误判合法授权。
 - staging 测试槽的管理员连接 defaults 文件包含 native MySQL 端口，但使用隔离用户导入 fixture 和校验 `SELECT DATABASE()` 时仍必须显式传入 `BYTEDEPTH_STAGING_MYSQL_PORT`；否则 MySQL 客户端会回退到 3306。
 

@@ -8,7 +8,7 @@ fi
 
 SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SOURCE_ROOT
-readonly STAGING_HOST="${BYTEDEPTH_STAGING_HOST:-124.221.143.25}"
+readonly STAGING_HOST="${BYTEDEPTH_STAGING_HOST:-129.211.6.82}"
 readonly STAGING_USER=ubuntu
 readonly STAGING_SSH_KEY="${BYTEDEPTH_SSH_KEY:-${HOME}/.ssh/ubuntu_2.pem}"
 readonly STATE_DIR=/var/lib/bytedepth-staging
@@ -66,7 +66,17 @@ fi
 for unit in bytedepth-staging-native-mysql.service bytedepth-staging-native-redis.service bytedepth-staging-native-meilisearch.service bytedepth-staging-native-app.service bytedepth-staging-native-edge.service; do
   sudo -n systemctl cat "$unit" >/dev/null
 done
-for legacy_unit in mysql.service redis.service meilisearch.service bytedepth-app.service nginx.service; do
+sudo -n cat /etc/nginx/conf.d/bytedepth-staging.conf >/dev/null
+sudo -n grep -Fq 'proxy_pass http://127.0.0.1:18081;' /etc/nginx/conf.d/bytedepth-staging.conf || {
+  printf "%s\n" "Refusing: public staging Nginx must proxy to the native edge on port 18081." >&2
+  exit 1
+}
+sudo -n nginx -t >/dev/null
+sudo -n systemctl is-active --quiet nginx.service || {
+  printf "%s\n" "Refusing: shared nginx.service must already be active." >&2
+  exit 1
+}
+for legacy_unit in mysql.service redis.service meilisearch.service bytedepth-app.service; do
   if sudo -n systemctl is-active --quiet "$legacy_unit"; then
     printf "%s\\n" "Refusing: legacy staging service is still active: $legacy_unit" >&2
     exit 1
@@ -135,6 +145,7 @@ run_locked_install() {
         fi
         systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE"
         systemctl reload "$BYTEDEPTH_STAGING_EDGE_SERVICE"
+        systemctl reload nginx.service
     }
 
     rollback_release() {

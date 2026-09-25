@@ -23,7 +23,10 @@ grep -Fq 'if ($host != ${BYTEDEPTH_DOMAIN})' "$NGINX_TEMPLATE"
 grep -Fq 'staging-bytedepth.bytedepth.cn' "$E2E_RUNNER"
 grep -Fq 'BYTEDEPTH_ENVIRONMENT=staging' "$STAGING_DEPLOY"
 grep -Fq 'BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn' "$STAGING_DEPLOY"
-grep -Fq 'Requires=bytedepth-app.service' "$ROOT/deploy/systemd/nginx.service"
+if grep -Eq 'Requires=bytedepth-app\.service|127\.0\.0\.1:8080/version' "$ROOT/deploy/systemd/nginx.service"; then
+    printf 'Shared nginx.service must not be coupled to the bytedepth app.\n' >&2
+    exit 1
+fi
 grep -Fq '127.0.0.1:8080' "$ROOT/deploy/nginx/staging.conf.template"
 grep -Fq 'th:if="${environment != '\''staging'\''}"' "$NAV_TEMPLATE"
 grep -Fq 'th:if="${environment != '\''staging'\''}"' "$HEAD_TEMPLATE"

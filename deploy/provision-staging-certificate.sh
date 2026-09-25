@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在 124 上签发/更新 staging 域名证书，并安装续期后的 Nginx reload hook。
+# 在 129 上签发/更新 staging 域名证书，并安装续期后的 Nginx reload hook。
 set -Eeuo pipefail
 
 if [[ "${EUID}" -ne 0 ]]; then
@@ -9,29 +9,30 @@ fi
 
 readonly CERT_NAME=staging-bytedepth.bytedepth.cn
 readonly CERT_DIR="/etc/letsencrypt/live/$CERT_NAME"
+readonly ACME_WEBROOT=/var/www/certbot
 SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SOURCE_ROOT
 readonly DEPLOY_HOOK_SOURCE="$SOURCE_ROOT/deploy/nginx/reload-nginx-deploy-hook.sh"
 readonly DEPLOY_HOOK=/etc/letsencrypt/renewal-hooks/deploy/reload-bytedepth-nginx.sh
-
-readonly CERTBOT_PRE_HOOK='systemctl stop nginx.service || true'
-readonly CERTBOT_POST_HOOK='systemctl start nginx.service'
 
 if [[ ! -r "$DEPLOY_HOOK_SOURCE" ]]; then
     printf 'Missing versioned Certbot deploy hook: %s\n' "$DEPLOY_HOOK_SOURCE" >&2
     exit 1
 fi
 
+install -d -o ubuntu -g ubuntu -m 0755 "$ACME_WEBROOT"
+nginx -t
+systemctl reload nginx.service
+
 certbot certonly \
-    --standalone \
+    --webroot \
+    --webroot-path "$ACME_WEBROOT" \
     --preferred-challenges http \
     --non-interactive \
     --agree-tos \
     --register-unsafely-without-email \
     --keep-until-expiring \
     --cert-name "$CERT_NAME" \
-    --pre-hook "$CERTBOT_PRE_HOOK" \
-    --post-hook "$CERTBOT_POST_HOOK" \
     -d "$CERT_NAME"
 
 install -d -o ubuntu -g ubuntu -m 0755 "$(dirname "$DEPLOY_HOOK")"

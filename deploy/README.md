@@ -15,18 +15,18 @@
 
 | 节点 | 地址 | 模式 | 公开入口 |
 | --- | --- | --- | --- |
-| staging | 124.221.143.25 | staging | https://staging-bytedepth.bytedepth.cn/ |
+| staging | 129.211.6.82 | native parallel staging | https://staging-bytedepth.bytedepth.cn/ |
 | production | 175.24.197.202 | production | https://bytedepth.cn/ |
 
-两台机器的数据服务和应用相互隔离。应用发布目录为 /opt/bytedepth/releases/<ref>/app.jar，/opt/bytedepth/current 是当前发布的软链接；部署状态位于 /var/lib/bytedepth-deploy/，staging 测试状态位于 /var/lib/bytedepth-staging/。最终原生运行时的持久化数据目录为 /data/mysql、/data/redis、/data/meilisearch 和 /data/images。staging 蓝绿迁移期间，独立候选栈使用 /data/bytedepth-native-staging 及 13306/16379/17700/18080/18081，绝不与仍在运行的旧栈共享数据目录。
+两台机器的数据服务和应用相互隔离。应用发布目录为 /opt/bytedepth/releases/<ref>/app.jar，/opt/bytedepth/current 是当前发布的软链接；部署状态位于 /var/lib/bytedepth-deploy/，staging 测试状态位于 /var/lib/bytedepth-staging/。129 上 native staging 的持久化数据目录为 /data/bytedepth-native-staging/mysql、redis、meilisearch 和 images，使用 13306/16379/17700/18080/18081，绝不与旧 124 Docker 栈或旧 canonical 数据目录共享。
 
-应用服务名是 bytedepth-app.service；数据服务名是 mysql.service、redis.service、meilisearch.service；边缘服务名是 nginx.service。E2E 临时接管服务名为 bytedepth-test-slot.service，它与应用服务互斥。
+native staging 应用服务名是 bytedepth-staging-native-app.service；数据服务名是 bytedepth-staging-native-mysql.service、bytedepth-staging-native-redis.service、bytedepth-staging-native-meilisearch.service；内部 edge 是 bytedepth-staging-native-edge.service（18081），公网入口是多服务宿主机共享的 nginx.service（80/443），其 upstream 必须指向 18081。bytedepth 只能安装自己的 `/etc/nginx/conf.d/bytedepth-staging.conf`、执行 `nginx -t` 和 reload，不能替换、重启或停用共享 Nginx。E2E 临时接管服务名为 bytedepth-staging-native-test-slot.service，它与 native 应用服务互斥。
 
 ## 3. 主机初始化
 
 目标主机必须预先安装固定版本的 Java 25、MySQL 8、Redis 7、Meilisearch 1.7、Nginx、curl、rsync、jq、openssl 和 systemd。Meilisearch 1.7 的 Linux 二进制还需要 musl loader 及对应的 `libgcc_s.so.1`；staging Docker→原生迁移脚本会自动安装 musl，并从现有 Meilisearch 容器提取匹配的 musl 运行库。应用账号、数据账号和服务目录由初始化脚本创建。
 
-在目标主机的 /opt/bytedepth 执行：
+在目标主机的 /opt/bytedepth 执行（当前 staging 目标为 129；124 旧 Docker 栈不参与本流程）：
 
     sudo install -d -o ubuntu -g ubuntu -m 0755 /etc/bytedepth
     sudo touch /etc/bytedepth/application.env
@@ -53,9 +53,9 @@ install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数
     sudo journalctl -u bytedepth-app.service -n 200 --no-pager
     sudo journalctl -u nginx.service -n 100 --no-pager
 
-## 4. staging Docker → 原生蓝绿迁移
+## 4. staging Docker → 原生蓝绿迁移（历史迁移流程）
 
-迁移不是直接覆盖 Docker 正在使用的数据目录，而是先完整部署一套独立原生栈。124 上保留现有 Docker 应用、MySQL、Redis、Meilisearch 和共享 Docker Nginx，执行：
+迁移不是直接覆盖 Docker 正在使用的数据目录，而是先完整部署一套独立原生栈。旧 124 保留现有 Docker 应用、MySQL、Redis、Meilisearch；当前 129 使用宿主 Nginx 公网入口和独立 native 数据目录。历史迁移脚本仍用于数据准备和回退，不得把旧 124 的 Docker Nginx 当作 129 的公网入口。
 
     sudo install -o ubuntu -g ubuntu -m 0600 deploy/staging-native.conf.example /etc/bytedepth/staging-native.conf
     sudo ./deploy/install-staging-native-stack.sh
@@ -86,7 +86,7 @@ install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数
 
     sudo awk -F= '$1 == "commit" {print}' /var/lib/bytedepth-staging/deploy-history
     curl --fail --silent --show-error https://staging-bytedepth.bytedepth.cn/version
-    sudo systemctl is-active bytedepth-app.service nginx.service
+    sudo systemctl is-active bytedepth-staging-native-app.service nginx.service
 
 ## 6. staging 数据同步与证书
 
@@ -96,7 +96,7 @@ install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数
 
 同步前后必须保留 ubuntu 所有的日志并核对图片数量；首页返回 200 不能单独证明图片同步完整。MySQL 使用 mysqldump/mysql，Redis 使用 redis-cli 和宿主数据目录，Meilisearch 使用 snapshot 文件，图片使用 rsync --delete。任何中间件导入失败都停止后续步骤并按备份恢复。
 
-staging 证书在 124 签发，生产边缘只同步精确 SAN 证书并拒绝代理 staging 内容：
+staging 证书在 129 签发，生产边缘只同步精确 SAN 证书并拒绝代理 staging 内容：
 
     # 124
     sudo ./deploy/provision-staging-certificate.sh
@@ -147,7 +147,7 @@ SSH 默认不会转发任意环境变量。远程执行时通过 SSH 标准输�
       printf '%s\n' "$staging_e2e_password"
     } | ssh -i "$BYTEDEPTH_SSH_KEY" -o BatchMode=yes \
       -o UserKnownHostsFile="$BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS" \
-      -o StrictHostKeyChecking=yes ubuntu@124.221.143.25 \
+      -o StrictHostKeyChecking=yes ubuntu@129.211.6.82 \
       'IFS= read -r BYTEDEPTH_STAGING_E2E_USERNAME &&
        IFS= read -r BYTEDEPTH_STAGING_E2E_PASSWORD &&
        export BYTEDEPTH_STAGING_E2E_USERNAME BYTEDEPTH_STAGING_E2E_PASSWORD &&

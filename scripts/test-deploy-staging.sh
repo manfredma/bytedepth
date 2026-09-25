@@ -45,6 +45,14 @@ rg -q 'check-staging-changelog-change.sh.*>&2' "$SCRIPT"
 rg -q 'check-release-readiness.sh.*>&2' "$SCRIPT"
 rg -q 'sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging' "$SCRIPT"
 rg -q 'sudo -n cat /etc/bytedepth/staging-native.conf >/dev/null 2>&1' "$SCRIPT"
+rg -q "proxy_pass http://127\.0\.0\.1:18081;" "$SCRIPT"
+rg -q "conf\.d/bytedepth-staging\.conf" "$SCRIPT"
+rg -q "systemctl is-active --quiet nginx\.service" "$SCRIPT"
+rg -q "systemctl reload nginx\.service" "$SCRIPT"
+if rg -q "for legacy_unit .*nginx\.service" "$SCRIPT"; then
+    printf 'Public native nginx must not be classified as a legacy runtime unit.\n' >&2
+    exit 1
+fi
 rg -Fq 'print \$2' "$SCRIPT"
 if rg -Fq 'print \\$2' "$SCRIPT"; then
     printf 'Staging SSH preflight must not over-escape awk positional parameters.\n' >&2

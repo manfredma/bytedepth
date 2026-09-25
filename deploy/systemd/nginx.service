@@ -1,13 +1,11 @@
 [Unit]
-Description=ByteDepth Nginx reverse proxy
-Requires=bytedepth-app.service
-After=bytedepth-app.service network-online.target
+Description=Shared Nginx reverse proxy
+After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=forking
 ExecStartPre=/usr/sbin/nginx -t
-ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 12 --retry-delay 2 --retry-connrefused http://127.0.0.1:8080/version
 ExecStart=/usr/sbin/nginx -g 'daemon on; master_process on;'
 ExecReload=/usr/sbin/nginx -s reload
 ExecStop=/usr/sbin/nginx -s quit

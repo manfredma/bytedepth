@@ -44,10 +44,10 @@ staging 只验收待上线版本，不提供“先预览、之后再决定是否
 
 ```bash
 evidence_dir="$(mktemp -d)"
-ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@129.211.6.82 \
   'sudo cat -- /var/lib/bytedepth-staging/test-history/staging-integration' \
   > "$evidence_dir/staging-integration"
-ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@129.211.6.82 \
   'sudo cat -- /var/lib/bytedepth-staging/test-history/staging-e2e' \
   > "$evidence_dir/staging-e2e"
     BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT

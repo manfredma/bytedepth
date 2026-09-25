@@ -50,7 +50,7 @@ staging_exec() { ssh "${SSH_OPTS[@]}" "$STAGING_USER" "$1"; }
 staging_send() { scp "${SSH_OPTS[@]}" "$1" "$STAGING_USER:$2"; }
 
 log "校验 staging native 隔离栈..."
-staging_exec "set -Eeuo pipefail; test -r '$STAGING_NATIVE_CONF'; . '$STAGING_NATIVE_CONF'; test \"\${BYTEDEPTH_NATIVE_STACK_MODE:-}\" = parallel; test \"\${BYTEDEPTH_NATIVE_ROOT:-}\" = '$STAGING_NATIVE_ROOT'; test -r '$STAGING_NATIVE_MYSQL_CNF'; for unit in bytedepth-staging-native-mysql.service bytedepth-staging-native-redis.service bytedepth-staging-native-meilisearch.service bytedepth-staging-native-app.service bytedepth-staging-native-edge.service; do systemctl cat \"\$unit\" >/dev/null; done; for unit in mysql.service redis.service meilisearch.service bytedepth-app.service nginx.service; do ! systemctl is-active --quiet \"\$unit\"; done"
+staging_exec "set -Eeuo pipefail; test -r '$STAGING_NATIVE_CONF'; . '$STAGING_NATIVE_CONF'; test \"\${BYTEDEPTH_NATIVE_STACK_MODE:-}\" = parallel; test \"\${BYTEDEPTH_NATIVE_ROOT:-}\" = '$STAGING_NATIVE_ROOT'; test -r '$STAGING_NATIVE_MYSQL_CNF'; sudo nginx -t >/dev/null; sudo grep -Fq 'proxy_pass http://127.0.0.1:18081;' /etc/nginx/conf.d/bytedepth-staging.conf; for unit in bytedepth-staging-native-mysql.service bytedepth-staging-native-redis.service bytedepth-staging-native-meilisearch.service bytedepth-staging-native-app.service bytedepth-staging-native-edge.service; do systemctl cat \"\$unit\" >/dev/null; done; for unit in mysql.service redis.service meilisearch.service bytedepth-app.service; do ! systemctl is-active --quiet \"\$unit\"; done"
 
 log "同步 staging 证书到生产边缘..."
 "$SOURCE_ROOT/deploy/sync-staging-certificate-to-production.sh"
@@ -95,7 +95,7 @@ log "图片同步..."
 rsync -avz --delete --rsync-path="sudo rsync" -e "ssh ${SSH_OPTS[*]}" /data/images/ "$STAGING_USER:$STAGING_NATIVE_ROOT/images/"
 
 log "恢复 staging 应用并验证..."
-staging_exec 'sudo systemctl start bytedepth-staging-native-app.service bytedepth-staging-native-edge.service'
+staging_exec 'sudo systemctl start bytedepth-staging-native-app.service bytedepth-staging-native-edge.service; sudo systemctl reload nginx.service'
 sleep 15
 http_code="$(staging_exec "curl -ksS -o /dev/null -w '%{http_code}' 'https://staging-bytedepth.bytedepth.cn/'")"
 [[ "$http_code" == 200 ]] || { printf 'staging returned HTTP %s.\n' "$http_code" >&2; exit 1; }

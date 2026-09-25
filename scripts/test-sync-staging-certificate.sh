@@ -50,11 +50,10 @@ done
 for contract in \
     'staging-bytedepth.bytedepth.cn' \
     'certbot certonly' \
-    '--standalone' \
-    '--pre-hook' \
-    '--post-hook' \
+    '--webroot' \
+    '--webroot-path' \
+    '/var/www/certbot' \
     'renewal-hooks/deploy' \
-    'systemctl stop nginx.service' \
     'checkend 2592000' \
     'openssl pkey' \
     'nginx -t' \

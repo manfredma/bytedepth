@@ -7,8 +7,9 @@ readonly INSTALLER="$ROOT/deploy/install-staging-native-stack.sh"
 readonly EXAMPLE="$ROOT/deploy/staging-native.conf.example"
 readonly UNIT_DIR="$ROOT/deploy/systemd"
 readonly TARGET_LIB="$ROOT/deploy/lib/staging-native-target.sh"
+readonly PUBLIC_NGINX_TEMPLATE="$ROOT/deploy/nginx/staging-native-public.conf.template"
 
-for path in "$INSTALLER" "$EXAMPLE" "$TARGET_LIB" \
+for path in "$INSTALLER" "$EXAMPLE" "$TARGET_LIB" "$PUBLIC_NGINX_TEMPLATE" \
     "$UNIT_DIR/bytedepth-staging-native-mysql.service.in" \
     "$UNIT_DIR/bytedepth-staging-native-redis.service.in" \
     "$UNIT_DIR/bytedepth-staging-native-meilisearch.service.in" \
@@ -25,6 +26,18 @@ rg -q 'BYTEDEPTH_NATIVE_REDIS_PORT=16379' "$EXAMPLE"
 rg -q 'BYTEDEPTH_NATIVE_MEILI_PORT=17700' "$EXAMPLE"
 rg -q 'BYTEDEPTH_NATIVE_APP_PORT=18080' "$EXAMPLE"
 rg -q 'BYTEDEPTH_NATIVE_EDGE_PORT=18081' "$EXAMPLE"
+rg -q 'proxy_pass http://127\.0\.0\.1:__NATIVE_EDGE_PORT__;' "$PUBLIC_NGINX_TEMPLATE"
+rg -q 'ssl_certificate /etc/letsencrypt/live/__BYTEDEPTH_DOMAIN__/fullchain\.pem' "$PUBLIC_NGINX_TEMPLATE"
+rg -q 'root /var/www/certbot' "$PUBLIC_NGINX_TEMPLATE"
+rg -q 'install -d -o ubuntu -g ubuntu -m 0755 /var/www/certbot' "$INSTALLER"
+rg -q 'PUBLIC_NGINX_CONF=/etc/nginx/conf\.d/bytedepth-staging\.conf' "$INSTALLER"
+rg -q 'nginx -t' "$INSTALLER"
+rg -q 'systemctl is-active --quiet nginx\.service' "$INSTALLER"
+if rg -n 'systemctl (enable|restart).*nginx\.service|PUBLIC_NGINX_UNIT|nginx\.service\.d' \
+    "$INSTALLER" >/dev/null; then
+    printf 'Native staging must not take over or restart the shared nginx service.\n' >&2
+    exit 1
+fi
 rg -Fq 'native_root" == /data/bytedepth-native-staging' "$INSTALLER"
 rg -q 'BYTEDEPTH_NATIVE_STACK_MODE=parallel' "$INSTALLER"
 rg -q 'BYTEDEPTH_STAGING_APP_SERVICE=bytedepth-staging-native-app.service' "$TARGET_LIB"
