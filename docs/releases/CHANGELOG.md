@@ -6,6 +6,7 @@
 
 ### Changed
 
+- 清理误提交的 agent 工作产物，发布包和项目知识库不再包含会阻断发布门禁的临时报告。
 - v2.25.2 发布后，主线进入 `2.25.3-SNAPSHOT` 开发周期。
 - 运行时部署迁移为宿主机原生 systemd 服务，应用通过不可变 JAR、SHA256 manifest 和原子 `current` 软链接发布；staging/生产不再依赖容器运行时。
 - staging 集成测试和 E2E 使用 `staging-it`/`staging-e2e` Spring Profile 及按 `run_id` 隔离的 MySQL、Redis、Meilisearch 和图片资源，测试结束后自动清理并恢复 staging 应用。
