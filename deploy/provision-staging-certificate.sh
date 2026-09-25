@@ -34,8 +34,8 @@ certbot certonly \
     --post-hook "$CERTBOT_POST_HOOK" \
     -d "$CERT_NAME"
 
-install -d -o root -g root -m 0755 "$(dirname "$DEPLOY_HOOK")"
-install -o root -g root -m 0755 "$DEPLOY_HOOK_SOURCE" "$DEPLOY_HOOK"
+install -d -o ubuntu -g ubuntu -m 0755 "$(dirname "$DEPLOY_HOOK")"
+install -o ubuntu -g ubuntu -m 0755 "$DEPLOY_HOOK_SOURCE" "$DEPLOY_HOOK"
 
 san_names="$(openssl x509 -in "$CERT_DIR/fullchain.pem" -noout -ext subjectAltName 2>/dev/null || true)"
 if ! printf '%s\n' "$san_names" \

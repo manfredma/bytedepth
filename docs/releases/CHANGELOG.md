@@ -27,7 +27,8 @@
 - 修正 staging 隔离测试 fixture 校验器误拒绝 Flyway `V1__...sql` 脚本名的问题，避免合法 schema history 被误判为生产库限定表名。
 - 约束 staging 隔离 fixture 的 DDL 外键顺序，避免外键引用尚未创建的表导致 fixture 导入失败。
 - 修正 native MySQL 与 Meilisearch 的 systemd 运行契约，固定 MySQL 大小写表名模式、运行目录和 Meilisearch 工作目录，避免重启后因环境漂移启动失败。
-- 修正 staging root-only 输入的 Linux 文件 uid/mode 校验，避免 GNU `stat -f` 被误当成 BSD 文件属性查询。
+- 修正 native 主机初始化后的项目文件归属：代码工作区、`.git`、发布目录、JAR、配置、日志和测试资源统一交给 `ubuntu`，服务进程仅通过服务组写入数据，避免 staging 部署因 Git ownership 或 `.git/FETCH_HEAD` 权限失败。
+- 修正 staging 项目文件归属校验，统一验证 `ubuntu` 所有并兼容 Linux/macOS 的 `stat` 实现，避免 GNU `stat -f` 被误当成 BSD 文件属性查询。
 - 修正 native staging 隔离测试图片根目录权限，避免初始化为应用用户所有导致测试资源前置校验拒绝。
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。

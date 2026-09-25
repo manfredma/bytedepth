@@ -71,7 +71,7 @@ printf 'READY\\n'")" || {
 [[ "$preflight_output" == *READY* ]] || { printf 'Refusing: production preflight did not become ready.\n' >&2; exit 1; }
 
 remote_artifact="/tmp/bytedepth-production-$TAG"
-remote "$(printf 'install -d -m 0700 %q' "$remote_artifact")"
+remote "$(printf 'install -d -o ubuntu -g ubuntu -m 0700 %q' "$remote_artifact")"
 scp "${SSH_OPTIONS[@]}" "$ARTIFACT_DIR/app.jar" "$ARTIFACT_DIR/artifact.manifest" "$SSH_TARGET:$remote_artifact/"
 printf 'Starting detached production deployment for %s; log: %s\n' "$TAG" "$REMOTE_LOG"
 remote "cd '$REMOTE_ROOT' && sudo -n nohup ./deploy/deploy-production.sh --artifact '$remote_artifact/app.jar' --manifest '$remote_artifact/artifact.manifest' '$TAG' >'$REMOTE_LOG' 2>&1 </dev/null & echo \$!" >/dev/null

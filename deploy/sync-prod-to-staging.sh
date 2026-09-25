@@ -17,8 +17,8 @@ readonly SSH_KNOWN_HOSTS=/root/.ssh/known_hosts
 readonly SOURCE_MYSQL_CNF=/etc/bytedepth/mysql-source.cnf
 
 [[ -r "$SYNC_CONF" ]] || { printf 'Missing %s.\n' "$SYNC_CONF" >&2; exit 1; }
-[[ -f "$SYNC_CONF" && "$(stat -c '%U:%G:%a' "$SYNC_CONF")" == 'root:root:600' ]] || {
-    printf 'Refusing: %s must be root-owned mode 0600.\n' "$SYNC_CONF" >&2; exit 1;
+[[ -f "$SYNC_CONF" && "$(stat -c '%U:%G:%a' "$SYNC_CONF")" == 'ubuntu:ubuntu:600' ]] || {
+    printf 'Refusing: %s must be ubuntu-owned mode 0600.\n' "$SYNC_CONF" >&2; exit 1;
 }
 # shellcheck disable=SC1090
 . "$SYNC_CONF"
@@ -31,7 +31,9 @@ readonly SSH_KEY=${SYNC_SSH_KEY:?SYNC_SSH_KEY must be set in $SYNC_CONF}
 readonly SSH_OPTS=(-i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes \
     -o UserKnownHostsFile="$SSH_KNOWN_HOSTS" -o StrictHostKeyChecking=yes)
 
-mkdir -p "$(dirname "$LOG")" "$(dirname "$LOCK_FILE")"
+install -d -o ubuntu -g ubuntu -m 0700 "$(dirname "$LOG")" "$(dirname "$LOCK_FILE")"
+touch "$LOG" "$LOCK_FILE"
+chown ubuntu:ubuntu "$LOG" "$LOCK_FILE"
 exec 9>"$LOCK_FILE"
 flock -xn 9 || { printf 'Another sync is running.\n' >&2; exit 1; }
 set -a
@@ -50,6 +52,7 @@ log "停止 staging 应用..."
 staging_exec 'sudo systemctl stop bytedepth-app.service' || true
 
 dump="$(mktemp /tmp/bytedepth-sync-XXXX.sql)"
+chown ubuntu:ubuntu "$dump"
 chmod 600 "$dump"
 log "MySQL 导出与导入..."
 mysqldump --defaults-extra-file="$SOURCE_MYSQL_CNF" --single-transaction --quick \
@@ -60,11 +63,12 @@ rm -f "$dump"
 
 log "Redis 导出与导入..."
 redis_dump="$(mktemp /tmp/bytedepth-redis-XXXX.rdb)"
+chown ubuntu:ubuntu "$redis_dump"
 chmod 600 "$redis_dump"
 REDISCLI_AUTH="${REDIS_PASSWORD:?REDIS_PASSWORD must be set}" redis-cli -h 127.0.0.1 -p 6379 --rdb "$redis_dump" >/dev/null
 staging_send "$redis_dump" /tmp/bytedepth-sync.rdb
 rm -f "$redis_dump"
-staging_exec 'sudo systemctl stop redis.service && sudo rm -rf /data/redis/dump.rdb /data/redis/appendonlydir && sudo install -o redis -g redis -m 0640 /tmp/bytedepth-sync.rdb /data/redis/dump.rdb && sudo rm -f /tmp/bytedepth-sync.rdb && sudo systemctl start redis.service'
+staging_exec 'sudo systemctl stop redis.service && sudo rm -rf /data/redis/dump.rdb /data/redis/appendonlydir && sudo install -o ubuntu -g redis -m 0640 /tmp/bytedepth-sync.rdb /data/redis/dump.rdb && sudo rm -f /tmp/bytedepth-sync.rdb && sudo systemctl start redis.service'
 
 log "Meilisearch 创建并传输 snapshot..."
 meili_url="${BYTEDEPTH_SEARCH_URL:-http://127.0.0.1:7700}"

@@ -41,6 +41,9 @@ require_text 'Conflicts=bytedepth-app.service' "$UNIT_DIR/bytedepth-test-slot.se
 require_text 'sha256sum' "$UNIT_DIR/bytedepth-test-slot.service"
 require_text 'bytedepth-test-slot.service' "$INSTALLER"
 require_text '/data/images-test' "$INSTALLER"
+require_text 'readonly DEPLOY_USER=ubuntu' "$INSTALLER"
+require_text 'getent passwd "$DEPLOY_USER"' "$INSTALLER"
+require_text 'chown -R "$DEPLOY_USER:$DEPLOY_GROUP" "$SOURCE_ROOT"' "$INSTALLER"
 
 require_text 'User=mysql' "$UNIT_DIR/mysql.service"
 require_text 'Type=simple' "$UNIT_DIR/mysql.service"

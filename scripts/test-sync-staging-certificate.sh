@@ -76,7 +76,7 @@ for contract in \
     'certbot certonly' \
     '--standalone' \
     'EDGE_CONFIG_SOURCE' \
-    'install -o root -g root -m 0644' \
+    'install -o ubuntu -g ubuntu -m 0644' \
     'https://bytedepth.cn' \
     'checkend 2592000' \
     'openssl pkey' \
@@ -88,7 +88,7 @@ for contract in \
 done
 
 for contract in \
-    "root:root:600" \
+    "ubuntu:ubuntu:600" \
     'StrictHostKeyChecking=yes' \
     'UserKnownHostsFile=' \
     'stat -L -c'; do

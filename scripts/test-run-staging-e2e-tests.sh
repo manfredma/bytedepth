@@ -344,7 +344,7 @@ grep -Fqx 'result=passed' "$EVIDENCE_DIR/staging-e2e"
 grep -Fqx 'runtime_mode=host-native' "$EVIDENCE_DIR/staging-e2e"
 grep -Fqx 'cleanup=result=passed' "$EVIDENCE_DIR/staging-e2e"
 grep -Fqx -- '-o' "$INSTALL_ARGS"
-grep -Fqx 'root' "$INSTALL_ARGS"
+grep -Fqx 'ubuntu' "$INSTALL_ARGS"
 
 # A warning invalidates a previous pass before Playwright starts and cannot mint a replacement.
 rm -f "$GIT_LOG" "$TEMP_ROOT/git.count"

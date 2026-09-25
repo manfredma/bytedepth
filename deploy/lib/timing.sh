@@ -4,6 +4,12 @@ timing_now_epoch_ms() {
     date -u +%s%3N
 }
 
+timing_ensure_ubuntu_owner() {
+    if [[ "${EUID:-}" -eq 0 ]] && getent passwd ubuntu >/dev/null 2>&1 && getent group ubuntu >/dev/null 2>&1; then
+        chown ubuntu:ubuntu "$@"
+    fi
+}
+
 is_valid_timing_phase() {
     [[ "$1" =~ ^[a-z0-9_]+$ ]]
 }
@@ -15,12 +21,15 @@ initialize_timing_file() {
     local temporary_file
 
     timing_directory="$(dirname "$timing_file")"
-    install -d -m 0700 "$timing_directory"
-    temporary_file="$(mktemp "$timing_directory/.timing.XXXXXX")"
-    printf 'identity=%s\n' "$identity" > "$temporary_file"
-    if [[ "${EUID}" -eq 0 ]]; then
-        chown root:root "$timing_directory" "$temporary_file"
+    if [[ "${EUID:-}" -eq 0 ]] && getent passwd ubuntu >/dev/null 2>&1 && getent group ubuntu >/dev/null 2>&1; then
+        install -d -o ubuntu -g ubuntu -m 0700 "$timing_directory"
+    else
+        install -d -m 0700 "$timing_directory"
     fi
+    temporary_file="$(mktemp "$timing_directory/.timing.XXXXXX")"
+    timing_ensure_ubuntu_owner "$temporary_file"
+    printf 'identity=%s\n' "$identity" > "$temporary_file"
+    timing_ensure_ubuntu_owner "$timing_directory" "$temporary_file"
     chmod 0600 "$temporary_file"
     mv -f "$temporary_file" "$timing_file"
 }

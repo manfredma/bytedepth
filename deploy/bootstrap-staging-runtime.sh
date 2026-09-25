@@ -18,7 +18,7 @@ source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 
 if [[ "${1:-}" != --lock-held ]]; then
-    install -d -o root -g root -m 0700 "$STATE_DIR"
+    install -d -o ubuntu -g ubuntu -m 0700 "$STATE_DIR"
     exec flock -x "$LOCK_FILE" "$0" --lock-held "$@"
 fi
 shift
@@ -53,11 +53,12 @@ initialize_timing_file "$timing_file" "$commit"
 bootstrap_started_at="$(timing_now_epoch_ms)"
 
 prepare_maven() {
-    install -d -o root -g root -m 0755 "$SHARED_MAVEN_REPOSITORY"
+    install -d -o ubuntu -g ubuntu -m 0755 "$SHARED_MAVEN_REPOSITORY"
     (
         flock -x 8
         cd "$SOURCE_ROOT"
         maven_log="$(mktemp)"
+        staging_ensure_ubuntu_owner "$maven_log"
         trap 'rm -f "$maven_log"' EXIT
         set +e
         (

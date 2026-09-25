@@ -21,8 +21,8 @@ if [[ ! -r "$SYNC_CONF" ]]; then
     printf 'Missing %s.\n' "$SYNC_CONF" >&2
     exit 1
 fi
-if [[ ! -f "$SYNC_CONF" || "$(stat -c '%U:%G:%a' "$SYNC_CONF")" != 'root:root:600' ]]; then
-    printf 'Refusing: %s must be a root-owned regular file with mode 0600.\n' "$SYNC_CONF" >&2
+if [[ ! -f "$SYNC_CONF" || "$(stat -c '%U:%G:%a' "$SYNC_CONF")" != 'ubuntu:ubuntu:600' ]]; then
+    printf 'Refusing: %s must be an ubuntu-owned regular file with mode 0600.\n' "$SYNC_CONF" >&2
     exit 1
 fi
 # shellcheck disable=SC1090
@@ -49,8 +49,8 @@ if [[ ! -r "$LEGACY_CERT_DIR/fullchain.pem" || ! -r "$LEGACY_CERT_DIR/privkey.pe
     exit 1
 fi
 
-install -d -o root -g root -m 0700 "$TEMP_DIR"
-install -d -o root -g root -m 0700 "$TEMP_DIR/legacy" "$TEMP_DIR/staging"
+install -d -o ubuntu -g ubuntu -m 0700 "$TEMP_DIR"
+install -d -o ubuntu -g ubuntu -m 0700 "$TEMP_DIR/legacy" "$TEMP_DIR/staging"
 
 staging_exec() {
     ssh "${SSH_OPTS[@]}" "$STAGING_USER" "$1"
@@ -117,20 +117,20 @@ if ! printf '%s\n' "$san_names" \
 fi
 
 readonly BACKUP_DIR="$TEMP_DIR/backup"
-install -d -o root -g root -m 0700 "$CERT_DIR" "$BACKUP_DIR"
+install -d -o ubuntu -g ubuntu -m 0700 "$CERT_DIR" "$BACKUP_DIR"
 FULLCHAIN_TARGET="$(readlink -f "$CERT_DIR/fullchain.pem" 2>/dev/null || printf '%s' "$CERT_DIR/fullchain.pem")"
 readonly FULLCHAIN_TARGET
 PRIVKEY_TARGET="$(readlink -f "$CERT_DIR/privkey.pem" 2>/dev/null || printf '%s' "$CERT_DIR/privkey.pem")"
 readonly PRIVKEY_TARGET
-if [[ -e "$FULLCHAIN_TARGET" ]]; then cp -- "$FULLCHAIN_TARGET" "$BACKUP_DIR/fullchain.pem"; fi
-if [[ -e "$PRIVKEY_TARGET" ]]; then cp -- "$PRIVKEY_TARGET" "$BACKUP_DIR/privkey.pem"; fi
+if [[ -e "$FULLCHAIN_TARGET" ]]; then cp -- "$FULLCHAIN_TARGET" "$BACKUP_DIR/fullchain.pem"; chown ubuntu:ubuntu "$BACKUP_DIR/fullchain.pem"; fi
+if [[ -e "$PRIVKEY_TARGET" ]]; then cp -- "$PRIVKEY_TARGET" "$BACKUP_DIR/privkey.pem"; chown ubuntu:ubuntu "$BACKUP_DIR/privkey.pem"; fi
 atomic_replace_file() {
     local source_file="$1"
     local target_file="$2"
     local mode="$3"
     local staged_file
     staged_file="$(mktemp "${target_file}.sync.XXXXXX")"
-    if ! install -o root -g root -m "$mode" "$source_file" "$staged_file"; then
+    if ! install -o ubuntu -g ubuntu -m "$mode" "$source_file" "$staged_file"; then
         rm -f "$staged_file"
         return 1
     fi
@@ -145,8 +145,8 @@ atomic_replace_file "$TEMP_DIR/privkey.pem" "$PRIVKEY_TARGET" 0600
 
 # Keep both production edge routes versioned: the new hostname is certificate-only,
 # while the legacy hostname redirects to production.
-install -o root -g root -m 0644 "$(dirname "$0")/nginx/staging-edge-certificate.conf" "$EDGE_CONFIG"
-install -o root -g root -m 0644 "$(dirname "$0")/nginx/staging-legacy-production-entry.conf" "$LEGACY_EDGE_CONFIG"
+install -o ubuntu -g ubuntu -m 0644 "$(dirname "$0")/nginx/staging-edge-certificate.conf" "$EDGE_CONFIG"
+install -o ubuntu -g ubuntu -m 0644 "$(dirname "$0")/nginx/staging-legacy-production-entry.conf" "$LEGACY_EDGE_CONFIG"
 if ! nginx -t; then
     restore_certificate
     exit 1

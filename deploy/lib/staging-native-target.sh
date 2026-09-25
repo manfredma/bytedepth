@@ -2,7 +2,7 @@
 
 # Resolve the service names, ports and isolated image root used by staging
 # deployment and test runners.  The parallel target is intentionally selected
-# only by an explicit root-owned marker; an absent or malformed marker keeps
+# only by an explicit ubuntu-owned marker; an absent or malformed marker keeps
 # the legacy native target and never silently guesses an endpoint.
 
 load_staging_native_target() {

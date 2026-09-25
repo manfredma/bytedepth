@@ -49,9 +49,10 @@ commit="$(artifact_manifest_value commit "$MANIFEST")"
     exit 1
 }
 
-install -d -o root -g root -m 0700 "$STATE_DIR"
+install -d -o ubuntu -g ubuntu -m 0700 "$STATE_DIR"
 touch "$HISTORY_FILE"
 chmod 0600 "$HISTORY_FILE"
+chown ubuntu:ubuntu "$HISTORY_FILE"
 grep -Fqx "version=$TAG" "$HISTORY_FILE" && {
     printf 'Refusing deployment: %s was already deployed on this node.\n' "$TAG" >&2
     exit 1
@@ -82,9 +83,10 @@ fail_deployment() {
 
 ./deploy/bootstrap-ops-deploy.sh
 backup_dir="$STATE_DIR/backups"
-install -d -o root -g root -m 0700 "$backup_dir"
+    install -d -o ubuntu -g ubuntu -m 0700 "$backup_dir"
 mysqladmin --protocol=socket ping >/dev/null
 mysqldump --protocol=socket --all-databases --single-transaction --routines --events > "$backup_dir/mysql-$commit.sql"
+chown ubuntu:ubuntu "$backup_dir/mysql-$commit.sql"
 chmod 0600 "$backup_dir/mysql-$commit.sql"
 
 install_release_artifact "$TAG" "$JAR" "$MANIFEST"

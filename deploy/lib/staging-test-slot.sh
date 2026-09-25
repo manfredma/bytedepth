@@ -3,12 +3,19 @@
 
 slot_die() { printf 'Refusing: %s\n' "$*" >&2; return 1; }
 
+slot_chown_ubuntu() {
+    local path="$1"
+    if [[ "${EUID:-}" -eq 0 ]] && getent passwd ubuntu >/dev/null 2>&1 && getent group ubuntu >/dev/null 2>&1; then
+        chown ubuntu:ubuntu "$path"
+    fi
+}
+
 validate_run_id() {
     [[ ${1:-} =~ ^[0-9]{8}_[0-9]{6}_[a-z0-9]{8}$ ]] || slot_die 'invalid RUN_ID'
 }
 
 # GNU stat is available on staging/Linux; BSD stat is used on macOS development hosts.
-slot_stat_uid() { stat -c %u "$1" 2>/dev/null || stat -f %u "$1"; }
+slot_stat_user() { stat -c %U "$1" 2>/dev/null || stat -f %Su "$1"; }
 slot_stat_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }
 slot_redis_cli() {
     redis-cli -h "${BYTEDEPTH_STAGING_REDIS_HOST:-127.0.0.1}" \
@@ -16,10 +23,10 @@ slot_redis_cli() {
 }
 slot_test_image_root() { printf '%s\n' "${BYTEDEPTH_STAGING_TEST_IMAGE_ROOT:-/data/images-test}"; }
 slot_root_private() {
-    [[ ! -L $1 && $(slot_stat_uid "$1") == 0 && $(slot_stat_mode "$1") == 600 ]] || slot_die "not a root-owned 0600 file: $1"
+    [[ ! -L $1 && $(slot_stat_user "$1") == ubuntu && $(slot_stat_mode "$1") == 600 ]] || slot_die "not an ubuntu-owned 0600 file: $1"
 }
 slot_root_directory() {
-    [[ -d $1 && ! -L $1 && $(slot_stat_uid "$1") == 0 && $(slot_stat_mode "$1") == 700 && -w $1 ]] || slot_die "not a writable root-owned 0700 directory: $1"
+    [[ -d $1 && ! -L $1 && $(slot_stat_user "$1") == ubuntu && $(slot_stat_mode "$1") == 700 && -w $1 ]] || slot_die "not a writable ubuntu-owned 0700 directory: $1"
 }
 
 assert_not_staging_resource() {
@@ -150,6 +157,7 @@ staging_resource_snapshot() {
     local staging_db="$1" redis_snapshot meili_stats record key_hex dump_hex ttl ttl_state key_id value_hash scan_file failed
     [[ $staging_db =~ ^[0-9]+$ && $staging_db != "$BYTEDEPTH_TEST_IT_REDIS_DB" && $staging_db != "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'invalid staging Redis DB'; return; }
     scan_file="$(mktemp)"
+    slot_chown_ubuntu "$scan_file"
     if ! slot_redis_cli -n "$staging_db" --raw EVAL '
 local function hex(value)
   local result = {}
@@ -201,6 +209,7 @@ return rows
 verify_staging_resource_baseline() {
     local staging_db="$1" baseline="$2" current
     current="$(mktemp "$(dirname "$baseline")/.staging-current.XXXXXX")"
+    slot_chown_ubuntu "$current"
     chmod 0600 "$current"
     if ! staging_resource_snapshot "$staging_db" > "$current"; then
         rm -f -- "$current"

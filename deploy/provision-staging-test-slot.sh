@@ -64,6 +64,7 @@ provision_cleanup() {
     fi
     if (( state_uncertain != 0 )); then
         printf 'state_uncertain=1\n' > "$(dirname "$manifest")/state-uncertain"
+        chown ubuntu:ubuntu "$(dirname "$manifest")/state-uncertain"
         chmod 0600 "$(dirname "$manifest")/state-uncertain"
         slot_die 'provision state is uncertain; preserving manifest and all resources for manual recovery'
         return 1
@@ -76,6 +77,7 @@ provision_cleanup() {
         esac
         if (( index_created != 0 )); then
             delete_body="$(mktemp)"
+            chown ubuntu:ubuntu "$delete_body"
             if index_status="$(curl -sS -o "$delete_body" -w '%{http_code}' -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index")"; then
                 if [[ $index_status == 404 ]]; then
                     :
@@ -123,14 +125,15 @@ for profile in it e2e; do
     [[ $status == 404 ]] || { slot_die 'run index exists or Meili preflight failed'; exit 1; }
 done
 if systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE"; then slot_die 'staging app must be stopped before provisioning'; exit 1; fi
-mkdir -m 0700 "$run_dir"
+install -d -o ubuntu -g ubuntu -m 0700 "$run_dir"
 run_dir_created=1
 slot_root_directory "$run_dir"
-mkdir -m 0700 "$image_root"
+install -d -o ubuntu -g bytedepth -m 0700 "$image_root"
 image_root_created=1
 slot_root_directory "$image_root"
 staging_resource_snapshot "$BYTEDEPTH_TEST_STAGING_REDIS_DB" > "$run_dir/staging-baseline"
 chmod 0600 "$run_dir/staging-baseline"
+chown ubuntu:ubuntu "$run_dir/staging-baseline"
 it_password="$(openssl rand -hex 24)"
 e2e_password="$(openssl rand -hex 24)"
 it_db="bytedepth_it_$run_id"; e2e_db="bytedepth_e2e_$run_id"
@@ -156,8 +159,7 @@ for profile in it e2e; do
     image_dir="$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT/$run_id/$profile"
     assert_not_staging_resource directory "$image_dir" "$run_id"
     [[ ! -e $image_dir && ! -L $image_dir ]] || { slot_die 'test image directory already exists'; exit 1; }
-    mkdir "$image_dir"
-    chmod 0700 "$image_dir"
+    install -d -o ubuntu -g bytedepth -m 0700 "$image_dir"
     printf 'BYTEDEPTH_ENVIRONMENT=staging\nBYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn\nBYTEDEPTH_SITE_URL=https://staging-bytedepth.bytedepth.cn\nSERVER_PORT=%s\nSPRING_PROFILES_ACTIVE=staging-%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_URL=jdbc:mysql://127.0.0.1:%s/%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_USERNAME=%s\nBYTEDEPTH_STAGING_%s_DATASOURCE_PASSWORD=%s\nBYTEDEPTH_STAGING_%s_REDIS_HOST=127.0.0.1\nBYTEDEPTH_STAGING_%s_REDIS_PORT=%s\nBYTEDEPTH_STAGING_%s_REDIS_DATABASE=%s\nBYTEDEPTH_STAGING_%s_REDIS_PASSWORD=%s\nBYTEDEPTH_STAGING_%s_REDIS_SESSION_NAMESPACE=%s\nBYTEDEPTH_STAGING_%s_REDIS_KEY_NAMESPACE=%s\nBYTEDEPTH_STAGING_%s_SEARCH_URL=http://127.0.0.1:%s\nBYTEDEPTH_STAGING_%s_SEARCH_INDEX=%s\nBYTEDEPTH_STAGING_%s_SEARCH_API_KEY=%s\nBYTEDEPTH_STAGING_%s_UPLOAD_IMAGE_DIR=%s\n' \
         "$BYTEDEPTH_STAGING_APP_PORT" "$profile" "$upper" "$BYTEDEPTH_STAGING_MYSQL_PORT" "$db" \
         "$upper" "$user" "$upper" "$password" "$upper" "$upper" "$BYTEDEPTH_STAGING_REDIS_PORT" \
@@ -165,10 +167,12 @@ for profile in it e2e; do
         "$upper" "$BYTEDEPTH_STAGING_MEILI_PORT" "$upper" "$index" "$upper" '__PENDING_SCOPED_KEY__' \
         "$upper" "$image_dir" > "$env_file"
     chmod 0600 "$env_file"
+    chown ubuntu:ubuntu "$env_file"
 done
 printf 'run_id=%s\ncandidate_sha=%s\nmode=staging\nit_db=%s\nit_user=%s\nit_index=%s\nit_namespace=%s\nit_redis_db=%s\nit_key_uid=%s\ne2e_db=%s\ne2e_user=%s\ne2e_index=%s\ne2e_namespace=%s\ne2e_redis_db=%s\ne2e_key_uid=%s\napp_port=8080\nit_env=%s\ne2e_env=%s\n' \
     "$run_id" "$BYTEDEPTH_TEST_CANDIDATE_SHA" "$it_db" "$it_user" "$it_index" "$it_namespace" "$BYTEDEPTH_TEST_IT_REDIS_DB" "$it_key_uid" "$e2e_db" "$e2e_user" "$e2e_index" "$e2e_namespace" "$BYTEDEPTH_TEST_E2E_REDIS_DB" "$e2e_key_uid" "$run_dir/staging-it.env" "$run_dir/staging-e2e.env" > "$manifest"
 chmod 0600 "$manifest"
+chown ubuntu:ubuntu "$manifest"
 require_manifest "$manifest"
 # Manifest and environment files exist before external writes, so an interrupted
 # provision can be cleaned by the same strict teardown contract.
@@ -192,10 +196,12 @@ for profile in it e2e; do
     [[ $scoped_key =~ ^[A-Za-z0-9_-]+$ ]] || { slot_die 'invalid scoped Meili key'; exit 1; }
     env_file="$run_dir/staging-$profile.env"
     env_tmp="$(mktemp "$run_dir/.staging-$profile.XXXXXX")"
+    chown ubuntu:ubuntu "$env_tmp"
     while IFS= read -r line; do
         if [[ $line == *'__PENDING_SCOPED_KEY__' ]]; then printf '%s\n' "${line/__PENDING_SCOPED_KEY__/$scoped_key}"; else printf '%s\n' "$line"; fi
     done < "$env_file" > "$env_tmp"
     chmod 0600 "$env_tmp"
+    chown ubuntu:ubuntu "$env_tmp"
     mv -f "$env_tmp" "$env_file"
 done
 for profile in it e2e; do

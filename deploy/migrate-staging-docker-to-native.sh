@@ -44,7 +44,7 @@ load_staging_native_target
     exit 1
 }
 
-install -d -o root -g root -m 0700 "$STATE_DIR"
+install -d -o ubuntu -g ubuntu -m 0700 "$STATE_DIR"
 
 env_value() {
     local file="$1" key="$2"
@@ -125,13 +125,13 @@ initialize_native_mysql() {
             return 1
         }
         rmdir -- "$data_dir"
-        chown mysql:mysql "$BYTEDEPTH_NATIVE_ROOT"
+        chown ubuntu:mysql "$BYTEDEPTH_NATIVE_ROOT"
         if ! mysqld --initialize-insecure --user=mysql --datadir="$data_dir" --log-error="$data_dir/error.log" --lower-case-table-names=1; then
-            chown root:root "$BYTEDEPTH_NATIVE_ROOT"
+            chown ubuntu:ubuntu "$BYTEDEPTH_NATIVE_ROOT"
             return 1
         fi
-        chown root:root "$BYTEDEPTH_NATIVE_ROOT"
-        chown mysql:mysql "$data_dir"
+        chown ubuntu:ubuntu "$BYTEDEPTH_NATIVE_ROOT"
+        chown -R ubuntu:mysql "$data_dir"
     fi
 }
 
@@ -146,6 +146,7 @@ write_native_application_env() {
         return 1
     }
     temp="$(mktemp /etc/bytedepth/.staging-native.env.XXXXXX)"
+    chown ubuntu:ubuntu "$temp"
     printf '%s\n' \
         'BYTEDEPTH_ENVIRONMENT=staging' \
         'BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn' \
@@ -168,11 +169,11 @@ write_native_application_env() {
         'BYTEDEPTH_SESSION_COOKIE_SECURE=true' \
         "BYTEDEPTH_REMEMBER_ME_KEY=$remember_key" \
         'BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE=true' > "$temp"
-    chown root:root "$temp"
+    chown ubuntu:ubuntu "$temp"
     chmod 0600 "$temp"
     mv -f "$temp" "$APP_ENV"
     printf 'MEILI_MASTER_KEY=%s\n' "$meili_key" > "$MEILI_ENV"
-    chown root:root "$MEILI_ENV"
+    chown ubuntu:ubuntu "$MEILI_ENV"
     chmod 0600 "$MEILI_ENV"
 }
 
@@ -181,9 +182,9 @@ migrate_mysql() {
     source_password="$(docker_env_value "$DOCKER_MYSQL" MYSQL_ROOT_PASSWORD)"
     db_password="$(env_value "$DOT_ENV" DB_PASSWORD)"
     [[ -n "$source_password" && -n "$db_password" ]] || return 1
-    mkdir -p "$STATE_DIR"
     docker exec -e MYSQL_PWD="$source_password" "$DOCKER_MYSQL" \
         mysqldump -uroot --databases bytedepth --single-transaction --routines --events --triggers --no-tablespaces > "$OLD_MYSQL_DUMP"
+    chown ubuntu:ubuntu "$OLD_MYSQL_DUMP"
     chmod 0600 "$OLD_MYSQL_DUMP"
     initialize_native_mysql
     systemctl start "$BYTEDEPTH_STAGING_MYSQL_SERVICE"
@@ -198,7 +199,8 @@ migrate_mysql() {
         native_mysql_socket_exec < "$OLD_MYSQL_DUMP"
         native_mysql_socket_exec -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$escaped_password'; CREATE USER IF NOT EXISTS 'bytedepth'@'localhost' IDENTIFIED BY '$escaped_password'; ALTER USER 'bytedepth'@'localhost' IDENTIFIED BY '$escaped_password'; GRANT ALL PRIVILEGES ON bytedepth.* TO 'bytedepth'@'localhost'; FLUSH PRIVILEGES;"
         printf '[client]\nhost=127.0.0.1\nport=%s\nuser=root\npassword=%s\nprotocol=tcp\n' "$BYTEDEPTH_STAGING_MYSQL_PORT" "$db_password" > "$MYSQL_ADMIN"
-        chown root:root "$MYSQL_ADMIN"
+        chown ubuntu:ubuntu "$MYSQL_ADMIN"
+    chown ubuntu:ubuntu "$MYSQL_ADMIN"
         chmod 0600 "$MYSQL_ADMIN"
     fi
     native_mysql_tcp_exec --batch --skip-column-names -e 'SELECT 1' >/dev/null
@@ -210,10 +212,11 @@ migrate_redis() {
     docker exec -e REDISCLI_AUTH="$redis_password" "$DOCKER_REDIS" redis-cli --rdb /tmp/bytedepth-native-staging.rdb >/dev/null
     docker cp "$DOCKER_REDIS:/tmp/bytedepth-native-staging.rdb" "$OLD_REDIS_DUMP"
     docker exec "$DOCKER_REDIS" rm -f /tmp/bytedepth-native-staging.rdb
+    chown ubuntu:ubuntu "$OLD_REDIS_DUMP"
     chmod 0600 "$OLD_REDIS_DUMP"
     rm -f -- "$BYTEDEPTH_NATIVE_ROOT/redis/dump.rdb"
     rm -rf -- "$BYTEDEPTH_NATIVE_ROOT/redis/appendonlydir"
-    install -o redis -g redis -m 0640 "$OLD_REDIS_DUMP" "$BYTEDEPTH_NATIVE_ROOT/redis/dump.rdb"
+    install -o ubuntu -g redis -m 0640 "$OLD_REDIS_DUMP" "$BYTEDEPTH_NATIVE_ROOT/redis/dump.rdb"
     systemctl start "$BYTEDEPTH_STAGING_REDIS_SERVICE"
     systemctl is-active --quiet "$BYTEDEPTH_STAGING_REDIS_SERVICE"
 }
@@ -227,11 +230,12 @@ ensure_meilisearch_runtime() {
         apt-get update
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends musl
     fi
-    install -d -o root -g root -m 0755 /usr/lib/x86_64-linux-musl
+    install -d -o ubuntu -g ubuntu -m 0755 /usr/lib/x86_64-linux-musl
     if [[ ! -r /usr/lib/x86_64-linux-musl/libgcc_s.so.1 ]]; then
         docker exec "$DOCKER_MEILI" /bin/sh -c 'cat /usr/lib/libgcc_s.so.1' \
             > /tmp/libgcc_s.musl.so.1
-        install -o root -g root -m 0644 /tmp/libgcc_s.musl.so.1 \
+        chown ubuntu:ubuntu /tmp/libgcc_s.musl.so.1
+        install -o ubuntu -g ubuntu -m 0644 /tmp/libgcc_s.musl.so.1 \
             /usr/lib/x86_64-linux-musl/libgcc_s.so.1
         rm -f /tmp/libgcc_s.musl.so.1
     fi
@@ -251,7 +255,7 @@ migrate_meilisearch() {
                 https://github.com/meilisearch/meilisearch/releases/download/v1.7.6/meilisearch-linux-amd64 \
                 -o /tmp/meilisearch-1.7.6-linux-amd64
         fi
-        install -o root -g root -m 0755 /tmp/meilisearch-1.7.6-linux-amd64 /usr/local/bin/meilisearch
+        install -o ubuntu -g ubuntu -m 0755 /tmp/meilisearch-1.7.6-linux-amd64 /usr/local/bin/meilisearch
         rm -f /tmp/meilisearch-1.7.6-linux-amd64
     fi
     /usr/local/bin/meilisearch --version | grep -Fq '1.7.6'
@@ -265,13 +269,14 @@ migrate_meilisearch() {
     [[ "$status" == succeeded ]] || return 1
     snapshot="$(find /data/meilisearch/snapshots -maxdepth 1 -type f -name '*.snapshot' -print | sort | tail -n 1)"
     [[ -n "$snapshot" && -f "$snapshot" ]] || return 1
-    install -o root -g root -m 0600 "$snapshot" "$OLD_MEILI_SNAPSHOT"
+    install -o ubuntu -g ubuntu -m 0600 "$snapshot" "$OLD_MEILI_SNAPSHOT"
     systemctl stop "$BYTEDEPTH_STAGING_MEILI_SERVICE" 2>/dev/null || true
     import_dir="$BYTEDEPTH_NATIVE_ROOT/meilisearch-import"
     rm -rf -- "$import_dir"
-    install -d -o root -g root -m 0700 "$import_dir"
+    install -d -o ubuntu -g ubuntu -m 0700 "$import_dir"
     local import_log import_pid import_status
     import_log="$(mktemp "$STATE_DIR/meilisearch-import.XXXXXX")"
+    chown ubuntu:ubuntu "$import_log"
     (
         cd "$import_dir"
         exec /usr/local/bin/meilisearch --import-snapshot "$OLD_MEILI_SNAPSHOT" \
@@ -306,20 +311,20 @@ migrate_meilisearch() {
         return 1
     fi
     rm -rf -- "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
-    install -d -o meilisearch -g meilisearch -m 0750 "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
+    install -d -o ubuntu -g meilisearch -m 0770 "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
     cp -a -- "$import_dir"/. "$BYTEDEPTH_NATIVE_ROOT/meilisearch/"
     rm -rf -- "$import_dir"
     printf '%s\n' 'env = "production"' > "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
+    chown ubuntu:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
     chmod 0600 "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
-    chown meilisearch:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch/meilisearch.toml"
-    chown -R meilisearch:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
+    chown -R ubuntu:meilisearch "$BYTEDEPTH_NATIVE_ROOT/meilisearch"
     systemctl start "$BYTEDEPTH_STAGING_MEILI_SERVICE"
     systemctl is-active --quiet "$BYTEDEPTH_STAGING_MEILI_SERVICE"
 }
 
 migrate_images() {
     rsync -a --delete /data/images/ "$BYTEDEPTH_STAGING_IMAGE_ROOT/"
-    chown -R bytedepth:bytedepth "$BYTEDEPTH_STAGING_IMAGE_ROOT"
+    chown -R ubuntu:bytedepth "$BYTEDEPTH_STAGING_IMAGE_ROOT"
 }
 
 prepare() {
@@ -338,6 +343,7 @@ prepare() {
     migrate_meilisearch
     migrate_images
     touch "$STATE_DIR/prepared"
+    chown ubuntu:ubuntu "$STATE_DIR/prepared"
     printf 'Prepared isolated staging-native data and services; public traffic is unchanged.\n'
 }
 
@@ -366,6 +372,7 @@ switch_traffic() {
     docker exec "$DOCKER_NGINX" nginx -t
     docker exec "$DOCKER_NGINX" nginx -s reload
     touch "$SWITCH_MARKER"
+    chown ubuntu:ubuntu "$SWITCH_MARKER"
     printf 'Switched staging public traffic to the isolated native stack. Docker app is stopped and retained for rollback.\n'
 }
 
@@ -392,6 +399,7 @@ cleanup() {
     docker rm -f "$DOCKER_APP" "$DOCKER_MYSQL" "$DOCKER_REDIS" "$DOCKER_MEILI"
     rm -r -- /data/mysql /data/redis /data/meilisearch
     touch "$CLEANUP_MARKER"
+    chown ubuntu:ubuntu "$CLEANUP_MARKER"
     printf 'Removed the old bytedepth containers and their old data roots; shared Nginx and other projects were retained.\n'
 }
 

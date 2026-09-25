@@ -61,7 +61,7 @@ require_deployed_commit() {
 }
 
 invalidate_evidence() {
-    install -d -o root -g root -m 0700 "$EVIDENCE_DIR"
+    install -d -o ubuntu -g ubuntu -m 0700 "$EVIDENCE_DIR"
     rm -f -- "$EVIDENCE_DIR/staging-integration"
 }
 
@@ -207,7 +207,7 @@ on_exit() {
 trap on_exit EXIT
 
 if [[ "${1:-}" != '--lock-held' ]]; then
-    install -d -o root -g root -m 0700 "$STATE_DIR"
+    install -d -o ubuntu -g ubuntu -m 0700 "$STATE_DIR"
     exec env BYTEDEPTH_TEST_SLOT_LOCK_HELD=1 flock -x "$LOCK_FILE" "$0" --lock-held "$@"
 fi
 shift
@@ -233,7 +233,7 @@ export BYTEDEPTH_TEST_STATE_DIR="$TEST_STATE_DIR"
 export BYTEDEPTH_TEST_CANDIDATE_SHA="$tested_commit"
 export BYTEDEPTH_TEST_SLOT_LOCK_HELD=1
 export BYTEDEPTH_DEPLOY_MODE=staging
-install -d -o root -g root -m 0700 "$TEST_STATE_DIR"
+install -d -o ubuntu -g ubuntu -m 0700 "$TEST_STATE_DIR"
 
 systemctl stop "$BYTEDEPTH_STAGING_APP_SERVICE"
 app_stopped=1
@@ -260,7 +260,10 @@ manifest_sha="$(shasum -a 256 "$manifest" | awk '{print $1}')"
 
 WORK_DIR="$(mktemp -d "$STATE_DIR/.staging-integration.XXXXXX")"
 chmod 0700 "$WORK_DIR"
+staging_ensure_ubuntu_owner "$WORK_DIR"
 MAVEN_LOG="$WORK_DIR/maven.log"
+touch "$MAVEN_LOG"
+staging_ensure_ubuntu_owner "$MAVEN_LOG"
 [[ -d "$SHARED_MAVEN_REPOSITORY" ]] || {
     printf 'Refusing: shared staging Maven repository is unavailable. Run bootstrap-staging-runtime.sh.\n' >&2
     exit 1
@@ -287,10 +290,10 @@ if [[ "$(read_checked_out_commit)" != "$tested_commit" ]]; then
 fi
 require_deployed_commit "$tested_commit"
 
-install -d -o root -g root -m 0700 "$EVIDENCE_DIR"
+install -d -o ubuntu -g ubuntu -m 0700 "$EVIDENCE_DIR"
 evidence_tmp="$(mktemp "$EVIDENCE_DIR/.staging-integration.XXXXXX")"
 printf 'commit=%s\ncommand=run-staging-integration-tests\ntimestamp=%s\nresult=passed\nruntime_mode=host-native\nrun_id=%s\ntest_resource_manifest_sha=%s\ncleanup=result=passed\n' \
     "$tested_commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$run_id" "$manifest_sha" > "$evidence_tmp"
-install -o root -g root -m 0600 "$evidence_tmp" "$EVIDENCE_DIR/staging-integration"
+install -o ubuntu -g ubuntu -m 0600 "$evidence_tmp" "$EVIDENCE_DIR/staging-integration"
 rm -f -- "$evidence_tmp"
 printf 'Staging integration tests passed for %s.\n' "$tested_commit"

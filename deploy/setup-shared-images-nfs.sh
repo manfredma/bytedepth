@@ -21,11 +21,13 @@ case "$role" in
     data-node)
         apt-get update
         DEBIAN_FRONTEND=noninteractive apt-get install -y nfs-kernel-server
-        install -d -m 0755 "$IMAGE_DIR"
-        chown -R "$IMAGE_UID:$IMAGE_UID" "$IMAGE_DIR"
-        install -d -m 0755 /etc/exports.d
+        install -d -o ubuntu -g ubuntu -m 0777 "$IMAGE_DIR"
+        chown -R ubuntu:ubuntu "$IMAGE_DIR"
+        chmod -R a+rwX "$IMAGE_DIR"
+        install -d -o ubuntu -g ubuntu -m 0755 /etc/exports.d
         printf '%s %s(rw,sync,no_subtree_check,all_squash,anonuid=%s,anongid=%s)\n' \
             "$IMAGE_DIR" "$peer_ip" "$IMAGE_UID" "$IMAGE_UID" > /etc/exports.d/bytedepth-images.exports
+        chown ubuntu:ubuntu /etc/exports.d/bytedepth-images.exports
         exportfs -ra
         systemctl enable --now nfs-server
         exportfs -v
@@ -33,7 +35,7 @@ case "$role" in
     app-node)
         apt-get update
         DEBIAN_FRONTEND=noninteractive apt-get install -y nfs-common
-        install -d -m 0755 "$MOUNT_DIR"
+        install -d -o ubuntu -g ubuntu -m 0755 "$MOUNT_DIR"
         fstab_entry="$peer_ip:$IMAGE_DIR $MOUNT_DIR nfs4 rw,_netdev,nofail 0 0"
         if ! grep -qxF "$fstab_entry" /etc/fstab; then
             printf '%s\n' "$fstab_entry" >> /etc/fstab
@@ -41,8 +43,8 @@ case "$role" in
         if ! mountpoint -q "$MOUNT_DIR"; then
             mount "$MOUNT_DIR"
         fi
-        install -d -m 0755 /etc/systemd/system
-        cat > /etc/systemd/system/bytedepth-images.mount <<EOF
+        install -d -o ubuntu -g ubuntu -m 0755 /etc/systemd/system
+cat > /etc/systemd/system/bytedepth-images.mount <<EOF
 [Unit]
 Description=ByteDepth shared image mount
 After=network-online.target
@@ -57,6 +59,8 @@ Options=rw,_netdev,nofail
 [Install]
 WantedBy=multi-user.target
 EOF
+chown ubuntu:ubuntu /etc/systemd/system/bytedepth-images.mount
+        chown ubuntu:ubuntu /etc/systemd/system/bytedepth-images.mount
         systemctl daemon-reload
         systemctl enable --now bytedepth-images.mount
         mountpoint -q "$MOUNT_DIR"

@@ -70,7 +70,7 @@ fi'
 deploy_external_artifact() {
     local ref="$1" artifact_dir="$2" commit="$3" remote_dir="/tmp/bytedepth-staging-$3" remote_command
     require_staging_host_configuration
-    ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "install -d -m 0700 '$remote_dir'"
+    ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "install -d -o ubuntu -g ubuntu -m 0700 '$remote_dir'"
     scp "${STAGING_SSH_OPTIONS[@]}" \
         "$artifact_dir/app.jar" "$artifact_dir/artifact.manifest" "$STAGING_USER@$STAGING_HOST:$remote_dir/"
     printf -v remote_command 'set -Eeuo pipefail
@@ -85,7 +85,7 @@ sudo ./deploy/deploy-staging.sh --artifact %q --manifest %q %q' \
 
 run_remote_install() {
     [[ "${EUID}" -eq 0 ]] || { printf 'Internal staging installation requires root.\n' >&2; exit 1; }
-    install -d -o root -g root -m 0700 "$STATE_DIR" "$TIMING_DIR"
+    install -d -o ubuntu -g ubuntu -m 0700 "$STATE_DIR" "$TIMING_DIR"
     local ref="$1" jar="$2" manifest="$3"
     exec env BYTEDEPTH_REMOTE_INSTALL=1 flock -x "$LOCK_FILE" "$0" --lock-held "$ref" "$jar" "$manifest"
 }
@@ -198,7 +198,7 @@ run_locked_install() {
     backup_database_preflight() {
         local backup_dir="$STATE_DIR/backups"
         local -a mysql_args=()
-        install -d -o root -g root -m 0700 "$backup_dir"
+        install -d -o ubuntu -g ubuntu -m 0700 "$backup_dir"
         command -v mysqldump >/dev/null
         if [[ "$BYTEDEPTH_STAGING_RUNTIME_MODE" == host-native-parallel ]]; then
             [[ -r /etc/bytedepth/staging-native-mysql-admin.cnf ]] || {
@@ -214,6 +214,7 @@ run_locked_install() {
                 printf 'Refusing: native staging MySQL backup failed.\n' >&2
                 return 1
             fi
+            chown ubuntu:ubuntu "$backup_dir/mysql-$commit.sql"
         else
             if ! mysqladmin --protocol=socket ping >/dev/null; then
                 printf 'Refusing: staging MySQL is not reachable for backup.\n' >&2
@@ -223,6 +224,7 @@ run_locked_install() {
                 printf 'Refusing: staging MySQL backup failed.\n' >&2
                 return 1
             fi
+            chown ubuntu:ubuntu "$backup_dir/mysql-$commit.sql"
         fi
         chmod 0600 "$backup_dir/mysql-$commit.sql"
     }
@@ -245,7 +247,7 @@ run_locked_install() {
     if ! record_timed_phase "$timing_file" nginx_reload ensure_edge_active_and_reload; then
         fail_deployment nginx_reload
     fi
-    install -d -m 0700 "$STATE_DIR"
+    install -d -o ubuntu -g ubuntu -m 0700 "$STATE_DIR"
     printf 'ref=%s\ncommit=%s\ndeployed_at=%s\n---\n' "$ref" "$commit" "$(date -u +%FT%TZ)" >> "$HISTORY_FILE"
     record_timing_phase "$timing_file" deployment_total passed "$deployment_started_at" "$(timing_now_epoch_ms)"
     printf 'Deployed staging %s (%s) using native artifact.\n' "$ref" "$commit"

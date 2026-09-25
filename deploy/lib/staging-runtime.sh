@@ -6,6 +6,12 @@ staging_runtime_sha256() {
     shasum -a 256 "$1" | awk '{print $1}'
 }
 
+staging_ensure_ubuntu_owner() {
+    if [[ "${EUID:-}" -eq 0 ]] && getent passwd ubuntu >/dev/null 2>&1 && getent group ubuntu >/dev/null 2>&1; then
+        chown ubuntu:ubuntu "$@"
+    fi
+}
+
 # Deployment must be able to move to a new checkout before bootstrap writes its
 # dependency-bound manifest. Keep this preflight limited to immutable shared
 # infrastructure; require_staging_runtime verifies the prepared dependencies.
@@ -34,13 +40,16 @@ write_runtime_manifest() {
     fi
     chromium_version="$("$SHARED_CHROMIUM_EXECUTABLE" --version)"
 
-    install -d -m 0700 "$runtime_directory"
+    if [[ "${EUID:-}" -eq 0 ]] && getent passwd ubuntu >/dev/null 2>&1 && getent group ubuntu >/dev/null 2>&1; then
+        install -d -o ubuntu -g ubuntu -m 0700 "$runtime_directory"
+    else
+        install -d -m 0700 "$runtime_directory"
+    fi
     temporary_file="$(mktemp "$runtime_directory/.manifest.XXXXXX")"
+    staging_ensure_ubuntu_owner "$temporary_file"
     printf 'package_lock_sha256=%s\npom_sha256=%s\nchromium_version=%s\n' \
         "$lockfile_sha" "$pom_sha" "$chromium_version" > "$temporary_file"
-    if [[ "${EUID}" -eq 0 ]]; then
-        chown root:root "$runtime_directory" "$temporary_file"
-    fi
+    staging_ensure_ubuntu_owner "$runtime_directory" "$temporary_file"
     chmod 0600 "$temporary_file"
     mv -f "$temporary_file" "$manifest"
 }

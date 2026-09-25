@@ -55,8 +55,8 @@ cat > "$tmp/bin/stat" <<'STAT'
 #!/usr/bin/env bash
 if [[ "$1" == -f ]]; then
     printf '999\n'
-elif [[ "$1" == -c && "$2" == %u ]]; then
-    printf '0\n'
+elif [[ "$1" == -c && "$2" == %U ]]; then
+    printf 'ubuntu\n'
 elif [[ "$1" == -c && "$2" == %a ]]; then
     printf '600\n'
 else

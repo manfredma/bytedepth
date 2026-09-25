@@ -28,17 +28,18 @@
 
 在目标主机的 /opt/bytedepth 执行：
 
-    sudo install -d -m 0755 /etc/bytedepth
+    sudo install -d -o ubuntu -g ubuntu -m 0755 /etc/bytedepth
     sudo touch /etc/bytedepth/application.env
-    sudo chown root:root /etc/bytedepth/application.env
+    sudo chown ubuntu:ubuntu /etc/bytedepth/application.env
     sudo chmod 0600 /etc/bytedepth/application.env
     # 按目标环境填写 application.env，不复制生产密钥到 staging
     sudo sh -c 'printf "BYTEDEPTH_DEPLOY_MODE=staging\n" > /etc/bytedepth-deploy.conf'
+    sudo chown ubuntu:ubuntu /etc/bytedepth-deploy.conf
     sudo chmod 0600 /etc/bytedepth-deploy.conf
     sudo ./deploy/install-host-service.sh
     sudo ./deploy/bootstrap-ops-deploy.sh
 
-install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数据目录；bootstrap-ops-deploy.sh 只安装/启动宿主机服务，不构建应用、不生成发布 JAR。应用首次启动前必须已经存在 /opt/bytedepth/current/app.jar，且 /etc/bytedepth/application.env 是 root 可读的 0600 文件。
+install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数据目录；项目在主机上创建的工作区、配置、运行数据、发布制品、日志、测试资源和凭据统一归属 `ubuntu:ubuntu`（服务进程需要写入时使用服务组作为 group），即使由 sudo 创建也必须在创建后显式修正。bootstrap-ops-deploy.sh 只安装/启动宿主机服务，不构建应用、不生成发布 JAR。应用首次启动前必须已经存在 /opt/bytedepth/current/app.jar，且 /etc/bytedepth/application.env 是 ubuntu 可读的 0600 文件。
 
 初始化验收：
 
@@ -56,7 +57,7 @@ install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数
 
 迁移不是直接覆盖 Docker 正在使用的数据目录，而是先完整部署一套独立原生栈。124 上保留现有 Docker 应用、MySQL、Redis、Meilisearch 和共享 Docker Nginx，执行：
 
-    sudo install -o root -g root -m 0600 deploy/staging-native.conf.example /etc/bytedepth/staging-native.conf
+    sudo install -o ubuntu -g ubuntu -m 0600 deploy/staging-native.conf.example /etc/bytedepth/staging-native.conf
     sudo ./deploy/install-staging-native-stack.sh
     sudo ./deploy/migrate-staging-docker-to-native.sh prepare
 
@@ -93,7 +94,7 @@ install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数
 
     sudo ./deploy/sync-prod-to-staging.sh
 
-同步前后必须保留 root-only 日志并核对图片数量；首页返回 200 不能单独证明图片同步完整。MySQL 使用 mysqldump/mysql，Redis 使用 redis-cli 和宿主数据目录，Meilisearch 使用 snapshot 文件，图片使用 rsync --delete。任何中间件导入失败都停止后续步骤并按备份恢复。
+同步前后必须保留 ubuntu 所有的日志并核对图片数量；首页返回 200 不能单独证明图片同步完整。MySQL 使用 mysqldump/mysql，Redis 使用 redis-cli 和宿主数据目录，Meilisearch 使用 snapshot 文件，图片使用 rsync --delete。任何中间件导入失败都停止后续步骤并按备份恢复。
 
 staging 证书在 124 签发，生产边缘只同步精确 SAN 证书并拒绝代理 staging 内容：
 
@@ -118,7 +119,7 @@ staging 证书在 124 签发，生产边缘只同步精确 SAN 证书并拒绝�
     cd /opt/bytedepth
     sudo ./deploy/run-staging-integration-tests.sh
 
-runner 读取显式注入的 root-only MySQL defaults、Redis secret、Meilisearch secret、fixture 和 checksum，按每次 run_id 创建：
+runner 读取显式注入的 ubuntu 所有 MySQL defaults、Redis secret、Meilisearch secret、fixture 和 checksum，按每次 run_id 创建：
 
 - MySQL：bytedepth_it_<run_id> 和最小权限用户 bd_it_<run_id>；
 - Redis：保留 logical DB 14，并使用 bytedepth:it:<run_id>: key/session namespace；
@@ -163,7 +164,7 @@ runner 固定使用公开 staging URL 和 /opt/shared-e2e/chrome-linux64/chrome�
 - 图片：/data/images-test/<run_id>/e2e；
 - Spring Profile：staging-e2e，同时明确 BYTEDEPTH_ENVIRONMENT=staging。
 
-通过后停止测试槽位、清理资源、恢复应用，再写入 root-only evidence。两份 evidence 必须严格包含以下字段，且 commit 等于当前 staging 部署和待合并 main 的完整 SHA：
+通过后停止测试槽位、清理资源、恢复应用，再写入 ubuntu 所有 evidence。两份 evidence 必须严格包含以下字段，且 commit 等于当前 staging 部署和待合并 main 的完整 SHA：
 
     commit=<40位完整SHA>
     command=run-staging-integration-tests 或 run-staging-e2e-tests

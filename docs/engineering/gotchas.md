@@ -23,8 +23,7 @@
 - **集成测试 fixture 不是空数据库**：隔离库会导入保留基线数据的安全 fixture；集成测试不能假定除本用例写入的数据外没有文章、用户或统计记录。需要验证本用例结果时，应使用足够小的 limit、唯一测试标识或针对本用例数据的断言，不能用“全库只有 N 条记录”的脆弱精确断言。
 - **集成测试 fixture 的 DDL 顺序必须可独立执行**：测试槽在已完成 Flyway 的隔离库上直接导入 fixture；fixture 中的外键不能引用尚未创建的表。若合成 fixture 不需要复刻该约束，应省略测试专用外键，并由应用迁移负责正式 schema 约束；不能把初始化失败留给远程 staging 才发现。
 - **测试 fixture 校验不能把 Flyway 元数据误判为限定表名**：fixture 可以包含 `flyway_schema_history` 的脚本名（例如 `V1__init_tables.sql`），限定表名检查只能针对 `INSERT INTO`/`CREATE TABLE` 的表名位置，不能对整份 SQL 文本做“任意标识符后跟点号”的匹配。对应回归用例固定带 `.sql` 脚本名的合法 fixture，并继续拒绝真正的 `库名.表名`。
-- **root-only 文件权限检查必须兼容 Linux 与 macOS**：staging 使用 GNU `stat -c`，本机 macOS 使用 BSD `stat -f`；辅助函数必须先尝试 GNU 格式、失败后回退 BSD 格式。不能反过来，因为 GNU `stat -f` 会成功输出文件系统信息而不是文件 uid/mode，造成合法凭据被拒绝。
-- **隔离测试图片根目录必须由 root 私有持有**：`images-test` 只是 root 创建/销毁按 `run_id` 划分的测试目录，安装时固定为 root/0700，不能 chown 给应用用户或复用生产图片目录；测试槽位使用的具体目录由 provision manifest 约束。
+- **项目部署文件统一由 ubuntu 持有**：线上和 staging 由项目部署流程创建的代码工作区、配置、运行数据、发布制品、日志、测试资源和凭据必须归属 `ubuntu:ubuntu`；即使使用 sudo 创建，也必须在创建后显式修正。服务进程需要写入时使用服务组作为 group，不得把项目文件留给 root 或服务账号。权限检查必须兼容 Linux 与 macOS：staging 使用 GNU `stat -c`，本机 macOS 使用 BSD `stat -f`。
 - **后台图表与文章 Mermaid 不依赖外部 CDN**：ECharts 和 Mermaid 必须使用项目内固定版本的静态资源；外部 CDN 的连接重置会让分析页在发起数据请求前中断，或让文章页抛出 `mermaid is not defined`，进而污染无关的 E2E 用例。Mermaid 资源还必须使用 `defer` 并在 DOMContentLoaded 后初始化，避免 2MB 级脚本阻塞批注脚本完成初始化。资源路径、加载方式和模板保护由 `ThemeAssetsTest` 固定检查。
 - 批注桌面端 E2E 点击正文“评注”标签会触发生产代码的平滑滚动；测试在测量划线位置或调用 `window.scrollBy` 前，必须先用即时 `scrollIntoView({behavior: 'auto'})` 取消该动画，否则动画与测试滚动竞争会导致偶发的视口位置断言失败。
 - Maven Release Plugin 会留下 `release.properties` 和 `pom.xml.releaseBackup`。它们是本机事务状态而非项目文件；发布前必须工作区干净，发布成功、失败或中断后在确认不需 rollback 时执行 `release:clean`，并且永不提交这些文件。完整恢复规则见 [发布管理](../releases/README.md)。
@@ -32,13 +31,14 @@
 ## 部署
 
 - 生产为单机（175），staging 预发独立部署（124）。staging 候选部署 → 集成测试 → E2E → 所有者验收 → 合并 `main` → 新 Tag 生产发布，完整操作以 [部署手册](../../deploy/README.md) 为准。
-- 服务由 systemd 管理，应用发布使用不可变 JAR、SHA256 manifest 和 `current` 软链接；JAR 安装为 root 只读，运行中的应用不能改写当前发布。
+- 服务由 systemd 管理，应用发布使用不可变 JAR、SHA256 manifest 和 `current` 软链接；JAR 由 `ubuntu` 持有并按发布权限安装，运行中的应用不能改写当前发布。
 - `deploy-staging.sh` 和 `deploy-production.sh` 在切换后健康检查或 Nginx reload 失败时尝试恢复旧发布；自动回滚只恢复代码和服务，不回滚已执行的 Flyway 迁移。
 - staging 的数据每周由生产覆盖，会清空 staging 写测试数据。staging 回滚需重新灌入兼容的数据基线再部署旧 JAR，非无风险。
 - 运维脚本必须在 staging 或 dry-run 模式先完整跑通，再用于生产。同步验收必须比较数据库记录和图片文件数；首页返回 200 不能证明图片目录完整。
 - 涉及 sudo 的脚本必须使用显式绝对路径和显式参数，不依赖用户级 SSH 配置、`$HOME` 或不稳定的 `$PATH`。
 - 外部服务 API 先用 `curl`/`redis-cli` 确认实际响应格式；Meilisearch snapshot 是宿主文件，导入必须限时并验证 `data.ms` 和服务健康。
-- staging 原生部署通过 SSH 的普通用户执行预检，但 `/etc/bytedepth/staging-native.*` 和应用环境文件必须保持 root-only 权限；预检只能用 `sudo -n` 做可读性和关键配置断言，不能为了让普通用户直接读取而放宽凭据权限。
+- staging 原生部署通过 SSH 的普通用户执行预检，`/etc/bytedepth/staging-native.*` 和应用环境文件同样归属 ubuntu；预检可以直接读取这些项目配置，但凭据不得写入日志、evidence 或 Git。
+- `/opt/bytedepth` 同时承载 Git 工作区和发布目录；初始化脚本必须将工作区、`.git`、`releases`、`current` 及发布 JAR 统一归属部署用户 `ubuntu`，否则初始化后普通用户的 `git fetch/checkout` 会触发 Git `dubious ownership` 或 `.git/FETCH_HEAD` 不可写。所有其他项目部署路径也遵循同一归属规则，并由 `test-project-ownership.sh` 固定检查。
 - systemd 启动 Meilisearch 时必须显式设置与数据目录匹配的 `WorkingDirectory`；导入快照要使用独立的空目录，验证健康和索引后再复制到正式数据目录。否则相对路径会落到仓库根目录，或旧配置/残留数据库会让导入失败并污染工作区。
 - 发布切换 current 软链接后必须立即校验 `readlink` 的目标等于本次 release 目录；自引用链接会让 systemd 在 `CHDIR` 阶段以 `Too many levels of symbolic links` 失败，edge 也会因依赖未启动而无法 reload。
 - staging 制品构建在 `set -o pipefail`、macOS 和 Java 25 环境下都必须保持失败可见：不要依赖 GNU-only `find` 参数或会触发 SIGPIPE 的 `grep -q`，Maven 与 `tee` 的退出码要显式读取，候选 SHA 的 stdout 只能输出 SHA，门禁日志输出到 stderr。
@@ -51,7 +51,7 @@
 - 部署和测试输出统一捕获并扫描未登记的 `WARNING`/`WARN`；不能以“不是本次引入”为由放行。
 - 宿主机构建脚本在 `set -u` 下清理临时日志时，`RETURN` trap 不得直接引用可能已失效的函数局部变量；必须使用安全默认值，并由部署契约检查固定该约束。
 - 发布 SSH 必须显式指定已存在的 known_hosts；生产使用 `StrictHostKeyChecking=yes`，staging 也使用同样的显式主机密钥校验。
-- 生产版本确认需要 sudo 读取 root-only 的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/current/artifact.manifest` 交叉核对。
+- 生产版本确认直接读取 ubuntu 所有的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/current/artifact.manifest` 交叉核对。
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。
 - systemd 的 `Requires=` 会在 staging app 重启时停止依赖它的 native edge；edge 停止时不能直接 `reload`，部署流程必须先确认并启动 edge，再执行 reload。
 - MySQL 8.4 的 `SHOW GRANTS` 会把账户名规范化为反引号形式，即使 `CREATE USER` 使用了字符串字面量；staging 测试槽必须按实际 canonical grant 格式校验，不能用单引号或转义数据库下划线误判合法授权。

@@ -54,7 +54,7 @@ if [[ -z "$certificate_public_key" || "$certificate_public_key" != "$private_key
     exit 1
 fi
 
-install -o root -g root -m 0644 "$EDGE_CONFIG_SOURCE" "$EDGE_CONFIG"
+install -o ubuntu -g ubuntu -m 0644 "$EDGE_CONFIG_SOURCE" "$EDGE_CONFIG"
 nginx -t
 systemctl reload nginx.service
 printf 'Provisioned %s certificate on the production edge.\n' "$CERT_NAME"

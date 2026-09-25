@@ -32,8 +32,11 @@ fi
 readonly SLOT_RUNTIME_DIR=/run/bytedepth
 readonly SLOT_JAR=/opt/bytedepth/current/app.jar
 WORK_DIR="$(mktemp -d)"
+staging_ensure_ubuntu_owner "$WORK_DIR"
 readonly WORK_DIR
 readonly E2E_LOG="$WORK_DIR/playwright.log"
+touch "$E2E_LOG"
+staging_ensure_ubuntu_owner "$E2E_LOG"
 manifest=""
 run_id=""
 tested_commit=""
@@ -121,8 +124,8 @@ prepare_test_slot_environment() {
     }
     sha="$(sha256sum "$jar" | awk '{print $1}')"
     [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || return 1
-    install -d -o root -g root -m 0755 "$SLOT_RUNTIME_DIR"
-    install -o root -g root -m 0600 "$e2e_env" "$SLOT_ENV"
+    install -d -o ubuntu -g ubuntu -m 0755 "$SLOT_RUNTIME_DIR"
+    install -o ubuntu -g ubuntu -m 0600 "$e2e_env" "$SLOT_ENV"
     printf 'BYTEDEPTH_TEST_SLOT_JAR=%s\nBYTEDEPTH_TEST_SLOT_SHA256=%s\n' "$jar" "$sha" >> "$SLOT_ENV"
 }
 
@@ -176,7 +179,7 @@ trap on_exit EXIT
 # Deployment, integration tests and E2E share this lock so an evidence record
 # can only be written for a stable deployed checkout.
 if [[ "${1:-}" != '--lock-held' ]]; then
-    install -d -o root -g root -m 0700 "$(dirname "$LOCK_FILE")"
+    install -d -o ubuntu -g ubuntu -m 0700 "$(dirname "$LOCK_FILE")"
     exec flock -x "$LOCK_FILE" "$0" --lock-held "$@"
 fi
 shift
@@ -229,11 +232,11 @@ write_evidence() {
     fi
     require_deployed_commit "$tested_commit"
 
-    install -d -o root -g root -m 0700 "$EVIDENCE_DIR"
+    install -d -o ubuntu -g ubuntu -m 0700 "$EVIDENCE_DIR"
     evidence_tmp="$(mktemp "$EVIDENCE_DIR/.staging-e2e.XXXXXX")"
     printf 'commit=%s\ncommand=run-staging-e2e-tests\ntimestamp=%s\nresult=passed\nruntime_mode=host-native\nrun_id=%s\ntest_resource_manifest_sha=%s\ncleanup=result=passed\n' \
         "$tested_commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$run_id" "$manifest_sha" > "$evidence_tmp"
-    install -o root -g root -m 0600 "$evidence_tmp" "$EVIDENCE_DIR/staging-e2e"
+    install -o ubuntu -g ubuntu -m 0600 "$evidence_tmp" "$EVIDENCE_DIR/staging-e2e"
     rm -f "$evidence_tmp"
 }
 
@@ -266,7 +269,7 @@ export BYTEDEPTH_TEST_STATE_DIR="$TEST_STATE_DIR"
 export BYTEDEPTH_TEST_CANDIDATE_SHA="$tested_commit"
 export BYTEDEPTH_TEST_SLOT_LOCK_HELD=1
 export BYTEDEPTH_DEPLOY_MODE=staging
-install -d -o root -g root -m 0700 "$TEST_STATE_DIR"
+install -d -o ubuntu -g ubuntu -m 0700 "$TEST_STATE_DIR"
 systemctl stop "$BYTEDEPTH_STAGING_APP_SERVICE"
 app_stopped=1
 if systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE"; then

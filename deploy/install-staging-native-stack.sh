@@ -52,21 +52,23 @@ getent passwd bytedepth >/dev/null || useradd --system --gid bytedepth --home-di
 getent group meilisearch >/dev/null || groupadd --system meilisearch
 getent passwd meilisearch >/dev/null || useradd --system --gid meilisearch --home-dir /nonexistent --shell /usr/sbin/nologin meilisearch
 
-install -d -o root -g root -m 0755 "$native_root" "$native_root/mysql" "$native_root/redis" "$native_root/meilisearch" "$native_root/images"
-install -d -o root -g root -m 0700 "$native_root/images-test"
-chown mysql:mysql "$native_root/mysql"
-chown redis:redis "$native_root/redis"
-chown meilisearch:meilisearch "$native_root/meilisearch"
-chown bytedepth:bytedepth "$native_root/images"
-install -d -o root -g root -m 0700 /etc/bytedepth
-install -d -o root -g root -m 0755 /etc/apparmor.d/local
+install -d -o ubuntu -g ubuntu -m 0775 "$native_root" "$native_root/mysql" "$native_root/redis" "$native_root/meilisearch" "$native_root/images"
+install -d -o ubuntu -g ubuntu -m 0770 "$native_root/images-test"
+chown ubuntu:mysql "$native_root/mysql"
+chown ubuntu:redis "$native_root/redis"
+chown ubuntu:meilisearch "$native_root/meilisearch"
+chown ubuntu:bytedepth "$native_root/images"
+install -d -o ubuntu -g ubuntu -m 0770 /etc/bytedepth
+if [[ ! -d /etc/apparmor.d/local ]]; then
+    install -d -o ubuntu -g ubuntu -m 0775 /etc/apparmor.d/local
+fi
 
 # Redis warns and background persistence can fail when the kernel disables
 # memory overcommit. Make this native-service prerequisite explicit and
 # persistent instead of accepting the warning in deployment output.
 printf '%s\n' 'vm.overcommit_memory = 1' > /etc/sysctl.d/99-bytedepth-staging-native.conf
 chmod 0644 /etc/sysctl.d/99-bytedepth-staging-native.conf
-chown root:root /etc/sysctl.d/99-bytedepth-staging-native.conf
+chown ubuntu:ubuntu /etc/sysctl.d/99-bytedepth-staging-native.conf
 sysctl -w vm.overcommit_memory=1 >/dev/null
 
 render_unit() {
@@ -79,6 +81,7 @@ render_unit() {
         -e "s#__APP_PORT__#$app_port#g" \
         "$source" > "$target"
     chmod 0644 "$target"
+    chown ubuntu:ubuntu "$target"
 }
 
 render_unit "$SOURCE_ROOT/deploy/systemd/bytedepth-staging-native-mysql.service.in" "$SYSTEMD_DIR/bytedepth-staging-native-mysql.service"
@@ -106,7 +109,7 @@ source "$ENV_FILE"
     exit 1
 }
 chmod 0600 "$ENV_FILE" "$MEILI_ENV_FILE"
-chown root:root "$ENV_FILE" "$MEILI_ENV_FILE"
+chown ubuntu:ubuntu "$ENV_FILE" "$MEILI_ENV_FILE"
 
 printf '%s\n' \
     'bind 127.0.0.1' \
@@ -120,7 +123,7 @@ printf '%s\n' \
     'appendonly yes' \
     'protected-mode yes' > "$native_root/redis/redis.conf"
 chmod 0600 "$native_root/redis/redis.conf"
-chown redis:redis "$native_root/redis/redis.conf"
+chown ubuntu:redis "$native_root/redis/redis.conf"
 
 if command -v apparmor_parser >/dev/null && [[ -f /etc/apparmor.d/usr.sbin.mysqld ]]; then
     printf '%s\n' \
@@ -131,13 +134,13 @@ if command -v apparmor_parser >/dev/null && [[ -f /etc/apparmor.d/usr.sbin.mysql
         '/run/bytedepth-staging-native/ r,' \
         '/run/bytedepth-staging-native/** rwk,' > /etc/apparmor.d/local/usr.sbin.mysqld
     chmod 0644 /etc/apparmor.d/local/usr.sbin.mysqld
-    chown root:root /etc/apparmor.d/local/usr.sbin.mysqld
+    chown ubuntu:ubuntu /etc/apparmor.d/local/usr.sbin.mysqld
     apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld
 fi
 
 printf '%s\n' 'env = "production"' > "$native_root/meilisearch/meilisearch.toml"
 chmod 0600 "$native_root/meilisearch/meilisearch.toml"
-chown meilisearch:meilisearch "$native_root/meilisearch/meilisearch.toml"
+chown ubuntu:meilisearch "$native_root/meilisearch/meilisearch.toml"
 
 printf '%s\n' \
     'events { worker_connections 1024; }' \
@@ -154,7 +157,7 @@ printf '%s\n' \
     '    }' \
     '}' > /etc/bytedepth/staging-native-nginx.conf
 chmod 0600 /etc/bytedepth/staging-native-nginx.conf
-chown root:root /etc/bytedepth/staging-native-nginx.conf
+chown ubuntu:ubuntu /etc/bytedepth/staging-native-nginx.conf
 
 systemctl daemon-reload
 systemctl enable bytedepth-staging-native-mysql.service bytedepth-staging-native-redis.service bytedepth-staging-native-meilisearch.service bytedepth-staging-native-app.service bytedepth-staging-native-edge.service
