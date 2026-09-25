@@ -105,11 +105,29 @@ prepare_node() {
     npm ci --ignore-scripts --no-audit --no-fund
 }
 
+prepare_playwright_runtime() {
+    cd "$SOURCE_ROOT"
+    playwright_log="$(mktemp)"
+    trap 'rm -f "$playwright_log"' RETURN
+    set +e
+    npm exec playwright -- install ffmpeg 2>&1 | tee "$playwright_log"
+    playwright_status="${PIPESTATUS[0]}"
+    set -e
+    if [[ "$playwright_status" -ne 0 ]]; then
+        return "$playwright_status"
+    fi
+    warning_policy_check_file "$playwright_log"
+}
+
 if ! record_timed_phase "$timing_file" maven_runtime_prepare prepare_maven; then
     record_timing_phase "$timing_file" bootstrap_total failed "$(timing_now_epoch_ms)" "$(timing_now_epoch_ms)"
     exit 1
 fi
 if ! record_timed_phase "$timing_file" node_runtime_prepare prepare_node; then
+    record_timing_phase "$timing_file" bootstrap_total failed "$(timing_now_epoch_ms)" "$(timing_now_epoch_ms)"
+    exit 1
+fi
+if ! record_timed_phase "$timing_file" playwright_runtime_prepare prepare_playwright_runtime; then
     record_timing_phase "$timing_file" bootstrap_total failed "$(timing_now_epoch_ms)" "$(timing_now_epoch_ms)"
     exit 1
 fi

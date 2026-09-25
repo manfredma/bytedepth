@@ -47,6 +47,8 @@ require_text 'getent passwd "$DEPLOY_USER"' "$INSTALLER"
 require_text 'chown -R "$DEPLOY_USER:$DEPLOY_GROUP" "$SOURCE_ROOT"' "$INSTALLER"
 require_text 'org.apache.maven.surefire:surefire-junit-platform:3.2.5' "$BOOTSTRAP"
 require_text 'dependency:get' "$BOOTSTRAP"
+require_text 'npm exec playwright -- install ffmpeg' "$BOOTSTRAP"
+require_text 'playwright_ffmpeg_version' "$ROOT/deploy/lib/staging-runtime.sh"
 
 require_text 'User=mysql' "$UNIT_DIR/mysql.service"
 require_text 'Type=simple' "$UNIT_DIR/mysql.service"

@@ -20,6 +20,7 @@
 - 修复 native edge 与正式 app 绑定生命周期导致 E2E test slot 启动后公网入口 502/健康检查无超时卡住的问题；edge 现在只依赖 app 的启动顺序，E2E 槽位可复用同一内部 edge。
 - 修复 edge 已保持 active 时 staging app 重启的就绪竞态；测试清理会先等待 app 的 HTTP `/version`，再等待 edge 的 18081 `/version`，避免把短暂 502 记录为清理失败。
 - 修复 129 云主机不支持公网 IP hairpin 导致 native E2E 健康探测超时的问题；E2E 仍使用公网 staging URL，但本机 curl 和 Chromium 仅将该域名解析到本机共享 Nginx，不绕过真实 TLS/Host/edge 链路，也不影响同机其他服务。
+- 补齐 staging 共享 E2E runtime 的 Playwright ffmpeg：bootstrap 现在安装并将其版本纳入 manifest，集成测试/E2E 在缺少录制运行时前 fail-fast，避免 34 个用例在 browser context 创建阶段统一失败。
 - 修复 staging 测试槽在 Redis 业务库为空时将 `redis-cli --raw` 的空行误判为非法快照的问题。
 - 修复 staging native app 重启后 edge 被 systemd 停止、导致部署阶段直接 reload 失败的问题。
 - 修复 MySQL 8.4 `SHOW GRANTS` 账户名格式与 staging 测试槽预期不一致，导致合法的单数据库授权被错误拒绝的问题。

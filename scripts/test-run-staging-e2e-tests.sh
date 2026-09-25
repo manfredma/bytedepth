@@ -16,6 +16,8 @@ readonly RUNTIME_MANIFEST="$FIXTURE_ROOT/runtime/manifest"
 readonly DEPLOY_HISTORY="$FIXTURE_ROOT/deploy-history"
 readonly LOCK_FILE="$FIXTURE_ROOT/deployment-test.lock"
 readonly FIXTURE_CHROMIUM="$FIXTURE_ROOT/chromium"
+readonly FIXTURE_FFMPEG_ROOT="$FIXTURE_ROOT/playwright-browsers"
+readonly FIXTURE_FFMPEG="$FIXTURE_FFMPEG_ROOT/ffmpeg-1011/ffmpeg-linux"
 readonly FIXTURE_JAR="$FIXTURE_ROOT/app.jar"
 readonly FIXTURE_MYSQL_DEFAULTS="$FIXTURE_ROOT/mysql.defaults"
 readonly FIXTURE_REDIS_SECRET="$FIXTURE_ROOT/redis.secret"
@@ -99,6 +101,14 @@ SCRIPT
 chmod +x "$FIXTURE_CHROMIUM"
 sed 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome$@readonly SHARED_CHROMIUM_EXECUTABLE='"$FIXTURE_CHROMIUM"'@' \
     "$SOURCE_ROOT/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
+mkdir -p "$(dirname "$FIXTURE_FFMPEG")"
+cat > "$FIXTURE_FFMPEG" <<'SCRIPT'
+#!/usr/bin/env bash
+printf 'ffmpeg version 7.0 fixture\n'
+SCRIPT
+chmod +x "$FIXTURE_FFMPEG"
+sed "s@^readonly SHARED_PLAYWRIGHT_BROWSERS_PATH=.*\$@readonly SHARED_PLAYWRIGHT_BROWSERS_PATH=$FIXTURE_FFMPEG_ROOT@" "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh.tmp"
+mv "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh.tmp" "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
 cp "$SOURCE_ROOT/deploy/lib/warning-policy.sh" "$FIXTURE_SOURCE/deploy/lib/warning-policy.sh"
 cp "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh" "$FIXTURE_SOURCE/deploy/lib/staging-test-slot.sh"
 cp "$SOURCE_ROOT/deploy/lib/staging-native-target.sh" "$FIXTURE_SOURCE/deploy/lib/staging-native-target.sh"

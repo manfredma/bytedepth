@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
+readonly SHARED_PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 
 staging_runtime_sha256() {
     shasum -a 256 "$1" | awk '{print $1}'
@@ -12,12 +13,32 @@ staging_ensure_ubuntu_owner() {
     fi
 }
 
+staging_shared_ffmpeg_executable() {
+    local executable
+
+    executable="$(find "$SHARED_PLAYWRIGHT_BROWSERS_PATH" -maxdepth 2 -type f \
+        -name ffmpeg-linux -perm -u+x -print -quit 2>/dev/null || true)"
+    [[ -n "$executable" ]] || return 1
+    printf '%s\n' "$executable"
+}
+
+staging_shared_ffmpeg_version() {
+    local executable
+
+    executable="$(staging_shared_ffmpeg_executable)" || return 1
+    "$executable" -version | sed -n '1p'
+}
+
 # Deployment must be able to move to a new checkout before bootstrap writes its
 # dependency-bound manifest. Keep this preflight limited to immutable shared
 # infrastructure; require_staging_runtime verifies the prepared dependencies.
 require_staging_runtime_prerequisites() {
     if [[ ! -x "$SHARED_CHROMIUM_EXECUTABLE" ]]; then
         printf 'Refusing: staging Chromium executable is unavailable.\n' >&2
+        return 1
+    fi
+    if ! staging_shared_ffmpeg_executable >/dev/null; then
+        printf 'Refusing: shared Playwright ffmpeg is unavailable. Run bootstrap-staging-runtime.sh.\n' >&2
         return 1
     fi
 }
@@ -30,6 +51,7 @@ write_runtime_manifest() {
     local lockfile_sha
     local pom_sha
     local chromium_version
+    local playwright_ffmpeg_version
 
     runtime_directory="$(dirname "$manifest")"
     lockfile_sha="$(staging_runtime_sha256 "$source_root/package-lock.json")"
@@ -39,6 +61,7 @@ write_runtime_manifest() {
         return 1
     fi
     chromium_version="$("$SHARED_CHROMIUM_EXECUTABLE" --version)"
+    playwright_ffmpeg_version="$(staging_shared_ffmpeg_version)"
 
     if [[ "${EUID:-}" -eq 0 ]] && getent passwd ubuntu >/dev/null 2>&1 && getent group ubuntu >/dev/null 2>&1; then
         install -d -o ubuntu -g ubuntu -m 0700 "$runtime_directory"
@@ -47,8 +70,8 @@ write_runtime_manifest() {
     fi
     temporary_file="$(mktemp "$runtime_directory/.manifest.XXXXXX")"
     staging_ensure_ubuntu_owner "$temporary_file"
-    printf 'package_lock_sha256=%s\npom_sha256=%s\nchromium_version=%s\n' \
-        "$lockfile_sha" "$pom_sha" "$chromium_version" > "$temporary_file"
+    printf 'package_lock_sha256=%s\npom_sha256=%s\nchromium_version=%s\nplaywright_ffmpeg_version=%s\n' \
+        "$lockfile_sha" "$pom_sha" "$chromium_version" "$playwright_ffmpeg_version" > "$temporary_file"
     staging_ensure_ubuntu_owner "$runtime_directory" "$temporary_file"
     chmod 0600 "$temporary_file"
     mv -f "$temporary_file" "$manifest"
@@ -62,6 +85,7 @@ require_staging_runtime() {
     local actual_lock_sha
     local actual_pom_sha
     local actual_chromium_version
+    local actual_playwright_ffmpeg_version
 
     if [[ ! -f "$manifest" || -L "$manifest" ]]; then
         printf 'Refusing: staging runtime manifest is missing. Run bootstrap-staging-runtime.sh.\n' >&2
@@ -70,6 +94,7 @@ require_staging_runtime() {
     actual_lock_sha="$(awk -F= '$1 == "package_lock_sha256" {print $2; exit}' "$manifest")"
     actual_pom_sha="$(awk -F= '$1 == "pom_sha256" {print $2; exit}' "$manifest")"
     actual_chromium_version="$(awk -F= '$1 == "chromium_version" {print $2; exit}' "$manifest")"
+    actual_playwright_ffmpeg_version="$(awk -F= '$1 == "playwright_ffmpeg_version" {print substr($0, index($0, "=") + 1); exit}' "$manifest")"
     expected_lock_sha="$(staging_runtime_sha256 "$source_root/package-lock.json")"
     expected_pom_sha="$(staging_runtime_sha256 "$source_root/pom.xml")"
 
@@ -79,6 +104,10 @@ require_staging_runtime() {
     fi
     if [[ ! -x "$SHARED_CHROMIUM_EXECUTABLE" || "$actual_chromium_version" != "$("$SHARED_CHROMIUM_EXECUTABLE" --version)" ]]; then
         printf 'Refusing: manifest Chromium executable changed. Run bootstrap-staging-runtime.sh.\n' >&2
+        return 1
+    fi
+    if [[ -z "$actual_playwright_ffmpeg_version" || "$actual_playwright_ffmpeg_version" != "$(staging_shared_ffmpeg_version)" ]]; then
+        printf 'Refusing: manifest Playwright ffmpeg runtime changed. Run bootstrap-staging-runtime.sh.\n' >&2
         return 1
     fi
 }

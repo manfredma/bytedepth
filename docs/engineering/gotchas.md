@@ -18,6 +18,7 @@
 - 访问日志原表可能沿用 MySQL 的 `utf8mb4_0900_ai_ci`，归档国家统计表固定为 `utf8mb4_unicode_ci`；国家分布查询把原始明细与归档统计 `UNION ALL` 时，两个分支的国家字段和原始分组表达式必须显式 `COLLATE utf8mb4_unicode_ci`，否则 MySQL 会以 1271 失败，后台图表表现为没有数据。对应 SQL 契约测试必须锁定该归一化。
 - 使用 `@ConfigurationProperties` 的不可变 record 如果声明了重载构造器，必须在 canonical constructor 上显式标注 `@ConstructorBinding`；否则本地单测可能通过，但完整 staging Spring 上下文会因找不到默认构造器启动失败。对应属性类应由配置契约脚本检查。
 - **staging 门禁先预检、后执行**：部署、集成测试与 E2E 在单机上互斥，重复运行的时间主要来自镜像构建和启动浏览器，不应在 staging 上逐个猜测前提。先在本机用 runner 的 fake/fixture 测试验证脚本逻辑；首次 staging 运行前一次性确认部署 SHA、服务健康、可用磁盘、固定浏览器路径和真实 E2E 数据。失败时保存日志并只针对第一个可复现错误修复，修复先通过离线脚本测试，再重跑 staging。不要因猜测缺浏览器而安装系统 Chromium，也不要依赖会被数据同步清除的固定文章 slug。
+- staging E2E 的共享浏览器运行时不只包含 Chromium，还包含 Playwright ffmpeg；缺少 `/root/.cache/ms-playwright/ffmpeg-*/ffmpeg-linux` 会在创建 browser context 前让所有用例失败。必须由 `bootstrap-staging-runtime.sh` 统一安装/校验并写入 runtime manifest，不能在项目目录下载浏览器或在 runner 中临时安装。
 - **移动端文章 E2E 等待正文初始化**：staging 的长文章在移动 Chromium 下可能在 Playwright `goto(..., {waitUntil: 'commit'})` 后超过默认 5 秒才完成 HTML 流式传输；批注测试必须使用显式 15 秒的 `data-bd-annotation-ready` 等待超时，并保留固定 staging E2E 复验，不能把该时序失败误判为业务脚本异常。
 - **集成测试资源必须有界**：同一 staging test slot 内的多个 `*IT` 类共享本次 run 的隔离 MySQL、Redis 和 Meilisearch 资源；runner 退出时必须执行 teardown。资源身份不确定时保留 manifest 并报警，不能盲删。
 - **集成测试 fixture 不是空数据库**：隔离库会导入保留基线数据的安全 fixture；集成测试不能假定除本用例写入的数据外没有文章、用户或统计记录。需要验证本用例结果时，应使用足够小的 limit、唯一测试标识或针对本用例数据的断言，不能用“全库只有 N 条记录”的脆弱精确断言。
