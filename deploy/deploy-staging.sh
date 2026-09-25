@@ -54,9 +54,9 @@ require_staging_host_configuration() {
         return 1
     }
     remote_command='set -Eeuo pipefail
-if ! sudo -n test -r /etc/bytedepth/staging-native.conf \
-  || ! sudo -n test -r /etc/bytedepth/staging-native.env \
-  || ! sudo -n test -r /etc/bytedepth/staging-native-meilisearch.env \
+if ! sudo -n bash -c 'test -r /etc/bytedepth/staging-native.conf' \
+  || ! sudo -n bash -c 'test -r /etc/bytedepth/staging-native.env' \
+  || ! sudo -n bash -c 'test -r /etc/bytedepth/staging-native-meilisearch.env' \
   || ! sudo -n grep -Fqx BYTEDEPTH_NATIVE_STACK_MODE=parallel /etc/bytedepth/staging-native.conf \
   || ! sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging /etc/bytedepth/staging-native.env \
   || ! sudo -n grep -Fqx BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn /etc/bytedepth/staging-native.env; then
