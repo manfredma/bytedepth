@@ -130,9 +130,28 @@ bash scripts/check-release-readiness.sh --target HEAD --base origin/main --mode 
 # deterministic; real integration/E2E evidence is still required below.
 bash scripts/check-staging-checklist.sh
 
-if [[ -z "${BYTEDEPTH_STAGING_EVIDENCE_DIR:-}" ]] \
-    || [[ ! -d "$BYTEDEPTH_STAGING_EVIDENCE_DIR" ]] \
-    || [[ -L "$BYTEDEPTH_STAGING_EVIDENCE_DIR" ]]; then
+skip_staging_validation=0
+case "${BYTEDEPTH_SKIP_STAGING_VALIDATION:-0}" in
+    0) ;;
+    1)
+        [[ -n "${BYTEDEPTH_SKIP_STAGING_VALIDATION_REASON:-}" ]] || {
+            printf 'Staging validation exception requires BYTEDEPTH_SKIP_STAGING_VALIDATION_REASON.\n' >&2
+            exit 1
+        }
+        printf 'Staging validation skipped by explicit exception: %s\n' "$BYTEDEPTH_SKIP_STAGING_VALIDATION_REASON"
+        skip_staging_validation=1
+        ;;
+    *)
+        printf 'BYTEDEPTH_SKIP_STAGING_VALIDATION must be 0 or 1.\n' >&2
+        exit 1
+        ;;
+esac
+
+if (( ! skip_staging_validation )) && {
+    [[ -z "${BYTEDEPTH_STAGING_EVIDENCE_DIR:-}" ]] \
+        || [[ ! -d "$BYTEDEPTH_STAGING_EVIDENCE_DIR" ]] \
+        || [[ -L "$BYTEDEPTH_STAGING_EVIDENCE_DIR" ]];
+}; then
     printf 'Release preparation requires BYTEDEPTH_STAGING_EVIDENCE_DIR to name a copied staging evidence directory.\n' >&2
     exit 1
 fi
@@ -144,8 +163,10 @@ if [[ ! "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
     exit 1
 fi
 
-require_staging_evidence 'staging-integration' 'run-staging-integration-tests'
-require_staging_evidence 'staging-e2e' 'run-staging-e2e-tests'
+if (( ! skip_staging_validation )); then
+    require_staging_evidence 'staging-integration' 'run-staging-integration-tests'
+    require_staging_evidence 'staging-e2e' 'run-staging-e2e-tests'
+fi
 
 if git rev-parse --verify --quiet "refs/tags/$TAG" >/dev/null; then
     printf 'Release tag %s already exists locally.\n' "$TAG" >&2

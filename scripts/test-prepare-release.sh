@@ -148,6 +148,13 @@ run_prepare() {
         "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT
 }
 
+run_prepare_with_staging_exception() {
+    RELEASE_TEST_LOG="$1" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME_25_X64="$TEMP_ROOT/java" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
+        RELEASE_TEST_SHA="$CURRENT_SHA" BYTEDEPTH_SKIP_STAGING_VALIDATION=1 \
+        BYTEDEPTH_SKIP_STAGING_VALIDATION_REASON='owner-approved deployment-only migration fix' \
+        "$TEMP_ROOT/scripts/prepare-release.sh" 1.2.3 1.2.4-SNAPSHOT
+}
+
 assert_release_rejects_without_maven() {
     local description="$1"
     local log_file="$2"
@@ -217,6 +224,10 @@ grep -Fqx 'readiness' "$TEMP_ROOT/release.log"
 grep -Fqx 'mvn release_mode=1 -B release:prepare -DskipTests -Darguments=-DskipTests -DreleaseVersion=1.2.3 -DdevelopmentVersion=1.2.4-SNAPSHOT' "$TEMP_ROOT/release.log"
 grep -Fqx 'git push origin main --follow-tags' "$TEMP_ROOT/release.log"
 grep -Fqx 'mvn release_mode=0 -B release:clean -Dsort.skip=true' "$TEMP_ROOT/release.log"
+
+rm -rf "$EVIDENCE_DIR"
+run_prepare_with_staging_exception "$TEMP_ROOT/staging-exception.log"
+grep -Fqx 'mvn release_mode=1 -B release:prepare -DskipTests -Darguments=-DskipTests -DreleaseVersion=1.2.3 -DdevelopmentVersion=1.2.4-SNAPSHOT' "$TEMP_ROOT/staging-exception.log"
 
 if RELEASE_TEST_LOG="$TEMP_ROOT/invalid.log" PATH="$TEMP_ROOT/bin:$PATH" JAVA_HOME_25_X64="$TEMP_ROOT/java" BYTEDEPTH_RELEASE_MAVEN="$TEMP_ROOT/java/bin/mvn" \
     "$TEMP_ROOT/scripts/prepare-release.sh" >/dev/null 2>&1; then

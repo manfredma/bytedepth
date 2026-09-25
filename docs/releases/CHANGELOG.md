@@ -6,6 +6,8 @@
 
 ### Changed
 
+- 发布脚本支持项目所有者对“仅生产部署迁移脚本、不影响应用运行时”的紧急修复显式跳过远程 staging 集成/E2E；仍强制执行本地发布清单、静态契约、覆盖率、不可变 Tag 和生产 green 切流前检查，不允许伪造 staging evidence。
+
 - 清理误提交的 agent 工作产物，发布包和项目知识库不再包含会阻断发布门禁的临时报告。
 - v2.25.2 发布后，主线进入 `2.25.3-SNAPSHOT` 开发周期。
 - 运行时部署迁移为宿主机原生 systemd 服务，应用通过不可变 JAR、SHA256 manifest 和原子 `current` 软链接发布；staging/生产不再依赖容器运行时。
@@ -73,6 +75,10 @@
 **Commit**：由本次 release:prepare 冻结
 **部署**：修复生产 native green final-sync 清空中间件目录后丢失 Redis/Meilisearch 配置、导致数据同步完成但绿色服务无法启动的问题。
 **回滚基线**：`v2.25.2`
+
+### Changed
+
+- 对仅生产部署迁移脚本的紧急修复，支持项目所有者显式批准跳过远程 staging 集成/E2E；本地发布清单、静态契约和生产 green 切流前检查仍然强制执行。
 
 ### Fixed
 
