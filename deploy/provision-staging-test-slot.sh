@@ -169,8 +169,8 @@ for profile in it e2e; do
     chmod 0600 "$env_file"
     chown ubuntu:ubuntu "$env_file"
 done
-printf 'run_id=%s\ncandidate_sha=%s\nmode=staging\nit_db=%s\nit_user=%s\nit_index=%s\nit_namespace=%s\nit_redis_db=%s\nit_key_uid=%s\ne2e_db=%s\ne2e_user=%s\ne2e_index=%s\ne2e_namespace=%s\ne2e_redis_db=%s\ne2e_key_uid=%s\napp_port=8080\nit_env=%s\ne2e_env=%s\n' \
-    "$run_id" "$BYTEDEPTH_TEST_CANDIDATE_SHA" "$it_db" "$it_user" "$it_index" "$it_namespace" "$BYTEDEPTH_TEST_IT_REDIS_DB" "$it_key_uid" "$e2e_db" "$e2e_user" "$e2e_index" "$e2e_namespace" "$BYTEDEPTH_TEST_E2E_REDIS_DB" "$e2e_key_uid" "$run_dir/staging-it.env" "$run_dir/staging-e2e.env" > "$manifest"
+printf 'run_id=%s\ncandidate_sha=%s\nmode=staging\nit_db=%s\nit_user=%s\nit_index=%s\nit_namespace=%s\nit_redis_db=%s\nit_key_uid=%s\ne2e_db=%s\ne2e_user=%s\ne2e_index=%s\ne2e_namespace=%s\ne2e_redis_db=%s\ne2e_key_uid=%s\napp_port=%s\nit_env=%s\ne2e_env=%s\n' \
+    "$run_id" "$BYTEDEPTH_TEST_CANDIDATE_SHA" "$it_db" "$it_user" "$it_index" "$it_namespace" "$BYTEDEPTH_TEST_IT_REDIS_DB" "$it_key_uid" "$e2e_db" "$e2e_user" "$e2e_index" "$e2e_namespace" "$BYTEDEPTH_TEST_E2E_REDIS_DB" "$e2e_key_uid" "$BYTEDEPTH_STAGING_APP_PORT" "$run_dir/staging-it.env" "$run_dir/staging-e2e.env" > "$manifest"
 chmod 0600 "$manifest"
 chown ubuntu:ubuntu "$manifest"
 require_manifest "$manifest"

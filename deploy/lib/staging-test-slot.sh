@@ -85,7 +85,7 @@ require_manifest() {
         value="$(slot_manifest_value "$file" "${profile}_key_uid")"
         [[ $value =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] || { slot_die 'invalid scoped Meili key UID'; return; }
     done
-    [[ $(slot_manifest_value "$file" app_port) == 8080 ]] || { slot_die 'invalid test app port'; return; }
+    [[ $(slot_manifest_value "$file" app_port) == "${BYTEDEPTH_STAGING_APP_PORT:?BYTEDEPTH_STAGING_APP_PORT is required}" ]] || { slot_die 'invalid test app port'; return; }
     [[ $(slot_manifest_value "$file" it_env) == "$(dirname "$file")/staging-it.env" && $(slot_manifest_value "$file" e2e_env) == "$(dirname "$file")/staging-e2e.env" ]] || { slot_die 'invalid environment path'; return; }
     [[ $(slot_manifest_value "$file" it_redis_db) == 14 && $(slot_manifest_value "$file" e2e_redis_db) == 15 ]] || { slot_die 'invalid reserved Redis DBs'; return; }
     slot_root_directory "$(dirname "$file")" || return

@@ -67,7 +67,7 @@ for unit in bytedepth-staging-native-mysql.service bytedepth-staging-native-redi
   sudo -n systemctl cat "$unit" >/dev/null
 done
 sudo -n cat /etc/nginx/conf.d/bytedepth-staging.conf >/dev/null
-sudo -n grep -Fq 'proxy_pass http://127.0.0.1:18081;' /etc/nginx/conf.d/bytedepth-staging.conf || {
+sudo -n grep -Fq "proxy_pass http://127.0.0.1:18081;" /etc/nginx/conf.d/bytedepth-staging.conf || {
   printf "%s\n" "Refusing: public staging Nginx must proxy to the native edge on port 18081." >&2
   exit 1
 }

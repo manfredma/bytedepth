@@ -72,6 +72,7 @@ rg -q 'systemctl stop "\$SLOT_SERVICE"' "$RUNNER"
 rg -q 'SPRING_PROFILES_ACTIVE.*staging-e2e|== staging-e2e' "$RUNNER"
 rg -q 'BYTEDEPTH_ENVIRONMENT=staging' "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
 rg -q 'BYTEDEPTH_STAGING_APP_PORT' "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
+rg -q 'app_port=%s' "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
 rg -q 'BYTEDEPTH_TEST_MANIFEST|run_id=' "$RUNNER"
 rg -q 'cleanup|restore' "$RUNNER"
 rg -q 'state-uncertain' "$RUNNER"
@@ -115,11 +116,11 @@ run_dir="$(dirname "$manifest")"
 mkdir -p "$run_dir"
 cat > "$run_dir/staging-e2e.env" <<EOF
 SPRING_PROFILES_ACTIVE=staging-e2e
-BYTEDEPTH_STAGING_E2E_DATASOURCE_URL=jdbc:mysql://127.0.0.1:3306/bytedepth_e2e_$run_id
+BYTEDEPTH_STAGING_E2E_DATASOURCE_URL=jdbc:mysql://127.0.0.1:13306/bytedepth_e2e_$run_id
 BYTEDEPTH_STAGING_E2E_DATASOURCE_USERNAME=fixture-e2e
 BYTEDEPTH_STAGING_E2E_DATASOURCE_PASSWORD=fixture-db-password
 BYTEDEPTH_STAGING_E2E_REDIS_HOST=127.0.0.1
-BYTEDEPTH_STAGING_E2E_REDIS_PORT=6379
+BYTEDEPTH_STAGING_E2E_REDIS_PORT=16379
 BYTEDEPTH_STAGING_E2E_REDIS_DATABASE=15
 BYTEDEPTH_STAGING_E2E_REDIS_PASSWORD=fixture-redis-password
 BYTEDEPTH_STAGING_E2E_REDIS_SESSION_NAMESPACE=bytedepth:e2e:$run_id:
@@ -145,7 +146,7 @@ e2e_index=posts_e2e_$run_id
 e2e_namespace=bytedepth:e2e:$run_id:
 e2e_redis_db=15
 e2e_key_uid=22222222-2222-2222-2222-222222222222
-app_port=8080
+app_port=18080
 it_env=$run_dir/staging-it.env
 e2e_env=$run_dir/staging-e2e.env
 EOF
@@ -171,6 +172,7 @@ sed \
     -e "s@^readonly TEST_STATE_DIR=/var/lib/bytedepth-staging/test-slots\$@readonly TEST_STATE_DIR=$FIXTURE_ROOT/test-slots@" \
     -e "s@^readonly SLOT_PROVISION=/opt/bytedepth/deploy/provision-staging-test-slot.sh\$@readonly SLOT_PROVISION=$FIXTURE_SOURCE/deploy/provision-staging-test-slot.sh@" \
     -e "s@^readonly SLOT_TEARDOWN=/opt/bytedepth/deploy/teardown-staging-test-slot.sh\$@readonly SLOT_TEARDOWN=$FIXTURE_SOURCE/deploy/teardown-staging-test-slot.sh@" \
+    -e "s@^[[:space:]]*readonly SLOT_ENV=/run/bytedepth/staging-native-e2e.env\$@    readonly SLOT_ENV=$FIXTURE_ROOT/staging-e2e.env@" \
     -e "s@^[[:space:]]*readonly SLOT_ENV=/run/bytedepth/staging-e2e.env\$@    readonly SLOT_ENV=$FIXTURE_ROOT/staging-e2e.env@" \
     -e "s@^readonly SLOT_RUNTIME_DIR=/run/bytedepth\$@readonly SLOT_RUNTIME_DIR=$FIXTURE_ROOT/runtime@" \
     -e "s@^readonly SLOT_JAR=/opt/bytedepth/current/app.jar\$@readonly SLOT_JAR=$FIXTURE_JAR@" \
@@ -234,12 +236,12 @@ service="${1:-}"
 state='app-active'
 [[ -f "$STAGING_E2E_SYSTEMCTL_STATE" ]] && state="$(< "$STAGING_E2E_SYSTEMCTL_STATE")"
 case "$action:$service" in
-    is-active:bytedepth-app.service) [[ "$state" == app-active ]] ;;
-    stop:bytedepth-app.service) printf 'app-stopped\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
-    start:bytedepth-app.service) printf 'app-active\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
-    is-active:bytedepth-test-slot.service) [[ "$state" == slot-active ]] ;;
-    start:bytedepth-test-slot.service) printf 'slot-active\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
-    stop:bytedepth-test-slot.service) printf 'slot-stopped\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
+    is-active:bytedepth-app.service|is-active:bytedepth-staging-native-app.service) [[ "$state" == app-active ]] ;;
+    stop:bytedepth-app.service|stop:bytedepth-staging-native-app.service) printf 'app-stopped\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
+    start:bytedepth-app.service|start:bytedepth-staging-native-app.service) printf 'app-active\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
+    is-active:bytedepth-test-slot.service|is-active:bytedepth-staging-native-test-slot.service) [[ "$state" == slot-active ]] ;;
+    start:bytedepth-test-slot.service|start:bytedepth-staging-native-test-slot.service) printf 'slot-active\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
+    stop:bytedepth-test-slot.service|stop:bytedepth-staging-native-test-slot.service) printf 'slot-stopped\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
     *) exit 2 ;;
 esac
 SCRIPT

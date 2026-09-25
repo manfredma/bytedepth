@@ -37,6 +37,10 @@
 - 修复多服务宿主机上共享 `nginx.service` 被错误绑定到单个项目的问题；共享 unit 现在不依赖 bytedepth，native staging 只安装自己的站点配置并在 native edge 健康后 reload 公网入口。
 - 补充多服务宿主机约束：staging 默认目标为 129，旧 124 仅保留 Docker；bytedepth 不得替换、重启或停用共享 Nginx，只能校验自己的站点配置并 reload。
 - 修正 staging 证书续期流程，改用共享 Nginx 的 webroot ACME challenge，不再为申请证书停止整台机器的 80/443 入口。
+- 修正 staging SSH 预检中嵌套单引号导致的本地 shell 截断问题，并增加静态契约检查，避免 URL 被误当成本地命令执行。
+- 修正 native staging E2E 契约 fixture 仍使用旧 canonical 服务名和端口的问题，确保测试 fake 与 129 的隔离 native 槽位一致。
+- 修正测试槽 manifest 硬编码 8080 导致 native app 端口 18080 被拒绝的问题，manifest 与校验现在使用显式 native app port。
+- 修正 E2E fixture 未替换 native `SLOT_ENV` 路径导致本机写入 `/run/bytedepth` 失败的问题。
 - 固化 SSH 远端命令的引号、反斜杠和 awk `$2` 转义契约，避免多层 shell 解析后出现远端变量展开错误。
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。

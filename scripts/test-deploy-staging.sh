@@ -46,6 +46,11 @@ rg -q 'check-release-readiness.sh.*>&2' "$SCRIPT"
 rg -q 'sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging' "$SCRIPT"
 rg -q 'sudo -n cat /etc/bytedepth/staging-native.conf >/dev/null 2>&1' "$SCRIPT"
 rg -q "proxy_pass http://127\.0\.0\.1:18081;" "$SCRIPT"
+rg -q 'grep -Fq "proxy_pass http://127\.0\.0\.1:18081;"' "$SCRIPT"
+if rg -q "grep -Fq 'proxy_pass http://127\.0\.0\.1:18081;'" "$SCRIPT"; then
+    printf 'SSH remote command must not nest single quotes inside the local single-quoted command string.\n' >&2
+    exit 1
+fi
 rg -q "conf\.d/bytedepth-staging\.conf" "$SCRIPT"
 rg -q "systemctl is-active --quiet nginx\.service" "$SCRIPT"
 rg -q "systemctl reload nginx\.service" "$SCRIPT"
