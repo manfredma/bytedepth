@@ -70,6 +70,9 @@ rg -q 'systemctl stop "\$BYTEDEPTH_STAGING_APP_SERVICE"' "$RUNNER"
 rg -q 'systemctl start "\$SLOT_SERVICE"' "$RUNNER"
 rg -q 'systemctl stop "\$SLOT_SERVICE"' "$RUNNER"
 rg -q -- '--max-time 10' "$RUNNER"
+rg -q 'E2E_LOCAL_HOST_RESOLVER_RULE' "$RUNNER"
+rg -q -- '--resolve.*E2E_LOCAL_RESOLVE' "$RUNNER"
+rg -q 'E2E_LOCAL_HOST_RESOLVER_RULE' "$SOURCE_ROOT/playwright.config.mjs"
 rg -q 'SPRING_PROFILES_ACTIVE.*staging-e2e|== staging-e2e' "$RUNNER"
 rg -q 'BYTEDEPTH_ENVIRONMENT=staging' "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
 rg -q 'BYTEDEPTH_STAGING_APP_PORT' "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
@@ -198,8 +201,9 @@ chmod +x "$FAKE_BIN/flock"
 cat > "$FAKE_BIN/npm" <<'SCRIPT'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "$STAGING_E2E_NPM_ARGS"
-printf 'E2E_BASE_URL=%s\nE2E_POST_SLUG=%s\nE2E_ADMIN_USERNAME=%s\nPLAYWRIGHT_CHROMIUM_EXECUTABLE=%s\n' "$E2E_BASE_URL" "$E2E_POST_SLUG" "$E2E_ADMIN_USERNAME" "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" > "$STAGING_E2E_NPM_ENV"
+printf 'E2E_BASE_URL=%s\nE2E_POST_SLUG=%s\nE2E_ADMIN_USERNAME=%s\nE2E_LOCAL_HOST_RESOLVER_RULE=%s\nPLAYWRIGHT_CHROMIUM_EXECUTABLE=%s\n' "$E2E_BASE_URL" "$E2E_POST_SLUG" "$E2E_ADMIN_USERNAME" "$E2E_LOCAL_HOST_RESOLVER_RULE" "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" > "$STAGING_E2E_NPM_ENV"
 [[ "$E2E_BASE_URL" == 'https://staging-bytedepth.bytedepth.cn' ]]
+[[ "$E2E_LOCAL_HOST_RESOLVER_RULE" == 'MAP staging-bytedepth.bytedepth.cn 127.0.0.1' ]]
 [[ "$E2E_POST_SLUG" == 'staging-e2e-fixture' ]]
 [[ "$E2E_ADMIN_USERNAME" == 'fixture-e2e-admin' ]]
 [[ "$E2E_ADMIN_PASSWORD" == 'fixture-e2e-password' ]]
@@ -350,6 +354,7 @@ grep -Fqx "$LOCK_FILE" "$FLOCK_ARGS"
 grep -Fqx 'run' "$NPM_ARGS"
 grep -Fqx 'test:e2e' "$NPM_ARGS"
 grep -Fqx 'E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn' "$NPM_ENV"
+grep -Fqx 'E2E_LOCAL_HOST_RESOLVER_RULE=MAP staging-bytedepth.bytedepth.cn 127.0.0.1' "$NPM_ENV"
 grep -Fqx 'E2E_POST_SLUG=staging-e2e-fixture' "$NPM_ENV"
 grep -Fqx 'E2E_ADMIN_USERNAME=fixture-e2e-admin' "$NPM_ENV"
 grep -Fqx "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM" "$NPM_ENV"

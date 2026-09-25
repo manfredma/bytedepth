@@ -16,6 +16,9 @@ readonly TEST_STATE_DIR=/var/lib/bytedepth-staging/test-slots
 readonly SLOT_PROVISION=/opt/bytedepth/deploy/provision-staging-test-slot.sh
 readonly SLOT_TEARDOWN=/opt/bytedepth/deploy/teardown-staging-test-slot.sh
 readonly E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn
+readonly E2E_DOMAIN=staging-bytedepth.bytedepth.cn
+readonly E2E_LOCAL_RESOLVE="$E2E_DOMAIN:443:127.0.0.1"
+readonly E2E_LOCAL_HOST_RESOLVER_RULE="MAP $E2E_DOMAIN 127.0.0.1"
 # Shared Chromium is provisioned at the host level by root maintenance.
 readonly CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
@@ -219,7 +222,7 @@ invalidate_evidence() {
 discover_e2e_post_slug() {
     local posts_page
 
-    posts_page="$(curl --fail --silent --show-error "$E2E_BASE_URL/posts")"
+    posts_page="$(curl --fail --silent --show-error --resolve "$E2E_LOCAL_RESOLVE" "$E2E_BASE_URL/posts")"
     if [[ "$posts_page" =~ href=\"/posts/([a-z0-9-]+)\" ]]; then
         printf '%s\n' "${BASH_REMATCH[1]}"
         return
@@ -295,7 +298,8 @@ systemctl start "$SLOT_SERVICE"
 test_slot_started=1
 for attempt in {1..30}; do
     if systemctl is-active --quiet "$SLOT_SERVICE" && \
-        curl --fail --silent --show-error --connect-timeout 3 --max-time 10 "$E2E_BASE_URL/version" >/dev/null; then
+        curl --fail --silent --show-error --connect-timeout 3 --max-time 10 \
+            --resolve "$E2E_LOCAL_RESOLVE" "$E2E_BASE_URL/version" >/dev/null; then
         break
     fi
     if [[ "$attempt" == 30 ]]; then
@@ -306,6 +310,7 @@ for attempt in {1..30}; do
 done
 e2e_post_slug="$(discover_e2e_post_slug)"
 export E2E_BASE_URL
+export E2E_LOCAL_HOST_RESOLVER_RULE
 if ! E2E_POST_SLUG="$e2e_post_slug" \
     E2E_ADMIN_USERNAME="$BYTEDEPTH_STAGING_E2E_USERNAME" \
     E2E_ADMIN_PASSWORD="$BYTEDEPTH_STAGING_E2E_PASSWORD" \

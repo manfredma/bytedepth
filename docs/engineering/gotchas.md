@@ -64,6 +64,7 @@
 - staging 集成测试或 E2E 清理时，teardown 可能已经启动 app；外层 runner 仍必须无条件检查并恢复 `bytedepth-staging-native-edge.service` 及其 18081 `/version`，否则会出现 cleanup evidence 通过、共享 Nginx 仍 active 但公网请求 502 的假成功。
 - edge 保持 active 时，`systemctl start app` 返回 active 不等于 Spring HTTP 已监听；清理恢复必须先轮询 native app 的 `/version`，再轮询 edge 的 18081 `/version`，两者都要有连接和总超时，不能用单次 curl 判定恢复成功。
 - native staging 的内部 edge（`bytedepth-staging-native-edge.service`，18081）不是公网入口；多服务宿主机的共享 `nginx.service` 监听 80/443，加载 `/etc/nginx/conf.d/bytedepth-staging.conf` 并代理到 18081。只启动内部 edge 或只把旧配置从 8080 改到应用端口，都会导致域名超时/502。部署预检必须同时执行 `nginx -t`、确认 `proxy_pass` 指向 18081、确认共享 Nginx 已 active，并在应用健康后只 reload 公网 Nginx。
+- 129 云主机不保证支持访问自身公网 IP 的 hairpin NAT；E2E 仍必须把 `E2E_BASE_URL` 固定为公网 staging URL，但 runner 的 curl 探测要用该域名的 TLS `--resolve` 指向 `127.0.0.1:443`，Chromium 要用等价的 host-resolver rule。这样保留真实 Host/SNI 和共享 Nginx 链路，不得改成直连 18080/18081，也不得修改共享 Nginx 或其他项目的 DNS 路由。
 - 共享 `nginx.service` 不能包含 `Requires=bytedepth-app.service` 或访问 8080 的 `ExecStartPre`；那是单服务宿主机的错误耦合，会让其他项目跟随 bytedepth 启停。共享 unit 由宿主初始化流程安装为无项目依赖的通用服务；各项目只安装自己的站点文件，文件归 `ubuntu` 所有，不能覆盖、重启或 disable 共享 Nginx。systemd drop-in 只能作为通用术语，不能用来偷偷删除共享服务的项目依赖。
 - 共享 Nginx 的 ACME 证书续期也不能使用 standalone 后停止 80/443；staging 使用 `/var/www/certbot` webroot，由自己的站点配置提供 `/.well-known/acme-challenge/`，证书更新后只 reload 共享 Nginx。
 - MySQL 8.4 的 `SHOW GRANTS` 会把账户名规范化为反引号形式，即使 `CREATE USER` 使用了字符串字面量；staging 测试槽必须按实际 canonical grant 格式校验，不能用单引号或转义数据库下划线误判合法授权。
