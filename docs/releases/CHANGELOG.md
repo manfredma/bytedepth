@@ -65,6 +65,18 @@
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
 
+## [v2.25.12] - 2026-09-25
+
+**Tag**：`v2.25.12`（由本次 release:prepare 创建）
+**Commit**：由本次 release:prepare 冻结
+**部署**：修复 native green MySQL 初始化认证和不完整迁移状态复用问题；失败时保持 Docker blue 提供线上访问。
+**回滚基线**：`v2.25.2`
+
+### Fixed
+
+- 修复生产 native green MySQL 初始化后使用 `mysqladmin ping` 误判认证成功、导致数据库导入失败的问题；迁移现在区分服务就绪与 root 凭据校验，兼容空密码 bootstrap 和已有 green 数据目录，并在导入后显式设置蓝环境密码。
+- 修复生产 native green 准备阶段失败后仍保留 `prepared` 标记、下一次发布复用不完整数据的问题；只要 green 准备或预检启动过但发布未完成，就保留 `uncertain` 状态并阻止后续自动复用。
+
 ## [v2.25.11] - 2026-09-25
 
 **Tag**：`v2.25.11`（由本次 release:prepare 创建）
