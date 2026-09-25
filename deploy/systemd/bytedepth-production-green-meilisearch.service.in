@@ -1,0 +1,25 @@
+[Unit]
+Description=ByteDepth production green Meilisearch
+After=local-fs.target network.target
+Before=bytedepth-production-green-app.service
+
+[Service]
+Type=simple
+User=meilisearch
+Group=meilisearch
+WorkingDirectory=__GREEN_ROOT__/meilisearch
+EnvironmentFile=-/etc/bytedepth/production-green-meilisearch.env
+ExecStart=/usr/local/bin/meilisearch --config-file-path __GREEN_ROOT__/meilisearch/meilisearch.toml --db-path __GREEN_ROOT__/meilisearch --http-addr 127.0.0.1:__MEILI_PORT__
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=60s
+TimeoutStopSec=30s
+LimitNOFILE=65536
+MemoryMax=384M
+ReadWritePaths=__GREEN_ROOT__/meilisearch
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

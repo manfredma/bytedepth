@@ -1,0 +1,21 @@
+[Unit]
+Description=ByteDepth production green edge
+After=bytedepth-production-green-app.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=ubuntu
+Group=ubuntu
+ExecStartPre=/usr/sbin/nginx -t -c /etc/bytedepth/production-green-nginx.conf
+ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 12 --retry-delay 2 --retry-connrefused http://127.0.0.1:__APP_PORT__/version
+ExecStart=/usr/sbin/nginx -c /etc/bytedepth/production-green-nginx.conf -g 'daemon on; master_process on;'
+ExecReload=/usr/sbin/nginx -c /etc/bytedepth/production-green-nginx.conf -s reload
+ExecStop=/usr/sbin/nginx -c /etc/bytedepth/production-green-nginx.conf -s quit
+Restart=on-failure
+RestartSec=5s
+PrivateTmp=true
+MemoryMax=64M
+
+[Install]
+WantedBy=multi-user.target
