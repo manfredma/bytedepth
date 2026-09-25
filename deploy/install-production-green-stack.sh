@@ -97,6 +97,11 @@ install -d -o ubuntu -g ubuntu -m 0755 \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/redis" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/meilisearch" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/client_body_temp" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/proxy_temp" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/fastcgi_temp" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/uwsgi_temp" \
+    "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/scgi_temp" \
     "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/images" \
     "$BYTEDEPTH_PRODUCTION_GREEN_RELEASE_ROOT" \
     "$BYTEDEPTH_PRODUCTION_GREEN_RELEASE_ROOT/releases"
@@ -172,6 +177,11 @@ printf '%s\n' \
     "pid $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/nginx.pid;" \
     'http {' \
     '    include /etc/nginx/mime.types;' \
+    "    client_body_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/client_body_temp;" \
+    "    proxy_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/proxy_temp;" \
+    "    fastcgi_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/fastcgi_temp;" \
+    "    uwsgi_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/uwsgi_temp;" \
+    "    scgi_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/scgi_temp;" \
     "    error_log $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/error.log warn;" \
     "    access_log $BYTEDEPTH_PRODUCTION_GREEN_ROOT/edge/access.log;" \
     "    server { listen $BYTEDEPTH_PRODUCTION_GREEN_EDGE_PORT;" \
