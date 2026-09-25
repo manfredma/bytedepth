@@ -20,7 +20,7 @@
 
 两台机器的数据服务和应用相互隔离。应用发布目录为 /opt/bytedepth/releases/<ref>/app.jar，/opt/bytedepth/current 是当前发布的软链接；部署状态位于 /var/lib/bytedepth-deploy/，staging 测试状态位于 /var/lib/bytedepth-staging/。129 上 native staging 的持久化数据目录为 /data/bytedepth-native-staging/mysql、redis、meilisearch 和 images，使用 13306/16379/17700/18080/18081，绝不与旧 124 Docker 栈或旧 canonical 数据目录共享。
 
-native staging 应用服务名是 bytedepth-staging-native-app.service；数据服务名是 bytedepth-staging-native-mysql.service、bytedepth-staging-native-redis.service、bytedepth-staging-native-meilisearch.service；内部 edge 是 bytedepth-staging-native-edge.service（18081），公网入口是多服务宿主机共享的 nginx.service（80/443），其 upstream 必须指向 18081。bytedepth 只能安装自己的 `/etc/nginx/conf.d/bytedepth-staging.conf`、执行 `nginx -t` 和 reload，不能替换、重启或停用共享 Nginx。E2E 临时接管服务名为 bytedepth-staging-native-test-slot.service，它与 native 应用服务互斥。
+native staging 应用服务名是 bytedepth-staging-native-app.service；数据服务名是 bytedepth-staging-native-mysql.service、bytedepth-staging-native-redis.service、bytedepth-staging-native-meilisearch.service；内部 edge 是 bytedepth-staging-native-edge.service（18081），公网入口是多服务宿主机共享的 nginx.service（80/443），其 upstream 必须指向 18081。edge 只按 `After=` 约束等待正式 app 启动，不使用 `Requires=` 绑定生命周期，以便 E2E 临时 test slot 接管 18080 时继续复用 18081。bytedepth 只能安装自己的 `/etc/nginx/conf.d/bytedepth-staging.conf`、执行 `nginx -t` 和 reload，不能替换、重启或停用共享 Nginx。E2E 临时接管服务名为 bytedepth-staging-native-test-slot.service，它与 native 应用服务互斥。
 
 ## 3. 主机初始化
 
@@ -156,7 +156,7 @@ SSH 默认不会转发任意环境变量。远程执行时通过 SSH 标准输�
          ./deploy/run-staging-e2e-tests.sh'
     unset staging_e2e_username staging_e2e_password
 
-runner 固定使用公开 staging URL 和 /opt/shared-e2e/chrome-linux64/chrome。它停止 bytedepth-app.service，生成 staging-e2e profile 环境，启动 bytedepth-test-slot.service，该服务只加载 /run/bytedepth/staging-e2e.env，并通过 /version 校验健康。E2E 槽位使用：
+runner 固定使用公开 staging URL 和 /opt/shared-e2e/chrome-linux64/chrome。它停止 native app，生成 staging-e2e profile 环境，启动 native test-slot，该服务只加载 `/run/bytedepth/staging-native-e2e.env`，内部 edge 保持监听 18081 并将请求转发到 test slot 的 18080；runner 通过公开 `/version` 校验健康，并对健康探测设置连接和总超时。E2E 槽位使用：
 
 - MySQL：bytedepth_e2e_<run_id> 和最小权限用户 bd_e2e_<run_id>；
 - Redis：logical DB 15 与 bytedepth:e2e:<run_id>: namespace；

@@ -69,6 +69,11 @@ rg -q 'WorkingDirectory=__NATIVE_ROOT__/meilisearch' "$UNIT_DIR/bytedepth-stagin
 rg -q '^MemoryMax=384M$' "$UNIT_DIR/bytedepth-staging-native-meilisearch.service.in"
 rg -q 'ExecStart=/usr/sbin/nginx.*staging-native-nginx.conf' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 rg -q '^MemoryMax=64M$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
+if rg -n '^Requires=bytedepth-staging-native-app\.service$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in" >/dev/null; then
+    printf 'Native staging edge must not stop with the app; E2E test-slot must be able to reuse the public edge.\n' >&2
+    exit 1
+fi
+rg -q '^After=bytedepth-staging-native-app\.service ' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 rg -q 'Conflicts=bytedepth-staging-native-app.service' "$UNIT_DIR/bytedepth-staging-native-test-slot.service.in"
 rg -q 'ReadWritePaths=__NATIVE_ROOT__/images-test' "$UNIT_DIR/bytedepth-staging-native-test-slot.service.in"
 if rg -n '(/data/mysql|/data/redis|/data/meilisearch|:3306|:6379|:7700|:8080)' \

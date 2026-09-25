@@ -69,6 +69,7 @@ rg -q 'BYTEDEPTH_STAGING_TEST_SLOT_SERVICE|SLOT_SERVICE' "$RUNNER"
 rg -q 'systemctl stop "\$BYTEDEPTH_STAGING_APP_SERVICE"' "$RUNNER"
 rg -q 'systemctl start "\$SLOT_SERVICE"' "$RUNNER"
 rg -q 'systemctl stop "\$SLOT_SERVICE"' "$RUNNER"
+rg -q -- '--max-time 10' "$RUNNER"
 rg -q 'SPRING_PROFILES_ACTIVE.*staging-e2e|== staging-e2e' "$RUNNER"
 rg -q 'BYTEDEPTH_ENVIRONMENT=staging' "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
 rg -q 'BYTEDEPTH_STAGING_APP_PORT' "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
@@ -242,6 +243,8 @@ case "$action:$service" in
     is-active:bytedepth-test-slot.service|is-active:bytedepth-staging-native-test-slot.service) [[ "$state" == slot-active ]] ;;
     start:bytedepth-test-slot.service|start:bytedepth-staging-native-test-slot.service) printf 'slot-active\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
     stop:bytedepth-test-slot.service|stop:bytedepth-staging-native-test-slot.service) printf 'slot-stopped\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
+    is-active:bytedepth-staging-native-edge.service) : ;;
+    start:bytedepth-staging-native-edge.service) : ;;
     *) exit 2 ;;
 esac
 SCRIPT

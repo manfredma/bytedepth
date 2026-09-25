@@ -26,6 +26,10 @@ staging 迁移采用蓝绿切换：先在 `/data/bytedepth-native-staging` 和�
 profile 文件定义资源映射和必需配置项，运行时 manifest 只向 profile 提供本次 run 的
 外部值；不得在各个 runner 中重复维护一套命令行属性名。
 
+native staging 的内部 edge 与正式 app 保持启动顺序关系，但不绑定停止生命周期；E2E
+test slot 临时接管同一应用端口时复用该 edge，公网共享 Nginx 不需要切换到另一套项目配置。
+具体 systemd 契约见 [ADR-0017](0017-native-edge-lifecycle-for-test-slot.md)。
+
 放弃的方案：
 
 - **继续全部使用 Docker Compose**：运行方式稳定，但不能满足当前小资源环境降低容器与构建峰值的目标。

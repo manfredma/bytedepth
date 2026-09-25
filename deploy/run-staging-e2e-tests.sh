@@ -294,7 +294,8 @@ prepare_test_slot_environment
 systemctl start "$SLOT_SERVICE"
 test_slot_started=1
 for attempt in {1..30}; do
-    if systemctl is-active --quiet "$SLOT_SERVICE" && curl --fail --silent --show-error "$E2E_BASE_URL/version" >/dev/null; then
+    if systemctl is-active --quiet "$SLOT_SERVICE" && \
+        curl --fail --silent --show-error --connect-timeout 3 --max-time 10 "$E2E_BASE_URL/version" >/dev/null; then
         break
     fi
     if [[ "$attempt" == 30 ]]; then

@@ -1,6 +1,5 @@
 [Unit]
 Description=ByteDepth staging native internal edge
-Requires=bytedepth-staging-native-app.service
 After=bytedepth-staging-native-app.service network-online.target
 Wants=network-online.target
 

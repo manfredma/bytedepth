@@ -60,8 +60,8 @@
 - 部署命令被中断或失败后，先检查并停止处于 `activating/auto-restart` 的 native app，再重试；不得把失败重启循环留在后台，否则会持续消耗内存并污染下一次预检。重试前必须重新校验 unit、端口、`/version` 和 deploy history。
 - 生产版本确认直接读取 ubuntu 所有的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/current/artifact.manifest` 交叉核对。
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。
-- systemd 的 `Requires=` 会在 staging app 重启时停止依赖它的 native edge；edge 停止时不能直接 `reload`，部署流程必须先确认并启动 edge，再执行 reload。
-- staging 集成测试或 E2E 清理时，teardown 可能已经启动 app，但这不会自动恢复依赖 app 的 native edge；外层 runner 不能只在 app 仍 inactive 时恢复 edge，必须无条件显式启动并验证 `bytedepth-staging-native-edge.service` 及其 18081 `/version`，否则会出现 cleanup evidence 通过、共享 Nginx 仍 active 但公网请求 502 的假成功。
+- native staging edge 不能使用 `Requires=bytedepth-staging-native-app.service` 绑定生命周期：E2E test slot 会临时替代 app 并复用 18080，edge 必须保持在 18081 提供公网转发；只保留 `After=`启动顺序和 `/version` 启动前检查。部署或清理仍必须确认 edge active 后再 reload/写 evidence。
+- staging 集成测试或 E2E 清理时，teardown 可能已经启动 app；外层 runner 仍必须无条件检查并恢复 `bytedepth-staging-native-edge.service` 及其 18081 `/version`，否则会出现 cleanup evidence 通过、共享 Nginx 仍 active 但公网请求 502 的假成功。
 - native staging 的内部 edge（`bytedepth-staging-native-edge.service`，18081）不是公网入口；多服务宿主机的共享 `nginx.service` 监听 80/443，加载 `/etc/nginx/conf.d/bytedepth-staging.conf` 并代理到 18081。只启动内部 edge 或只把旧配置从 8080 改到应用端口，都会导致域名超时/502。部署预检必须同时执行 `nginx -t`、确认 `proxy_pass` 指向 18081、确认共享 Nginx 已 active，并在应用健康后只 reload 公网 Nginx。
 - 共享 `nginx.service` 不能包含 `Requires=bytedepth-app.service` 或访问 8080 的 `ExecStartPre`；那是单服务宿主机的错误耦合，会让其他项目跟随 bytedepth 启停。共享 unit 由宿主初始化流程安装为无项目依赖的通用服务；各项目只安装自己的站点文件，文件归 `ubuntu` 所有，不能覆盖、重启或 disable 共享 Nginx。systemd drop-in 只能作为通用术语，不能用来偷偷删除共享服务的项目依赖。
 - 共享 Nginx 的 ACME 证书续期也不能使用 standalone 后停止 80/443；staging 使用 `/var/www/certbot` webroot，由自己的站点配置提供 `/.well-known/acme-challenge/`，证书更新后只 reload 共享 Nginx。

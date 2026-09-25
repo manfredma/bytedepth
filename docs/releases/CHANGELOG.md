@@ -16,7 +16,8 @@
 
 ### Fixed
 
-- 修复 staging 集成测试和 E2E 清理后只恢复 native app、未恢复内部 edge，导致多服务宿主机共享 Nginx 仍运行但公网 upstream 失效的问题。
+- 修复 staging 集成测试和 E2E 清理后只恢复 native app、未恢复内部 edge，导致多服务宿主机共享 Nginx 仍运行但公网 upstream 失效的问题；即使 teardown 已先启动 app，外层 runner 也会无条件恢复并验证 edge。
+- 修复 native edge 与正式 app 绑定生命周期导致 E2E test slot 启动后公网入口 502/健康检查无超时卡住的问题；edge 现在只依赖 app 的启动顺序，E2E 槽位可复用同一内部 edge。
 - 修复 staging 测试槽在 Redis 业务库为空时将 `redis-cli --raw` 的空行误判为非法快照的问题。
 - 修复 staging native app 重启后 edge 被 systemd 停止、导致部署阶段直接 reload 失败的问题。
 - 修复 MySQL 8.4 `SHOW GRANTS` 账户名格式与 staging 测试槽预期不一致，导致合法的单数据库授权被错误拒绝的问题。
