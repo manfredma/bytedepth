@@ -72,7 +72,7 @@ for legacy_unit in mysql.service redis.service meilisearch.service bytedepth-app
     exit 1
   fi
 done
-available_kib="$(sudo -n awk "/^MemAvailable:/ {print \\$2}" /proc/meminfo)"
+available_kib="$(sudo -n awk "/^MemAvailable:/ {print \$2}" /proc/meminfo)"
 [[ "$available_kib" =~ ^[0-9]+$ && "$available_kib" -ge 524288 ]] || {
   printf "%s\\n" "Refusing: staging host has less than 512 MiB available before deployment." >&2
   exit 1

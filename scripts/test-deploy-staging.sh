@@ -45,6 +45,11 @@ rg -q 'check-staging-changelog-change.sh.*>&2' "$SCRIPT"
 rg -q 'check-release-readiness.sh.*>&2' "$SCRIPT"
 rg -q 'sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging' "$SCRIPT"
 rg -q 'sudo -n cat /etc/bytedepth/staging-native.conf >/dev/null 2>&1' "$SCRIPT"
+rg -Fq 'print \$2' "$SCRIPT"
+if rg -Fq 'print \\$2' "$SCRIPT"; then
+    printf 'Staging SSH preflight must not over-escape awk positional parameters.\n' >&2
+    exit 1
+fi
 if rg -n 'sudo -n (test -r|bash -c)|bash -c .*test -r' "$SCRIPT" >/dev/null; then
     printf 'Staging SSH preflight must not use nested shell readability checks.\n' >&2
     exit 1
