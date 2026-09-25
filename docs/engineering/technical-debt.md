@@ -52,3 +52,14 @@
 - 已确认根因边界：主机失去响应的直接根因是 MySQL 无资源上限地增长并触发全局 OOM；运行模式配置缺失和 MySQL 数据目录权限契约缺口是部署流程缺陷，放大了故障恢复难度。MySQL 具体是哪一个运行时内存组件持续增长，仍需在隔离、可观测和有上限的复现环境中确认，不能凭当前证据断言是单一配置项或 mysqldump 导致。
 - 后续方向：原生 staging 配置必须在部署前显式校验并 fail-closed，禁止无提示回退到另一运行模式；所有 native MySQL 实例必须有 systemd `MemoryMax` 和启动前内存余量检查；`ubuntu` 作为所有者时，服务组写入能力必须由目录/文件权限契约和自动测试同时保证；补充 MySQL RSS、cgroup、buffer pool、连接数、临时表和备份阶段指标，复现并定位具体增长来源；部署脚本必须在数据库备份前阻止并发/残留的旧栈资源争抢。
 - 验收条件：缺少 native parallel 配置时部署在任何服务操作前失败；MySQL、Redis、Meilisearch 和应用的 cgroup 上限与当前主机总内存预算可计算且自动检查通过；`ubuntu` 所有权与服务组写权限同时通过；模拟 OOM/内存不足时 SSH、systemd 和 Nginx 不被拖入不可响应；在 staging 完整部署、集成测试和 E2E 通过，并保留 commit-bound evidence。
+
+## TD-0005：staging 候选门禁未校验目标发布版本条目
+
+- 状态：`Open`
+- 发现日期：2026-09-25
+- 范围：`deploy/deploy-staging.sh`、`scripts/check-release-readiness.sh` 与发布冻结流程；不改变当前生产发布逻辑。
+- 现状：staging 候选门禁以 `--mode candidate` 运行时，只校验候选范围包含 `CHANGELOG.md` 变更，并在运行时代码变更时要求 `## Unreleased` 有分类条目；它不会校验候选中是否已经存在目标 `## [vX.Y.Z]` 正式版本条目。目标版本条目目前只由 `prepare-release.sh` 在 staging 验收之后检查。
+- 影响：候选可以完成 staging 部署、集成测试和 E2E，但在准备 Release Tag 时才因缺少正式版本条目失败；补充版本条目会改变 commit SHA，使已有 staging evidence 失效并迫使重复部署和验收。
+- 根因：发布文档已要求“首次 staging 前冻结正式 Changelog”，但 executable gate 将候选模式设计为只检查 `Unreleased`，没有接收或推导目标发布版本，也没有执行正式版本标题校验；文档规则与自动门禁不一致。
+- 后续方向：本次版本发布完成后，为 staging 部署入口增加显式目标版本参数或候选版本元数据，并在候选门禁阶段校验对应的 `## [vX.Y.Z]`、回滚基线和发布说明；保持 `prepare-release.sh` 的检查作为最终防线，并为缺失版本条目增加契约测试。
+- 验收条件：缺少目标 `## [vX.Y.Z]` 条目的候选在 staging 构建和远程部署前 fail-closed；包含正式版本条目、`Unreleased` 或文档-only 变更的合法候选按预期通过；现有 staging Changelog、release readiness、evidence SHA 绑定和正式发布流程全量测试通过。
