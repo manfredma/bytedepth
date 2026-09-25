@@ -17,6 +17,7 @@
 
 ### Fixed
 
+- 修复生产 native green Meilisearch 启动后立即健康检查的时序竞态；部署现在在连接被拒绝时继续等待直到服务真正就绪，避免短暂启动窗口被误判为 native 失败。
 - 修复生产 native green Redis 使用 `Type=simple` 启动后立即探测端口的时序竞态；部署现在轮询 Redis 鉴权 `PING` 直到真正就绪，避免短暂 `Connection refused` 被误判为 native 失败。
 - 修复生产 native green 发布在 Ubuntu 宿主机上的 MySQL 密码健康检查、MySQL 数据目录权限、Redis systemd 就绪类型和 overcommit 前置配置；native 失败时继续保持 Docker blue 可访问。
 - 修复生产远程发布脚本将生产主机 SSH key 错用于 GitHub 拉取、版本解析正则多转义一层导致合法 Tag 被误判，以及本机重复 fetch 不可变 Tag 引发 pack 解包失败的问题；生产 key 现在只用于 175，本机直接使用已校验 Tag。

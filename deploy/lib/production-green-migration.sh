@@ -291,7 +291,7 @@ production_green_import_meili_snapshot() {
     chown -R ubuntu:meilisearch "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/meilisearch"
     chmod -R g+rwX "$BYTEDEPTH_PRODUCTION_GREEN_ROOT/meilisearch"
     systemctl start "$BYTEDEPTH_PRODUCTION_GREEN_MEILI_SERVICE"
-    curl --fail --silent --show-error --retry 30 --retry-delay 1 \
+    curl --fail --silent --show-error --retry 30 --retry-delay 1 --retry-connrefused \
         "http://127.0.0.1:$BYTEDEPTH_PRODUCTION_GREEN_MEILI_PORT/health" >/dev/null
 }
 
