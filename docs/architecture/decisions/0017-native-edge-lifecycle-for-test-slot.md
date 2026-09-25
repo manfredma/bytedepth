@@ -29,7 +29,9 @@ native edge 删除对正式 app 的 `Requires=` 生命周期依赖，只保留 `
    自己的站点配置。
 
 所有公网健康探测必须同时设置连接超时和总超时，避免 edge 或 DNS 异常把测试 runner
-永久挂起。
+永久挂起。清理恢复时还必须先轮询 app 的 HTTP `/version`，再轮询 edge 的 18081
+`/version`；systemd 的 active 状态只表示进程启动事务完成，不代表 Spring 已经可以
+接收请求。
 
 ## 后果
 

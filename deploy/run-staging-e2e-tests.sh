@@ -152,11 +152,11 @@ cleanup_slot() {
         if ! systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE"; then
             systemctl start "$BYTEDEPTH_STAGING_APP_SERVICE" || cleanup_status=1
         fi
-        systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE" || cleanup_status=1
+        staging_native_wait_for_http "$BYTEDEPTH_STAGING_APP_SERVICE" \
+            "$BYTEDEPTH_STAGING_HEALTH_URL" || cleanup_status=1
         systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE" || cleanup_status=1
-        systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE" || cleanup_status=1
-        curl --fail --silent --show-error \
-            "http://127.0.0.1:${BYTEDEPTH_STAGING_EDGE_PORT}/version" >/dev/null || cleanup_status=1
+        staging_native_wait_for_http "$BYTEDEPTH_STAGING_EDGE_SERVICE" \
+            "http://127.0.0.1:${BYTEDEPTH_STAGING_EDGE_PORT}" || cleanup_status=1
     fi
     rm -f -- "$SLOT_ENV"
     cleanup_done=1

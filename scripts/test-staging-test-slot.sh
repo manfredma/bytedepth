@@ -192,12 +192,17 @@ for runner in "$root/deploy/run-staging-integration-tests.sh" "$root/deploy/run-
         printf 'FAIL: %s must restore the native edge after restoring the staging app\n' "$runner" >&2
         exit 1
     }
-    grep -Fq 'systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE"' "$runner" || {
+    grep -Fq 'staging_native_wait_for_http "$BYTEDEPTH_STAGING_APP_SERVICE"' "$runner" && \
+        grep -Fq '"$BYTEDEPTH_STAGING_HEALTH_URL"' "$runner" || {
+        printf 'FAIL: %s must wait for the staging app HTTP health before validating the edge\n' "$runner" >&2
+        exit 1
+    }
+    grep -Fq 'staging_native_wait_for_http "$BYTEDEPTH_STAGING_EDGE_SERVICE"' "$runner" || {
         printf 'FAIL: %s must verify the native edge after cleanup\n' "$runner" >&2
         exit 1
     }
-    grep -Fq 'curl --fail --silent --show-error' "$runner" && \
-        grep -Fq 'http://127.0.0.1:${BYTEDEPTH_STAGING_EDGE_PORT}/version' "$runner" || {
+    grep -Fq 'BYTEDEPTH_STAGING_EDGE_PORT' "$runner" && \
+        grep -Fq 'staging_native_wait_for_http' "$runner" || {
         printf 'FAIL: %s must verify the native edge port after cleanup\n' "$runner" >&2
         exit 1
     }

@@ -45,3 +45,17 @@ load_staging_native_target() {
         BYTEDEPTH_STAGING_IMAGE_ROOT \
         BYTEDEPTH_STAGING_TEST_IMAGE_ROOT BYTEDEPTH_STAGING_HEALTH_URL
 }
+
+staging_native_wait_for_http() {
+    local service="$1" url="$2" attempt
+
+    for attempt in {1..30}; do
+        if systemctl is-active --quiet "$service" && \
+            curl --fail --silent --show-error --connect-timeout 3 --max-time 10 \
+                "$url/version" >/dev/null; then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
