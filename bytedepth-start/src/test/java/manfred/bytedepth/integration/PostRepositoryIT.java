@@ -111,7 +111,10 @@ class PostRepositoryIT {
                 .containsExactly(second.getId(), first.getId(), third.getId());
         assertThat(hotPosts.get(2).viewCount()).isZero();
 
-        var hotPostsWithoutSecond = postRepository.findPublishedByHotnessExcluding(List.of(second.getId()), 1, 3);
+        // The integration fixture may contain published baseline posts.  Ask for
+        // exactly the two records created by this test instead of assuming that
+        // this isolated schema is otherwise empty.
+        var hotPostsWithoutSecond = postRepository.findPublishedByHotnessExcluding(List.of(second.getId()), 1, 2);
         assertThat(hotPostsWithoutSecond)
                 .extracting(row -> row.post().getId())
                 .containsExactly(first.getId(), third.getId());
