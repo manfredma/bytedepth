@@ -17,8 +17,6 @@
 
 ### Fixed
 
-- 修复生产红绿发布在 final-sync 失败时因 Bash `errexit` 在 `if ! function` 条件上下文中被抑制、错误继续切流的问题；final-sync 现在直接执行，失败会保留不确定状态、停止 green 并恢复 Docker blue，禁止 native 失败影响线上访问。
-
 - 修复生产 native green 安装器未验证目标主机 Java 25、导致 systemd 使用不存在的固定路径并在切流前失败的问题；安装器现在会准备并验证 Java 25，并用实际解析路径渲染应用服务。
 
 - 修复生产 native green edge 以 `ubuntu` 运行时仍依赖 root 默认 Nginx 临时目录的问题；现在 body、proxy 等临时目录都位于 green root 并由 `ubuntu` 创建，避免 `nginx -t` 在 Docker blue 仍健康时阻断 native 预检。
@@ -66,6 +64,17 @@
 - 固化 SSH 远端命令的引号、反斜杠和 awk `$2` 转义契约，避免多层 shell 解析后出现远端变量展开错误。
 - 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
 - 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
+
+## [v2.25.11] - 2026-09-25
+
+**Tag**：`v2.25.11`（由本次 release:prepare 创建）
+**Commit**：由本次 release:prepare 冻结
+**部署**：修复 native green final-sync 失败时错误继续切流的问题；失败时保持 Docker blue 提供线上访问。
+**回滚基线**：`v2.25.2`
+
+### Fixed
+
+- 修复生产红绿发布在 final-sync 失败时因 Bash `errexit` 在 `if ! function` 条件上下文中被抑制、错误继续切流的问题；final-sync 现在直接执行，失败会保留不确定状态、停止 green 并恢复 Docker blue，禁止 native 失败影响线上访问。
 
 ## [v2.25.10] - 2026-09-25
 
