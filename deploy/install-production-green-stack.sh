@@ -22,24 +22,42 @@ load_production_green_target
 
 ensure_native_dependencies() {
     local missing=()
+    local nginx_service_masked=0
     command -v mysqld >/dev/null || missing+=(mysqld)
     command -v mysql >/dev/null || missing+=(mysql)
     command -v mysqladmin >/dev/null || missing+=(mysqladmin)
     command -v redis-server >/dev/null || missing+=(redis-server)
     command -v redis-cli >/dev/null || missing+=(redis-cli)
+    command -v nginx >/dev/null || missing+=(nginx)
     getent passwd mysql >/dev/null || missing+=(mysql-user)
     getent group mysql >/dev/null || missing+=(mysql-group)
     getent passwd redis >/dev/null || missing+=(redis-user)
     getent group redis >/dev/null || missing+=(redis-group)
     if (( ${#missing[@]} > 0 )); then
         command -v apt-get >/dev/null || {
-            printf 'Refusing: native MySQL/Redis prerequisites are missing: %s\n' "${missing[*]}" >&2
+            printf 'Refusing: native green prerequisites are missing: %s\n' "${missing[*]}" >&2
             return 1
         }
-        apt-get update
-        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends mysql-server redis-server
+        # The public ingress is managed separately.  nginx-core is only used
+        # by the isolated green edge on 18081; prevent its package
+        # maintainer scripts from starting a competing host ingress while the
+        # native prerequisite is being installed.
+        if [[ " ${missing[*]} " == *' nginx '* ]]; then
+            systemctl mask nginx.service >/dev/null
+            nginx_service_masked=1
+        fi
+        if ! apt-get update || ! DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            mysql-server redis-server nginx-core; then
+            if (( nginx_service_masked )); then
+                systemctl unmask nginx.service >/dev/null || true
+            fi
+            return 1
+        fi
+        if (( nginx_service_masked )); then
+            systemctl unmask nginx.service >/dev/null
+        fi
     fi
-    for command_name in mysqld mysql mysqladmin redis-server redis-cli; do
+    for command_name in mysqld mysql mysqladmin redis-server redis-cli nginx; do
         command -v "$command_name" >/dev/null || {
             printf 'Refusing: required native command is unavailable after installation: %s\n' "$command_name" >&2
             return 1
