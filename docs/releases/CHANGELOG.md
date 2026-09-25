@@ -71,6 +71,7 @@
 ### Fixed
 
 - 修复生产 Docker 入口宿主机缺少 nginx 二进制导致 native green edge 以 `203/EXEC` 失败的问题；安装 green 前置依赖时自动安装 `nginx-core`，并屏蔽其 package maintainer scripts，避免触碰 Docker 公网入口。
+- 修复生产 green 已存在 `prepared` 标记时跳过 native 前置依赖复核的问题；每次部署都会先重新校验并补齐 `nginx` 等宿主依赖，前置失败仍停留在 Docker blue 切流前。
 
 ## [v2.25.6] - 2026-09-25
 

@@ -4,6 +4,7 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly ROOT
 readonly SCRIPT="$ROOT/deploy/deploy-production.sh"
+readonly MIGRATION_LIB="$ROOT/deploy/lib/production-green-migration.sh"
 
 [[ -x "$SCRIPT" ]] || { printf 'Expected executable production deployment script.\n' >&2; exit 1; }
 
@@ -40,6 +41,8 @@ require_text 'validate_artifact_manifest' "$SCRIPT"
 require_text 'install_release_artifact' "$SCRIPT"
 require_text 'production-green' "$SCRIPT"
 require_text 'release-history' "$SCRIPT"
+require_text 'production_green_prepare()' "$MIGRATION_LIB"
+require_text '"$SOURCE_ROOT/deploy/install-production-green-stack.sh"' "$MIGRATION_LIB"
 
 if rg -n -i 'docker compose|docker-compose|docker rm|docker system prune|systemctl (stop|restart|disable) nginx' "$SCRIPT" >/dev/null; then
     printf 'Production red-green deployment must not rebuild/remove Docker or stop shared Nginx.\n' >&2
@@ -73,5 +76,12 @@ require_text 'trap rollback_on_failure EXIT' "$SCRIPT"
 require_text 'if (( route_changed )); then' "$SCRIPT"
 require_text 'if (( blue_stopped )); then' "$SCRIPT"
 require_text 'if (( deployment_succeeded == 0 )); then' "$SCRIPT"
+
+install_stack_line="$(awk '/\"\$SOURCE_ROOT\/deploy\/install-production-green-stack\.sh\"/ { print NR; exit }' "$MIGRATION_LIB")"
+prepared_marker_line="$(awk '/BYTEDEPTH_PRODUCTION_GREEN_STATE_ROOT\/prepared/ { print NR; exit }' "$MIGRATION_LIB")"
+[[ -n "$install_stack_line" && -n "$prepared_marker_line" && "$install_stack_line" -lt "$prepared_marker_line" ]] || {
+    printf 'Production green must recheck native prerequisites before honoring the prepared marker.\n' >&2
+    exit 1
+}
 
 printf 'Production red-green deployment contract passed.\n'

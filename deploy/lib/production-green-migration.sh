@@ -320,9 +320,9 @@ production_green_mark() {
 production_green_prepare() {
     production_green_require_blue
     production_green_require_target
-    [[ ! -e "$BYTEDEPTH_PRODUCTION_GREEN_STATE_ROOT/prepared" ]] || return 0
     production_green_write_app_env
     "$SOURCE_ROOT/deploy/install-production-green-stack.sh"
+    [[ ! -e "$BYTEDEPTH_PRODUCTION_GREEN_STATE_ROOT/prepared" ]] || return 0
     production_green_ensure_meilisearch_binary
     production_green_prepare_mysql_dump
     production_green_initialize_mysql
