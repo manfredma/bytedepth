@@ -69,6 +69,8 @@ if rg -n 'Requires=bytedepth-app\.service|127\.0\.0\.1:8080/version|ExecStartPre
     exit 1
 fi
 require_text "ExecStart=/usr/sbin/nginx -g 'daemon on; master_process on;'" "$UNIT_DIR/nginx.service"
+require_text 'ExecReload=/bin/kill -HUP $MAINPID' "$UNIT_DIR/nginx.service"
+require_text 'ExecStop=/bin/kill -QUIT $MAINPID' "$UNIT_DIR/nginx.service"
 
 for unit in mysql.service redis.service meilisearch.service; do
     require_text '127.0.0.1' "$UNIT_DIR/$unit"

@@ -253,6 +253,7 @@ printf '%s\n' \
     "pid $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/nginx.pid;" \
     'http {' \
     '    include /etc/nginx/mime.types;' \
+    '    include /etc/nginx/conf.d/*.conf;' \
     "    client_body_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/client_body_temp;" \
     "    proxy_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/proxy_temp;" \
     "    fastcgi_temp_path $BYTEDEPTH_PRODUCTION_GREEN_ROOT/public-nginx/fastcgi_temp;" \

@@ -56,6 +56,7 @@ require_text 'ExecStartPost=/usr/bin/chown -R ubuntu:ubuntu __GREEN_ROOT__/publi
 require_text 'ExecStopPost=/usr/bin/chown -R ubuntu:ubuntu __GREEN_ROOT__/public-nginx' "$ROOT/deploy/systemd/bytedepth-production-green-public-nginx.service.in"
 require_text 'listen 443 ssl' "$INSTALLER"
 require_text 'server_name bytedepth.cn www.bytedepth.cn' "$INSTALLER"
+require_text 'include /etc/nginx/conf.d/*.conf;' "$INSTALLER"
 require_text 'production-green-public-nginx.conf' "$INSTALLER"
 require_text "proxy_pass http://127.0.0.1:\$BYTEDEPTH_PRODUCTION_GREEN_EDGE_PORT;" "$INSTALLER"
 require_text 'RequiresMountsFor=__GREEN_ROOT__/images' "$ROOT/deploy/systemd/bytedepth-production-green-app.service.in"

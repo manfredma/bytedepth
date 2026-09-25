@@ -6,6 +6,8 @@
 
 ### Changed
 
+- native production public Nginx now includes project-owned `/etc/nginx/conf.d/*.conf` files, allowing independently deployed services such as Daylilt to add routes without modifying the bytedepth main configuration or restarting the shared ingress.
+
 - 修复发布例外契约测试继承外层跳过开关、导致正常 evidence 拒绝用例失真的问题；测试现在显式隔离该环境变量。
 
 - 发布脚本支持项目所有者对“仅生产部署迁移脚本、不影响应用运行时”的紧急修复显式跳过远程 staging 集成/E2E；仍强制执行本地发布清单、静态契约、覆盖率、不可变 Tag 和生产 green 切流前检查，不允许伪造 staging evidence。

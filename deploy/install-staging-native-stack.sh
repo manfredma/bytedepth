@@ -155,6 +155,7 @@ chown ubuntu:meilisearch "$native_root/meilisearch/meilisearch.toml"
 
 printf '%s\n' \
     'events { worker_connections 1024; }' \
+    "pid $native_root/edge/nginx.pid;" \
     'http {' \
     '    include /etc/nginx/mime.types;' \
     "    server { listen $edge_port;" \
