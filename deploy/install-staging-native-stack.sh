@@ -59,7 +59,7 @@ ensure_service_group_write_access() {
 }
 
 install -d -o ubuntu -g ubuntu -m 0775 "$native_root" "$native_root/mysql" "$native_root/redis" "$native_root/meilisearch" "$native_root/images"
-install -d -o ubuntu -g ubuntu -m 0770 "$native_root/images-test"
+install -d -o ubuntu -g ubuntu -m 0700 "$native_root/images-test"
 chown ubuntu:mysql "$native_root/mysql"
 chown ubuntu:redis "$native_root/redis"
 chown ubuntu:meilisearch "$native_root/meilisearch"

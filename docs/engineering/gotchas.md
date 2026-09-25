@@ -69,6 +69,7 @@
 - native staging E2E 的 fake/systemd fixture 也必须使用 native app/test-slot 服务名和 13306/16379/18080 端口；只把生产 runner 改成 native、却保留 fixture 的 canonical 服务名，会让本机契约测试在“非 staging 拒绝”后静默失败，无法进入真正的 E2E 断言。
 - 测试槽 manifest 的 `app_port` 不能硬编码 8080；校验和生成必须绑定 `BYTEDEPTH_STAGING_APP_PORT`，否则隔离 native 槽位会在资源创建前被错误拒绝。
 - E2E 契约 fixture 替换运行时路径时，必须同时覆盖 canonical 与 native 的 `SLOT_ENV` 路径；否则测试会在 macOS 上意外向 `/run/bytedepth` 写入并把路径问题误报成 runner 失败。
+- native 测试槽的共享图片根目录也属于隔离边界：必须由 `ubuntu` 持有且使用 0700；只有按 `run_id` 创建的 `it`/`e2e` 子目录才授予应用服务组写入。根目录若沿用 0770，测试 runner 会在真正执行前拒绝，不能只修正子目录权限。
 
 ## 原生测试槽位（critical）
 

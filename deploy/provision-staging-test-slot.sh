@@ -109,7 +109,7 @@ provision_cleanup() {
     if (( run_dir_created != 0 )) && [[ -d $run_dir && ! -L $run_dir ]]; then
         rm -r -- "$run_dir" || slot_die 'partial local test state cleanup failed'
     fi
-    image_root="/data/images-test/$run_id"
+    image_root="$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT/$run_id"
     if (( image_root_created != 0 )) && [[ -d $image_root && ! -L $image_root ]]; then
         rm -r -- "$image_root" || slot_die 'partial image directory cleanup failed'
     fi
