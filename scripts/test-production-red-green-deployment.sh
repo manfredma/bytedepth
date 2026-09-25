@@ -34,6 +34,8 @@ for contract in \
     'stop_green_services'; do
     require_text "$contract" "$SCRIPT"
 done
+require_text "systemctl cat \"\$service\"" "$SCRIPT"
+require_text 'local failure=0 service' "$SCRIPT"
 
 require_text 'This is a production-host-only script' "$SCRIPT"
 require_text 'deploy-production-remote.sh' "$SCRIPT"

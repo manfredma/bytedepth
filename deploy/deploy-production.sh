@@ -169,16 +169,21 @@ restore_blue_access() {
 }
 
 stop_green_services() {
-    if systemctl stop "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE" \
+    local failure=0 service
+    for service in \
+        "$BYTEDEPTH_PRODUCTION_GREEN_EDGE_SERVICE" \
         "$BYTEDEPTH_PRODUCTION_GREEN_APP_SERVICE" \
         "$BYTEDEPTH_PRODUCTION_GREEN_MEILI_SERVICE" \
         "$BYTEDEPTH_PRODUCTION_GREEN_REDIS_SERVICE" \
         "$BYTEDEPTH_PRODUCTION_GREEN_MYSQL_SERVICE" \
-        "$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE" 2>/dev/null; then
-        return 0
-    fi
-    printf 'Refusing: one or more native green services could not be stopped during rollback.\n' >&2
-    return 1
+        "$BYTEDEPTH_PRODUCTION_GREEN_PUBLIC_NGINX_SERVICE"; do
+        systemctl cat "$service" >/dev/null 2>&1 || continue
+        if ! systemctl stop "$service" 2>/dev/null; then
+            printf 'Refusing: native green service could not be stopped during rollback: %s\n' "$service" >&2
+            failure=1
+        fi
+    done
+    return "$failure"
 }
 
 rollback_on_failure() {

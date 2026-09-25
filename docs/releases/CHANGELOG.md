@@ -21,6 +21,8 @@
 
 ### Fixed
 
+- 修复生产 green 尚未安装公网 Nginx unit 时，失败回滚把“unit 不存在”误报为停止服务失败的问题；回滚现在只停止已安装的 green unit，并继续对真实停止失败 fail-closed。
+
 - 将生产公网 Nginx 纳入 native green 完整迁移：旧 Docker Nginx 配置保持不动，切流先停止旧入口切断流量，再停止蓝应用并重新执行最终数据导入，最后启动独立的 native 公网 Nginx；失败时停止新服务、启动旧 Docker Nginx 和蓝应用回退，避免 bind mount inode 和旧路由修改造成 502。
 
 - 修复合并主分支脚本只写入 `FETCH_HEAD`、未创建候选分支 remote-tracking ref，导致质量通过后合并流程错误中止的问题；现在显式更新 `origin/<branch>` 并由契约测试锁定。
