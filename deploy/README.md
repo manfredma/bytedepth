@@ -197,6 +197,10 @@ runner 固定使用公开 staging URL、宿主机共享运行时提供的 `/opt/
 
 代码回滚只能选择已经验证过的旧原生发布，并先确认数据库迁移兼容。若 schema 不兼容，必须先从对应备份恢复数据，再安装旧 JAR；不能只把软链接指回旧目录。发布中自动回滚仅恢复 current、应用和 Nginx，不能回滚已执行的 Flyway 数据迁移。
 
+175 的生产迁移采用红绿流程。当前 Docker 栈是蓝环境；native 绿环境使用 `/data/bytedepth-native-production`、13306/16379/17700/18080/18081 和 `bytedepth-production-green-*` systemd unit。`deploy/migrate-production-docker-to-native.sh prepare` 只能在蓝环境继续提供流量时执行初始复制、安装配置和启动绿中间件；绿环境健康、版本 SHA 和只读回归未通过前，禁止停止、重建或修改 Docker 蓝环境。
+
+只有绿环境预验证通过后，发布锁才可进入短暂切流窗口：停止蓝 bytedepth 应用、执行 `final-sync`、启动绿应用和 edge、执行 `nginx -t`，再只 reload bytedepth upstream。任一步骤失败都必须恢复原 Docker upstream、启动蓝应用并通过 Docker 公网入口回归；native 失败不能把 Docker 留在停止、半配置或不可访问状态。共享 Nginx 和同机其他项目不得重启、重建或改路由。切流后 Docker 蓝环境和迁移前数据必须保留到生产验收完成；清理是单独的显式阶段。
+
 ## 10. 发布前门禁
 
 本机只作离线单元测试和静态检查；完整门禁入口为：

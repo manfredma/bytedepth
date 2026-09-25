@@ -112,6 +112,10 @@
 | 隔离栈（isolated stack） | 一组共同使用专用目录、端口、配置和生命周期的应用与中间件服务。 | 不能与旧栈共享持久化数据目录；切换前旧栈保留为回退目标。 |
 | 测试槽位（test slot） | staging 上临时接管应用入口、运行一次集成测试或 E2E 测试的受控服务实例。 | 每次运行绑定唯一 `run_id` 和资源清单；测试结束必须停止槽位、清理资源并恢复 staging 应用。不是永久环境。 |
 | 旧栈（legacy stack） | 迁移前仍保留的旧服务集合，例如旧 Docker 栈或旧 canonical systemd 服务。 | 只用于迁移回退或最终清理；普通部署和测试不得静默回到旧栈。 |
+| 生产蓝环境（production blue） | 175 上当前继续提供生产流量的 Docker bytedepth 应用、数据服务和 bytedepth Nginx 路由。 | native 准备和预验证期间必须保持可用；native 失败时必须恢复或保持蓝环境访问。 |
+| 生产绿环境（production green） | 175 上使用独立目录、端口和 `bytedepth-production-green-*` systemd unit 的完整 native 栈。 | 不得与蓝环境共享活动中间件数据目录；健康、SHA 和只读回归通过后才能切流。 |
+| 切流窗口（cutover window） | 绿环境预验证通过后，保存蓝路由、执行最终同步、切换 bytedepth upstream 并验证公网入口的受控短时操作阶段。 | 只允许操作 bytedepth；任何失败先恢复蓝应用和蓝 upstream，再报告失败。 |
+| 不确定状态（uncertain state） | 迁移复制、清理或回退的结果无法确认的安全状态。 | 必须保留 manifest、目录和资源，禁止猜测性删除；恢复前先人工确认资源身份和服务状态。 |
 | 内部 edge | native 隔离栈内负责把 18081 转发到应用 18080 的 Nginx 服务 `bytedepth-staging-native-edge.service`。 | 只监听本机隔离端口，不直接承担公网 DNS、TLS 或 80/443 流量。 |
 | 公网入口（public ingress） | 多服务宿主机共享的 Nginx `nginx.service`，负责 80/443、TLS 证书及各项目域名路由；bytedepth 只拥有自己的站点配置。 | 共享 unit 不能依赖某一个项目或固定应用端口；bytedepth 只能校验并 reload，不能接管、重启或覆盖其他项目的入口。 |
 | systemd drop-in | 放在某个 unit 的 `.service.d/` 目录中的覆盖片段；systemd 读取主 unit 后再合并其中的同名配置，用于按环境覆盖依赖、启动前检查等少量行为。 | 不是新的服务，也不是复制主 unit；必须明确清空需要替换的多值字段（如 `Requires=`、`ExecStartPre=`），否则旧值会继续生效。 |
