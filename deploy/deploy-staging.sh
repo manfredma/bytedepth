@@ -229,11 +229,11 @@ run_locked_install() {
 
     native_bootstrap_command() {
         if [[ "$BYTEDEPTH_STAGING_RUNTIME_MODE" == host-native-parallel ]]; then
-            ./deploy/install-staging-native-stack.sh
+            ./deploy/install-staging-native-stack.sh || return 1
             restart_native_middlewares || return 1
             wait_for_native_mysql || return 1
         else
-            ./deploy/bootstrap-ops-deploy.sh
+            ./deploy/bootstrap-ops-deploy.sh || return 1
         fi
     }
     if ! record_timed_phase "$timing_file" native_service_install native_bootstrap_command; then

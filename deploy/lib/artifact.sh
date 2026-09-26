@@ -46,9 +46,9 @@ install_release_artifact() {
     [[ "${EUID}" -eq 0 ]] || { printf 'Artifact installation requires root.\n' >&2; return 1; }
     validate_artifact_ref "$release_ref" || { printf 'Invalid release reference.\n' >&2; return 1; }
     validate_artifact_manifest "$manifest" "$jar" || { printf 'Invalid artifact manifest.\n' >&2; return 1; }
-    install -d -o ubuntu -g ubuntu -m 0755 "$release_dir"
-    install -o ubuntu -g ubuntu -m 0644 "$jar" "$release_dir/app.jar"
-    install -o ubuntu -g ubuntu -m 0600 "$manifest" "$release_dir/artifact.manifest"
+    install -d -o ubuntu -g ubuntu -m 0755 "$release_dir" || return 1
+    install -o ubuntu -g ubuntu -m 0644 "$jar" "$release_dir/app.jar" || return 1
+    install -o ubuntu -g ubuntu -m 0600 "$manifest" "$release_dir/artifact.manifest" || return 1
 }
 
 switch_current_release() {

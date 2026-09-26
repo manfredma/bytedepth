@@ -14,6 +14,8 @@ for contract in \
     'check-release-readiness.sh' \
     'build_release_artifact' \
     'application_version' \
+    './deploy/install-staging-native-stack.sh || return 1' \
+    './deploy/bootstrap-ops-deploy.sh || return 1' \
     'scp' \
     'if ! scp' \
     'find '\''$remote_dir'\'' -depth -delete' \

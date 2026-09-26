@@ -5,6 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=forking
+PIDFile=__NATIVE_ROOT__/edge/nginx.pid
 ExecStartPre=/usr/sbin/nginx -t -c /etc/bytedepth/staging-native-nginx.conf
 ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 12 --retry-delay 2 --retry-connrefused http://127.0.0.1:__APP_PORT__/version
 ExecStart=/usr/sbin/nginx -c /etc/bytedepth/staging-native-nginx.conf -g 'daemon on; master_process on;'

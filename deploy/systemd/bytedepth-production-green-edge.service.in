@@ -5,6 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=forking
+PIDFile=__GREEN_ROOT__/edge/nginx.pid
 User=ubuntu
 Group=ubuntu
 ExecStartPre=/usr/sbin/nginx -t -c /etc/bytedepth/production-green-nginx.conf
