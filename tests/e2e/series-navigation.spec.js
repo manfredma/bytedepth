@@ -40,7 +40,7 @@ test.describe('专栏文章导航', () => {
         const targetUrl = new URL(targetHref, page.url());
 
         await Promise.all([
-            page.waitForNavigation({waitUntil: 'domcontentloaded'}),
+            page.waitForURL(targetUrl.href, {waitUntil: 'domcontentloaded'}),
             target.click()
         ]);
 

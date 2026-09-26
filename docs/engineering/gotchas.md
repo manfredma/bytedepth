@@ -22,6 +22,7 @@
 - **staging 门禁先预检、后执行**：部署、集成测试与 E2E 在单机上互斥，重复运行的时间主要来自镜像构建和启动浏览器，不应在 staging 上逐个猜测前提。先在本机用 runner 的 fake/fixture 测试验证脚本逻辑；首次 staging 运行前一次性确认部署 SHA、服务健康、可用磁盘、固定浏览器路径和真实 E2E 数据。失败时保存日志并只针对第一个可复现错误修复，修复先通过离线脚本测试，再重跑 staging。不要因猜测缺浏览器而安装系统 Chromium，也不要依赖会被数据同步清除的固定文章 slug。
 - staging E2E 的共享浏览器运行时不只包含 Chromium，还包含 Playwright ffmpeg；缺少 `/root/.cache/ms-playwright/ffmpeg-*/ffmpeg-linux` 会在创建 browser context 前让所有用例失败。必须由 `bootstrap-staging-runtime.sh` 统一安装/校验并写入 runtime manifest，不能在项目目录下载浏览器或在 runner 中临时安装。
 - **移动端文章 E2E 等待正文初始化**：staging 的长文章在移动 Chromium 下可能在 Playwright `goto(..., {waitUntil: 'commit'})` 后超过默认 5 秒才完成 HTML 流式传输；批注测试必须使用显式 15 秒的 `data-bd-annotation-ready` 等待超时，并保留固定 staging E2E 复验，不能把该时序失败误判为业务脚本异常。
+- **E2E 完整页面导航按目标 URL 同步**：Playwright 的 `page.waitForNavigation()` 可能在 URL 已切到目标页且 `networkidle` 已触发时仍超时；完整页面导航断言使用 `page.waitForURL(目标 URL)`，并继续检查目标页内容。对应导航 E2E 必须覆盖桌面 Chromium 和移动 Chromium。
 - **集成测试资源必须有界**：同一 staging test slot 内的多个 `*IT` 类共享本次 run 的隔离 MySQL、Redis 和 Meilisearch 资源；runner 退出时必须执行 teardown。资源身份不确定时保留 manifest 并报警，不能盲删。
 - **集成测试 fixture 不是空数据库**：隔离库会导入保留基线数据的安全 fixture；集成测试不能假定除本用例写入的数据外没有文章、用户或统计记录。需要验证本用例结果时，应使用足够小的 limit、唯一测试标识或针对本用例数据的断言，不能用“全库只有 N 条记录”的脆弱精确断言。
 - **集成测试 fixture 的 DDL 顺序必须可独立执行**：测试槽在已完成 Flyway 的隔离库上直接导入 fixture；fixture 中的外键不能引用尚未创建的表。若合成 fixture 不需要复刻该约束，应省略测试专用外键，并由应用迁移负责正式 schema 约束；不能把初始化失败留给远程 staging 才发现。
