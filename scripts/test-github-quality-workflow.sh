@@ -5,6 +5,8 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly WORKFLOW="$SOURCE_ROOT/.github/workflows/quality.yml"
 
 [[ -f "$WORKFLOW" ]]
+[[ "$(rg -c '^    runs-on: ubuntu-24\.04$' "$WORKFLOW")" == 2 ]]
+! rg -q 'ubuntu-latest' "$WORKFLOW"
 rg -Fq 'pull_request:' "$WORKFLOW"
 rg -Fq 'push:' "$WORKFLOW"
 rg -Fq -- "- 'main'" "$WORKFLOW"
