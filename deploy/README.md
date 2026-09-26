@@ -1,5 +1,11 @@
 # bytedepth 部署手册（宿主机原生运行时）
 
+## 多项目共享基础设施边界
+
+bytedepth、Career、Daylilt 与 Toolbox 共用宿主机基础设施：MySQL、公共 Nginx、Java/Maven/Node/Chromium 以及实际需要的其他中间件。共享只发生在基础设施能力层；业务数据库、数据库用户、凭据、端口、目录、systemd unit、Nginx route、日志、测试资源和 evidence 必须按项目隔离。
+
+bytedepth 的部署只能安装或 reload 自己的服务和站点配置，不能 stop、disable、重建或覆盖 Career、Daylilt、Toolbox 的服务、数据或路由。
+
 本文件是部署、发布、切流、回滚和数据迁移的唯一操作说明。每个验收步骤必须成功后才能继续。正常运行时由宿主机 systemd 管理 Java 25、MySQL 8、Redis 7、Meilisearch 1.7 和 Nginx；应用以外部构建的不可变 JAR 交付。
 
 ## 1. 不可变约束

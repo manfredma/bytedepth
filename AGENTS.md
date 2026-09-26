@@ -11,6 +11,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
   - runtime manifest 只描述可复用的依赖输入（`package-lock.json`、`pom.xml`、共享 Chromium 版本），**不得绑定 checkout SHA**；代码提交变化但这些输入未变化时，runner 必须复用既有运行时。测试结果与部署对应提交的绑定由 integration/E2E evidence 单独负责，二者不得混用。
 - 新建或切换 Git worktree 后，运行任何前端测试、lint 或 Playwright 前必须先执行 `npm ci --ignore-scripts --no-audit --no-fund`；统一本机门禁入口是 `bash scripts/run-local-quality.sh`，不得先试跑 `npm test` 再根据缺失的 `node_modules` 报错补救。
 - 不得忽略任何构建、测试、静态分析、发布或部署验收输出中的 `WARNING`：必须在继续流程前定位并修复；无法修复时立即中止并报告，不能将含告警的结果称为成功。
+- bytedepth、Career、Daylilt 与 Toolbox 共用宿主机基础设施（MySQL、公共 Nginx、Java/Maven/Node/Chromium 及实际需要的中间件），但业务数据库、用户、凭据、端口、目录、systemd unit、route、日志、测试资源和 evidence 必须按项目隔离；共享基础设施不等于共享业务数据。
 - 线上和 staging 的所有项目部署产物统一由操作系统用户 `ubuntu` 持有：代码工作区、配置、运行数据、发布制品、日志、测试资源、凭据以及由 `sudo` 创建的文件，创建后都必须显式修正为 `ubuntu` 所有。服务进程需要写入时只能使用服务组作为 group，不能把项目文件留给 `root` 或服务账号；该规则由 `scripts/test-project-ownership.sh` 和 staging checklist 固定检查。
 - **跨 agent 防复发（强制）**：每次发现的流程、配置、测试或部署错误，必须在结束前沉淀为项目内的明确规则（`AGENTS.md`、`docs/` 或 ADR）并补充可重复执行的自动检查/测试；不得依赖任何 agent 的会话记忆、个人经验或口头交接。自动检查必须在写入通过证据、合并或发布之前执行；发布前统一运行 `bash scripts/check-staging-checklist.sh`。对 staging runner，凭据、共享运行时和候选 SHA 必须显式注入并 fail-fast 校验，禁止隐式默认值；启用 `pipefail` 的脚本不得用会因上游 SIGPIPE 产生假阴性的 `命令 | grep -q` 作为就绪判定；涉及“当前日期/时间”的 E2E 断言必须在测试运行时计算，禁止硬编码会过期的日历预期。
 - 任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前拥有 `CHANGELOG.md` 中非空且分类明确的 `## Unreleased` 条目；本地质量、CI、staging 部署、合并和正式发布入口均必须自动检查，缺失时 fail-closed。
