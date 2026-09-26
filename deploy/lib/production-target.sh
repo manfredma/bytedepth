@@ -7,7 +7,8 @@ normalize_production_config_file() {
         return 1
     }
     temporary_file="$(mktemp "${target_file}.XXXXXX")" || return 1
-    if ! sed -E 's/^(BYTEDEPTH_PRODUCTION_)[A-Z0-9]+_((ROOT|[A-Z0-9]+_PORT)=)/\1\2/' \
+    if ! sed -E -e '/^[[:space:]]*#/d' \
+        -e 's/^(BYTEDEPTH_PRODUCTION_)[A-Z0-9]+_((ROOT|[A-Z0-9]+_PORT)=)/\1\2/' \
         "$source_file" > "$temporary_file"; then
         rm -f -- "$temporary_file"
         return 1

@@ -100,6 +100,7 @@ TEMP_ROOT="$(mktemp -d)"
 readonly TEMP_ROOT
 trap 'python3 -c "from pathlib import Path; import shutil; shutil.rmtree(Path(\"$TEMP_ROOT\"), ignore_errors=True)"' EXIT
 printf '%s\n' \
+    '# Production config source' \
     'BYTEDEPTH_PRODUCTION_PROFILE_ROOT=/data/bytedepth-native-production' \
     'BYTEDEPTH_PRODUCTION_PROFILE_MYSQL_PORT=13306' \
     'BYTEDEPTH_PRODUCTION_PROFILE_REDIS_PORT=16379' \
@@ -117,6 +118,10 @@ load_production_target
     printf 'Production configuration keys were not normalized correctly.\n' >&2
     exit 1
 }
+if rg -n '^#' "$TEMP_ROOT/production.conf" >/dev/null; then
+    printf 'Normalized production configuration must not keep temporary transition notes.\n' >&2
+    exit 1
+fi
 
 for forbidden in '3306' '6379' '7700' '8080' '80' '443'; do
     if rg -n "^[[:space:]]*(BYTEDEPTH_PRODUCTION_[A-Z_]+|[a-z_]+_port)=?$forbidden$" "$CONFIG_EXAMPLE" >/dev/null; then
