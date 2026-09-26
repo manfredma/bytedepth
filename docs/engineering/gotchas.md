@@ -66,6 +66,7 @@
 - 对 `ubuntu:ubuntu`、0600 的项目配置，不能把 `sudo test -r <file>` 当作跨主机可移植的唯一检查；本次 124 预检中该形式出现假失败，而 `sudo cat >/dev/null` 正常。权限、所有权和内容校验要分别执行，不能因检查命令异常而切换部署方案。
 - 部署命令被中断或失败后，先检查并停止处于 `activating/auto-restart` 的 native app，再重试；不得把失败重启循环留在后台，否则会持续消耗内存并污染下一次预检。重试前必须重新校验 unit、端口、`/version` 和 deploy history。
 - 生产版本确认直接读取 ubuntu 所有的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/production/current/artifact.manifest` 交叉核对。
+- 生产发布配置可能来自历史变量命名。必须在停止服务前将 root/port 字段解析到 canonical 名称、验证当前 native 回退 JAR 与公网版本，并将规范化文件设为 ubuntu 所有；`test-production-runtime.sh` 和 `test-production-deployment.sh` 固定该顺序。
 - staging 制品上传使用的 `/tmp/bytedepth-staging-<SHA>` 只允许作为单次传输目录；上传失败和远程安装结束都必须清理它。staging 的 `/tmp` 是独立 tmpfs，历史 JAR 残留会耗尽 tmpfs，即使根分区仍有大量空间也会让 `scp` 写入失败。
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。
 - native staging edge 不能使用 `Requires=bytedepth-staging-native-app.service` 绑定生命周期：E2E test slot 会临时替代 app 并复用 18080，edge 必须保持在 18081 提供公网转发；只保留 `After=`启动顺序和 `/version` 启动前检查。部署或清理仍必须确认 edge active 后再 reload/写 evidence。

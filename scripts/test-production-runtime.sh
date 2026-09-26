@@ -38,6 +38,9 @@ require_text 'BYTEDEPTH_PRODUCTION_APP_PORT=18080' "$CONFIG_EXAMPLE"
 require_text 'BYTEDEPTH_PRODUCTION_EDGE_PORT=18081' "$CONFIG_EXAMPLE"
 
 require_text 'load_production_target()' "$TARGET_HELPER"
+require_text 'normalize_production_config_file()' "$TARGET_HELPER"
+require_text 'owner="${3:-ubuntu:ubuntu}"' "$TARGET_HELPER"
+require_text 'chown "$owner" "$temporary_file"' "$TARGET_HELPER"
 require_text '/data/bytedepth-native-production' "$TARGET_HELPER"
 require_text 'bytedepth-production-app.service' "$TARGET_HELPER"
 require_text 'bytedepth-production-edge.service' "$TARGET_HELPER"
@@ -92,6 +95,28 @@ require_text 'production' "$INSTALLER"
 require_text 'chown ubuntu:ubuntu "$target"' "$INSTALLER"
 require_text 'chown ubuntu:ubuntu "$PUBLIC_NGINX_CONFIG"' "$INSTALLER"
 require_text 'ubuntu:ubuntu' "$INSTALLER"
+
+TEMP_ROOT="$(mktemp -d)"
+readonly TEMP_ROOT
+trap 'python3 -c "from pathlib import Path; import shutil; shutil.rmtree(Path(\"$TEMP_ROOT\"), ignore_errors=True)"' EXIT
+printf '%s\n' \
+    'BYTEDEPTH_PRODUCTION_PROFILE_ROOT=/data/bytedepth-native-production' \
+    'BYTEDEPTH_PRODUCTION_PROFILE_MYSQL_PORT=13306' \
+    'BYTEDEPTH_PRODUCTION_PROFILE_REDIS_PORT=16379' \
+    'BYTEDEPTH_PRODUCTION_PROFILE_MEILI_PORT=17700' \
+    'BYTEDEPTH_PRODUCTION_PROFILE_APP_PORT=18080' \
+    'BYTEDEPTH_PRODUCTION_PROFILE_EDGE_PORT=18081' > "$TEMP_ROOT/source.conf"
+# shellcheck disable=SC1090
+source "$TARGET_HELPER"
+normalize_production_config_file "$TEMP_ROOT/source.conf" "$TEMP_ROOT/production.conf" "$(id -un):$(id -gn)"
+export BYTEDEPTH_PRODUCTION_CONFIG="$TEMP_ROOT/production.conf"
+load_production_target
+[[ "$BYTEDEPTH_PRODUCTION_ROOT" == /data/bytedepth-native-production \
+    && "$BYTEDEPTH_PRODUCTION_MYSQL_PORT" == 13306 \
+    && "$BYTEDEPTH_PRODUCTION_RUNTIME_MODE" == production-native ]] || {
+    printf 'Production configuration keys were not normalized correctly.\n' >&2
+    exit 1
+}
 
 for forbidden in '3306' '6379' '7700' '8080' '80' '443'; do
     if rg -n "^[[:space:]]*(BYTEDEPTH_PRODUCTION_[A-Z_]+|[a-z_]+_port)=?$forbidden$" "$CONFIG_EXAMPLE" >/dev/null; then

@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 
+normalize_production_config_file() {
+    local source_file="$1" target_file="$2" owner="${3:-ubuntu:ubuntu}" temporary_file
+    [[ -r "$source_file" ]] || {
+        printf 'Refusing: production configuration source is unreadable.\n' >&2
+        return 1
+    }
+    temporary_file="$(mktemp "${target_file}.XXXXXX")" || return 1
+    if ! sed -E 's/^(BYTEDEPTH_PRODUCTION_)[A-Z0-9]+_((ROOT|[A-Z0-9]+_PORT)=)/\1\2/' \
+        "$source_file" > "$temporary_file"; then
+        rm -f -- "$temporary_file"
+        return 1
+    fi
+    chmod 0600 "$temporary_file" || { rm -f -- "$temporary_file"; return 1; }
+    chown "$owner" "$temporary_file" || { rm -f -- "$temporary_file"; return 1; }
+    mv -f -- "$temporary_file" "$target_file"
+}
+
 load_production_target() {
     local config_file="${BYTEDEPTH_PRODUCTION_CONFIG:-/etc/bytedepth/production.conf}"
     [[ -r "$config_file" ]] || {
@@ -8,6 +25,19 @@ load_production_target() {
     }
     # shellcheck disable=SC1090
     source "$config_file"
+    local variable suffix target_name
+    for variable in ${!BYTEDEPTH_PRODUCTION_@}; do
+        suffix="${variable#BYTEDEPTH_PRODUCTION_}"
+        if [[ "$suffix" =~ ^[A-Z0-9]+_(ROOT|[A-Z0-9]+_PORT)$ ]]; then
+            suffix="${BASH_REMATCH[1]}"
+            target_name="BYTEDEPTH_PRODUCTION_$suffix"
+            if [[ -z "${!target_name:-}" ]]; then
+                printf -v "$target_name" '%s' "${!variable}"
+                # shellcheck disable=SC2163
+                export "$target_name"
+            fi
+        fi
+    done
     [[ "${BYTEDEPTH_PRODUCTION_ROOT:-}" == /data/bytedepth-native-production ]] || {
         printf 'Refusing: production production root is not isolated.\n' >&2
         return 1

@@ -88,7 +88,7 @@ preflight_production_baseline() {
         config_candidate=''
         for candidate in /etc/bytedepth/production-*.conf; do
             [[ -r "$candidate" ]] || continue
-            grep -Fq 'BYTEDEPTH_PRODUCTION_ROOT=' "$candidate" || continue
+            grep -Eq '^BYTEDEPTH_PRODUCTION_([A-Z0-9]+_)?ROOT=' "$candidate" || continue
             [[ -z "$config_candidate" ]] || {
                 printf 'Refusing: production configuration source is ambiguous.\n' >&2
                 return 1
@@ -284,7 +284,7 @@ normalize_live_layout() {
         chown -R ubuntu:ubuntu /var/lib/bytedepth-production
     fi
     if [[ "$PREVIOUS_CONFIG_FILE" != /etc/bytedepth/production.conf ]]; then
-        install -o ubuntu -g ubuntu -m 0600 "$PREVIOUS_CONFIG_FILE" /etc/bytedepth/production.conf
+        normalize_production_config_file "$PREVIOUS_CONFIG_FILE" /etc/bytedepth/production.conf
         LEGACY_CONFIG_FILES+=("$PREVIOUS_CONFIG_FILE")
     fi
     if [[ "$PREVIOUS_APP_ENV_FILE" != /etc/bytedepth/production.env ]]; then
@@ -299,8 +299,17 @@ normalize_live_layout() {
         install -o ubuntu -g ubuntu -m 0600 "$PREVIOUS_MYSQL_CNF" /etc/bytedepth/production-mysql.cnf
         LEGACY_CONFIG_FILES+=("$PREVIOUS_MYSQL_CNF")
     fi
-    for config_candidate in /etc/bytedepth/production-*-nginx.conf; do
-        [[ -f "$config_candidate" ]] && LEGACY_CONFIG_FILES+=("$config_candidate")
+    for config_candidate in /etc/bytedepth/production-*.conf /etc/bytedepth/production-*.env \
+        /etc/bytedepth/production-*.cnf /etc/bytedepth/production-*-nginx.conf; do
+        [[ -f "$config_candidate" ]] || continue
+        case "$config_candidate" in
+            /etc/bytedepth/production.conf|/etc/bytedepth/production.env|\
+                /etc/bytedepth/production-meilisearch.env|/etc/bytedepth/production-mysql.cnf|\
+                /etc/bytedepth/production-nginx.conf|/etc/bytedepth/production-public-nginx.conf)
+                continue
+                ;;
+        esac
+        LEGACY_CONFIG_FILES+=("$config_candidate")
     done
     systemctl daemon-reload
 }

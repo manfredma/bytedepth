@@ -5,6 +5,7 @@ readonly ROOT SCRIPT="$ROOT/deploy/deploy-production.sh" TARGET="$ROOT/deploy/li
 [[ -x "$SCRIPT" ]] || { printf 'Production deployment entrypoint is missing.\n' >&2; exit 1; }
 for contract in \
     'preflight_production_baseline()' \
+    'grep -Eq '\''^BYTEDEPTH_PRODUCTION_([A-Z0-9]+_)?ROOT='\''' \
     'normalize_live_layout()' \
     'LEGACY_RELEASE_IS_ALIAS=1' \
     'rollback_layout_on_exit()' \
