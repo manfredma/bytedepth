@@ -6,7 +6,7 @@ REPO="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##')"
 git fetch origin "refs/heads/$REF:refs/remotes/origin/$REF" "refs/heads/main:refs/remotes/origin/main"
 SHA="$(git rev-parse "origin/$REF")"
 bash scripts/check-staging-changelog-change.sh --target "$SHA" --base origin/main
-bash scripts/check-release-readiness.sh --target "$SHA" --base origin/main --mode candidate
+bash scripts/check-release-readiness.sh --target "$SHA" --base origin/main --mode frozen-candidate
 command -v gh >/dev/null || { echo 'gh is required' >&2; exit 1; }
 for _ in $(seq 1 120); do
   run="$(gh run list --repo "$REPO" --workflow quality --commit "$SHA" --limit 1 --json status,conclusion --jq '.[0] // {}')"

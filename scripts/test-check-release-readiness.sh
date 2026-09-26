@@ -20,6 +20,14 @@ run_check() {
     (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base base)
 }
 
+run_frozen_check() {
+    (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base base --mode frozen-candidate)
+}
+
+run_same_commit_release_check() {
+    (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base HEAD --mode release)
+}
+
 assert_fails() {
     if "$@" >/dev/null 2>&1; then
         printf 'Expected command to fail: %s\n' "$*" >&2
@@ -33,11 +41,27 @@ printf 'class Change {}\n' > "$TEMP_REPO/src/main/java/Change.java"
 git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm runtime-change
 assert_fails run_check
+assert_fails run_frozen_check
 
 printf '%s\n' '## Unreleased' '' '### Added' '' '- New capability.' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
 git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm valid-changelog
 run_check
+
+printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.26.0] - 2026-09-26' '' \
+    '**Tag**：`v2.26.0`' '**回滚基线**：`v2.25.15`' '' '### Fixed' '' \
+    '- Candidate change.' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm frozen-changelog
+run_frozen_check
+
+printf '%s\n' '# Changelog' '' '## Unreleased' '' '### Fixed' '' '- Stale shipped change.' '' \
+    '## [v2.26.0] - 2026-09-26' '' '**Tag**：`v2.26.0`' '**回滚基线**：`v2.25.15`' '' \
+    '### Fixed' '' '- Candidate change.' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm stale-frozen-changelog
+assert_fails run_frozen_check
+assert_fails run_same_commit_release_check
 
 for invalid_content in \
     $'## Unreleased\n' \

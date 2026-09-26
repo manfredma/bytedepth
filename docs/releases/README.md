@@ -1,6 +1,6 @@
 # 发布管理
 
-本文件是版本、Tag、发布记录和回滚的唯一规则说明。`CHANGELOG.md` 同时记录 `## Unreleased` 与正式版本：任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前拥有非空且分类明确的 `Unreleased` 条目；正式版本条目必须与不可变 annotated Tag 一一对应。部署拓扑与机器操作仍以 [部署手册](../../deploy/README.md) 为准。
+本文件是版本、Tag、发布记录和回滚的唯一规则说明。开发中的变更先记在非空且分类明确的 `## Unreleased`；候选冻结时将本次条目移入正式 `## [vX.Y.Z]` 版本段并清空 `Unreleased`。正式版本条目必须与一个不可变 annotated Git Tag 一一对应。已部署的变化不得继续留在 `Unreleased`。部署拓扑与机器操作仍以 [部署手册](../../deploy/README.md) 为准。
 
 访问 staging 页面必须使用 `https://staging-bytedepth.bytedepth.cn/`。staging 按 `BYTEDEPTH_ENVIRONMENT=staging` 关闭 RSS、sitemap 和 RSS 自动发现，并返回 noindex；生产环境保持这些入口。新域名只是环境入口，不是安全认证。
 
@@ -34,11 +34,11 @@ main（下一版本 -SNAPSHOT）
 
 ### 冻结与 staging 验收（唯一发布路径）
 
-staging 只验收待上线版本，不提供“先预览、之后再决定是否发布”的第二条发布路径。候选分支必须在首次 staging 部署前确定正式版本、下一开发版本并冻结正式 Changelog（包含 `## [vX.Y.Z]`、回滚基线和发布说明），随后吸收远程最新 `main`，再以候选分支部署 staging。`deploy-staging.sh` 会拒绝与 `origin/main` 相同的 ref，并拒绝候选提交范围未修改 `docs/releases/CHANGELOG.md` 的部署。
+staging 只验收待上线版本，不提供“先预览、之后再决定是否发布”的第二条发布路径。候选分支必须在首次 staging 部署前确定正式版本、下一开发版本并冻结正式 Changelog（包含 `## [vX.Y.Z]`、回滚基线和分类发布说明）；旧 `Unreleased` 条目先与生产部署记录核对，已部署条目归档到实际版本，本次候选条目移到冻结版本段，冻结后的 `Unreleased` 不得有条目。随后吸收远程最新 `main`，再以候选分支部署 staging。`deploy-staging.sh` 会拒绝与 `origin/main` 相同的 ref、未修改 `docs/releases/CHANGELOG.md` 的部署、未冻结的候选，以及仍残留 `Unreleased` 条目的冻结候选。
 
-集成、E2E 和项目所有者验收都针对这个冻结候选版本。验收通过后只能将候选分支 fast-forward 合并到 `main`，完整 SHA 必须保持不变；随后直接执行 `prepare-release.sh` 和生产发布。验收失败时才允许修改代码或 Changelog；修改后旧 evidence 作废，必须重新冻结、重新部署和重新验收。
+`scripts/check-release-readiness.sh --mode frozen-candidate` 负责校验正式版本段、分类发布说明、Tag、回滚基线与空 `Unreleased`；staging 部署、候选合并和正式发布入口都必须运行该门禁。集成、E2E 和项目所有者验收都针对这个冻结候选版本。验收通过后只能将候选分支 fast-forward 合并到 `main`，完整 SHA 必须保持不变；随后直接执行 `prepare-release.sh` 和生产发布。验收失败时才允许修改代码或 Changelog；修改后旧 evidence 作废，必须重新冻结、重新部署和重新验收。
 
-**CHANGELOG 版本号标题时序**：开发改动在 PR 阶段往 `## Unreleased` 下写变更内容（`### Changed`/`### Fixed`），合并 `main`；发版前在 `main` 上把 `## Unreleased` 改为 `## [vX.Y.Z] - 日期` 标题，填 `**Tag**`、`**回滚基线**`（`**Commit**`/`**部署**` 等 release:prepare 与部署后再补），提交。`prepare-release.sh` grep 校验 CHANGELOG 含 `## [vX.Y.Z]`，缺失则拒绝——版本号标题必须在 `prepare-release.sh` 之前出现在 `main`。该标题改动与部署后的验收记录补填，均属发布流程的 `docs(release)` 提交（先例 `36918d0`），非普通开发改动，不与「`main` 仅允许受控发布流程写入」冲突。
+**CHANGELOG 版本号标题时序**：开发改动在候选分支的 `## Unreleased` 下记录。首次 staging 部署前，在候选分支把这些条目移入 `## [vX.Y.Z] - 日期`，填写 `**Tag**` 与 `**回滚基线**`，并清空 `Unreleased`；随后冻结该提交并部署。`prepare-release.sh` 在验收通过并 fast-forward 到 `main` 后校验正式版本标题和冻结状态，再创建 annotated Tag。验收后禁止再补写 Changelog 或其他提交；提交与部署 SHA 以冻结候选及 evidence 为准。
 
 发布工具必须自动校验工作区、版本号、Tag 格式和 Tag 唯一性；部署脚本必须只接受已验证的 Tag，并在状态中保存 `version` 与完整 SHA。发布工具完成前，禁止执行下一次生产部署。
 

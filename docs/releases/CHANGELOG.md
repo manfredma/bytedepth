@@ -1,29 +1,57 @@
 # Changelog
 
-本文件同时记录开发中的 `## Unreleased` 和正式发布版本。任何用户可见、运行时、部署或配置变更，必须在首次 staging 部署前写入非空且分类明确的 `Unreleased` 条目；正式版本条目必须与一个不可变 annotated Git Tag 一一对应。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
+本文件同时记录开发中的 `## Unreleased` 和正式发布版本。候选冻结前，用户可见、运行时、部署或配置变更记录在非空且分类明确的 `Unreleased`；冻结时将候选条目移入正式版本段并清空 `Unreleased`。正式版本条目必须与一个不可变 annotated Git Tag 一一对应，已部署条目不得留在 `Unreleased`。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
 ## Unreleased
 
+## [v2.26.0] - 2026-09-26
+
+**Tag**：`v2.26.0`（待 staging 验收）
+**Commit**：由本次 release:prepare 冻结
+**部署**：收录 v2.25.15 之后的 Nginx PID 隔离、版本页布局修复和冻结候选 Changelog 门禁。
+**回滚基线**：`v2.25.15`
+
 ### Changed
 
-- native production public Nginx now includes project-owned `/etc/nginx/conf.d/*.conf` files, allowing independently deployed services such as Daylilt to add routes without modifying the bytedepth main configuration or restarting the shared ingress.
+- 冻结候选门禁现在要求正式版本说明完整且 `Unreleased` 为空，避免已部署内容再次列为待发布。
+- Production native Nginx now includes project-owned `/etc/nginx/conf.d/*.conf` routes, allowing sibling services to add routes without replacing the shared ingress configuration.
+
+### Fixed
+
+- 修复 staging native edge 使用共享 Nginx PID 路径、可能影响同机服务的问题；systemd reload/stop 现在针对所属主进程。
+- 修复移动端版本页因长英文单词横向溢出，以及浏览器默认 body 外边距造成的页面边缘留白；长文本现在会在必要处换行。
+
+## [v2.25.15] - 2026-09-26
+
+**Tag**：`v2.25.15`（由本次 release:prepare 创建）
+**Commit**：由本次 release:prepare 冻结
+**部署**：修复 v2.25.14 生产发布在 green 公网 Nginx 尚未安装时回滚误报失败的问题；重新执行生产迁移。
+**回滚基线**：`v2.25.2`
+
+**发布记录更正**：补全随本版本部署、原先遗漏在 `Unreleased` 的变更。
+
+### Changed
 
 - 修复发布例外契约测试继承外层跳过开关、导致正常 evidence 拒绝用例失真的问题；测试现在显式隔离该环境变量。
 
 - 发布脚本支持项目所有者对“仅生产部署迁移脚本、不影响应用运行时”的紧急修复显式跳过远程 staging 集成/E2E；仍强制执行本地发布清单、静态契约、覆盖率、不可变 Tag 和生产 green 切流前检查，不允许伪造 staging evidence。
 
 - 清理误提交的 agent 工作产物，发布包和项目知识库不再包含会阻断发布门禁的临时报告。
-- v2.25.2 发布后，主线进入 `2.25.3-SNAPSHOT` 开发周期。
+
 - 运行时部署迁移为宿主机原生 systemd 服务，应用通过不可变 JAR、SHA256 manifest 和原子 `current` 软链接发布；staging/生产不再依赖容器运行时。
+
 - staging 集成测试和 E2E 使用 `staging-it`/`staging-e2e` Spring Profile 及按 `run_id` 隔离的 MySQL、Redis、Meilisearch 和图片资源，测试结束后自动清理并恢复 staging 应用。
+
 - 发布 evidence 增加 `runtime_mode`、`run_id`、测试资源 manifest SHA 和 cleanup 结果，旧格式 evidence 不再可用于创建 Release Tag。
-- 文章顶层代码块统一使用可复制、带行号、可展开/收起的代码组件；未标注语言时显示中性的 `Code`，不杜撰文件名。
+
 - 显式 `tabs:` 代码继续使用多语言 Tab，每个面板独立维护语法高亮、行号、复制和展开/收起状态；显式 `fold` 才默认收起。
+
 - 代码块组件兼容 Obsidian Codeblock Customizer 的 `group`/`tab` 元数据（支持 `:` 与 `=` 参数形式及省略 `tab` 时的语言名回退），同时保留既有 `tabs` 格式；同步前校验同组代码块的连续性和重复有效页签。
 
 ### Fixed
 
-- 修复生产 green 尚未安装公网 Nginx unit 时，失败回滚把“unit 不存在”误报为停止服务失败的问题；回滚现在只停止已安装的 green unit，并继续对真实停止失败 fail-closed。
+- 回滚只停止已安装的 green systemd unit；缺少尚未安装的公网 Nginx unit 不再阻断旧 Docker 入口恢复。
+
 
 - 将生产公网 Nginx 纳入 native green 完整迁移：旧 Docker Nginx 配置保持不动，切流先停止旧入口切断流量，再停止蓝应用并重新执行最终数据导入，最后启动独立的 native 公网 Nginx；失败时停止新服务、启动旧 Docker Nginx 和蓝应用回退，避免 bind mount inode 和旧路由修改造成 502。
 
@@ -36,61 +64,84 @@
 - 修复生产 native green 安装器未验证目标主机 Java 25、导致 systemd 使用不存在的固定路径并在切流前失败的问题；安装器现在会准备并验证 Java 25，并用实际解析路径渲染应用服务。
 
 - 修复生产 native green edge 以 `ubuntu` 运行时仍依赖 root 默认 Nginx 临时目录的问题；现在 body、proxy 等临时目录都位于 green root 并由 `ubuntu` 创建，避免 `nginx -t` 在 Docker blue 仍健康时阻断 native 预检。
+
 - 修复 staging 制品上传失败后远端临时 JAR 目录未清理的问题；上传失败和远程安装结束都会删除按候选 SHA 命名的临时目录，避免 `/tmp` 累积旧制品耗尽 tmpfs。
-- 修复生产 native green Meilisearch 启动后立即健康检查的时序竞态；部署现在在连接被拒绝时继续等待直到服务真正就绪，避免短暂启动窗口被误判为 native 失败。
-- 修复生产 native green Redis 使用 `Type=simple` 启动后立即探测端口的时序竞态；部署现在轮询 Redis 鉴权 `PING` 直到真正就绪，避免短暂 `Connection refused` 被误判为 native 失败。
-- 修复生产 native green 发布在 Ubuntu 宿主机上的 MySQL 密码健康检查、MySQL 数据目录权限、Redis systemd 就绪类型和 overcommit 前置配置；native 失败时继续保持 Docker blue 可访问。
+
 - 修复生产远程发布脚本将生产主机 SSH key 错用于 GitHub 拉取、版本解析正则多转义一层导致合法 Tag 被误判，以及本机重复 fetch 不可变 Tag 引发 pack 解包失败的问题；生产 key 现在只用于 175，本机直接使用已校验 Tag。
+
 - 修复 staging 集成测试和 E2E 清理后只恢复 native app、未恢复内部 edge，导致多服务宿主机共享 Nginx 仍运行但公网 upstream 失效的问题；即使 teardown 已先启动 app，外层 runner 也会无条件恢复并验证 edge。
+
 - 修复 native edge 与正式 app 绑定生命周期导致 E2E test slot 启动后公网入口 502/健康检查无超时卡住的问题；edge 现在只依赖 app 的启动顺序，E2E 槽位可复用同一内部 edge。
+
 - 修复 edge 已保持 active 时 staging app 重启的就绪竞态；测试清理会先等待 app 的 HTTP `/version`，再等待 edge 的 18081 `/version`，避免把短暂 502 记录为清理失败。
+
 - 修复 129 云主机不支持公网 IP hairpin 导致 native E2E 健康探测超时的问题；E2E 仍使用公网 staging URL，但本机 curl 和 Chromium 仅将该域名解析到本机共享 Nginx，不绕过真实 TLS/Host/edge 链路，也不影响同机其他服务。
+
 - 补齐 staging 共享 E2E runtime 的 Playwright ffmpeg：bootstrap 现在安装并将其版本纳入 manifest，集成测试/E2E 在缺少录制运行时前 fail-fast，避免 34 个用例在 browser context 创建阶段统一失败。
+
 - 修复 staging 测试槽在 Redis 业务库为空时将 `redis-cli --raw` 的空行误判为非法快照的问题。
+
 - 修复 staging native app 重启后 edge 被 systemd 停止、导致部署阶段直接 reload 失败的问题。
+
 - 修复 MySQL 8.4 `SHOW GRANTS` 账户名格式与 staging 测试槽预期不一致，导致合法的单数据库授权被错误拒绝的问题。
+
 - 修复 staging 测试槽使用隔离 MySQL 用户连接时遗漏 native 端口、错误回退到 3306 的问题。
+
 - 修复 staging 集成测试在低内存宿主机上仍启动 Maven、导致远程 SSH/HTTPS 无响应的问题；runner 现在在停止 app 前检查至少 256 MiB，并在启动 Maven 前确认至少 512 MiB 可用内存。
+
 - 为 native staging MySQL、Redis、Meilisearch 和 edge 增加 systemd 内存上限，并为 Redis 增加 64 MiB `maxmemory` 保护，避免中间件无限消耗共享宿主机内存。
+
 - 修复 native 中间件重启后的 MySQL 端口就绪竞态，以及数据库备份失败被错误记录为通过的问题；部署现在等待 MySQL 真正可连接，并显式阻断备份错误。
+
 - 修正 staging 集成测试把含有基线文章的 fixture 误当成空库的问题，避免合法的既有文章导致仓储排序用例失败。
+
 - 修正 staging 隔离测试 fixture 校验器误拒绝 Flyway `V1__...sql` 脚本名的问题，避免合法 schema history 被误判为生产库限定表名。
+
 - 约束 staging 隔离 fixture 的 DDL 外键顺序，避免外键引用尚未创建的表导致 fixture 导入失败。
+
 - 修正 native MySQL 与 Meilisearch 的 systemd 运行契约，固定 MySQL 大小写表名模式、运行目录和 Meilisearch 工作目录，避免重启后因环境漂移启动失败。
+
 - 修正 native 主机初始化后的项目文件归属：代码工作区、`.git`、发布目录、JAR、配置、日志和测试资源统一交给 `ubuntu`，服务进程仅通过服务组写入数据，避免 staging 部署因 Git ownership 或 `.git/FETCH_HEAD` 权限失败。
+
 - 修正 staging 项目文件归属校验，统一验证 `ubuntu` 所有并兼容 Linux/macOS 的 `stat` 实现，避免 GNU `stat -f` 被误当成 BSD 文件属性查询。
+
 - 修正 native staging 隔离测试图片根目录权限，避免初始化为应用用户所有导致测试资源前置校验拒绝。
+
 - 移除普通 staging/生产代码部署中的无界全库 MySQL dump；部署现在必须 fail-fast 校验 native parallel 配置、旧栈停止状态和可用内存，数据迁移备份与代码发布流程分离。
+
 - 修正 native 数据目录权限：项目文件继续由 `ubuntu` 持有，同时为 MySQL、Redis、Meilisearch 和应用服务组保留必要的读写权限；修正 native Redis/Meilisearch 配置文件的服务组读取权限。
+
 - 修正 staging 部署计时在 GNU `date` 下误把纳秒拼接为毫秒的问题，避免生成虚假的超长部署耗时。
+
 - 修复 native staging 只启动 18081 内部 edge、但公网 Nginx 仍停留在旧 8080 upstream 导致域名超时的问题；安装器现在生成并校验宿主 80/443 公网入口，部署健康后自动启用并 reload `nginx.service`。
+
 - 修复多服务宿主机上共享 `nginx.service` 被错误绑定到单个项目的问题；共享 unit 现在不依赖 bytedepth，native staging 只安装自己的站点配置并在 native edge 健康后 reload 公网入口。
+
 - 补充多服务宿主机约束：staging 默认目标为 129，旧 124 仅保留 Docker；bytedepth 不得替换、重启或停用共享 Nginx，只能校验自己的站点配置并 reload。
+
 - 修正 staging 证书续期流程，改用共享 Nginx 的 webroot ACME challenge，不再为申请证书停止整台机器的 80/443 入口。
+
 - 修正 staging SSH 预检中嵌套单引号导致的本地 shell 截断问题，并增加静态契约检查，避免 URL 被误当成本地命令执行。
+
 - 修正 native staging E2E 契约 fixture 仍使用旧 canonical 服务名和端口的问题，确保测试 fake 与 129 的隔离 native 槽位一致。
+
 - 修正测试槽 manifest 硬编码 8080 导致 native app 端口 18080 被拒绝的问题，manifest 与校验现在使用显式 native app port。
+
 - 修正 E2E fixture 未替换 native `SLOT_ENV` 路径导致本机写入 `/run/bytedepth` 失败的问题。
+
 - 修正 native 测试槽共享图片根目录仍使用 0770 的问题，统一为 ubuntu 所有、0700 根目录，并让异常清理沿用显式 native 图片根路径。
+
 - 修正 staging fixture 校验依赖未安装在 129 上的 `rg`，运行时改用宿主机基础工具，并增加契约检查防止再次引入开发机专用命令。
+
 - 修正 native 测试槽管理员 MySQL 连接未显式指定 13306、回退到 3306 的问题，并统一通过端口 helper 连接隔离数据库。
+
 - 修正 staging 测试槽 teardown 仍使用 MySQL 默认 3306 的问题，确保失败清理也通过 native 端口 helper 删除隔离资源。
+
 - 修正 staging Maven bootstrap 未显式预热 Surefire JUnit Platform provider、导致离线集成测试回退公共镜像失败的问题。
+
 - 修正 Redis 基线快照在 Ubuntu `/tmp` 保护策略下因 root 写入前 chown 为 ubuntu 而失败的问题，临时文件保持 root 所有直到写入完成。
+
 - 固化 SSH 远端命令的引号、反斜杠和 awk `$2` 转义契约，避免多层 shell 解析后出现远端变量展开错误。
-- 为 `@Async` 提供唯一命名的 `taskExecutor`，消除生产启动时 Spring 无法选择异步执行器的 WARNING。
-- 将缺失静态资源按正常 404 处理，避免客户端请求不存在图片时被全局异常处理器记录为 ERROR。
-
-## [v2.25.15] - 2026-09-26
-
-**Tag**：`v2.25.15`（由本次 release:prepare 创建）
-**Commit**：由本次 release:prepare 冻结
-**部署**：修复 v2.25.14 生产发布在 green 公网 Nginx 尚未安装时回滚误报失败的问题；重新执行生产迁移。
-**回滚基线**：`v2.25.2`
-
-### Fixed
-
-- 回滚只停止已安装的 green systemd unit；缺少尚未安装的公网 Nginx unit 不再阻断旧 Docker 入口恢复。
 
 ## [v2.25.14] - 2026-09-26
 

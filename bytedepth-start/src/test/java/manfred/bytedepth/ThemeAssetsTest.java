@@ -61,6 +61,17 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void releasePageResetsBrowserGapsAndWrapsLongText() throws Exception {
+        String css = classpathText("/static/css/releases.css");
+
+        assertThat(css)
+                .contains("body { margin: 0;")
+                .contains("background: var(--bd-bg, #f0f2f5);")
+                .contains(".bd-releases__content")
+                .contains("overflow-wrap: anywhere;");
+    }
+
+    @Test
     void navStaticAssetDefinesIsolatedComponentContract() throws Exception {
         String css = classpathText("/static/css/nav.css");
 

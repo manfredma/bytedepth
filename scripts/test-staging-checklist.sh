@@ -31,8 +31,8 @@ grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-deploy-production-remote.sh"' "$CHECK
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-verify-production-release.sh"' "$CHECKLIST"
 
 grep -Fq 'scripts/check-release-readiness.sh' "$SOURCE_ROOT/scripts/run-local-quality.sh"
-grep -Fq 'bash "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target "$commit" --base origin/main --mode candidate' "$SOURCE_ROOT/deploy/deploy-staging.sh"
-grep -Fq 'scripts/check-release-readiness.sh --target "$SHA" --base origin/main --mode candidate' "$SOURCE_ROOT/scripts/merge-main-after-quality.sh"
+grep -Fq 'bash "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target "$commit" --base origin/main --mode frozen-candidate' "$SOURCE_ROOT/deploy/deploy-staging.sh"
+grep -Fq 'scripts/check-release-readiness.sh --target "$SHA" --base origin/main --mode frozen-candidate' "$SOURCE_ROOT/scripts/merge-main-after-quality.sh"
 grep -Fq 'scripts/check-staging-changelog-change.sh --target "$SHA" --base origin/main' "$SOURCE_ROOT/scripts/merge-main-after-quality.sh"
 grep -Fq 'scripts/check-release-readiness.sh --target HEAD --base origin/main --mode release' "$SOURCE_ROOT/scripts/prepare-release.sh"
 

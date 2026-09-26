@@ -14,9 +14,9 @@ staging 是唯一跨进程集成与 E2E 环境；生产操作只在受控主机�
 
 staging 只有一条发布路径：在首次 staging 部署前确定版本并冻结正式 Changelog，staging 验收冻结后的待上线候选版本；不提供先预览、验收后再决定是否发布的第二条路径。
 
-1. 功能分支先完成 `CHANGELOG.md` 的 `Unreleased` 条目，再运行 `scripts/run-local-quality.sh`；缺少条目时门禁失败。
+1. 功能分支先完成 `CHANGELOG.md` 的分类 `Unreleased` 条目，再运行 `scripts/run-local-quality.sh`；缺少条目时门禁失败。版本冻结时将已上线的旧条目归档到实际发布版本，将本次候选条目移入正式版本段并清空 `Unreleased`。
 2. PR 的 `.github/workflows/quality.yml` 通过。
-3. 在首次 staging 部署前于候选分支冻结正式 Changelog，再吸收远程最新 `main`，通过 Changelog 门禁后部署候选分支：`deploy/deploy-staging.sh <branch-or-tag>`；候选 ref 必须相对 `origin/main` 修改 `docs/releases/CHANGELOG.md`，部署 `main` 会被拒绝。
+3. 在首次 staging 部署前于候选分支冻结正式 Changelog，再吸收远程最新 `main`，通过 Changelog 冻结门禁后部署候选分支：`deploy/deploy-staging.sh <branch-or-tag>`；冻结版本必须有分类发布说明、Tag 和回滚基线，`Unreleased` 必须为空。候选 ref 必须相对 `origin/main` 修改 `docs/releases/CHANGELOG.md`，部署 `main` 会被拒绝。
 4. `deploy/bootstrap-ops-deploy.sh` 确认宿主机 systemd 服务和数据目录；应用 JAR 由外部构建后传输，目标主机不构建发布包。
 5. 运行 staging 集成与 E2E；两份 evidence 必须绑定冻结候选完整 SHA、host-native runtime 和本次隔离资源 manifest。
 6. 所有者完成 staging 验收；纯交付基础设施改动审阅 PR 与自动证据即可。

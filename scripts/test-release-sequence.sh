@@ -10,10 +10,13 @@ readonly RELEASE_DOC="$SOURCE_ROOT/docs/releases/README.md"
 readonly PIPELINE_DOC="$SOURCE_ROOT/docs/engineering/unified-release-pipeline.md"
 readonly AGENTS_DOC="$SOURCE_ROOT/AGENTS.md"
 readonly PREPARE_RELEASE="$SOURCE_ROOT/scripts/prepare-release.sh"
+readonly STAGING_DEPLOY="$SOURCE_ROOT/deploy/deploy-staging.sh"
+readonly MERGE_RELEASE="$SOURCE_ROOT/scripts/merge-main-after-quality.sh"
 
 grep -Fq '冻结与 staging 验收（唯一发布路径）' "$RELEASE_DOC"
 grep -Fq '候选分支必须在首次 staging 部署前确定正式版本' "$RELEASE_DOC"
-grep -Fq '候选提交范围未修改 `docs/releases/CHANGELOG.md` 的部署' "$RELEASE_DOC"
+grep -Fq '冻结后的 `Unreleased` 不得有条目' "$RELEASE_DOC"
+grep -Fq 'check-release-readiness.sh --mode frozen-candidate' "$RELEASE_DOC"
 grep -Fq '验收失败时才允许修改代码或 Changelog' "$RELEASE_DOC"
 grep -Fq '验收通过后禁止追加 Changelog、文档或其他提交' "$RELEASE_DOC"
 
@@ -29,5 +32,7 @@ grep -Fq '部署 `main`、未修改 Changelog 的候选或验收后追加提交�
 grep -Fq 'HEAD_SHA="$(git rev-parse HEAD)"' "$PREPARE_RELEASE"
 grep -Fq 'readonly HEAD_SHA' "$PREPARE_RELEASE"
 grep -Fq 'commit" != "commit=$HEAD_SHA' "$PREPARE_RELEASE"
+grep -Fq 'check-release-readiness.sh" --target "$commit" --base origin/main --mode frozen-candidate' "$STAGING_DEPLOY"
+grep -Fq 'check-release-readiness.sh --target "$SHA" --base origin/main --mode frozen-candidate' "$MERGE_RELEASE"
 
 printf 'Release sequencing contract passed.\n'
