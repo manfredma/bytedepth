@@ -129,6 +129,8 @@ staging 证书在 129 签发，生产边缘只同步精确 SAN 证书并拒绝�
 
 runner 读取显式注入的 ubuntu 所有 MySQL defaults、Redis secret、Meilisearch secret、fixture 和 checksum，按每次 run_id 创建：
 
+在多项目 staging 主机上，集成 runner 要求启动前至少 768 MiB、停止 staging app 后至少 1 GiB `MemAvailable`；`staging-integration` Maven profile 把 Spring Test context cache 限为 16。资源不足会 fail-fast、恢复 staging app，不启动 Surefire fork。
+
 - MySQL：bytedepth_it_<run_id> 和最小权限用户 bd_it_<run_id>；
 - Redis：保留 logical DB 14，并使用 bytedepth:it:<run_id>: key/session namespace；
 - Meilisearch：posts_it_<run_id> 与只允许该 index 的 key；

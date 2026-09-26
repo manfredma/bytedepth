@@ -51,6 +51,7 @@ assert_failsafe_uses_staging_profile() {
         in_profile && /<\/profile>/ { exit }
     ' "$POM")"
     [[ "$profile_block" == *"<spring.profiles.active>\${env.SPRING_PROFILES_ACTIVE}</spring.profiles.active>"* ]]
+    rg -q '<spring.test.context.cache.maxSize>16</spring.test.context.cache.maxSize>' <<< "$profile_block"
     if rg -n 'bytedepth\.it\.(manifest|redis\.(host|port|password|database|key-namespace))' <<< "$profile_block"; then
         return 1
     fi
@@ -75,8 +76,8 @@ assert_runner_uses_manifest_transaction() {
     fi
     rg -q 'BYTEDEPTH_STAGING_IT_REDIS_PASSWORD' "$RUNNER"
     rg -q 'require_memory_headroom' "$RUNNER"
-    rg -q 'MINIMUM_MEMORY_AVAILABLE_KIB=262144' "$RUNNER"
-    rg -q 'MINIMUM_MEMORY_AFTER_APP_STOP_KIB=524288' "$RUNNER"
+    rg -q 'MINIMUM_MEMORY_AVAILABLE_KIB=786432' "$RUNNER"
+    rg -q 'MINIMUM_MEMORY_AFTER_APP_STOP_KIB=1048576' "$RUNNER"
 }
 
 assert_evidence_contract() {
