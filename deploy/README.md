@@ -79,14 +79,14 @@ install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数
 
 ## 5. staging 候选部署
 
-本机必须有 staging SSH 私钥和已核验的 known_hosts 文件。候选 ref 必须是 origin 上的命名分支或 Tag，且相对 origin/main 修改了 docs/releases/CHANGELOG.md。候选构建在本机/构建机完成，传输 JAR 和 manifest，staging 只校验并安装产物。
+本机必须有 staging SSH 私钥和已核验的 known_hosts 文件。候选 ref 必须是 origin 上的命名分支或 Tag，且相对 origin/main 修改了 docs/releases/CHANGELOG.md 并通过冻结门禁。候选 JAR 的运行时版本取自冻结版本段（例如 `v2.26.0`），Tag 构建则须与 Maven POM 和 Tag 一致；版本号和 commit SHA 一并写入 JAR 元数据/制品 manifest。候选构建在本机/构建机完成，传输 JAR 和 manifest，staging 只校验并安装制品。
 
     export BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts"
     export BYTEDEPTH_SSH_KEY="$HOME/.ssh/ubuntu_2.pem"
     test -r "$BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS" -a -r "$BYTEDEPTH_SSH_KEY"
     ./deploy/deploy-staging.sh feat/host-native-runtime
 
-脚本会执行：构建并扫描 WARNING → 上传 JAR/manifest → 锁定 staging → 校验 native parallel 配置、旧栈已停止和可用内存 → 安装发布 → 原子切换 current → 重启应用 → /version 校验完整 SHA → reload Nginx → 清除旧 evidence。普通代码部署不执行全库 MySQL dump；数据迁移或不兼容数据库迁移必须走单独的、受资源约束的备份流程。切换后的健康检查失败会恢复切换前的 current；若旧发布不存在，则保持停机并报告，禁止伪造成功。
+脚本会执行：构建并扫描 WARNING → 上传 JAR/manifest → 锁定 staging → 校验 native parallel 配置、旧栈已停止和可用内存 → 安装发布 → 原子切换 current → 重启应用 → `/version` 同时校验冻结版本与完整 SHA → reload Nginx → 清除旧 evidence。普通代码部署不执行全库 MySQL dump；数据迁移或不兼容数据库迁移必须走单独的、受资源约束的备份流程。切换后的健康检查失败会恢复切换前的 current；若旧发布不存在，则保持停机并报告，禁止伪造成功。
 
 验收部署版本：
 

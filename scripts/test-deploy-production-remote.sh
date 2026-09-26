@@ -29,6 +29,7 @@ grep -Fq -- '--artifact' "$SCRIPT"
 grep -Fq -- '--manifest' "$SCRIPT"
 grep -Fq 'verify-production-release.sh' "$SCRIPT"
 grep -Fq 'release-history' "$SCRIPT"
+grep -Fq 'build_release_artifact "$CHECKOUT_DIR" "$TAG" "$commit" "$ARTIFACT_DIR" "${TAG#v}"' "$SCRIPT"
 grep -Fq 'WARNING' "$SCRIPT"
 if rg -n -i 'docker|compose|mvn ' "$SCRIPT" >/dev/null; then
     printf 'Local production deployment wrapper must not invoke Docker, Compose, or Maven.\n' >&2

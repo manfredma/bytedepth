@@ -34,15 +34,28 @@ require_named_ref() {
 }
 
 build_candidate() {
-    local ref="$1" output_dir="$2" commit checkout
+    local ref="$1" output_dir="$2" commit checkout application_version
     git -C "$SOURCE_ROOT" fetch --force --no-recurse-submodules origin "$ref" main
     commit="$(git -C "$SOURCE_ROOT" rev-parse 'FETCH_HEAD^{commit}')"
     bash "$SOURCE_ROOT/scripts/check-staging-changelog-change.sh" --target "$commit" --base origin/main >&2
     bash "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target "$commit" --base origin/main --mode frozen-candidate >&2
     checkout="$(mktemp -d)"
     git -C "$SOURCE_ROOT" archive "$commit" | tar -x -C "$checkout"
+    application_version="$(awk '
+        /^## \[v[0-9]+\.[0-9]+\.[0-9]+\] - [0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]*$/ {
+            sub(/^## \[v/, "")
+            sub(/\].*$/, "")
+            print
+            exit
+        }
+    ' "$checkout/docs/releases/CHANGELOG.md")"
+    [[ "$application_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || {
+        printf 'Refusing: frozen candidate has no valid application version.\n' >&2
+        rm -rf "$checkout"
+        return 1
+    }
     BYTEDEPTH_COMMIT_ID="$commit" BYTEDEPTH_BUILT_AT="$(date -u +%FT%TZ)" \
-        build_release_artifact "$checkout" "$ref" "$commit" "$output_dir" >&2
+        build_release_artifact "$checkout" "$ref" "$commit" "$output_dir" "$application_version" >&2
     rm -rf "$checkout"
     printf '%s\n' "$commit"
 }
@@ -236,7 +249,8 @@ run_locked_install() {
     if ! record_timed_phase "$timing_file" app_restart systemctl restart "$BYTEDEPTH_STAGING_APP_SERVICE"; then
         fail_deployment app_restart
     fi
-    if ! record_timed_phase "$timing_file" app_health verify_running_release "$commit"; then
+    if ! record_timed_phase "$timing_file" app_health verify_running_release \
+        "$commit" "$(artifact_manifest_value application_version "$manifest")"; then
         fail_deployment app_health
     fi
     if ! record_timed_phase "$timing_file" nginx_reload ensure_edge_active_and_reload; then

@@ -13,6 +13,7 @@ for contract in \
     'check-staging-changelog-change.sh' \
     'check-release-readiness.sh' \
     'build_release_artifact' \
+    'application_version' \
     'scp' \
     'if ! scp' \
     'find '\''$remote_dir'\'' -depth -delete' \
@@ -46,6 +47,8 @@ if rg -n -F '/etc/bytedepth/application.env' "$SCRIPT" >/dev/null; then
 fi
 rg -q 'check-staging-changelog-change.sh.*>&2' "$SCRIPT"
 rg -q 'check-release-readiness.sh.*>&2' "$SCRIPT"
+rg -Fq 'build_release_artifact "$checkout" "$ref" "$commit" "$output_dir" "$application_version"' "$SCRIPT"
+rg -Fq 'artifact_manifest_value application_version "$manifest"' "$SCRIPT"
 rg -q 'sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging' "$SCRIPT"
 rg -q 'sudo -n cat /etc/bytedepth/staging-native.conf >/dev/null 2>&1' "$SCRIPT"
 rg -q "proxy_pass http://127\.0\.0\.1:18081;" "$SCRIPT"

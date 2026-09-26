@@ -8,6 +8,7 @@ readonly SCRIPT="$ROOT/scripts/verify-production-release.sh"
 [[ -x "$SCRIPT" ]] || { printf 'Expected executable production verifier.\n' >&2; exit 1; }
 rg -F 'https://bytedepth.cn' "$SCRIPT" >/dev/null
 rg -F 'release-history' "$SCRIPT" >/dev/null
+rg -F '.commitId == $expected_commit and .version == $expected_version' "$SCRIPT" >/dev/null
 rg -F '/opt/bytedepth/production-green/current/artifact.manifest' "$SCRIPT" >/dev/null
 rg -F 'GREEN_APP_SERVICE=bytedepth-production-green-app.service' "$SCRIPT" >/dev/null
 rg -F 'DOCKER_APP=bytedepth-bytedepth-app-1' "$SCRIPT" >/dev/null

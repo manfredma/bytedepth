@@ -55,7 +55,7 @@ pom_version="$(git -C "$SOURCE_ROOT" show "$commit:pom.xml" | sed -n 's@^[[:spac
     exit 1
 }
 git -C "$SOURCE_ROOT" archive "$commit" | tar -x -C "$CHECKOUT_DIR"
-build_release_artifact "$CHECKOUT_DIR" "$TAG" "$commit" "$ARTIFACT_DIR"
+build_release_artifact "$CHECKOUT_DIR" "$TAG" "$commit" "$ARTIFACT_DIR" "${TAG#v}"
 
 printf 'Checking production deployment target %s...\n' "$SSH_TARGET"
 preflight_output="$(remote "set -Eeuo pipefail

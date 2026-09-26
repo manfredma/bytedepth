@@ -69,8 +69,13 @@ grep -Fq 'proxy_pass http://127.0.0.1:18081;' "$GREEN_PUBLIC_NGINX_CONFIG" || {
     printf 'Refusing: native green public Nginx is not routed to the green edge.\n' >&2
     exit 1
 }
-curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused \
-    --connect-timeout 10 "$BASE_URL/version" | grep -F "$expected_commit" >/dev/null
+version_response="$(curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused \
+    --connect-timeout 10 "$BASE_URL/version")"
+jq --exit-status --arg expected_commit "$expected_commit" --arg expected_version "${TAG#v}" \
+    '.commitId == $expected_commit and .version == $expected_version' <<< "$version_response" >/dev/null || {
+    printf 'Refusing: production /version does not match %s (%s).\n' "$TAG" "$expected_commit" >&2
+    exit 1
+}
 
 request() {
     curl "${CURL_OPTIONS[@]}" "$BASE_URL$1" >/dev/null

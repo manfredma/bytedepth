@@ -17,15 +17,20 @@ artifact_manifest_value() {
 validate_artifact_manifest() {
     local manifest="$1"
     local jar="$2"
-    local expected_sha actual_sha commit release_ref
+    local expected_sha actual_sha commit release_ref application_version
 
     [[ -f "$manifest" && ! -L "$manifest" && -f "$jar" && ! -L "$jar" ]] || return 1
     [[ "$(stat -c '%a' "$manifest" 2>/dev/null || stat -f '%Lp' "$manifest")" == 600 ]] || return 1
     release_ref="$(artifact_manifest_value release_ref "$manifest")"
     commit="$(artifact_manifest_value commit "$manifest")"
+    application_version="$(artifact_manifest_value application_version "$manifest")"
     expected_sha="$(artifact_manifest_value sha256 "$manifest")"
     validate_artifact_ref "$release_ref" || return 1
     [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || return 1
+    [[ "$application_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || return 1
+    if validate_release_tag "$release_ref"; then
+        [[ "$application_version" == "${release_ref#v}" ]] || return 1
+    fi
     [[ "$expected_sha" =~ ^[0-9a-f]{64}$ ]] || return 1
     actual_sha="$(sha256sum "$jar" | awk '{print $1}')"
     [[ "$actual_sha" == "$expected_sha" ]]
@@ -81,11 +86,16 @@ restore_current_release() {
 
 verify_running_release() {
     local expected_commit="$1"
+    local expected_version="${2:-}"
     local base_url="${BYTEDEPTH_HEALTH_URL:-http://127.0.0.1:8080}"
     local app_service="${BYTEDEPTH_APP_SERVICE:-bytedepth-app.service}"
+    [[ "$expected_commit" =~ ^[0-9a-f]{40}$ ]] || return 1
+    [[ "$expected_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || return 1
     systemctl is-active --quiet "$app_service" || return 1
     curl --fail --silent --show-error --retry 12 --retry-delay 2 --retry-connrefused \
-        --connect-timeout 5 "$base_url/version" | grep -F "$expected_commit" >/dev/null
+        --connect-timeout 5 "$base_url/version" \
+        | jq --exit-status --arg expected_commit "$expected_commit" --arg expected_version "$expected_version" \
+            '.commitId == $expected_commit and .version == $expected_version' >/dev/null
 }
 
 build_release_artifact() {
@@ -93,10 +103,15 @@ build_release_artifact() {
     local release_ref="$2"
     local commit="$3"
     local output_dir="$4"
-    local build_log jar built_at sha version build_properties maven_status candidate java_25_home
+    local application_version="${5:-}"
+    local build_log jar built_at sha pom_version changelog_version build_properties maven_status candidate java_25_home
 
     validate_artifact_ref "$release_ref" || return 1
     [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || return 1
+    [[ "$application_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || {
+        printf 'A frozen application version is required to build the release artifact.\n' >&2
+        return 1
+    }
     # shellcheck disable=SC1091
     source "$source_root/scripts/lib/java-25.sh"
     java_25_home="$(resolve_java_25)"
@@ -106,7 +121,7 @@ build_release_artifact() {
     }
     install -d -m 0700 "$output_dir"
     build_properties="$source_root/bytedepth-start/src/main/resources/bytedepth-build.properties"
-    version="$(awk '
+    pom_version="$(awk '
         /^[[:space:]]*<version>[^<]*<\/version>[[:space:]]*$/ {
             line = $0
             sub(/^[[:space:]]*<version>/, "", line)
@@ -115,8 +130,27 @@ build_release_artifact() {
             exit
         }
     ' "$source_root/pom.xml")"
+    if validate_release_tag "$release_ref"; then
+        [[ "$application_version" == "${release_ref#v}" && "$pom_version" == "$application_version" ]] || {
+            printf 'Refusing: production artifact version, Tag, and POM version must match.\n' >&2
+            return 1
+        }
+    else
+        changelog_version="$(awk '
+            /^## \[v[0-9]+\.[0-9]+\.[0-9]+\] - [0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]*$/ {
+                sub(/^## \[v/, "")
+                sub(/\].*$/, "")
+                print
+                exit
+            }
+        ' "$source_root/docs/releases/CHANGELOG.md")"
+        [[ "$pom_version" == *-SNAPSHOT && "$application_version" == "$changelog_version" ]] || {
+            printf 'Refusing: staging artifact version must match the frozen Changelog and the source POM must remain a SNAPSHOT.\n' >&2
+            return 1
+        }
+    fi
     install -d "$(dirname "$build_properties")"
-    printf 'version=%s\ncommitId=%s\nbuiltAt=%s\n' "$version" "$commit" "${BYTEDEPTH_BUILT_AT:-$(date -u +%FT%TZ)}" > "$build_properties"
+    printf 'version=%s\ncommitId=%s\nbuiltAt=%s\n' "$application_version" "$commit" "${BYTEDEPTH_BUILT_AT:-$(date -u +%FT%TZ)}" > "$build_properties"
     build_log="$(mktemp)"
     # RETURN runs after the function-local scope has ended under some bash
     # versions. Keep cleanup safe with nounset enabled.
@@ -149,7 +183,7 @@ build_release_artifact() {
     install -m 0644 "$jar" "$output_dir/app.jar"
     built_at="$(date -u +%FT%TZ)"
     sha="$(sha256sum "$output_dir/app.jar" | awk '{print $1}')"
-    printf 'release_ref=%s\ncommit=%s\nbuilt_at=%s\nsha256=%s\n' \
-        "$release_ref" "$commit" "$built_at" "$sha" > "$output_dir/artifact.manifest"
+    printf 'release_ref=%s\ncommit=%s\nbuilt_at=%s\napplication_version=%s\nsha256=%s\n' \
+        "$release_ref" "$commit" "$built_at" "$application_version" "$sha" > "$output_dir/artifact.manifest"
     chmod 0600 "$output_dir/artifact.manifest"
 }
