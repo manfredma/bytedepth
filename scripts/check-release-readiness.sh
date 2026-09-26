@@ -77,7 +77,7 @@ check_frozen_changelog() {
         }
         /^## Unreleased[[:space:]]*$/ { in_unreleased = 1; saw_unreleased = 1; next }
         in_unreleased && /^## / { in_unreleased = 0 }
-        in_unreleased && /^[[:space:]]*-[[:space:]]+/ { stale_items = 1 }
+        in_unreleased && /[^[:space:]]/ { stale_content = 1 }
         !saw_unreleased { next }
         !in_unreleased && !saw_release && /^## \[v[0-9]+\.[0-9]+\.[0-9]+\] - [0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]*$/ {
             release_version = $0
@@ -87,9 +87,15 @@ check_frozen_changelog() {
             saw_release = 1
             next
         }
-        saw_release && /^## / { in_release = 0 }
-        in_release && /^### (Added|Changed|Deprecated|Removed|Fixed|Security|Compatibility)[[:space:]]*$/ { has_category = 1 }
-        in_release && /^[[:space:]]*-[[:space:]]+/ { has_item = 1 }
+        saw_release && /^## / { in_release = 0; active_category = 0 }
+        in_release && /^### / {
+            active_category = $0 ~ /^### (Added|Changed|Deprecated|Removed|Fixed|Security|Compatibility)[[:space:]]*$/
+            if (active_category) has_category = 1
+        }
+        in_release && /^[[:space:]]*-[[:space:]]+/ {
+            if (active_category) has_item = 1
+            else uncategorized_item = 1
+        }
         in_release && /^\*\*Tag\*\*[：:]/ {
             if (match($0, /`v[0-9]+\.[0-9]+\.[0-9]+`/)) {
                 candidate_tag = substr($0, RSTART + 1, RLENGTH - 2)
@@ -101,7 +107,7 @@ check_frozen_changelog() {
             }
         }
         END {
-            valid = saw_unreleased && !stale_items && saw_release && has_category && has_item
+            valid = saw_unreleased && !stale_content && saw_release && has_category && has_item && !uncategorized_item
             valid = valid && release_version != "" && version_is_newer(release_version, baseline_version)
             valid = valid && candidate_tag == ("v" release_version) && candidate_rollback == baseline_tag
             if (expected_release != "") valid = valid && release_version == expected_release

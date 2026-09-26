@@ -86,6 +86,24 @@ git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm mismatched-rollback
 assert_fails run_frozen_check
 
+printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.26.0] - 2026-09-26' '' \
+    '**Tag**：`v2.26.0`' '**回滚基线**：`v2.25.15`' '' '- Unclassified release note.' '' \
+    '### Fixed' '' '## [v2.25.15] - 2026-09-26' '' '**Tag**：`v2.25.15`' \
+    '**回滚基线**：`v2.25.2`' '' '### Fixed' '' '- Previous release.' \
+    > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm uncategorized-release-note
+assert_fails run_frozen_check
+
+printf '%s\n' '# Changelog' '' '## Unreleased' '' 'No pending changes.' '' \
+    '## [v2.26.0] - 2026-09-26' '' '**Tag**：`v2.26.0`' '**回滚基线**：`v2.25.15`' '' \
+    '### Fixed' '' '- Candidate change.' '' '## [v2.25.15] - 2026-09-26' '' \
+    '**Tag**：`v2.25.15`' '**回滚基线**：`v2.25.2`' '' '### Fixed' '' '- Previous release.' \
+    > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm prose-in-unreleased
+assert_fails run_frozen_check
+
 printf '%s\n' '# Changelog' '' '## Unreleased' '' '### Fixed' '' '- Stale shipped change.' '' \
     '## [v2.26.0] - 2026-09-26' '' '**Tag**：`v2.26.0`' '**回滚基线**：`v2.25.15`' '' \
     '### Fixed' '' '- Candidate change.' '' '## [v2.25.15] - 2026-09-26' '' \
