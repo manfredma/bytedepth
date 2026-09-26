@@ -4,6 +4,15 @@
 
 ## Unreleased
 
+## [v2.26.3] - 2026-09-27
+
+**Tag**：`v2.26.3`
+**回滚基线**：`v2.25.15`
+
+### Fixed
+
+- 修复现役回退 JAR 的早期 manifest 缺少 `application_version`、导致发布在任何服务变更前拒绝的问题；回退校验只在 Tag、路径、commit 和 JAR SHA 均一致时从 Tag 推导版本，新制品继续要求完整 manifest。
+
 ## [v2.26.2] - 2026-09-27
 
 **Tag**：`v2.26.2`

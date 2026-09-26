@@ -19,6 +19,8 @@ for contract in \
     'load_production_target' \
     'install -o ubuntu -g ubuntu -m 0600 "$PREVIOUS_APP_ENV_FILE" /etc/bytedepth/production.env' \
     'current_release_path' \
+    'validate_rollback_manifest "$previous_manifest" "$previous_release/app.jar" "${previous_release##*/}"' \
+    '[[ -n "$previous_version" ]] || previous_version="${previous_release##*/v}"' \
     'install_release_artifact' \
     'switch_current_release' \
     'systemctl reload "$BYTEDEPTH_PRODUCTION_EDGE_SERVICE"' \

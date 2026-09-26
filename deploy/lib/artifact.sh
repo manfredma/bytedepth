@@ -36,6 +36,27 @@ validate_artifact_manifest() {
     [[ "$actual_sha" == "$expected_sha" ]]
 }
 
+validate_rollback_manifest() {
+    local manifest="$1"
+    local jar="$2"
+    local expected_ref="$3"
+    local expected_sha actual_sha commit release_ref application_version
+    [[ -f "$manifest" && ! -L "$manifest" && -f "$jar" && ! -L "$jar" ]] || return 1
+    [[ "$(stat -c '%a' "$manifest" 2>/dev/null || stat -f '%Lp' "$manifest")" == 600 ]] || return 1
+    validate_release_tag "$expected_ref" || return 1
+    [[ "$(basename "$(dirname "$manifest")")" == "$expected_ref" ]] || return 1
+    release_ref="$(artifact_manifest_value release_ref "$manifest")"
+    commit="$(artifact_manifest_value commit "$manifest")"
+    application_version="$(artifact_manifest_value application_version "$manifest")"
+    expected_sha="$(artifact_manifest_value sha256 "$manifest")"
+    [[ "$release_ref" == "$expected_ref" ]] || return 1
+    [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || return 1
+    [[ -z "$application_version" || "$application_version" == "${expected_ref#v}" ]] || return 1
+    [[ "$expected_sha" =~ ^[0-9a-f]{64}$ ]] || return 1
+    actual_sha="$(sha256sum "$jar" | awk '{print $1}')"
+    [[ "$actual_sha" == "$expected_sha" ]]
+}
+
 install_release_artifact() {
     local release_ref="$1"
     local jar="$2"

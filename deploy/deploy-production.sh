@@ -155,11 +155,12 @@ preflight_production_baseline() {
         printf 'Refusing: current production rollback artifact is missing.\n' >&2; return 1;
     }
     previous_manifest="$previous_release/artifact.manifest"
-    validate_artifact_manifest "$previous_manifest" "$previous_release/app.jar" || {
+    validate_rollback_manifest "$previous_manifest" "$previous_release/app.jar" "${previous_release##*/}" || {
         printf 'Refusing: current production rollback manifest is invalid.\n' >&2; return 1;
     }
     previous_commit="$(artifact_manifest_value commit "$previous_manifest")"
     previous_version="$(artifact_manifest_value application_version "$previous_manifest")"
+    [[ -n "$previous_version" ]] || previous_version="${previous_release##*/v}"
 
     for suffix in "${suffixes[@]}"; do
         selected_service=""
@@ -376,11 +377,12 @@ previous_release="$(current_release_path)"
 [[ -f "$previous_release/app.jar" && -f "$previous_release/artifact.manifest" ]] || {
     printf 'Refusing: current native rollback release is missing.\n' >&2; exit 1;
 }
-validate_artifact_manifest "$previous_release/artifact.manifest" "$previous_release/app.jar" || {
+validate_rollback_manifest "$previous_release/artifact.manifest" "$previous_release/app.jar" "${previous_release##*/}" || {
     printf 'Refusing: current native rollback manifest is invalid.\n' >&2; exit 1;
 }
 previous_commit="$(artifact_manifest_value commit "$previous_release/artifact.manifest")"
 previous_version="$(artifact_manifest_value application_version "$previous_release/artifact.manifest")"
+[[ -n "$previous_version" ]] || previous_version="${previous_release##*/v}"
 
 restore_previous_release() {
     local restored_public_version

@@ -14,7 +14,7 @@ readonly TEMP_ROOT
 trap 'rm -rf "$TEMP_ROOT"' EXIT
 
 [[ -f "$ARTIFACT" ]] || { printf 'Missing artifact library.\n' >&2; exit 1; }
-for function_name in validate_release_tag validate_artifact_manifest install_release_artifact switch_current_release verify_running_release; do
+for function_name in validate_release_tag validate_artifact_manifest validate_rollback_manifest install_release_artifact switch_current_release verify_running_release; do
     rg -q "^${function_name}[[:space:]]*\(\)" "$ARTIFACT" || {
         printf 'Missing artifact interface: %s\n' "$function_name" >&2
         exit 1
@@ -75,6 +75,9 @@ rg -q 'restore_current_release' "$PRODUCTION"
 
 jar="$TEMP_ROOT/app.jar"
 manifest="$TEMP_ROOT/artifact.manifest"
+legacy_manifest_dir="$TEMP_ROOT/v2.25.15"
+legacy_manifest="$legacy_manifest_dir/artifact.manifest"
+mkdir -p "$legacy_manifest_dir"
 printf 'test artifact\n' > "$jar"
 jar_sha="$(sha256sum "$jar" | awk '{print $1}')"
 write_manifest() {
@@ -100,6 +103,28 @@ if ! (
     validate_artifact_manifest "$manifest" "$jar"
 ); then
     printf 'A production Tag manifest with matching release and application versions should validate.\n' >&2
+    exit 1
+fi
+printf 'release_ref=v2.25.15\ncommit=0123456789abcdef0123456789abcdef01234567\nbuilt_at=2026-09-26T00:00:00Z\nsha256=%s\n' \
+    "$jar_sha" > "$legacy_manifest"
+chmod 0600 "$legacy_manifest"
+if ! (
+    # shellcheck disable=SC1090
+    source "$ARTIFACT"
+    validate_rollback_manifest "$legacy_manifest" "$jar" v2.25.15
+); then
+    printf 'An older rollback manifest may infer its version from its immutable release Tag.\n' >&2
+    exit 1
+fi
+printf 'release_ref=v2.25.15\ncommit=0123456789abcdef0123456789abcdef01234567\nbuilt_at=2026-09-26T00:00:00Z\napplication_version=2.26.0\nsha256=%s\n' \
+    "$jar_sha" > "$legacy_manifest"
+chmod 0600 "$legacy_manifest"
+if (
+    # shellcheck disable=SC1090
+    source "$ARTIFACT"
+    validate_rollback_manifest "$legacy_manifest" "$jar" v2.25.15
+); then
+    printf 'A rollback manifest with inconsistent version metadata must be refused.\n' >&2
     exit 1
 fi
 write_manifest v2.26.0 2.25.15
