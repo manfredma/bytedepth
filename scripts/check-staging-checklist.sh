@@ -8,6 +8,7 @@ readonly SOURCE_ROOT
 
 bash "$SOURCE_ROOT/scripts/test-changelog-order.sh"
 bash "$SOURCE_ROOT/scripts/test-release-sequence.sh"
+bash "$SOURCE_ROOT/scripts/test-merge-main-after-quality.sh"
 bash "$SOURCE_ROOT/scripts/test-check-release-readiness.sh"
 bash "$SOURCE_ROOT/scripts/test-check-staging-changelog-change.sh"
 bash "$SOURCE_ROOT/scripts/test-run-local-quality.sh"

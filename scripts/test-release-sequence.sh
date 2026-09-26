@@ -34,5 +34,6 @@ grep -Fq 'readonly HEAD_SHA' "$PREPARE_RELEASE"
 grep -Fq 'commit" != "commit=$HEAD_SHA' "$PREPARE_RELEASE"
 grep -Fq 'check-release-readiness.sh" --target "$commit" --base origin/main --mode frozen-candidate' "$STAGING_DEPLOY"
 grep -Fq 'check-release-readiness.sh --target "$SHA" --base origin/main --mode frozen-candidate' "$MERGE_RELEASE"
+grep -Fq 'check-release-readiness.sh --target HEAD --base origin/main --mode release --expected-release "$RELEASE_VERSION"' "$PREPARE_RELEASE"
 
 printf 'Release sequencing contract passed.\n'

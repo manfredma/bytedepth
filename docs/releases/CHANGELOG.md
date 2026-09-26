@@ -25,7 +25,7 @@
 
 **Tag**：`v2.25.15`（由本次 release:prepare 创建）
 **Commit**：由本次 release:prepare 冻结
-**部署**：修复 v2.25.14 生产发布在 green 公网 Nginx 尚未安装时回滚误报失败的问题；重新执行生产迁移。
+**部署**：将生产运行时迁移为原生 systemd green 服务栈，包含 edge、公网 Nginx 与数据服务，并完善 staging 集成/E2E 隔离；同时修复 v2.25.14 首次部署失败后的回滚。
 **回滚基线**：`v2.25.2`
 
 **发布记录更正**：补全随本版本部署、原先遗漏在 `Unreleased` 的变更。
@@ -43,10 +43,6 @@
 - staging 集成测试和 E2E 使用 `staging-it`/`staging-e2e` Spring Profile 及按 `run_id` 隔离的 MySQL、Redis、Meilisearch 和图片资源，测试结束后自动清理并恢复 staging 应用。
 
 - 发布 evidence 增加 `runtime_mode`、`run_id`、测试资源 manifest SHA 和 cleanup 结果，旧格式 evidence 不再可用于创建 Release Tag。
-
-- 显式 `tabs:` 代码继续使用多语言 Tab，每个面板独立维护语法高亮、行号、复制和展开/收起状态；显式 `fold` 才默认收起。
-
-- 代码块组件兼容 Obsidian Codeblock Customizer 的 `group`/`tab` 元数据（支持 `:` 与 `=` 参数形式及省略 `tab` 时的语言名回退），同时保留既有 `tabs` 格式；同步前校验同组代码块的连续性和重复有效页签。
 
 ### Fixed
 

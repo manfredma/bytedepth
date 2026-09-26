@@ -11,10 +11,13 @@ cp "$SOURCE_ROOT/scripts/check-changelog-order.sh" "$TEMP_REPO/scripts/check-cha
 git -C "$TEMP_REPO" init -q -b main
 git -C "$TEMP_REPO" config user.email test@example.com
 git -C "$TEMP_REPO" config user.name readiness-test
-printf '%s\n' '# Changelog' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.25.15] - 2026-09-26' '' \
+    '**Tag**：`v2.25.15`' '**回滚基线**：`v2.25.2`' '' '### Fixed' '' '- Previous release.' \
+    > "$TEMP_REPO/docs/releases/CHANGELOG.md"
 git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm base
 git -C "$TEMP_REPO" branch base
+git -C "$TEMP_REPO" tag v2.25.15 base
 
 run_check() {
     (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base base)
@@ -25,7 +28,7 @@ run_frozen_check() {
 }
 
 run_same_commit_release_check() {
-    (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base HEAD --mode release)
+    (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base HEAD --mode release --expected-release 2.26.0)
 }
 
 assert_fails() {
@@ -50,14 +53,44 @@ run_check
 
 printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.26.0] - 2026-09-26' '' \
     '**Tag**：`v2.26.0`' '**回滚基线**：`v2.25.15`' '' '### Fixed' '' \
-    '- Candidate change.' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+    '- Candidate change.' '' '## [v2.25.15] - 2026-09-26' '' \
+    '**Tag**：`v2.25.15`' '**回滚基线**：`v2.25.2`' '' '### Fixed' '' '- Previous release.' \
+    > "$TEMP_REPO/docs/releases/CHANGELOG.md"
 git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm frozen-changelog
 run_frozen_check
+run_same_commit_release_check
+
+printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.25.15] - 2026-09-26' '' \
+    '**Tag**：`v2.25.15`' '**回滚基线**：`v2.25.2`' '' '### Fixed' '' '- Reused old release.' '' \
+    '## [v2.25.14] - 2026-09-26' '' '**Tag**：`v2.25.14`' '**回滚基线**：`v2.25.2`' '' \
+    '### Fixed' '' '- Previous release.' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm reused-release-version
+assert_fails run_frozen_check
+assert_fails run_same_commit_release_check
+
+printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.26.0] - 2026-09-26' '' \
+    '**Tag**：`v2.25.14`' '**回滚基线**：`v2.25.15`' '' '### Fixed' '' '- Candidate change.' '' \
+    '## [v2.25.15] - 2026-09-26' '' '**Tag**：`v2.25.15`' '**回滚基线**：`v2.25.2`' '' \
+    '### Fixed' '' '- Previous release.' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm mismatched-tag
+assert_fails run_frozen_check
+
+printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.26.0] - 2026-09-26' '' \
+    '**Tag**：`v2.26.0`' '**回滚基线**：`v2.25.2`' '' '### Fixed' '' '- Candidate change.' '' \
+    '## [v2.25.15] - 2026-09-26' '' '**Tag**：`v2.25.15`' '**回滚基线**：`v2.25.2`' '' \
+    '### Fixed' '' '- Previous release.' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm mismatched-rollback
+assert_fails run_frozen_check
 
 printf '%s\n' '# Changelog' '' '## Unreleased' '' '### Fixed' '' '- Stale shipped change.' '' \
     '## [v2.26.0] - 2026-09-26' '' '**Tag**：`v2.26.0`' '**回滚基线**：`v2.25.15`' '' \
-    '### Fixed' '' '- Candidate change.' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+    '### Fixed' '' '- Candidate change.' '' '## [v2.25.15] - 2026-09-26' '' \
+    '**Tag**：`v2.25.15`' '**回滚基线**：`v2.25.2`' '' '### Fixed' '' '- Previous release.' \
+    > "$TEMP_REPO/docs/releases/CHANGELOG.md"
 git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm stale-frozen-changelog
 assert_fails run_frozen_check

@@ -10,9 +10,10 @@ readonly REPOSITORY_ROOT
 TARGET_REF=HEAD
 BASE_REF=origin/main
 MODE=candidate
+EXPECTED_RELEASE_VERSION=''
 
 usage() {
-    printf 'Usage: %s [--target REF] [--base REF] [--mode candidate|frozen-candidate|release]\n' "$0" >&2
+    printf 'Usage: %s [--target REF] [--base REF] [--mode candidate|frozen-candidate|release] [--expected-release X.Y.Z]\n' "$0" >&2
     exit 2
 }
 
@@ -33,6 +34,11 @@ while [[ $# -gt 0 ]]; do
             MODE="$2"
             shift 2
             ;;
+        --expected-release)
+            [[ $# -ge 2 ]] || usage
+            EXPECTED_RELEASE_VERSION="$2"
+            shift 2
+            ;;
         *)
             usage
             ;;
@@ -40,19 +46,43 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ "$MODE" == candidate || "$MODE" == frozen-candidate || "$MODE" == release ]] || usage
+if [[ -n "$EXPECTED_RELEASE_VERSION" && ! "$EXPECTED_RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+    usage
+fi
+if [[ "$MODE" == release && -z "$EXPECTED_RELEASE_VERSION" ]]; then
+    printf 'Release readiness refused: --expected-release is required in release mode.\n' >&2
+    exit 2
+fi
 
 cd "$REPOSITORY_ROOT"
 CHANGELOG_FILE="$REPOSITORY_ROOT/docs/releases/CHANGELOG.md"
 TEMP_CHANGELOG=''
-trap 'if [[ -n "$TEMP_CHANGELOG" ]]; then rm -f "$TEMP_CHANGELOG"; fi' EXIT
+BASE_CHANGELOG_TEMP=''
+trap 'if [[ -n "$TEMP_CHANGELOG" ]]; then rm -f "$TEMP_CHANGELOG"; fi; if [[ -n "$BASE_CHANGELOG_TEMP" ]]; then rm -f "$BASE_CHANGELOG_TEMP"; fi' EXIT
 
 check_frozen_changelog() {
-    awk '
+    local baseline_version="$1"
+    local baseline_tag="$2"
+
+    awk -v baseline_version="$baseline_version" -v baseline_tag="$baseline_tag" \
+        -v expected_release="$EXPECTED_RELEASE_VERSION" '
+        function version_is_newer(current, previous, current_parts, previous_parts, i) {
+            split(current, current_parts, ".")
+            split(previous, previous_parts, ".")
+            for (i = 1; i <= 3; i++) {
+                if ((current_parts[i] + 0) > (previous_parts[i] + 0)) return 1
+                if ((current_parts[i] + 0) < (previous_parts[i] + 0)) return 0
+            }
+            return 0
+        }
         /^## Unreleased[[:space:]]*$/ { in_unreleased = 1; saw_unreleased = 1; next }
         in_unreleased && /^## / { in_unreleased = 0 }
         in_unreleased && /^[[:space:]]*-[[:space:]]+/ { stale_items = 1 }
         !saw_unreleased { next }
         !in_unreleased && !saw_release && /^## \[v[0-9]+\.[0-9]+\.[0-9]+\] - [0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]*$/ {
+            release_version = $0
+            sub(/^## \[v/, "", release_version)
+            sub(/\].*$/, "", release_version)
             in_release = 1
             saw_release = 1
             next
@@ -60,10 +90,66 @@ check_frozen_changelog() {
         saw_release && /^## / { in_release = 0 }
         in_release && /^### (Added|Changed|Deprecated|Removed|Fixed|Security|Compatibility)[[:space:]]*$/ { has_category = 1 }
         in_release && /^[[:space:]]*-[[:space:]]+/ { has_item = 1 }
-        in_release && /^\*\*Tag\*\*[：:]/ { has_tag = 1 }
-        in_release && /^\*\*回滚基线\*\*[：:]/ { has_rollback = 1 }
-        END { exit !(saw_unreleased && !stale_items && saw_release && has_category && has_item && has_tag && has_rollback) }
+        in_release && /^\*\*Tag\*\*[：:]/ {
+            if (match($0, /`v[0-9]+\.[0-9]+\.[0-9]+`/)) {
+                candidate_tag = substr($0, RSTART + 1, RLENGTH - 2)
+            }
+        }
+        in_release && /^\*\*回滚基线\*\*[：:]/ {
+            if (match($0, /`v[0-9]+\.[0-9]+\.[0-9]+`/)) {
+                candidate_rollback = substr($0, RSTART + 1, RLENGTH - 2)
+            }
+        }
+        END {
+            valid = saw_unreleased && !stale_items && saw_release && has_category && has_item
+            valid = valid && release_version != "" && version_is_newer(release_version, baseline_version)
+            valid = valid && candidate_tag == ("v" release_version) && candidate_rollback == baseline_tag
+            if (expected_release != "") valid = valid && release_version == expected_release
+            exit !valid
+        }
     ' "$CHANGELOG_FILE"
+}
+
+first_release_field() {
+    local changelog_path="$1"
+    local field_name="$2"
+
+    awk -v field_name="$field_name" '
+        /^## \[v[0-9]+\.[0-9]+\.[0-9]+\] - [0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]*$/ {
+            if (saw_release) exit
+            saw_release = 1
+            in_release = 1
+            next
+        }
+        saw_release && /^## / { exit }
+        in_release && $0 ~ "^\\*\\*" field_name "\\*\\*[：:]" {
+            if (match($0, /`v[0-9]+\.[0-9]+\.[0-9]+`/)) {
+                print substr($0, RSTART + 1, RLENGTH - 2)
+                exit
+            }
+        }
+    ' "$changelog_path"
+}
+
+first_release_version() {
+    local changelog_path="$1"
+
+    awk '
+        /^## \[v[0-9]+\.[0-9]+\.[0-9]+\] - [0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]*$/ {
+            version = $0
+            sub(/^## \[v/, "", version)
+            sub(/\].*$/, "", version)
+            print version
+            exit
+        }
+    ' "$changelog_path"
+}
+
+latest_stable_tag_for_commit() {
+    local commit="$1"
+
+    git tag --merged "$commit" --sort=-version:refname \
+        | awk '/^v[0-9]+\.[0-9]+\.[0-9]+$/ && !found { print; found = 1 }'
 }
 
 has_release_heading() {
@@ -97,6 +183,29 @@ if [[ "$TARGET_REF" != HEAD ]]; then
     CHANGELOG_FILE="$TEMP_CHANGELOG"
 fi
 
+BASE_RELEASE_VERSION=''
+BASE_RELEASE_TAG=''
+if [[ "$MODE" == release ]]; then
+    BASE_RELEASE_TAG="$(latest_stable_tag_for_commit "$BASE_COMMIT")"
+    if [[ -z "$BASE_RELEASE_TAG" ]]; then
+        printf 'Release readiness refused: no prior stable release Tag is reachable from %s.\n' "$BASE_REF" >&2
+        exit 1
+    fi
+    BASE_RELEASE_VERSION="${BASE_RELEASE_TAG#v}"
+else
+    BASE_CHANGELOG_TEMP="$(mktemp)"
+    if ! git show "$BASE_COMMIT:docs/releases/CHANGELOG.md" > "$BASE_CHANGELOG_TEMP"; then
+        printf 'Release readiness refused: base %s has no docs/releases/CHANGELOG.md.\n' "$BASE_REF" >&2
+        exit 1
+    fi
+    BASE_RELEASE_VERSION="$(first_release_version "$BASE_CHANGELOG_TEMP")"
+    BASE_RELEASE_TAG="$(first_release_field "$BASE_CHANGELOG_TEMP" Tag)"
+    if [[ -n "$BASE_RELEASE_VERSION" && "$BASE_RELEASE_TAG" != "v$BASE_RELEASE_VERSION" ]]; then
+        printf 'Release readiness refused: base Changelog latest version and Tag do not match.\n' >&2
+        exit 1
+    fi
+fi
+
 [[ -f "$CHANGELOG_FILE" ]] || {
     printf 'Release readiness refused: missing %s.\n' "$CHANGELOG_FILE" >&2
     exit 1
@@ -104,7 +213,7 @@ fi
 bash "$REPOSITORY_ROOT/scripts/check-changelog-order.sh" "$CHANGELOG_FILE"
 
 if [[ "$MODE" == frozen-candidate || "$MODE" == release ]]; then
-    if ! check_frozen_changelog; then
+    if ! check_frozen_changelog "$BASE_RELEASE_VERSION" "$BASE_RELEASE_TAG"; then
         printf 'Release readiness refused: frozen Changelog requires an empty ## Unreleased section and a categorized version entry with Tag and rollback baseline.\n' >&2
         exit 1
     fi
@@ -127,7 +236,7 @@ fi
 mapfile -t changed_files < <(printf '%s\n' "$changed_paths" | sed '/^$/d' | sort -u)
 if [[ "${#changed_files[@]}" -eq 0 ]]; then
     if [[ "$MODE" == candidate ]] && ! unreleased_has_items && has_release_heading; then
-        if ! check_frozen_changelog; then
+        if ! check_frozen_changelog "$BASE_RELEASE_VERSION" "$BASE_RELEASE_TAG"; then
             printf 'Release readiness refused: frozen Changelog requires an empty ## Unreleased section and a categorized version entry with Tag and rollback baseline.\n' >&2
             exit 1
         fi
@@ -167,7 +276,7 @@ if [[ "${#runtime_files[@]}" -eq 0 ]]; then
 fi
 
 if [[ "$MODE" == frozen-candidate || "$MODE" == release ]] || { ! unreleased_has_items && has_release_heading; }; then
-    if ! check_frozen_changelog; then
+    if ! check_frozen_changelog "$BASE_RELEASE_VERSION" "$BASE_RELEASE_TAG"; then
         printf 'Release readiness refused: frozen Changelog requires an empty ## Unreleased section and a categorized version entry with Tag and rollback baseline.\n' >&2
         exit 1
     fi

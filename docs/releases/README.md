@@ -36,7 +36,7 @@ main（下一版本 -SNAPSHOT）
 
 staging 只验收待上线版本，不提供“先预览、之后再决定是否发布”的第二条发布路径。候选分支必须在首次 staging 部署前确定正式版本、下一开发版本并冻结正式 Changelog（包含 `## [vX.Y.Z]`、回滚基线和分类发布说明）；旧 `Unreleased` 条目先与生产部署记录核对，已部署条目归档到实际版本，本次候选条目移到冻结版本段，冻结后的 `Unreleased` 不得有条目。随后吸收远程最新 `main`，再以候选分支部署 staging。`deploy-staging.sh` 会拒绝与 `origin/main` 相同的 ref、未修改 `docs/releases/CHANGELOG.md` 的部署、未冻结的候选，以及仍残留 `Unreleased` 条目的冻结候选。
 
-`scripts/check-release-readiness.sh --mode frozen-candidate` 负责校验正式版本段、分类发布说明、Tag、回滚基线与空 `Unreleased`；staging 部署、候选合并和正式发布入口都必须运行该门禁。集成、E2E 和项目所有者验收都针对这个冻结候选版本。验收通过后只能将候选分支 fast-forward 合并到 `main`，完整 SHA 必须保持不变；随后直接执行 `prepare-release.sh` 和生产发布。验收失败时才允许修改代码或 Changelog；修改后旧 evidence 作废，必须重新冻结、重新部署和重新验收。
+`scripts/check-release-readiness.sh --mode frozen-candidate` 负责校验正式版本段、分类发布说明、Tag 与回滚基线：候选版本必须高于基线 `main` 的最新正式版本，`Tag` 必须与版本标题相符，回滚基线必须指向基线版本，且 `Unreleased` 为空。staging 部署、候选合并和正式发布入口都必须运行该门禁；`prepare-release.sh` 还会把正式版本参数传入校验器，防止用旧版本标题创建新 Tag。集成、E2E 和项目所有者验收都针对这个冻结候选版本。验收通过后只能将候选分支 fast-forward 合并到 `main`，完整 SHA 必须保持不变；随后直接执行 `prepare-release.sh` 和生产发布。验收失败时才允许修改代码或 Changelog；修改后旧 evidence 作废，必须重新冻结、重新部署和重新验收。
 
 **CHANGELOG 版本号标题时序**：开发改动在候选分支的 `## Unreleased` 下记录。首次 staging 部署前，在候选分支把这些条目移入 `## [vX.Y.Z] - 日期`，填写 `**Tag**` 与 `**回滚基线**`，并清空 `Unreleased`；随后冻结该提交并部署。`prepare-release.sh` 在验收通过并 fast-forward 到 `main` 后校验正式版本标题和冻结状态，再创建 annotated Tag。验收后禁止再补写 Changelog 或其他提交；提交与部署 SHA 以冻结候选及 evidence 为准。
 

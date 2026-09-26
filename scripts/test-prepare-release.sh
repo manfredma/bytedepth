@@ -9,8 +9,8 @@ readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
 readonly EVIDENCE_DIR="$TEMP_ROOT/staging-evidence"
 readonly RELEASE_SCRIPT="$SOURCE_ROOT/scripts/prepare-release.sh"
 
-grep -Fq 'bash scripts/check-release-readiness.sh --target HEAD --base origin/main --mode release' "$RELEASE_SCRIPT"
-readiness_line="$(rg -nF 'bash scripts/check-release-readiness.sh --target HEAD --base origin/main --mode release' "$RELEASE_SCRIPT" | cut -d: -f1)"
+grep -Fq 'bash scripts/check-release-readiness.sh --target HEAD --base origin/main --mode release --expected-release "$RELEASE_VERSION"' "$RELEASE_SCRIPT"
+readiness_line="$(rg -nF 'bash scripts/check-release-readiness.sh --target HEAD --base origin/main --mode release --expected-release "$RELEASE_VERSION"' "$RELEASE_SCRIPT" | cut -d: -f1)"
 release_prepare_line="$(rg -nF 'release:prepare' "$RELEASE_SCRIPT" | tail -n 1 | cut -d: -f1)"
 [[ "$readiness_line" -lt "$release_prepare_line" ]]
 cleanup_fixture() {
