@@ -13,7 +13,7 @@
 3. **跑前置门禁**：候选冻结前，先将所有用户可见、运行时、部署或配置变更写入非空分类 `## Unreleased`，再运行 `bash scripts/run-local-quality.sh`。首次 staging 部署前，需核对线上版本与部署台账，将已发布的旧条目归档到实际版本，把本次候选条目移入正式 `## [vX.Y.Z]` 段并清空 `Unreleased`；冻结后运行质量门禁，冻结检查必须全绿。
 4. **staging 预发验收**（界面/视觉/布局改动必须，后端改动建议）：
    - 推送工作分支到 `origin`。
-   - 在 129（`129.211.6.82`）执行 `deploy-staging.sh <分支>` 部署该分支（staging 是测试环境，接受任意命名分支用于验收；旧 124 Docker 栈不作为验收入口）。该入口只接受有正式版本说明且 `Unreleased` 为空的冻结候选。
+   - 在 124 执行 `deploy-staging.sh <分支>` 部署该分支（staging 是测试环境，接受任意命名分支用于验收）。该入口只接受有正式版本说明且 `Unreleased` 为空的冻结候选。
    - 项目所有者通过 `https://staging-bytedepth.bytedepth.cn/` 验收。**未收到明确「staging 验收通过」不得合并 `main`。** staging 的 RSS、sitemap 和 RSS 自动发现按环境关闭；新域名不是安全认证。
 5. **PR 合并 `main`**：验收通过后创建 PR，全部必需检查通过后合并。合并后立即删除 worktree 与分支。
 6. **创建生产版本**：从干净 `main` 运行 `scripts/prepare-release.sh` 创建新 SemVer annotated Tag。
@@ -42,7 +42,7 @@ bash scripts/verify-changed-coverage.sh
 git push -u origin feat/<topic>
 
 # 界面/视觉改动：先部署 staging 验收
-ssh -i ~/.ssh/ubuntu_2.pem ubuntu@129.211.6.82 \
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
   "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh feat/<topic>"
 # 项目所有者在 https://staging-bytedepth.bytedepth.cn/ 验收通过后，再创建并合并 PR
 ```

@@ -31,11 +31,11 @@ grep -Fq 'verify-production-release.sh' "$SCRIPT"
 grep -Fq 'release-history' "$SCRIPT"
 grep -Fq 'build_release_artifact "$CHECKOUT_DIR" "$TAG" "$commit" "$ARTIFACT_DIR" "${TAG#v}"' "$SCRIPT"
 grep -Fq 'WARNING' "$SCRIPT"
-if rg -n -i 'docker|compose|mvn ' "$SCRIPT" >/dev/null; then
-    printf 'Local production deployment wrapper must not invoke Docker, Compose, or Maven.\n' >&2
+if rg -n -i 'compose|mvn ' "$SCRIPT" >/dev/null; then
+    printf 'Local production deployment wrapper must not invoke Compose or Maven.\n' >&2
     exit 1
 fi
-grep -Fq "docker stop \"\$DOCKER_APP\"" "$HOST_SCRIPT"
-grep -Fq 'restore_blue_access' "$HOST_SCRIPT"
+grep -Fq 'restore_current_release' "$HOST_SCRIPT"
+grep -Fq 'runtime_mode=production-native' "$HOST_SCRIPT"
 
 printf 'Local production deployment contract passed.\n'

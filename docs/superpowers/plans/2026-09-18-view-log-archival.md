@@ -15,7 +15,7 @@
 - Work only in the isolated `feat/view-log-archival` worktree; never develop directly on `main`.
 - Do not add a Maven module or a new scheduling framework; use the existing Spring `@EnableScheduling` and `@Scheduled` foundation.
 - Maven commands use `./mvnw` with Java 25; before multi-module tests run `./mvnw clean install -DskipTests -Dsort.skip=true`, then `./mvnw test`.
-- No local MySQL, Redis, Flyway, Docker, Testcontainers, or other independent process is evidence for integration acceptance; run those checks on staging.
+- No local MySQL, Redis, Flyway, or other external process is evidence for integration acceptance; run those checks on staging.
 - Any runtime/database/configuration change must have a non-empty categorized `## Unreleased` entry before the first staging deployment.
 - Raw `post_view_log` and `page_view_log` details are logically and physically retained for seven days only; aggregate tables must not store IP, User-Agent, Referer, city, visit token, or reading-progress detail.
 - Time calculations use `Asia/Shanghai`; archive ranges are half-open `[start, end)` and only complete hours older than the seven-day boundary may be deleted.

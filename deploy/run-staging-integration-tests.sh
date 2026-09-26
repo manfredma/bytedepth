@@ -16,8 +16,6 @@ readonly TEST_STATE_DIR="$STATE_DIR/test-slots"
 readonly RUNTIME_MANIFEST="$STATE_DIR/runtime/manifest"
 readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository
 readonly MINIMUM_WORKSPACE_FREE_KIB=2097152
-readonly MINIMUM_MEMORY_AVAILABLE_KIB=524288
-readonly MINIMUM_MEMORY_AFTER_APP_STOP_KIB=1048576
 readonly SLOT_PROVISION="$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
 readonly SLOT_TEARDOWN="$SOURCE_ROOT/deploy/teardown-staging-test-slot.sh"
 # shellcheck disable=SC1091
@@ -72,17 +70,6 @@ require_workspace_headroom() {
     [[ "$available_kib" =~ ^[0-9]+$ && "$available_kib" -ge "$MINIMUM_WORKSPACE_FREE_KIB" ]] || {
         printf 'Refusing: staging workspace needs at least %s KiB free, found %s KiB.\n' \
             "$MINIMUM_WORKSPACE_FREE_KIB" "${available_kib:-unknown}" >&2
-        return 1
-    }
-}
-
-require_memory_headroom() {
-    local minimum_kib="${1:-$MINIMUM_MEMORY_AVAILABLE_KIB}" available_kib
-
-    available_kib="$(awk '/^MemAvailable:/ {print $2; exit}' /proc/meminfo 2>/dev/null || true)"
-    [[ "$available_kib" =~ ^[0-9]+$ && "$available_kib" -ge "$minimum_kib" ]] || {
-        printf 'Refusing: staging integration needs at least %s KiB available memory, found %s KiB.\n' \
-            "$minimum_kib" "${available_kib:-unknown}" >&2
         return 1
     }
 }
@@ -229,7 +216,6 @@ tested_commit="$(read_checked_out_commit)"
 require_deployed_commit "$tested_commit"
 require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
 require_workspace_headroom
-require_memory_headroom
 require_test_slot_inputs
 load_resource_credentials
 
@@ -247,8 +233,6 @@ if systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE"; then
     printf 'Refusing: staging app remained active; test resources were not provisioned.\n' >&2
     exit 1
 fi
-require_memory_headroom "$MINIMUM_MEMORY_AFTER_APP_STOP_KIB"
-
 "$SLOT_PROVISION" --run-id "$run_id" --manifest "$manifest"
 require_manifest "$manifest"
 it_env="$(slot_manifest_value "$manifest" it_env)"

@@ -63,9 +63,10 @@ trap 'if [[ -n "$TEMP_CHANGELOG" ]]; then rm -f "$TEMP_CHANGELOG"; fi; if [[ -n 
 check_frozen_changelog() {
     local baseline_version="$1"
     local baseline_tag="$2"
+    local allow_same_release="${3:-0}"
 
-    awk -v baseline_version="$baseline_version" -v baseline_tag="$baseline_tag" \
-        -v expected_release="$EXPECTED_RELEASE_VERSION" '
+    if ! awk -v baseline_version="$baseline_version" -v baseline_tag="$baseline_tag" \
+        -v expected_release="$EXPECTED_RELEASE_VERSION" -v allow_same_release="$allow_same_release" '
         function version_is_newer(current, previous, current_parts, previous_parts, i) {
             split(current, current_parts, ".")
             split(previous, previous_parts, ".")
@@ -108,12 +109,27 @@ check_frozen_changelog() {
         }
         END {
             valid = saw_unreleased && !stale_content && saw_release && has_category && has_item && !uncategorized_item
-            valid = valid && release_version != "" && version_is_newer(release_version, baseline_version)
-            valid = valid && candidate_tag == ("v" release_version) && candidate_rollback == baseline_tag
+            newer_release = version_is_newer(release_version, baseline_version)
+            same_released_version = allow_same_release == "1" && release_version == baseline_version && candidate_tag == baseline_tag
+            valid = valid && release_version != "" && (newer_release || same_released_version)
+            valid = valid && candidate_tag == ("v" release_version)
+            valid = valid && candidate_rollback ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/
+            rollback_version = substr(candidate_rollback, 2)
+            valid = valid && version_is_newer(release_version, rollback_version)
+            valid = valid && !version_is_newer(rollback_version, baseline_version)
             if (expected_release != "") valid = valid && release_version == expected_release
             exit !valid
         }
-    ' "$CHANGELOG_FILE"
+    ' "$CHANGELOG_FILE"; then
+        return 1
+    fi
+
+    local rollback_tag rollback_commit
+    rollback_tag="$(first_release_field "$CHANGELOG_FILE" '回滚基线')"
+    [[ "$rollback_tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || return 1
+    [[ "$(git cat-file -t "refs/tags/$rollback_tag" 2>/dev/null || true)" == tag ]] || return 1
+    rollback_commit="$(git rev-parse --verify "refs/tags/$rollback_tag^{commit}" 2>/dev/null)" || return 1
+    git merge-base --is-ancestor "$rollback_commit" "$BASE_COMMIT"
 }
 
 first_release_field() {
@@ -242,7 +258,7 @@ fi
 mapfile -t changed_files < <(printf '%s\n' "$changed_paths" | sed '/^$/d' | sort -u)
 if [[ "${#changed_files[@]}" -eq 0 ]]; then
     if [[ "$MODE" == candidate ]] && ! unreleased_has_items && has_release_heading; then
-        if ! check_frozen_changelog "$BASE_RELEASE_VERSION" "$BASE_RELEASE_TAG"; then
+        if ! check_frozen_changelog "$BASE_RELEASE_VERSION" "$BASE_RELEASE_TAG" 1; then
             printf 'Release readiness refused: frozen Changelog requires an empty ## Unreleased section and a categorized version entry with Tag and rollback baseline.\n' >&2
             exit 1
         fi

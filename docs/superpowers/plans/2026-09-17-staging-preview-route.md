@@ -4,7 +4,7 @@
 
 The temporary query/Cookie-based staging preview route from this plan was intentionally replaced after owner review. It must not be used for current deployment or acceptance.
 
-The current design is documented in [`2026-09-17-staging-domain-search-isolation.md`](2026-09-17-staging-domain-search-isolation.md):
+The current design is documented in [部署手册](../../../deploy/README.md):
 
 - staging uses `https://staging-bytedepth.bytedepth.cn/` directly;
 - `BYTEDEPTH_ENVIRONMENT=staging` hides RSS navigation and auto-discovery;

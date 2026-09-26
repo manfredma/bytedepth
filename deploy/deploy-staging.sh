@@ -8,7 +8,7 @@ fi
 
 SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SOURCE_ROOT
-readonly STAGING_HOST="${BYTEDEPTH_STAGING_HOST:-129.211.6.82}"
+readonly STAGING_HOST="${BYTEDEPTH_STAGING_HOST:-124.221.143.25}"
 readonly STAGING_USER=ubuntu
 readonly STAGING_SSH_KEY="${BYTEDEPTH_SSH_KEY:-${HOME}/.ssh/ubuntu_2.pem}"
 readonly STATE_DIR=/var/lib/bytedepth-staging
@@ -231,14 +231,13 @@ run_locked_install() {
     }
 
     wait_for_native_mysql() {
-        local attempt
         local mysql_defaults=/etc/bytedepth/staging-native-mysql-admin.cnf
 
         [[ -r "$mysql_defaults" ]] || {
             printf 'Refusing: native staging MySQL admin defaults are missing.\n' >&2
             return 1
         }
-        for attempt in {1..30}; do
+        for _ in {1..30}; do
             if mysqladmin --defaults-extra-file="$mysql_defaults" \
                 --host=127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" ping >/dev/null 2>&1; then
                 return 0

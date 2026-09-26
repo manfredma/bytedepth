@@ -1,0 +1,27 @@
+[Unit]
+Description=ByteDepth production public Nginx
+After=network-online.target bytedepth-production-edge.service
+Requires=bytedepth-production-edge.service
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=__PRODUCTION_ROOT__/public-nginx/nginx.pid
+User=root
+Group=root
+ExecStartPre=/usr/sbin/nginx -t -c /etc/bytedepth/production-public-nginx.conf
+ExecStart=/usr/sbin/nginx -c /etc/bytedepth/production-public-nginx.conf -g 'daemon on; master_process on;'
+ExecStartPost=/usr/bin/chown -R ubuntu:ubuntu __PRODUCTION_ROOT__/public-nginx
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -QUIT $MAINPID
+ExecStopPost=/usr/bin/chown -R ubuntu:ubuntu __PRODUCTION_ROOT__/public-nginx
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=30s
+TimeoutStopSec=30s
+PrivateTmp=true
+MemoryMax=64M
+ReadWritePaths=__PRODUCTION_ROOT__/public-nginx
+
+[Install]
+WantedBy=multi-user.target

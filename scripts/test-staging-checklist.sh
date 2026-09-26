@@ -17,7 +17,7 @@ grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-github-quality-workflow.sh"' "$CHECKL
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-maven-runtime.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-host-native-runtime.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-host-native-deployment.sh"' "$CHECKLIST"
-grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-production-red-green-rehearsal.sh"' "$CHECKLIST"
+grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-project-ownership.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-platform-portability.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-flyway-migration-warning-safety.sh"' "$CHECKLIST"
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-deploy-staging.sh"' "$CHECKLIST"

@@ -7,9 +7,10 @@ readonly ARTIFACT="$ROOT/deploy/lib/artifact.sh"
 readonly STAGING="$ROOT/deploy/deploy-staging.sh"
 readonly PRODUCTION="$ROOT/deploy/deploy-production.sh"
 readonly REMOTE="$ROOT/deploy/deploy-production-remote.sh"
-readonly PRODUCTION_GREEN_EDGE_UNIT="$ROOT/deploy/systemd/bytedepth-production-green-edge.service.in"
-readonly PRODUCTION_GREEN_PUBLIC_NGINX_UNIT="$ROOT/deploy/systemd/bytedepth-production-green-public-nginx.service.in"
-readonly TEMP_ROOT="$(mktemp -d)"
+readonly PRODUCTION_EDGE_UNIT="$ROOT/deploy/systemd/bytedepth-production-edge.service.in"
+readonly PRODUCTION_PUBLIC_NGINX_UNIT="$ROOT/deploy/systemd/bytedepth-production-public-nginx.service.in"
+TEMP_ROOT="$(mktemp -d)"
+readonly TEMP_ROOT
 trap 'rm -rf "$TEMP_ROOT"' EXIT
 
 [[ -f "$ARTIFACT" ]] || { printf 'Missing artifact library.\n' >&2; exit 1; }
@@ -45,12 +46,12 @@ rg -q 'install_release_artifact|switch_current_release' "$STAGING"
 rg -q 'restore_current_release|rollback' "$STAGING"
 rg -q 'systemctl restart "\$BYTEDEPTH_STAGING_APP_SERVICE"' "$STAGING"
 rg -q 'base_url/version' "$ARTIFACT"
-rg -q '^ExecReload=/bin/kill -HUP \$MAINPID$' "$PRODUCTION_GREEN_EDGE_UNIT"
-rg -q '^ExecStop=/bin/kill -QUIT \$MAINPID$' "$PRODUCTION_GREEN_EDGE_UNIT"
-rg -q '^PIDFile=__GREEN_ROOT__/edge/nginx.pid$' "$PRODUCTION_GREEN_EDGE_UNIT"
-rg -q '^ExecReload=/bin/kill -HUP \$MAINPID$' "$PRODUCTION_GREEN_PUBLIC_NGINX_UNIT"
-rg -q '^ExecStop=/bin/kill -QUIT \$MAINPID$' "$PRODUCTION_GREEN_PUBLIC_NGINX_UNIT"
-rg -q '^PIDFile=__GREEN_ROOT__/public-nginx/nginx.pid$' "$PRODUCTION_GREEN_PUBLIC_NGINX_UNIT"
+rg -q '^ExecReload=/bin/kill -HUP \$MAINPID$' "$PRODUCTION_EDGE_UNIT"
+rg -q '^ExecStop=/bin/kill -QUIT \$MAINPID$' "$PRODUCTION_EDGE_UNIT"
+rg -q '^PIDFile=__PRODUCTION_ROOT__/edge/nginx.pid$' "$PRODUCTION_EDGE_UNIT"
+rg -q '^ExecReload=/bin/kill -HUP \$MAINPID$' "$PRODUCTION_PUBLIC_NGINX_UNIT"
+rg -q '^ExecStop=/bin/kill -QUIT \$MAINPID$' "$PRODUCTION_PUBLIC_NGINX_UNIT"
+rg -q '^PIDFile=__PRODUCTION_ROOT__/public-nginx/nginx.pid$' "$PRODUCTION_PUBLIC_NGINX_UNIT"
 rg -q 'artifact|app\.jar' "$PRODUCTION"
 rg -q 'deploy-production\.sh' "$REMOTE"
 rg -q 'UserKnownHostsFile=' "$REMOTE"
@@ -61,7 +62,7 @@ if rg -n 'mysqldump|backup_dir|mysqladmin.*ping' "$PRODUCTION" >/dev/null; then
     printf '普通生产发布不得执行无界全库数据库备份。\n' >&2
     exit 1
 fi
-if rg -q 'docker|compose|mvn ' "$REMOTE"; then
+if rg -q 'compose|mvn ' "$REMOTE"; then
     printf 'Local native deployment entrypoint must not invoke Docker, Compose, or bare Maven.\n' >&2
     exit 1
 fi
@@ -69,8 +70,8 @@ if rg -q 'compose|mvn ' "$PRODUCTION"; then
     printf 'Production native deployment must not invoke Compose or bare Maven.\n' >&2
     exit 1
 fi
-rg -q 'docker stop "\$DOCKER_APP"' "$PRODUCTION"
-rg -q 'restore_blue_access' "$PRODUCTION"
+rg -q 'normalize_live_layout' "$PRODUCTION"
+rg -q 'restore_current_release' "$PRODUCTION"
 
 jar="$TEMP_ROOT/app.jar"
 manifest="$TEMP_ROOT/artifact.manifest"
@@ -83,37 +84,48 @@ write_manifest() {
         "$ref" "$application_version" "$jar_sha" > "$manifest"
     chmod 0600 "$manifest"
 }
-if ! (source "$ARTIFACT"; write_manifest "fix/mobile-release-page-layout" 2.26.0; validate_artifact_manifest "$manifest" "$jar"); then
+if ! (
+    # shellcheck disable=SC1090
+    source "$ARTIFACT"
+    write_manifest "fix/mobile-release-page-layout" 2.26.0
+    validate_artifact_manifest "$manifest" "$jar"
+); then
     printf 'A branch candidate manifest with an explicit release version should validate.\n' >&2
     exit 1
 fi
 write_manifest v2.26.0 2.26.0
-if ! (source "$ARTIFACT"; validate_artifact_manifest "$manifest" "$jar"); then
+if ! (
+    # shellcheck disable=SC1090
+    source "$ARTIFACT"
+    validate_artifact_manifest "$manifest" "$jar"
+); then
     printf 'A production Tag manifest with matching release and application versions should validate.\n' >&2
     exit 1
 fi
 write_manifest v2.26.0 2.25.15
-if (source "$ARTIFACT"; validate_artifact_manifest "$manifest" "$jar"); then
+if (
+    # shellcheck disable=SC1090
+    source "$ARTIFACT"
+    validate_artifact_manifest "$manifest" "$jar"
+); then
     printf 'A release Tag with a mismatched application version must be refused.\n' >&2
     exit 1
 fi
 write_manifest "fix/mobile-release-page-layout" ''
-if (source "$ARTIFACT"; validate_artifact_manifest "$manifest" "$jar"); then
+if (
+    # shellcheck disable=SC1090
+    source "$ARTIFACT"
+    validate_artifact_manifest "$manifest" "$jar"
+); then
     printf 'A manifest without an application version must be refused.\n' >&2
     exit 1
 fi
 
 for path in \
-    "$ROOT/Dockerfile" \
-    "$ROOT/.dockerignore" \
-    "$ROOT/deploy/docker-compose.app-external.yml" \
-    "$ROOT/deploy/docker-compose.data-access.yml" \
-    "$ROOT/deploy/docker-compose.single-host.yml" \
-    "$ROOT/deploy/docker-compose.staging.yml" \
     "$ROOT/deploy/ctl.sh" \
     "$ROOT/deploy/prewarm-production-maven-cache.sh"; do
     if [[ -e "$path" ]]; then
-        printf 'Docker deployment asset still exists: %s\n' "$path" >&2
+        printf 'Obsolete deployment asset still exists: %s\n' "$path" >&2
         exit 1
     fi
 done

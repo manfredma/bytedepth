@@ -6,7 +6,7 @@
 
 ## 上下文
 
-现有 Maven Surefire 按文件名执行所有 `*Test`。其中 `RedisRateLimitAdapterTest` 会直接连接独立 Redis，却以普通单测名称存在；因此换一台没有本地 Redis 的开发机就失败。这既违背“断网、单进程可执行才是单测”的约束，也把本机 Docker、端口和数据状态变成隐式发布依赖。
+现有 Maven Surefire 按文件名执行所有 `*Test`。其中 `RedisRateLimitAdapterTest` 会直接连接独立 Redis，却以普通单测名称存在；因此换一台没有本地 Redis 的开发机就失败。这既违背“断网、单进程可执行才是单测”的约束，也把本机端口和数据状态变成隐式发布依赖。
 
 Redis、MySQL、Flyway、Nginx、Testcontainers 与浏览器端到端场景需要真实服务拓扑。项目已经将 staging 定义为独立且可写的预发环境，适合作为这些测试的唯一执行位置。
 
@@ -16,13 +16,13 @@ Redis、MySQL、Flyway、Nginx、Testcontainers 与浏览器端到端场景需�
 
 staging 集成测试使用短生命周期 Maven 测试容器加入当前 Compose 网络，以服务 DNS 名访问 Redis/MySQL 等依赖；不发布宿主端口、不依赖 `localhost`，也不在应用容器中安装构建工具。
 
-放弃“本机 Docker 运行集成测试”的方案：它仍使结果依赖开发机守护进程、镜像、端口及数据状态，不能代表 staging 验收。放弃只靠文档约定：现有误分类已证明缺少构建级隔离会回归。
+跨进程集成测试固定在 staging 执行，避免结果依赖开发机端口和数据状态。放弃只靠文档约定：现有误分类已证明缺少构建级隔离会回归。
 
 ## 后果
 
 **正向**
 
-- 任意无网络、无 Docker 的开发机能稳定执行单元与覆盖率门禁。
+- 任意无网络的开发机能稳定执行单元与覆盖率门禁。
 - 真实服务测试在与部署相同的 staging Compose 网络执行，结果可复现且不暴露数据服务端口。
 - Maven 生命周期清楚表达测试性质，发布脚本不再误把本地集成失败当作单测失败。
 

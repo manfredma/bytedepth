@@ -17,7 +17,7 @@ printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.25.15] - 2026-09-26' '
 git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm base
 git -C "$TEMP_REPO" branch base
-git -C "$TEMP_REPO" tag v2.25.15 base
+git -C "$TEMP_REPO" tag -a -m 'v2.25.15 deployed release' v2.25.15 base
 
 run_check() {
     (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base base)
@@ -29,6 +29,20 @@ run_frozen_check() {
 
 run_same_commit_release_check() {
     (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base HEAD --mode release --expected-release 2.26.0)
+}
+
+run_frozen_check_against() {
+    local base_ref="$1"
+    (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base "$base_ref" --mode frozen-candidate)
+}
+
+run_release_check_against() {
+    local base_ref="$1"
+    (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base "$base_ref" --mode release --expected-release 2.26.1)
+}
+
+run_main_release_check() {
+    (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base v2.26.0)
 }
 
 assert_fails() {
@@ -60,6 +74,23 @@ git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm frozen-changelog
 run_frozen_check
 run_same_commit_release_check
+git -C "$TEMP_REPO" tag -a -m 'v2.26.0 release' v2.26.0 HEAD
+
+# A tag can exist without ever reaching production.  A later candidate must
+# keep the last deployed rollback tag, even though its version is below the
+# newest tagged candidate.
+git -C "$TEMP_REPO" checkout -q -b next-patch v2.26.0
+printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.26.1] - 2026-09-26' '' \
+    '**Tag**：`v2.26.1`' '**回滚基线**：`v2.25.15`' '' '### Fixed' '' \
+    '- Native rollback update.' '' '## [v2.26.0] - 2026-09-26' '' \
+    '**Tag**：`v2.26.0`' '**回滚基线**：`v2.25.15`' '' '### Fixed' '' \
+    '- Candidate change.' '' '## [v2.25.15] - 2026-09-26' '' \
+    '**Tag**：`v2.25.15`' '**回滚基线**：`v2.25.2`' '' '### Fixed' '' '- Previous release.' \
+    > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm next-patch
+run_frozen_check_against v2.26.0
+run_release_check_against v2.26.0
 
 printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.25.15] - 2026-09-26' '' \
     '**Tag**：`v2.25.15`' '**回滚基线**：`v2.25.2`' '' '### Fixed' '' '- Reused old release.' '' \
@@ -137,6 +168,11 @@ printf 'service: staging\n' > "$TEMP_REPO/deploy.yml"
 git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm deployment-change
 assert_fails run_check
+
+# A quiet post-release main quality run must accept the frozen release that
+# is identical to its base; it must still validate the release metadata.
+git -C "$TEMP_REPO" checkout -q -b main-release-state v2.26.0
+run_main_release_check
 
 if (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --target HEAD --base missing-base) >/dev/null 2>&1; then
     printf 'Expected missing base ref to fail.\n' >&2

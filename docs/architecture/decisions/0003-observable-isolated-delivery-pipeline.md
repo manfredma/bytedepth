@@ -1,7 +1,6 @@
 # ADR-0003: 可观测且隔离的交付流水线
 
 - **状态**: Accepted
-- **运行时说明**：本 ADR 的 evidence、锁和 CI 边界仍有效；原测试运行时和资源拓扑由 [ADR-0016](0016-host-native-runtime-deployment.md) supersede。
 - **日期**: 2026-09-12
 - **决策者**: 项目所有者
 
@@ -9,7 +8,7 @@
 
 当前 staging 部署、集成测试和 E2E 使用同一互斥锁，但没有统一阶段耗时记录。集成 runner 还会临时创建 Maven 工作区和 Testcontainers，重复下载或创建基础设施，既延长验收，也将测试结果绑定到一次性运行环境。现有 Git 托管仓库没有 CI 质量门禁。
 
-项目必须保留单元测试与跨进程测试的边界：只有断网、无外部进程的测试可在本机或托管 CI 运行；Docker、MySQL、Redis、Flyway、浏览器和 staging HTTP 场景只能在 staging。124/175 是运行环境，不能成为执行来自任意分支代码的通用 CI Runner。
+项目必须保留单元测试与跨进程测试的边界：只有断网、无外部进程的测试可在本机或托管 CI 运行；MySQL、Redis、Flyway、浏览器和 staging HTTP 场景只能在 staging。124/175 是运行环境，不能成为执行来自任意分支代码的通用 CI Runner。
 
 ## 决策
 
@@ -19,7 +18,7 @@ staging 明确拆为四个入口：受维护者显式调用的 runtime bootstrap
 
 GitHub Actions 使用 GitHub 托管 Runner，仅运行纯单元质量门禁及脚本契约测试；不得拥有 staging、生产、SSH 或部署密钥。staging/生产仍由现有受控脚本和人工审批运行。暂不引入 Jenkins 或自托管 Runner。
 
-放弃只在终端输出耗时：它无法将失败、结果和提交绑定。放弃 Jenkins：当前单仓库/单 staging 的编排复杂度不足以抵消 Controller、插件、凭据、备份和 Agent 隔离成本。放弃将 GitHub Runner 安装到 124/175：PR 代码不能在持有环境凭据和 Docker 权限的主机上运行。
+放弃只在终端输出耗时：它无法将失败、结果和提交绑定。放弃 Jenkins：当前单仓库/单 staging 的编排复杂度不足以抵消 Controller、插件、凭据、备份和 Agent 隔离成本。放弃将 GitHub Runner 安装到 124/175：PR 代码不能在持有环境凭据和 服务管理权限的主机上运行。
 
 ## 后果
 

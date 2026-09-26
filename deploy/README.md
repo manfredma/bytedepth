@@ -1,223 +1,106 @@
-# bytedepth 部署手册（宿主机原生运行时）
+# bytedepth 部署手册
 
-## 多项目共享基础设施边界
+本文是部署、发布、验证和回滚的唯一操作说明。生产和 staging 均使用宿主机原生服务；应用由外部构建为不可变 JAR，目标主机不编译。
 
-bytedepth、Career、Daylilt 与 Toolbox 共用宿主机基础设施：MySQL、公共 Nginx、Java/Maven/Node/Chromium 以及实际需要的其他中间件。共享只发生在基础设施能力层；业务数据库、数据库用户、凭据、端口、目录、systemd unit、Nginx route、日志、测试资源和 evidence 必须按项目隔离。
+## 环境与隔离
 
-bytedepth 的部署只能安装或 reload 自己的服务和站点配置，不能 stop、disable、重建或覆盖 Career、Daylilt、Toolbox 的服务、数据或路由。
-
-本文件是部署、发布、切流、回滚和数据迁移的唯一操作说明。每个验收步骤必须成功后才能继续。正常运行时由宿主机 systemd 管理 Java 25、MySQL 8、Redis 7、Meilisearch 1.7 和 Nginx；应用以外部构建的不可变 JAR 交付。
-
-## 1. 不可变约束
-
-- 不在 main 直接开发。staging 是唯一集成测试、E2E 和验收环境，入口固定为 https://staging-bytedepth.bytedepth.cn/。
-- 生产只接受新的 annotated SemVer Tag；本机只能执行 deploy/deploy-production-remote.sh，生产主机内部才执行 deploy/deploy-production.sh。
-- staging 候选部署、集成测试和 E2E 共用 /var/lib/bytedepth-staging/deployment-test.lock，不会并发改写运行服务或测试资源。
-- 生产发布使用 /var/lock/bytedepth-production-deploy.lock 串行化；JAR 和 manifest 校验失败、健康检查失败或边缘 reload 失败都必须中止，并尝试恢复旧的 current 发布。
-- 不把凭据写入命令行、日志、evidence 或 Git。staging E2E 管理员凭据必须显式注入，不能创建临时管理员账号。
-- 所有构建、测试、静态检查和发布输出中的 WARNING 都是失败；发布前运行 bash scripts/check-staging-checklist.sh。
-
-## 2. 节点与目录
-
-| 节点 | 地址 | 模式 | 公开入口 |
+| 环境 | 主机 | 内容入口 | 运行方式 |
 | --- | --- | --- | --- |
-| staging | 129.211.6.82 | native parallel staging | https://staging-bytedepth.bytedepth.cn/ |
-| production | 175.24.197.202 | production | https://bytedepth.cn/ |
+| staging | 124 | `https://staging-bytedepth.bytedepth.cn/` | 独立 native 服务、数据目录、端口和测试资源 |
+| production | 175 | `https://bytedepth.cn/` | native 服务，systemd 管理应用、数据服务和公网入口 |
 
-两台机器的数据服务和应用相互隔离。应用发布目录为 /opt/bytedepth/releases/<ref>/app.jar，/opt/bytedepth/current 是当前发布的软链接；部署状态位于 /var/lib/bytedepth-deploy/，staging 测试状态位于 /var/lib/bytedepth-staging/。129 上 native staging 的持久化数据目录为 /data/bytedepth-native-staging/mysql、redis、meilisearch 和 images，使用 13306/16379/17700/18080/18081，绝不与旧 124 Docker 栈或旧 canonical 数据目录共享。
+生产 release 位于 `/opt/bytedepth/production/releases/<version>`，`current` 指向线上版本；持久数据位于 `/data/bytedepth-native-production`。发布恢复记录保存在 `/var/lib/bytedepth-production` 并由 `ubuntu` 持有。staging 数据位于 `/data/bytedepth-native-staging`，测试资源另按 `run_id` 隔离。业务数据库、账号、密钥、端口、unit、route、日志、测试资源和 evidence 不得跨项目共享。
 
-native staging 应用服务名是 bytedepth-staging-native-app.service；数据服务名是 bytedepth-staging-native-mysql.service、bytedepth-staging-native-redis.service、bytedepth-staging-native-meilisearch.service；内部 edge 是 bytedepth-staging-native-edge.service（18081），公网入口是多服务宿主机共享的 nginx.service（80/443），其 upstream 必须指向 18081。edge 只按 `After=` 约束等待正式 app 启动，不使用 `Requires=` 绑定生命周期，以便 E2E 临时 test slot 接管 18080 时继续复用 18081。bytedepth 只能安装自己的 `/etc/nginx/conf.d/bytedepth-staging.conf`、执行 `nginx -t` 和 reload，不能替换、重启或停用共享 Nginx。E2E 临时接管服务名为 bytedepth-staging-native-test-slot.service，它与 native 应用服务互斥。
+所有项目脚本、配置、工作区、发布物、日志、测试资源、密钥和运行数据都由登录用户 `ubuntu` 持有。服务所需写权限通过所属组授予；不得留下 root 或服务账号所有的项目文件。脚本即使通过受控的系统权限操作创建文件，也必须立即显式设置为 `ubuntu` 所有。
 
-## 3. 主机初始化
+## 版本与部署约束
 
-目标主机必须使用可安装固定版本的 Java 25、MySQL 8、Redis 7、Meilisearch 1.7、Nginx、curl、rsync、jq、openssl 和 systemd 软件源；native green 安装器会在安装服务前验证 Java 25，缺失时安装 `openjdk-25-jre-headless`，无法满足时在 Docker blue 仍提供流量阶段 fail-fast。Meilisearch 1.7 的 Linux 二进制还需要 musl loader 及对应的 `libgcc_s.so.1`；staging Docker→原生迁移脚本会自动安装 musl，并从现有 Meilisearch 容器提取匹配的 musl 运行库。应用账号、数据账号和服务目录由初始化脚本创建。
+- 不在 `main` 开发。候选分支完成变更、测试及 Changelog 后，按发布流程部署和验证。
+- 每次生产发布必须使用新的 annotated SemVer Tag；不得部署分支、裸 commit 或已经部署过的 Tag。
+- 本机唯一生产入口：
 
-在目标主机的 /opt/bytedepth 执行（当前 staging 目标为 129；124 旧 Docker 栈不参与本流程）：
+  ```bash
+  BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" \
+  BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" \
+  ./deploy/deploy-production-remote.sh vX.Y.Z
+  ```
 
-    sudo install -d -o ubuntu -g ubuntu -m 0755 /etc/bytedepth
-    sudo touch /etc/bytedepth/application.env
-    sudo chown ubuntu:ubuntu /etc/bytedepth/application.env
-    sudo chmod 0600 /etc/bytedepth/application.env
-    # 按目标环境填写 application.env，不复制生产密钥到 staging
-    sudo sh -c 'printf "BYTEDEPTH_DEPLOY_MODE=staging\n" > /etc/bytedepth-deploy.conf'
-    sudo chown ubuntu:ubuntu /etc/bytedepth-deploy.conf
-    sudo chmod 0600 /etc/bytedepth-deploy.conf
-    sudo ./deploy/install-host-service.sh
-    sudo ./deploy/bootstrap-ops-deploy.sh
+- `deploy/deploy-production.sh` 仅能在生产主机内部由远程入口调用。
+- 生产及 staging 只接收通过 SHA manifest 校验的 JAR；由 systemd 重启应用、校验 `/version`，并 reload edge 和 Nginx。
+- 每次部署串行执行。错误、未允许的 `WARNING`、版本或 SHA 不匹配、清理失败均阻止成功记录。
+- 发布前运行 `bash scripts/check-staging-checklist.sh`。任何质量输出含 `WARNING` 都必须先处理。
 
-install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数据目录；项目在主机上创建的工作区、配置、运行数据、发布制品、日志、测试资源和凭据统一归属 `ubuntu:ubuntu`（服务进程需要写入时使用服务组作为 group），即使由 sudo 创建也必须在创建后显式修正。bootstrap-ops-deploy.sh 只安装/启动宿主机服务，不构建应用、不生成发布 JAR。应用首次启动前必须已经存在 /opt/bytedepth/current/app.jar，且 /etc/bytedepth/application.env 是 ubuntu 可读的 0600 文件。
+## 主机准备
 
-初始化验收：
+运行初始化脚本前，登录用户 `ubuntu` 必须可以非交互执行所需的系统服务管理命令。安装器准备 Java 25、MySQL、Redis、Meilisearch、Nginx、systemd unit、目录和配置。项目创建的所有资源最终归 `ubuntu` 所有；数据库、Redis、Meilisearch、应用进程可以使用专属服务账号运行。
 
-    sudo systemctl daemon-reload
-    sudo systemctl is-active mysql.service redis.service meilisearch.service
-    sudo systemctl is-active bytedepth-deploy.socket
-    sudo systemctl status bytedepth-app.service nginx.service --no-pager
+配置模板：
 
-服务日志只从 journal 查看：
+- staging：`deploy/staging-native.conf.example` 与 staging 环境配置
+- production：`deploy/production.conf.example`、`/etc/bytedepth/production.env`、`/etc/bytedepth/production-meilisearch.env`
 
-    sudo journalctl -u bytedepth-app.service -n 200 --no-pager
-    sudo journalctl -u nginx.service -n 100 --no-pager
+秘密只通过 ubuntu 持有的权限受限配置文件注入，不写入命令行参数、日志、Git 或 evidence。生产环境的服务、端口和持久目录以 production 配置及 `deploy/lib/production-target.sh` 为准。
 
-## 4. staging Docker → 原生蓝绿迁移（历史迁移流程）
+## 候选部署与验证
 
-迁移不是直接覆盖 Docker 正在使用的数据目录，而是先完整部署一套独立原生栈。旧 124 保留现有 Docker 应用、MySQL、Redis、Meilisearch；当前 129 使用宿主 Nginx 公网入口和独立 native 数据目录。历史迁移脚本仍用于数据准备和回退，不得把旧 124 的 Docker Nginx 当作 129 的公网入口。
+唯一 staging URL 为 `https://staging-bytedepth.bytedepth.cn/`。候选 ref 必须冻结正式版本与 `CHANGELOG.md`，并通过变更门禁；使用：
 
-    sudo install -o ubuntu -g ubuntu -m 0600 deploy/staging-native.conf.example /etc/bytedepth/staging-native.conf
-    sudo ./deploy/install-staging-native-stack.sh
-    sudo ./deploy/migrate-staging-docker-to-native.sh prepare
+```bash
+./deploy/deploy-staging.sh <candidate-ref>
+```
 
-`prepare` 会初始化独立 MySQL、Redis、Meilisearch、图片目录和 systemd unit；MySQL/Meilisearch/图片从旧栈复制，Redis 复制 RDB 后再启动原生服务。此时公网仍由 Docker 栈提供。候选 JAR 部署并完成本节后续的集成测试与 E2E 后，执行：
+部署脚本校验候选、构建不可变制品、传输 JAR 和 manifest、重启 native 应用、验证冻结版本及完整 SHA，并 reload 公网 Nginx。若本次变更涉及运行时集成或浏览器行为，在 staging 运行：
 
-    sudo ./deploy/migrate-staging-docker-to-native.sh switch
+```bash
+ssh ubuntu@<staging-host> 'cd /opt/bytedepth && ./deploy/run-staging-integration-tests.sh'
+ssh ubuntu@<staging-host> 'cd /opt/bytedepth && ./deploy/run-staging-e2e-tests.sh'
+```
 
-`switch` 停止旧应用、执行最后一次数据同步，启动原生应用和内部 edge，再只修改宿主机 `/opt/nginx-conf.d/default.conf` 的 bytedepth upstream 为 `172.18.0.1:18081`，通过共享 Docker Nginx reload。其他项目的路由不变。切换失败可执行：
+SSH 默认不会转发任意环境变量。远程 E2E 凭据通过 SSH 标准输入传到远端 shell，再由 staging shell读取，再显式保留到 runner；不得放进 SSH 命令参数或日志：
 
-    sudo ./deploy/migrate-staging-docker-to-native.sh rollback
+```bash
+staging_e2e_username=admin
+staging_e2e_password="$(security find-generic-password -a admin -s bytedepth-staging-e2e -w)"
+{
+  printf '%s\n' "$staging_e2e_username"
+  printf '%s\n' "$staging_e2e_password"
+} | ssh -i "$BYTEDEPTH_SSH_KEY" \
+  -o UserKnownHostsFile="$BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS" \
+  -o StrictHostKeyChecking=yes ubuntu@124.221.143.25 \
+  'IFS= read -r BYTEDEPTH_STAGING_E2E_USERNAME &&
+   IFS= read -r BYTEDEPTH_STAGING_E2E_PASSWORD &&
+   export BYTEDEPTH_STAGING_E2E_USERNAME BYTEDEPTH_STAGING_E2E_PASSWORD &&
+   cd /opt/bytedepth &&
+   sudo --preserve-env=BYTEDEPTH_STAGING_E2E_USERNAME,BYTEDEPTH_STAGING_E2E_PASSWORD \
+     ./deploy/run-staging-e2e-tests.sh'
+unset staging_e2e_username staging_e2e_password
+```
 
-回滚会恢复 Nginx 配置并启动原 Docker 应用；旧容器和 `/data/*` 在所有者验收前不得删除。验收通过后才允许显式执行 `sudo env BYTEDEPTH_NATIVE_CLEANUP_ACCEPTED=1 ./deploy/migrate-staging-docker-to-native.sh cleanup`，该命令只删除 bytedepth 旧容器和旧数据目录，不删除共享 Nginx 或其他项目。
+staging runner 必须使用显式注入的凭据与共享运行时，按 `run_id` 隔离资源；测试结果、清理状态和完整 commit SHA 分别写入 integration/E2E evidence。测试主机恢复原运行服务后，检查公开 `/version`、关键页面和日志。当前部署清理变更不等待项目所有者做功能验收；部署验证正常后可继续生产发布。
 
-## 5. staging 候选部署
+本机只运行断网、无外部进程的单元测试和静态门禁；集成与 E2E 证据只能来自 staging。staging Maven 仓库唯一位置为宿主机 `/opt/shared-maven/repository`，bootstrap 在全局锁内预热，runner 离线只读复用；`node_modules` 仍按项目 lockfile 安装。
 
-本机必须有 staging SSH 私钥和已核验的 known_hosts 文件。候选 ref 必须是 origin 上的命名分支或 Tag，且相对 origin/main 修改了 docs/releases/CHANGELOG.md 并通过冻结门禁。候选 JAR 的运行时版本取自冻结版本段（例如 `v2.26.0`），Tag 构建则须与 Maven POM 和 Tag 一致；版本号和 commit SHA 一并写入 JAR 元数据/制品 manifest。候选构建在本机/构建机完成，传输 JAR 和 manifest，staging 只校验并安装制品。
+## 生产部署和回滚
 
-上传暂存目录使用持久文件系统上的 `/var/tmp/bytedepth-staging-<SHA>`，不使用多项目共享且容量受限的 `/tmp` tmpfs。传输前会按 JAR、manifest 实际字节数加 16 MiB 余量检查 `/var/tmp` 可用空间；失败时只删除本候选 SHA 的暂存目录。
+生产 native unit 使用 `bytedepth-production-*.service`；release 路径为 `/opt/bytedepth/production`。部署脚本在更新前核对当前 JAR manifest、公开 `/version` 和本地服务健康；随后安装新 JAR、原子切换 `current`、重启应用、校验版本/SHA，并 reload edge 与公网 Nginx。失败时恢复之前的 native release 并再次校验；数据库 schema 变更不由 JAR 回滚。
 
-    export BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts"
-    export BYTEDEPTH_SSH_KEY="$HOME/.ssh/ubuntu_2.pem"
-    test -r "$BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS" -a -r "$BYTEDEPTH_SSH_KEY"
-    ./deploy/deploy-staging.sh feat/host-native-runtime
+现网目录、配置与 unit 名称已归一到 `production` 命名。部署脚本只在目标名称不存在且能唯一识别旧目录时执行一次原位改名，保留数据目录不动，并修复 `current` 软链接指向。它不会复制或重建整套运行数据。
 
-脚本会执行：构建并扫描 WARNING → 上传 JAR/manifest → 锁定 staging → 校验 native parallel 配置、旧栈已停止和可用内存 → 安装发布 → 原子切换 current → 重启应用 → `/version` 同时校验冻结版本与完整 SHA → reload Nginx → 清除旧 evidence。普通代码部署不执行全库 MySQL dump；数据迁移或不兼容数据库迁移必须走单独的、受资源约束的备份流程。切换后的健康检查失败会恢复切换前的 current；若旧发布不存在，则保持停机并报告，禁止伪造成功。
+部署后进行只读验收：
 
-验收部署版本：
+```bash
+sudo ./scripts/verify-production-release.sh vX.Y.Z
+curl --fail --silent --show-error https://bytedepth.cn/version
+sudo systemctl is-active bytedepth-production-app.service
+sudo journalctl -u bytedepth-production-app.service -n 200 --no-pager
+```
 
-    sudo awk -F= '$1 == "commit" {print}' /var/lib/bytedepth-staging/deploy-history
-    curl --fail --silent --show-error https://staging-bytedepth.bytedepth.cn/version
-    sudo systemctl is-active bytedepth-staging-native-app.service nginx.service
+若自动恢复未通过，停止后续发布，保留现场并检查 production deployment log、systemd 状态和 `/var/lib/bytedepth-deploy/release-history`。手动回滚只允许选择已验证的旧 JAR，且先确认数据库 schema 兼容。
 
-## 6. staging 数据同步与证书
+## 运行维护
 
-生产到 staging 的同步只在 175 生产数据节点执行，使用 /etc/bytedepth-sync.conf 中的专用 SSH key 和 /root/.ssh/known_hosts。同步会停 staging 应用，按顺序处理 MySQL、Redis、Meilisearch 和图片，然后恢复应用并验证公开入口：
-
-    sudo ./deploy/sync-prod-to-staging.sh
-
-同步前后必须保留 ubuntu 所有的日志并核对图片数量；首页返回 200 不能单独证明图片同步完整。MySQL 使用 mysqldump/mysql，Redis 使用 redis-cli 和宿主数据目录，Meilisearch 使用 snapshot 文件，图片使用 rsync --delete。任何中间件导入失败都停止后续步骤并按备份恢复。
-
-staging 证书在 129 签发，生产边缘只同步精确 SAN 证书并拒绝代理 staging 内容：
-
-    # 124
-    sudo ./deploy/provision-staging-certificate.sh
-    # 175
-    sudo ./deploy/sync-staging-certificate-to-production.sh
-
-证书脚本必须校验有效期、精确 SAN、证书/私钥匹配、链和 Nginx 配置；同步使用显式 known_hosts，禁止首次连接自动接受主机密钥。旧域名 staging.bytedepth.cn 只负责跳转到生产，不是 staging 内容入口。
-
-共享图片的多机节点按角色执行：
-
-    sudo ./deploy/setup-shared-images-nfs.sh data-node <应用节点私网IP>
-    sudo ./deploy/setup-shared-images-nfs.sh app-node <数据节点私网IP>
-
-应用服务依赖 /data/images 挂载存在；挂载不完整时不得启动应用。
-
-## 7. 隔离集成测试
-
-集成测试只在 staging 主机运行，不能用本机启动的外部进程作为验收依据：
-
-    cd /opt/bytedepth
-    sudo ./deploy/run-staging-integration-tests.sh
-
-runner 读取显式注入的 ubuntu 所有 MySQL defaults、Redis secret、Meilisearch secret、fixture 和 checksum，按每次 run_id 创建：
-
-`staging-integration` Maven profile 跳过 Surefire 单元测试，只由 Failsafe 运行 `*IT` 跨进程集成测试；单元测试由本机和 CI 门禁运行。Failsafe fork 最大堆限制为 512 MiB，Spring Test context cache 限为 16。在多项目 staging 主机上，集成 runner 要求启动前至少 512 MiB、停止 staging app 后至少 1 GiB `MemAvailable`。资源不足会 fail-fast、恢复 staging app，不启动测试 fork。
-
-- MySQL：bytedepth_it_<run_id> 和最小权限用户 bd_it_<run_id>；
-- Redis：保留 logical DB 14，并使用 bytedepth:it:<run_id>: key/session namespace；
-- Meilisearch：posts_it_<run_id> 与只允许该 index 的 key；
-- 图片：/data/images-test/<run_id>/it；
-- Spring Profile：staging-it，配置由 profile 文件定义，run manifest 只提供本次资源值。
-
-测试完成后 runner 删除本次资源并恢复 bytedepth-app.service。资源身份无法确认时会写入 state-uncertain，保留 manifest 和资源供人工恢复，但仍会尝试恢复应用；不得自动删除可能属于未知状态的资源。
-
-## 8. 隔离 E2E 测试与 evidence
-
-集成测试通过后，在同一 staging checkout 运行真实浏览器 E2E。管理员账号必须是既有 staging 管理员，凭据由调用者显式注入：
-
-    cd /opt/bytedepth
-    sudo --preserve-env=BYTEDEPTH_STAGING_E2E_USERNAME,BYTEDEPTH_STAGING_E2E_PASSWORD \
-      ./deploy/run-staging-e2e-tests.sh
-
-SSH 默认不会转发任意环境变量。远程执行时通过 SSH 标准输入传到远端 shell，再由远端显式导出并交给 sudo；密码不会出现在远端命令行参数中：
-
-    staging_e2e_username=admin
-    staging_e2e_password="$(security find-generic-password -a admin -s bytedepth-staging-e2e -w)"
-    test -n "$staging_e2e_password"
-    {
-      printf '%s\n' "$staging_e2e_username"
-      printf '%s\n' "$staging_e2e_password"
-    } | ssh -i "$BYTEDEPTH_SSH_KEY" -o BatchMode=yes \
-      -o UserKnownHostsFile="$BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS" \
-      -o StrictHostKeyChecking=yes ubuntu@129.211.6.82 \
-      'IFS= read -r BYTEDEPTH_STAGING_E2E_USERNAME &&
-       IFS= read -r BYTEDEPTH_STAGING_E2E_PASSWORD &&
-       export BYTEDEPTH_STAGING_E2E_USERNAME BYTEDEPTH_STAGING_E2E_PASSWORD &&
-       cd /opt/bytedepth &&
-       sudo --preserve-env=BYTEDEPTH_STAGING_E2E_USERNAME,BYTEDEPTH_STAGING_E2E_PASSWORD \
-         ./deploy/run-staging-e2e-tests.sh'
-    unset staging_e2e_username staging_e2e_password
-
-runner 固定使用公开 staging URL、宿主机共享运行时提供的 `/opt/shared-e2e/chrome-linux64/chrome` 和 Playwright ffmpeg。ffmpeg 由 `sudo ./deploy/bootstrap-staging-runtime.sh` 预热并纳入 runtime manifest；runner 不在项目目录下载浏览器或录制工具。它停止 native app，生成 staging-e2e profile 环境，启动 native test-slot，该服务只加载 `/run/bytedepth/staging-native-e2e.env`，内部 edge 保持监听 18081 并将请求转发到 test slot 的 18080；runner 通过公开 `/version` 校验健康，并对健康探测设置连接和总超时。E2E 槽位使用：
-
-runner 会在 test-slot 启动前记录时间，并在停止后读取本轮 systemd journal；Playwright 输出和服务 journal 都必须通过 WARNING 策略检查，任一未允许的 WARN/WARNING 都会阻止写入 E2E evidence，同时仍执行临时资源清理和 staging app 恢复。
-
-- MySQL：bytedepth_e2e_<run_id> 和最小权限用户 bd_e2e_<run_id>；
-- Redis：logical DB 15 与 bytedepth:e2e:<run_id>: namespace；
-- Meilisearch：posts_e2e_<run_id> 与 scoped key；
-- 图片：/data/images-test/<run_id>/e2e；
-- Spring Profile：staging-e2e，同时明确 BYTEDEPTH_ENVIRONMENT=staging。
-
-通过后停止测试槽位、清理资源、恢复应用，再写入 ubuntu 所有 evidence。两份 evidence 必须严格包含以下字段，且 commit 等于当前 staging 部署和待合并 main 的完整 SHA：
-
-    commit=<40位完整SHA>
-    command=run-staging-integration-tests 或 run-staging-e2e-tests
-    timestamp=<UTC>
-    result=passed
-    runtime_mode=host-native
-    run_id=<本次运行ID>
-    test_resource_manifest_sha=<64位SHA256>
-    cleanup=result=passed
-
-任何测试失败、WARNING、checkout 变化、部署 SHA 不一致或清理失败都会删除对应 evidence，禁止以旧记录放行发布。
-
-## 9. 生产发布、验证与回滚
-
-生产发布前必须完成 staging 集成、E2E 和所有者验收，随后 fast-forward 合并 main，确认 SHA 不变，创建新的 annotated Tag。生产本机调用必须显式提供两个 SSH 文件：
-
-    BYTEDEPTH_PRODUCTION_SSH_KEY="$HOME/.ssh/ubuntu_2.pem" \
-    BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts" \
-    ./deploy/deploy-production-remote.sh vX.Y.Z
-
-该入口在外部构建不可变 JAR，将 JAR/manifest 上传到 175，远程执行内部安装流程，并运行只读验收：
-
-    sudo ./scripts/verify-production-release.sh vX.Y.Z
-
-生产状态和回滚基线：
-
-    sudo tail -n 40 /var/lib/bytedepth-deploy/release-history
-    sudo readlink -f /opt/bytedepth/production-green/current
-    sudo journalctl -u bytedepth-production-green-app.service -n 200 --no-pager
-
-代码回滚只能选择已经验证过的旧原生发布，并先确认数据库迁移兼容。若 schema 不兼容，必须先从对应备份恢复数据，再安装旧 JAR；不能只把软链接指回旧目录。发布中自动回滚仅恢复 green current、Docker 蓝应用和 Nginx 路由，不能回滚已执行的 Flyway 数据迁移。
-
-175 的生产迁移采用红绿流程。当前 Docker 栈是蓝环境；native 绿环境使用 `/data/bytedepth-native-production`、13306/16379/17700/18080/18081 和 `bytedepth-production-green-*` systemd unit。`deploy/migrate-production-docker-to-native.sh prepare` 只能在蓝环境继续提供流量时执行初始复制、安装配置和启动绿中间件；绿环境健康、版本 SHA 和只读回归未通过前，禁止停止、重建或修改 Docker 蓝环境。
-
-只有绿环境预验证通过后，发布锁才可进入短暂切流窗口：停止旧 `bytedepth-nginx-1` 切断公网流量，停止蓝 bytedepth 应用，执行一次最终 `final-sync` 重新导入数据，启动绿应用和内部 edge，再启动完整的 `bytedepth-production-green-public-nginx.service` 接管 80/443。旧 Docker Nginx 的配置和容器保持不变，不修改 `/opt/nginx-conf.d`；本次切流窗口已由项目所有者确认同机其他项目无流量，因此其他项目随共享旧入口一起短暂停服。任一步骤失败都必须停止新公网 Nginx、启动旧 Docker Nginx、启动蓝应用并通过 Docker 公网入口回归；native 失败不能把 Docker 留在停止、半配置或不可访问状态。切流后 Docker 蓝环境和迁移前数据必须保留到生产验收完成；清理是单独的显式阶段。具体替换和回退规则见 [ADR-0019](../docs/architecture/decisions/0019-production-public-nginx-replacement.md)。
-
-## 10. 发布前门禁
-
-本机只作离线单元测试和静态检查；完整门禁入口为：
-
-    bash scripts/run-local-quality.sh
-    bash scripts/check-staging-checklist.sh
-
-在 staging 真实运行集成测试和 E2E，并在项目所有者验收后才合并 main。创建 Release Tag 前，prepare-release.sh 必须读取当前 SHA 对应的两份 host-native evidence。发布、合并、回滚和知识库规则分别见 docs/releases/README.md、docs/README.md 和 docs/architecture/decisions/0018-production-red-green-native-cutover.md。
+- 生产到 staging 的数据同步由 `deploy/sync-prod-to-staging.sh` 执行；同步前后核对数据库、搜索索引、Redis 与图片结果。
+- staging 证书在 staging 主机签发；生产边缘仅同步精确 SAN 证书。脚本校验有效期、SAN、证书/私钥匹配及显式 `known_hosts`。
+- RSS、sitemap 和 RSS 自动发现仅生产开启；`BYTEDEPTH_ENVIRONMENT=staging` 必须返回 noindex 并关闭公开索引入口。
+- bytedepth 只能维护自身命名的服务、路径与站点配置，不得改动 Career、Daylilt、Toolbox 的数据、route 或 systemd unit。
+- 详细模块导航与知识沉淀入口见 `docs/README.md`；版本、Tag 和 Changelog 规则见 `docs/releases/README.md`。

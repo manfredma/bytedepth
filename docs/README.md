@@ -55,4 +55,4 @@
 - **契约（contract）**：跨模块、跨服务或面向消费者的接口、数据格式与可观察行为约定；例如 API 契约、事件契约和契约测试。不得把一般构建、部署或流程规则称为“契约”。
 - **约束（constraint）**：工程执行必须满足的规则；例如固定 Maven 版本、staging-only 测试边界和零 WARNING 门禁。
 - **自动化约束**：可由脚本、静态检查或质量门禁自动验证的工程约束。它把自然语言流程要求落实为可重复执行、失败即阻断的检查，以避免只靠执行者记忆。它不等同于面向 API/消费者的契约测试。
-- **运行时约束检查**：将已确认的工程运行时规则写成可重复执行的检查；它属于可执行规范/策略即代码，不是 API 的契约测试。当前覆盖 Maven Wrapper、宿主机 systemd 服务、不可变 JAR 和 staging 隔离测试资源，详见 [ADR-0005](architecture/decisions/0005-pinned-maven-runtime.md) 与 [ADR-0016](architecture/decisions/0016-host-native-runtime-deployment.md)。
+- **运行时约束检查**：将已确认的工程运行时规则写成可重复执行的检查；它属于可执行规范/策略即代码，不是 API 的契约测试。当前覆盖 Maven Wrapper、宿主机 systemd 服务、不可变 JAR 和 staging 隔离测试资源，详见 [ADR-0005](architecture/decisions/0005-pinned-maven-runtime.md) 与 [ADR-0020](architecture/decisions/0020-single-native-production-runtime.md)。

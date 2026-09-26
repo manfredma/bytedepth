@@ -10,16 +10,13 @@ fi
 
 readonly HISTORY_FILE=/var/lib/bytedepth-deploy/release-history
 readonly BASE_URL=https://bytedepth.cn
-readonly CURRENT_MANIFEST=/opt/bytedepth/production-green/current/artifact.manifest
-readonly GREEN_APP_SERVICE=bytedepth-production-green-app.service
-readonly GREEN_EDGE_SERVICE=bytedepth-production-green-edge.service
-readonly GREEN_MYSQL_SERVICE=bytedepth-production-green-mysql.service
-readonly GREEN_REDIS_SERVICE=bytedepth-production-green-redis.service
-readonly GREEN_MEILI_SERVICE=bytedepth-production-green-meilisearch.service
-readonly GREEN_PUBLIC_NGINX_SERVICE=bytedepth-production-green-public-nginx.service
-readonly GREEN_PUBLIC_NGINX_CONFIG=/etc/bytedepth/production-green-public-nginx.conf
-readonly DOCKER_APP=bytedepth-bytedepth-app-1
-readonly DOCKER_NGINX=bytedepth-nginx-1
+readonly CURRENT_MANIFEST=/opt/bytedepth/production/current/artifact.manifest
+readonly APP_SERVICE=bytedepth-production-app.service
+readonly EDGE_SERVICE=bytedepth-production-edge.service
+readonly MYSQL_SERVICE=bytedepth-production-mysql.service
+readonly REDIS_SERVICE=bytedepth-production-redis.service
+readonly MEILI_SERVICE=bytedepth-production-meilisearch.service
+readonly PUBLIC_NGINX_SERVICE=bytedepth-production-public-nginx.service
 readonly TAG="${1:-}"
 readonly CURL_OPTIONS=(
     --fail
@@ -51,24 +48,12 @@ actual_commit="$(awk -F= '$1 == "commit" {print $2; exit}' "$CURRENT_MANIFEST" 2
     printf 'Refusing: current artifact does not match recorded deployment for %s.\n' "$TAG" >&2
     exit 1
 }
-for service in "$GREEN_APP_SERVICE" "$GREEN_EDGE_SERVICE" "$GREEN_MYSQL_SERVICE" "$GREEN_REDIS_SERVICE" "$GREEN_MEILI_SERVICE" "$GREEN_PUBLIC_NGINX_SERVICE"; do
+for service in "$APP_SERVICE" "$EDGE_SERVICE" "$MYSQL_SERVICE" "$REDIS_SERVICE" "$MEILI_SERVICE" "$PUBLIC_NGINX_SERVICE"; do
     systemctl is-active --quiet "$service" || {
-        printf 'Refusing: production green service is not active: %s.\n' "$service" >&2
+        printf 'Refusing: production production service is not active: %s.\n' "$service" >&2
         exit 1
     }
 done
-[[ "$(docker inspect -f '{{.State.Running}}' "$DOCKER_APP")" == false ]] || {
-    printf 'Refusing: Docker blue application must remain stopped after native cutover.\n' >&2
-    exit 1
-}
-[[ "$(docker inspect -f '{{.State.Running}}' "$DOCKER_NGINX")" == false ]] || {
-    printf 'Refusing: Docker blue Nginx must remain stopped after native cutover.\n' >&2
-    exit 1
-}
-grep -Fq 'proxy_pass http://127.0.0.1:18081;' "$GREEN_PUBLIC_NGINX_CONFIG" || {
-    printf 'Refusing: native green public Nginx is not routed to the green edge.\n' >&2
-    exit 1
-}
 version_response="$(curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused \
     --connect-timeout 10 "$BASE_URL/version")"
 jq --exit-status --arg expected_commit "$expected_commit" --arg expected_version "${TAG#v}" \
@@ -104,7 +89,7 @@ request "$column_path"
 # Application logs are checked through the fixed native systemd service.
 log_file="$(mktemp)"
 trap 'rm -f "$log_file"' EXIT
-journalctl -u "$GREEN_APP_SERVICE" -n 300 --no-pager > "$log_file" 2>&1
+journalctl -u "$APP_SERVICE" -n 300 --no-pager > "$log_file" 2>&1
 if grep -Eqi '\bWARN(ING)?\b|\bERROR\b' "$log_file"; then
     printf 'Refusing: production application logs contain WARNING or ERROR.\n' >&2
     exit 1

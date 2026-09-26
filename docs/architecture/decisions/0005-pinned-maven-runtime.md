@@ -14,7 +14,7 @@ CI、发布和镜像构建随机器配置漂移。
 ## 决策
 
 所有 Maven 执行固定为 Maven 3.9.11：本机、CI 与发布脚本只调用仓库提交的
-Maven Wrapper；Dockerfile、staging bootstrap 与 staging 集成 runner 固定使用
+Maven Wrapper；staging bootstrap 与 staging 集成 runner 固定使用
 `maven:3.9.11-eclipse-temurin-25`。共享 repository 仍只负责制品缓存，不承担
 版本选择。运行时约束检查禁止裸 `mvn` 和浮动 Maven 镜像标签。
 

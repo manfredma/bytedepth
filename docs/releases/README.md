@@ -14,7 +14,7 @@
 6. 部署结果必须记录版本、完整 commit SHA、目标节点、时间、验收结论和回滚基线。机器上的运行状态用于实时查询；变更内容以 Git Tag 和 Changelog 为准。
 7. `CHANGELOG.md` 的 `## Unreleased` 必须置顶；正式版本必须按 SemVer 版本号严格倒序排列。版本页按文件顺序渲染，不在运行时自行排序；`scripts/check-changelog-order.sh` 及其契约测试会在本地质量、staging 清单和发布前门禁中校验该规则。
 
-对于仅修改生产部署迁移脚本、且不改变应用运行时的紧急修复，项目所有者可以显式批准跳过远程 staging 集成/E2E：设置 `BYTEDEPTH_SKIP_STAGING_VALIDATION=1` 和非空 `BYTEDEPTH_SKIP_STAGING_VALIDATION_REASON`。本地发布清单、静态契约、覆盖率和版本 Tag 校验仍必须执行；不得伪造 staging evidence，生产部署仍必须保留 Docker blue 保护和切流前 green 健康检查。
+对于仅修改生产部署迁移脚本、且不改变应用运行时的紧急修复，项目所有者可以显式批准跳过远程 staging 集成/E2E：设置 `BYTEDEPTH_SKIP_STAGING_VALIDATION=1` 和非空 `BYTEDEPTH_SKIP_STAGING_VALIDATION_REASON`。本地发布清单、静态契约、覆盖率和版本 Tag 校验仍必须执行；不得伪造 staging evidence，生产部署必须核对现行 native 回退版本和应用/公网健康状态。
 
 ## 标准开发到发布流程
 
@@ -46,10 +46,10 @@ staging 只验收待上线版本，不提供“先预览、之后再决定是否
 
 ```bash
 evidence_dir="$(mktemp -d)"
-ssh -i ~/.ssh/ubuntu_2.pem ubuntu@129.211.6.82 \
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
   'sudo cat -- /var/lib/bytedepth-staging/test-history/staging-integration' \
   > "$evidence_dir/staging-integration"
-ssh -i ~/.ssh/ubuntu_2.pem ubuntu@129.211.6.82 \
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 \
   'sudo cat -- /var/lib/bytedepth-staging/test-history/staging-e2e' \
   > "$evidence_dir/staging-e2e"
     BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1.2.3 1.2.4-SNAPSHOT

@@ -6,7 +6,7 @@
 
 **Architecture:** Merge the already accepted staging-pipeline PR before changing this repository, then implement the common entrypoints on a fresh branch from that main. GitHub Actions runs only pure local quality; staging and production stay in root-owned scripts with commit-bound evidence and no credentials in CI.
 
-**Tech Stack:** Bash, GitHub Actions, Java 25, Maven Wrapper 3.9.11, Docker Compose, Playwright, SSH.
+**Tech Stack:** Bash, GitHub Actions, Java 25, Maven Wrapper 3.9.11, systemd services, Playwright, SSH.
 
 **Spec:** `docs/superpowers/specs/2026-09-13-unified-release-pipeline-design.md`
 

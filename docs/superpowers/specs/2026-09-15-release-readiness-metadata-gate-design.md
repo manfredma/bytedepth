@@ -17,7 +17,7 @@
 
 ## 变更范围判定
 
-检查脚本比较候选提交与 `origin/main` 的共同祖先；若变更文件包含应用 Java、模板、前端资源、数据库迁移、部署脚本、Compose、Dockerfile、配置或依赖清单，则要求有效 `Unreleased`。只修改 `docs/`（但不包含 `docs/releases/CHANGELOG.md`）或其他纯说明文件时可豁免。无法判断或无法取得基线时失败，不默认豁免。
+检查脚本比较候选提交与 `origin/main` 的共同祖先；若变更文件包含应用 Java、模板、前端资源、数据库迁移、部署脚本、服务配置或依赖清单，则要求有效 `Unreleased`。只修改 `docs/`（但不包含 `docs/releases/CHANGELOG.md`）或其他纯说明文件时可豁免。无法判断或无法取得基线时失败，不默认豁免。
 
 ## 强制入口
 

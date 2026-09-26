@@ -20,8 +20,8 @@
 - 访问日志原表可能沿用 MySQL 的 `utf8mb4_0900_ai_ci`，归档国家统计表固定为 `utf8mb4_unicode_ci`；国家分布查询把原始明细与归档统计 `UNION ALL` 时，两个分支的国家字段和原始分组表达式必须显式 `COLLATE utf8mb4_unicode_ci`，否则 MySQL 会以 1271 失败，后台图表表现为没有数据。对应 SQL 契约测试必须锁定该归一化。
 - 使用 `@ConfigurationProperties` 的不可变 record 如果声明了重载构造器，必须在 canonical constructor 上显式标注 `@ConstructorBinding`；否则本地单测可能通过，但完整 staging Spring 上下文会因找不到默认构造器启动失败。对应属性类应由配置契约脚本检查。
 - **staging 门禁先预检、后执行**：部署、集成测试与 E2E 在单机上互斥，重复运行的时间主要来自镜像构建和启动浏览器，不应在 staging 上逐个猜测前提。先在本机用 runner 的 fake/fixture 测试验证脚本逻辑；首次 staging 运行前一次性确认部署 SHA、服务健康、可用磁盘、固定浏览器路径和真实 E2E 数据。失败时保存日志并只针对第一个可复现错误修复，修复先通过离线脚本测试，再重跑 staging。不要因猜测缺浏览器而安装系统 Chromium，也不要依赖会被数据同步清除的固定文章 slug。
-- **staging JAR 上传不能使用共享 `/tmp`**：129 的 `/tmp` 是多项目共享 tmpfs，可能因其他项目的临时制品或 `ubuntu` 用户配额耗尽而拒绝写入，即使单个 JAR 小于 `df` 显示的剩余容量。候选 JAR 和 manifest 暂存到按 SHA 命名的 `/var/tmp/bytedepth-staging-<SHA>`，并按实际文件大小预检可用空间；自动约束见 `scripts/test-deploy-staging.sh`。失败清理只能删除本候选目录，不能清理其他项目临时文件。
-- **staging integration 只运行受限的 Failsafe `*IT`**：单元测试已由本机和 CI 执行；`staging-integration` profile 必须跳过 Surefire，否则会在 staging 再运行全套单测，占用共享 JVM 内存。曾有 Surefire fork 使用约 664 MiB 后被 global OOM killer 杀掉；Failsafe fork 最大堆固定为 512 MiB，Spring Test context cache 限为 16；runner 停 app 前至少要求 512 MiB、停后至少 1 GiB `MemAvailable`；不足时 fail-fast，不得把 exit 137 当测试通过或重试掩盖。
+- **staging JAR 上传不能使用共享 `/tmp`**：124 的 `/tmp` 是多项目共享 tmpfs，可能因其他项目的临时制品或 `ubuntu` 用户配额耗尽而拒绝写入，即使单个 JAR 小于 `df` 显示的剩余容量。候选 JAR 和 manifest 暂存到按 SHA 命名的 `/var/tmp/bytedepth-staging-<SHA>`，并按实际文件大小预检可用空间；自动约束见 `scripts/test-deploy-staging.sh`。失败清理只能删除本候选目录，不能清理其他项目临时文件。
+- **staging integration 只运行受限的 Failsafe `*IT`**：单元测试已由本机和 CI 执行；`staging-integration` profile 必须跳过 Surefire，否则会在 staging 再运行全套单测，占用共享 JVM 内存。曾有 Surefire fork 使用约 664 MiB 后被 global OOM killer 杀掉；Failsafe fork 最大堆固定为 512 MiB，Spring Test context cache 限为 16；不得把 exit 137 当测试通过或重试掩盖。
 - **staging E2E warning 要同时检查进程输出和 systemd journal**：Playwright stdout 不包含 test-slot 应用日志；runner 必须用运行时记录的 start timestamp 读取本轮 unit journal，并与 Playwright log 一起通过 WARNING policy。Redis fail-open、数据库或服务初始化 WARN 都不能因为 runner 原先只看 Playwright 输出而漏过。
 - staging E2E 的共享浏览器运行时不只包含 Chromium，还包含 Playwright ffmpeg；缺少 `/root/.cache/ms-playwright/ffmpeg-*/ffmpeg-linux` 会在创建 browser context 前让所有用例失败。必须由 `bootstrap-staging-runtime.sh` 统一安装/校验并写入 runtime manifest，不能在项目目录下载浏览器或在 runner 中临时安装。
 - **移动端文章 E2E 等待正文初始化**：staging 的长文章在移动 Chromium 下可能在 Playwright `goto(..., {waitUntil: 'commit'})` 后超过默认 5 秒才完成 HTML 流式传输；批注测试必须使用显式 15 秒的 `data-bd-annotation-ready` 等待超时，并保留固定 staging E2E 复验，不能把该时序失败误判为业务脚本异常。
@@ -37,7 +37,7 @@
 
 ## 部署
 
-- 生产为单机（175），staging 预发独立部署（129）。旧 124 保留 Docker 运行时，不作为当前 staging 验收入口。staging 候选部署 → 集成测试 → E2E → 所有者验收 → 合并 `main` → 新 Tag 生产发布，完整操作以 [部署手册](../../deploy/README.md) 为准。
+- 生产为单机（175），staging 预发独立部署（124）。staging 候选部署 → 集成测试 → E2E → 所有者验收 → 合并 `main` → 新 Tag 生产发布，完整操作以 [部署手册](../../deploy/README.md) 为准。
 - 服务由 systemd 管理，应用发布使用不可变 JAR、SHA256 manifest 和 `current` 软链接；JAR 由 `ubuntu` 持有并按发布权限安装，运行中的应用不能改写当前发布。
 - `deploy-staging.sh` 和 `deploy-production.sh` 在切换后健康检查或 Nginx reload 失败时尝试恢复旧发布；自动回滚只恢复代码和服务，不回滚已执行的 Flyway 迁移。
 - staging 的数据每周由生产覆盖，会清空 staging 写测试数据。staging 回滚需重新灌入兼容的数据基线再部署旧 JAR，非无风险。
@@ -50,7 +50,7 @@
 - 发布切换 current 软链接后必须立即校验 `readlink` 的目标等于本次 release 目录；自引用链接会让 systemd 在 `CHDIR` 阶段以 `Too many levels of symbolic links` 失败，edge 也会因依赖未启动而无法 reload。
 - staging 制品构建在 `set -o pipefail`、macOS 和 Java 25 环境下都必须保持失败可见：不要依赖 GNU-only `find` 参数或会触发 SIGPIPE 的 `grep -q`，Maven 与 `tee` 的退出码要显式读取，候选 SHA 的 stdout 只能输出 SHA，门禁日志输出到 stderr。
 - staging、集成测试和 E2E 使用共享锁；测试资源按 `run_id` 隔离。资源状态不确定时保留 manifest 和资源，禁止自动删除未知对象，但必须尝试恢复 staging 应用并报告人工恢复入口。
-- staging 集成测试启动 Maven 前必须检查宿主机 `MemAvailable` 至少 512 MiB；停止 app 前只要求至少 256 MiB，停止 app 后再检查 512 MiB。磁盘空间通过不代表 Java/Maven 有足够调度资源；资源不足时必须在启动 Maven 前 fail-fast，避免测试把 SSH/HTTPS 服务拖入不可响应状态。
+- staging 集成测试 runner 不使用固定的宿主机 `MemAvailable` 启动门槛；Surefire 在 staging profile 跳过，Failsafe fork 最大堆固定为 512 MiB，Spring Test context cache 限为 16。
 - native staging 中间件必须有 systemd `MemoryMax`：MySQL 512M、Redis 128M、Meilisearch 384M、edge 64M；Redis 同时固定 `maxmemory 64mb` 与 `noeviction`，防止中间件在 2 GiB 宿主机上无限争抢内存。上限是保护阈值，不代表会预留对应内存。中间件重启后必须等待实际端口就绪，不能只检查 systemd active。
 - 原生 staging 部署不能因缺少 `/etc/bytedepth/staging-native.conf`、`staging-native.env` 或 Meilisearch 环境文件而静默回退到另一运行模式；运行模式必须在任何服务启动、重启或数据库备份前 fail-fast。2026-09-25 的事故已证明，未受限的旧 MySQL 在约 3.6 GiB 主机上增长到约 3.3 GiB 会触发全局 OOM，使 SSH banner、HTTP 和 systemd 同时失去响应。`ubuntu` 所有者策略还必须同时保证服务组对数据文件的写权限，不能只修正 owner/group 而留下 `640` 等不可写模式。
 - native MySQL 的数据目录必须使用与初始化时一致的 `lower_case_table_names=1`，并由 systemd 创建 `/run/mysqld` 运行目录；不能只依赖初始化命令或发行版默认 unit，否则重启可能因字典大小写模式不一致或运行目录权限失败。MySQL unit 的关键参数由 `test-host-native-runtime.sh` 固定检查。
@@ -63,30 +63,17 @@
 - 同一类远端字符串中，awk 的 `$2` 只需要为“本地脚本解析”保留一层反斜杠；多写一层会把 `\\$2` 送到远端，远端在 `set -u` 下展开成未定义的位置参数并报 `bash: $2: unbound variable`。涉及 shell、SSH、awk 的变量时必须用实际远端命令做一次 `set -u` 解析验证。
 - 远端 SSH 命令中的双引号、单引号和反斜杠会分别经过本地 shell、SSH 远端 shell、`sudo` 和目标命令解析；不要把复杂命令继续嵌套进 `bash -c`，也不要为了“保险”重复转义 `$2`、引号或反斜杠。修复后必须用 `bash -n`、实际远端 `set -u` 预检和静态契约测试三重验证，避免本地看似正确、远端却得到不同命令。
 - 本地脚本用单引号包裹传给 `ssh` 的多行 `remote_command` 时，远端命令内部不能再直接写单引号；例如 `grep -Fq 'proxy_pass ...'` 会先被本地 shell 截断，甚至把 URL 当成本地命令执行。应改用远端双引号、显式 stdin 脚本，或拆成独立参数，并为这类边界写静态拒绝检查。
-- 对 `ubuntu:ubuntu`、0600 的项目配置，不能把 `sudo test -r <file>` 当作跨主机可移植的唯一检查；本次 129 预检中该形式出现假失败，而 `sudo cat >/dev/null` 正常。权限、所有权和内容校验要分别执行，不能因检查命令异常而切换部署方案。
+- 对 `ubuntu:ubuntu`、0600 的项目配置，不能把 `sudo test -r <file>` 当作跨主机可移植的唯一检查；本次 124 预检中该形式出现假失败，而 `sudo cat >/dev/null` 正常。权限、所有权和内容校验要分别执行，不能因检查命令异常而切换部署方案。
 - 部署命令被中断或失败后，先检查并停止处于 `activating/auto-restart` 的 native app，再重试；不得把失败重启循环留在后台，否则会持续消耗内存并污染下一次预检。重试前必须重新校验 unit、端口、`/version` 和 deploy history。
-- 生产版本确认直接读取 ubuntu 所有的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/current/artifact.manifest` 交叉核对。
-- 175 生产是多服务宿主机上的 Docker 蓝环境迁移到 native 绿环境，不能套用 129 staging 的 unit、目录或端口。native 准备和预验证阶段不得停止或改写 Docker；只有绿环境通过健康检查后才进入切流窗口。切流或最终同步失败时必须恢复 Docker upstream、启动蓝应用并用公网入口回归，不能把 native 失败留成 Docker 停机或半配置状态。
-- 生产 green 数据复制必须使用 `/data/bytedepth-native-production` 和显式 13306/16379/17700 端口；不能复用 `/data/mysql`、`/data/redis`、`/data/meilisearch` 活动目录，也不能使用无界全库 dump、全 `/data` 删除或重建旧 Docker 运行栈。迁移状态为 `uncertain` 时保留全部资源，禁止自动清理。
-- 生产 green 的 MySQL/Redis 运行时依赖必须由安装脚本显式校验并在缺失时安装；MySQL 的 green 健康检查和首次导入必须通过 `MYSQL_PWD` 复用蓝环境 `MYSQL_ROOT_PASSWORD`，不能假设 `root` 支持无密码 TCP 登录。Redis 使用 Ubuntu 原生服务时必须采用 `Type=simple`，并在启动前持久化启用 `vm.overcommit_memory=1`，否则可能出现“已 Ready 但 systemd 超时”或 Redis 告警。
-- 175 生产的公网入口仍由 Docker Nginx 提供，但 native green edge 使用宿主机 nginx 只监听 18081；生产宿主机可能没有 nginx 二进制。green 安装器必须把 `nginx-core` 作为 native 前置依赖，并在安装期间屏蔽 `nginx.service` 的 package maintainer scripts，避免安装过程启动或改写 Docker 80/443 入口；缺少该检查会让 edge 以 `203/EXEC` 失败，而错误只应停留在切流前并保持 Docker blue 可访问。
-- 生产公网 Nginx 必须像 MySQL/Redis 一样作为 green 的完整服务迁移：旧 `bytedepth-nginx-1` 配置保持不动，切流时停止旧容器并启动 `bytedepth-production-green-public-nginx.service` 接管 80/443；失败时停止新服务并启动旧容器即可回到蓝环境。该窗口已由项目所有者确认同机其他项目无流量，因此不能把“其他项目暂时不可访问”误判为 bytedepth 路由故障，也不能修改旧 Docker Nginx 的 bind mount 或 `/opt/nginx-conf.d`。
-- 新公网 Nginx 启动前必须以独立配置执行 `nginx -t`，启动后必须校验服务 active 和公网 `/version` 的 green commit；回滚必须先停止新 Nginx，再启动旧 Docker Nginx 和蓝应用并执行公网回归。停止/启动任一步失败都必须 fail-closed，保留 green 状态供人工处理。
-- 生产 green edge 以 `ubuntu` 运行时，Nginx 的 `client_body_temp_path`、`proxy_temp_path` 等临时目录必须显式落在 green root，并由安装器以 `ubuntu` 创建；不能依赖发行版默认的 `/var/lib/nginx/*`，否则新宿主机上 native `nginx -t` 会因权限或目录缺失失败。该失败必须发生在 Docker blue 切流前。
+- 生产版本确认直接读取 ubuntu 所有的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/production/current/artifact.manifest` 交叉核对。
 - staging 制品上传使用的 `/tmp/bytedepth-staging-<SHA>` 只允许作为单次传输目录；上传失败和远程安装结束都必须清理它。staging 的 `/tmp` 是独立 tmpfs，历史 JAR 残留会耗尽 tmpfs，即使根分区仍有大量空间也会让 `scp` 写入失败。
-- 生产 green 的 `prepared` 标记只代表数据复制已完成，不代表宿主依赖永久满足；每次发布都必须在检查该标记前重新执行 native stack 安装器/前置依赖复核，否则后续补丁会被旧标记短路，出现“修复已提交但 nginx 仍缺失”的假通过路径。此复核失败必须发生在停止 Docker blue 之前。
-- 生产 green 主机可能只有 Java 21，即使构建机和 staging 已使用 Java 25；native 安装器必须把 `openjdk-25-jre-headless` 作为依赖准备项，验证实际 `java -version` 后再将解析出的 Java 路径写入 systemd unit。不能把 `/usr/lib/jvm/java-25-openjdk/bin/java` 当作所有 Ubuntu 版本都存在的固定路径；该检查失败必须发生在停止 Docker blue 之前。
-- 生产 green final-sync 会清空 MySQL、Redis、Meilisearch 数据目录；这些目录同时承载渲染后的服务配置，不能清空后直接启动服务。清理完成后必须重新执行 native stack 安装器，再进行数据导入和就绪检查；迁移契约测试必须校验安装器调用位于清理之后，避免出现“数据已同步但 Redis 因缺少 `redis.conf` 未发布”的假成功。
-- `systemctl start` 返回不等于 Redis 已经监听端口：`Type=simple` 服务可能仍处于毫秒级启动窗口。生产 green Redis 启动后必须轮询带密码的 `PING`，不能只执行一次 `redis-cli`；否则短暂 `Connection refused` 会在 Docker 仍可用时误判 native 预检失败。
-- 红绿发布的切流前置条件是 green 中间件、应用、edge、版本 SHA 和只读检查全部通过；任何准备或预检失败都必须保持 Docker blue 运行并验证公网仍可访问，禁止通过手工修改远端 tag 脚本绕过不可变发布输入。
-- Bash 中被 `if ! function`、`if function` 或 `function || ...` 调用的函数会处于 `errexit` 抑制上下文；生产 final-sync 不能这样调用，否则 Redis/MySQL/Meilisearch 任一步失败后函数可能继续执行并返回最后一条成功命令，误进入切流。final-sync 必须直接执行，失败由 EXIT trap 标记 `uncertain`、停止 green、恢复 Docker blue 并验证公网入口。
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。
 - native staging edge 不能使用 `Requires=bytedepth-staging-native-app.service` 绑定生命周期：E2E test slot 会临时替代 app 并复用 18080，edge 必须保持在 18081 提供公网转发；只保留 `After=`启动顺序和 `/version` 启动前检查。部署或清理仍必须确认 edge active 后再 reload/写 evidence。
 - staging 集成测试或 E2E 清理时，teardown 可能已经启动 app；外层 runner 仍必须无条件检查并恢复 `bytedepth-staging-native-edge.service` 及其 18081 `/version`，否则会出现 cleanup evidence 通过、共享 Nginx 仍 active 但公网请求 502 的假成功。
 - edge 保持 active 时，`systemctl start app` 返回 active 不等于 Spring HTTP 已监听；清理恢复必须先轮询 native app 的 `/version`，再轮询 edge 的 18081 `/version`，两者都要有连接和总超时，不能用单次 curl 判定恢复成功。
 - native staging 的内部 edge（`bytedepth-staging-native-edge.service`，18081）不是公网入口；多服务宿主机的共享 `nginx.service` 监听 80/443，加载 `/etc/nginx/conf.d/bytedepth-staging.conf` 并代理到 18081。只启动内部 edge 或只把旧配置从 8080 改到应用端口，都会导致域名超时/502。部署预检必须同时执行 `nginx -t`、确认 `proxy_pass` 指向 18081、确认共享 Nginx 已 active，并在应用健康后只 reload 公网 Nginx。
-- 129 云主机不保证支持访问自身公网 IP 的 hairpin NAT；E2E 仍必须把 `E2E_BASE_URL` 固定为公网 staging URL，但 runner 的 curl 探测要用该域名的 TLS `--resolve` 指向 `127.0.0.1:443`，Chromium 要用等价的 host-resolver rule。这样保留真实 Host/SNI 和共享 Nginx 链路，不得改成直连 18080/18081，也不得修改共享 Nginx 或其他项目的 DNS 路由。
-- 共享 `nginx.service` 不能包含 `Requires=bytedepth-app.service` 或访问 8080 的 `ExecStartPre`；那是单服务宿主机的错误耦合，会让其他项目跟随 bytedepth 启停。共享 unit 由宿主初始化流程安装为无项目依赖的通用服务；各项目只安装自己的站点文件，文件归 `ubuntu` 所有，普通部署不能覆盖、重启或 disable 共享 Nginx。生产整体迁移窗口按 ADR-0019 停止旧 Docker 入口并启动独立 green 公网 Nginx，不修改共享配置。systemd drop-in 只能作为通用术语，不能用来偷偷删除共享服务的项目依赖。
+- 124 云主机不保证支持访问自身公网 IP 的 hairpin NAT；E2E 仍必须把 `E2E_BASE_URL` 固定为公网 staging URL，但 runner 的 curl 探测要用该域名的 TLS `--resolve` 指向 `127.0.0.1:443`，Chromium 要用等价的 host-resolver rule。这样保留真实 Host/SNI 和共享 Nginx 链路，不得改成直连 18080/18081，也不得修改共享 Nginx 或其他项目的 DNS 路由。
+- 共享 `nginx.service` 不能包含 `Requires=bytedepth-app.service` 或访问 8080 的 `ExecStartPre`；那是单服务宿主机的错误耦合，会让其他项目跟随 bytedepth 启停。共享 unit 由宿主初始化流程安装为无项目依赖的通用服务；各项目只安装自己的站点文件，文件归 `ubuntu` 所有，普通部署不能覆盖、重启或 disable 共享 Nginx。生产使用项目独立的公网入口和配置，不得修改其他项目配置。systemd drop-in 只能作为通用术语，不能用来偷偷删除共享服务的项目依赖。
 - 共享 Nginx 的 ACME 证书续期也不能使用 standalone 后停止 80/443；staging 使用 `/var/www/certbot` webroot，由自己的站点配置提供 `/.well-known/acme-challenge/`，证书更新后只 reload 共享 Nginx。
 - MySQL 8.4 的 `SHOW GRANTS` 会把账户名规范化为反引号形式，即使 `CREATE USER` 使用了字符串字面量；staging 测试槽必须按实际 canonical grant 格式校验，不能用单引号或转义数据库下划线误判合法授权。
 - staging 测试槽的管理员连接 defaults 文件包含 native MySQL 端口，但使用隔离用户导入 fixture 和校验 `SELECT DATABASE()` 时仍必须显式传入 `BYTEDEPTH_STAGING_MYSQL_PORT`；否则 MySQL 客户端会回退到 3306。
@@ -94,7 +81,7 @@
 - 测试槽 manifest 的 `app_port` 不能硬编码 8080；校验和生成必须绑定 `BYTEDEPTH_STAGING_APP_PORT`，否则隔离 native 槽位会在资源创建前被错误拒绝。
 - E2E 契约 fixture 替换运行时路径时，必须同时覆盖 canonical 与 native 的 `SLOT_ENV` 路径；否则测试会在 macOS 上意外向 `/run/bytedepth` 写入并把路径问题误报成 runner 失败。
 - native 测试槽的共享图片根目录也属于隔离边界：必须由 `ubuntu` 持有且使用 0700；只有按 `run_id` 创建的 `it`/`e2e` 子目录才授予应用服务组写入。根目录若沿用 0770，测试 runner 会在真正执行前拒绝，不能只修正子目录权限。
-- staging 运行时脚本不能把本机开发工具当作宿主机依赖；129 未安装 `rg`，测试槽 fixture 校验因此在真实集成测试开始前失败。部署/测试运行路径使用 `grep`、`sed` 等基础工具，`rg` 只允许出现在本机静态契约脚本中。
+- staging 运行时脚本不能把本机开发工具当作宿主机依赖；124 未安装 `rg`，测试槽 fixture 校验因此在真实集成测试开始前失败。部署/测试运行路径使用 `grep`、`sed` 等基础工具，`rg` 只允许出现在本机静态契约脚本中。
 - staging native 测试槽的管理员 MySQL defaults 文件只提供凭据，不能假设其中包含端口；所有管理员连接必须通过统一 helper 显式指定 127.0.0.1 和 `BYTEDEPTH_STAGING_MYSQL_PORT`，否则客户端会回退到 3306，并把连接失败误报成资源已存在。
 - 测试槽的 teardown 与 provision 必须共用同一个 native MySQL 端口 helper；只修 provision 会导致测试失败后的清理仍回退 3306，留下数据库、用户和图片资源，并使 staging 恢复被错误标记为失败。
 - `maven-dependency-plugin:go-offline` 不保证解析 Surefire 动态选择的 `surefire-junit-platform` provider；bootstrap 必须显式执行 `dependency:get` 预热该 provider 及其传递依赖，之后 runner 才能在离线仓库中稳定运行。

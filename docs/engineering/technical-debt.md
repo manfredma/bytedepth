@@ -21,16 +21,6 @@
 - 后续方向：单独评估升级/替换相关依赖或安全移除这条可选路径；在没有完成依赖树、运行时和 staging 验证前，不把简单 exclusion 视为已修复。
 - 验收条件：Java 25 环境下 staging Maven 预热、离线校验及后续集成流程均无该 WARNING，且 MyBatis-Plus 的实际数据库访问测试保持通过。
 
-## TD-0002：staging Maven 预热未拦截 WARNING
-
-- 状态：`In Progress`
-- 发现日期：2026-09-21
-- 范围：`deploy/bootstrap-staging-runtime.sh` 的 staging 运行时预热门禁。
-- 现状：预热脚本连续执行 Maven 命令并依据退出码判断成功，但没有像 staging integration runner 那样捕获并扫描 Maven 输出中的 `WARNING`/`WARN`。
-- 影响：Maven 可以在有效模型存在问题时仍返回 0，带 Javassist `tools.jar` WARNING 的预热被记录为 `passed`，随后继续执行 Docker 构建和 Compose rollout；这违反项目的零 WARNING 发布规则。
-- 后续方向：统一 Maven 输出捕获、敏感信息脱敏和 WARNING 扫描逻辑；任何预热阶段的告警都必须在 Compose rollout 前失败。
-- 验收条件：使用可重复的模拟 Maven WARNING 验证脚本在 runtime preflight 阶段失败，且失败时不执行 `bootstrap-ops-deploy.sh`，不生成可复用的 runtime manifest 或 staging passed evidence。
-
 ## TD-0003：测试 Profile 名称混合了部署环境与测试类型
 
 - 状态：`Open`

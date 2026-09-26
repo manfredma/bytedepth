@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly ROOT
 readonly NGINX_ROOT="$ROOT/deploy/nginx/staging-root.conf"
 readonly NGINX_TEMPLATE="$ROOT/deploy/nginx/staging.conf.template"
 readonly E2E_RUNNER="$ROOT/deploy/run-staging-e2e-tests.sh"
@@ -40,11 +41,7 @@ for file in \
     "$ROOT/docs/engineering/unified-release-pipeline.md" \
     "$ROOT/docs/agent-guides/maven.md" \
     "$ROOT/docs/superpowers/specs/2026-09-13-unified-release-pipeline-design.md" \
-    "$ROOT/docs/superpowers/specs/2026-08-23-staging-environment-design.md" \
-    "$ROOT/docs/superpowers/specs/2026-09-08-rss-discovery-and-sync-design.md" \
-    "$ROOT/docs/superpowers/plans/2026-09-10-test-boundaries.md" \
-    "$ROOT/docs/superpowers/plans/2026-09-10-network-map.md" \
-    "$ROOT/docs/superpowers/plans/2026-08-23-staging-environment.md"; do
+    "$ROOT/docs/superpowers/specs/2026-09-08-rss-discovery-and-sync-design.md"; do
     grep -Fq 'staging-bytedepth.bytedepth.cn' "$file"
 done
 

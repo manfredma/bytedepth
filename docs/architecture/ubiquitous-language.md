@@ -107,17 +107,11 @@
 | 重建索引 | 以当前已发布文章重新生成搜索投影。 | 是运维/应用命令，不是文章编辑。 |
 | 项目（Project） | 独立展示的作品条目，含名称、描述、技术标签、链接和展示顺序。 | 不等同于文章、专栏、分类或文章标签。 |
 | 展示顺序 | 项目在项目页的人工排序。 | 与专栏顺序、文章发布时间完全不同。 |
-| 宿主机原生运行时（native runtime） | 不依赖 Docker 容器、直接由宿主机 systemd 管理的 Java 应用及其依赖服务运行方式。 | “native”描述运行方式，不表示业务能力；生产和 staging 的具体服务、目录、端口必须以部署文档为准。 |
-| 原生隔离（native isolation） | 在同一宿主机上，通过独立 systemd unit、数据目录、监听端口、配置文件和资源上限，将一套 native runtime 与其他运行时分开的部署边界。 | 不是 Docker，也不是只改服务名；必须同时满足路径、端口、服务和 `MemoryMax` 隔离。 |
-| 隔离栈（isolated stack） | 一组共同使用专用目录、端口、配置和生命周期的应用与中间件服务。 | 不能与旧栈共享持久化数据目录；切换前旧栈保留为回退目标。 |
+| 宿主机原生运行时（native runtime） | 由宿主机 systemd 管理的 Java 应用及其依赖服务运行方式。 | “native”描述运行方式，不表示业务能力；生产和 staging 的具体服务、目录、端口必须以部署文档为准。 |
+| 原生隔离（native isolation） | 在同一宿主机上，通过独立 systemd unit、数据目录、监听端口、配置文件和资源上限，将一套 native runtime 与其他项目服务分开的部署边界。 | 必须同时满足路径、端口、服务和 `MemoryMax` 隔离。 |
 | 测试槽位（test slot） | staging 上临时接管应用入口、运行一次集成测试或 E2E 测试的受控服务实例。 | 每次运行绑定唯一 `run_id` 和资源清单；测试结束必须停止槽位、清理资源并恢复 staging 应用。不是永久环境。 |
-| 旧栈（legacy stack） | 迁移前仍保留的旧服务集合，例如旧 Docker 栈或旧 canonical systemd 服务。 | 只用于迁移回退或最终清理；普通部署和测试不得静默回到旧栈。 |
-| 生产蓝环境（production blue） | 175 上当前继续提供生产流量的 Docker bytedepth 应用、数据服务和 bytedepth Nginx 路由。 | native 准备和预验证期间必须保持可用；native 失败时必须恢复或保持蓝环境访问。 |
-| 生产绿环境（production green） | 175 上使用独立目录、端口和 `bytedepth-production-green-*` systemd unit 的完整 native 栈。 | 不得与蓝环境共享活动中间件数据目录；健康、SHA 和只读回归通过后才能切流。 |
-| 切流窗口（cutover window） | 绿环境预验证通过后，停止旧 Docker Nginx 切断流量、停止蓝应用、重新执行最终数据导入、启动 green 应用/edge/公网 Nginx 并验证公网入口的受控短时操作阶段。 | 旧 Docker Nginx 配置不修改；任何失败先停止新公网 Nginx、启动旧 Docker Nginx 和蓝应用，再报告失败。 |
 | 不确定状态（uncertain state） | 迁移复制、清理或回退的结果无法确认的安全状态。 | 必须保留 manifest、目录和资源，禁止猜测性删除；恢复前先人工确认资源身份和服务状态。 |
 | 内部 edge | native 隔离栈内负责把 18081 转发到应用 18080 的 Nginx 服务 `bytedepth-staging-native-edge.service`。 | 只监听本机隔离端口，不直接承担公网 DNS、TLS 或 80/443 流量。 |
-| 公网入口（public ingress） | 当前活跃的 80/443 Nginx 服务；生产切流后是 `bytedepth-production-green-public-nginx.service`，回退时是旧 Docker `bytedepth-nginx-1`。 | 生产切流维护窗口由项目所有者确认同机无流量时允许停旧入口、启新入口；旧 Docker 配置保持不变，不能修改或删除其他项目配置。 |
 | systemd drop-in | 放在某个 unit 的 `.service.d/` 目录中的覆盖片段；systemd 读取主 unit 后再合并其中的同名配置，用于按环境覆盖依赖、启动前检查等少量行为。 | 不是新的服务，也不是复制主 unit；必须明确清空需要替换的多值字段（如 `Requires=`、`ExecStartPre=`），否则旧值会继续生效。 |
 | 运行状态 | 应用、数据库、Redis、搜索等依赖的可用性快照。 | 是观测结果，不是业务领域状态。 |
 | 部署请求 | 要求受控部署某个已发布不可变版本的操作意图。 | 不是已经完成的部署事实；部署规则以 `deploy/README.md` 为准。 |
