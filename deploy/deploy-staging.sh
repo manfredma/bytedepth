@@ -161,11 +161,11 @@ run_locked_install() {
         # it first, then perform the reload so both the first deploy and
         # subsequent deploys have the same deterministic path.
         if ! systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE"; then
-            systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE"
+            systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE" || return 1
         fi
-        systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE"
-        systemctl reload "$BYTEDEPTH_STAGING_EDGE_SERVICE"
-        systemctl reload nginx.service
+        systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE" || return 1
+        systemctl reload "$BYTEDEPTH_STAGING_EDGE_SERVICE" || return 1
+        systemctl reload nginx.service || return 1
     }
 
     rollback_release() {

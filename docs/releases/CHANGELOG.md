@@ -18,7 +18,7 @@
 
 ### Fixed
 
-- 修复 staging native edge 使用共享 Nginx PID 路径、可能影响同机服务的问题；systemd reload/stop 现在针对所属主进程。
+- 修复 staging native edge 使用共享 Nginx PID 路径、可能影响同机服务的问题；staging/production Nginx unit 的 reload/stop 现在针对所属主进程，staging 部署会在 edge 或公共 Nginx 操作失败时阻断并回滚。
 - 修复移动端版本页因长英文单词横向溢出，以及浏览器默认 body 外边距造成的页面边缘留白；长文本现在会在必要处换行。
 
 ## [v2.25.15] - 2026-09-26

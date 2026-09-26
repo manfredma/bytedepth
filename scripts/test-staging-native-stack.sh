@@ -68,6 +68,8 @@ rg -q 'ExecStart=/usr/local/bin/meilisearch.*meilisearch.toml.*__NATIVE_ROOT__/m
 rg -q 'WorkingDirectory=__NATIVE_ROOT__/meilisearch' "$UNIT_DIR/bytedepth-staging-native-meilisearch.service.in"
 rg -q '^MemoryMax=384M$' "$UNIT_DIR/bytedepth-staging-native-meilisearch.service.in"
 rg -q 'ExecStart=/usr/sbin/nginx.*staging-native-nginx.conf' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
+rg -q '^ExecReload=/bin/kill -HUP \$MAINPID$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
+rg -q '^ExecStop=/bin/kill -QUIT \$MAINPID$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 rg -q 'nginx.pid' "$INSTALLER"
 rg -q '^MemoryMax=64M$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 if rg -n '^Requires=bytedepth-staging-native-app\.service$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in" >/dev/null; then

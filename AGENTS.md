@@ -16,6 +16,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - **跨 agent 防复发（强制）**：每次发现的流程、配置、测试或部署错误，必须在结束前沉淀为项目内的明确规则（`AGENTS.md`、`docs/` 或 ADR）并补充可重复执行的自动检查/测试；不得依赖任何 agent 的会话记忆、个人经验或口头交接。自动检查必须在写入通过证据、合并或发布之前执行；发布前统一运行 `bash scripts/check-staging-checklist.sh`。对 staging runner，凭据、共享运行时和候选 SHA 必须显式注入并 fail-fast 校验，禁止隐式默认值；启用 `pipefail` 的脚本不得用会因上游 SIGPIPE 产生假阴性的 `命令 | grep -q` 作为就绪判定；涉及“当前日期/时间”的 E2E 断言必须在测试运行时计算，禁止硬编码会过期的日历预期。
 - 任何用户可见、运行时、部署或配置变更，在候选冻结前必须有 `CHANGELOG.md` 中非空且分类明确的 `## Unreleased` 条目；冻结后必须将本次候选条目放入正式 `## [vX.Y.Z]` 版本段并清空 `Unreleased` 条目。本地质量、CI、staging、合并和正式发布入口必须拒绝未冻结候选、冻结后仍有 `Unreleased` 条目的候选，以及没有分类发布说明的版本段。过去已部署的条目必须归入其实际发布版本，不能留在 `Unreleased` 造成重复发布记录。
 - 本机可能同 IP 部署多个工程；bytedepth 的 systemd 服务、Nginx 配置和数据目录必须使用带工程前缀的名称/路径，禁止依赖通用服务名或覆盖其他工程的 `/opt/nginx-conf.d/*.conf`。详见 [部署手册](deploy/README.md) 与 [工程陷阱](docs/engineering/gotchas.md)。
+- Nginx 使用项目独立 PID 文件时，systemd `ExecReload`/`ExecStop` 必须通过该 unit 的 `$MAINPID` 发送信号；部署阶段函数经 `record_timed_phase` 调用时不得依赖 `set -e` 隐式传播，edge/公共 Nginx 的 start、reload 和 health 状态必须逐项显式检查并 fail-closed。
 - 改完代码必须跑测试，不能只编译通过。
 - 不带病上线：发布前所有测试（单元、E2E、静态分析）必须全绿；既有的、非本次引入的失败同样不构成放行理由，发现必须当场修复或中止发布并报告，不得以「pre-existing」为由跳过。创建 Release Tag 前，必须有 staging integration 与 E2E 的两份 commit-bound `result=passed` 记录，且其中完整 SHA 均与当前 `main` 的 `HEAD` 一致；每次 staging run 会先作废其旧记录，只有测试、WARNING 检查与 SHA 稳定性均通过才能重写记录。
 - 每项代码改动必须补齐单元测试；本次改动涉及的业务逻辑分支覆盖率必须达到 100%，并在提交前提供覆盖率验证结果。

@@ -47,6 +47,10 @@ if rg -n -F '/etc/bytedepth/application.env' "$SCRIPT" >/dev/null; then
 fi
 rg -q 'check-staging-changelog-change.sh.*>&2' "$SCRIPT"
 rg -q 'check-release-readiness.sh.*>&2' "$SCRIPT"
+rg -Fq 'systemctl start "$BYTEDEPTH_STAGING_EDGE_SERVICE" || return 1' "$SCRIPT"
+rg -Fq 'systemctl is-active --quiet "$BYTEDEPTH_STAGING_EDGE_SERVICE" || return 1' "$SCRIPT"
+rg -Fq 'systemctl reload "$BYTEDEPTH_STAGING_EDGE_SERVICE" || return 1' "$SCRIPT"
+rg -Fq 'systemctl reload nginx.service || return 1' "$SCRIPT"
 rg -Fq 'build_release_artifact "$checkout" "$ref" "$commit" "$output_dir" "$application_version"' "$SCRIPT"
 rg -Fq 'artifact_manifest_value application_version "$manifest"' "$SCRIPT"
 rg -q 'sudo -n grep -Fqx BYTEDEPTH_ENVIRONMENT=staging' "$SCRIPT"
