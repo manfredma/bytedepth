@@ -38,11 +38,14 @@ WORK_DIR="$(mktemp -d)"
 staging_ensure_ubuntu_owner "$WORK_DIR"
 readonly WORK_DIR
 readonly E2E_LOG="$WORK_DIR/playwright.log"
+readonly SLOT_JOURNAL_LOG="$WORK_DIR/test-slot-journal.log"
 touch "$E2E_LOG"
-staging_ensure_ubuntu_owner "$E2E_LOG"
+touch "$SLOT_JOURNAL_LOG"
+staging_ensure_ubuntu_owner "$E2E_LOG" "$SLOT_JOURNAL_LOG"
 manifest=""
 run_id=""
 tested_commit=""
+slot_started_at=""
 app_stopped=0
 test_slot_started=0
 cleanup_done=0
@@ -139,9 +142,27 @@ stop_test_slot() {
     ! systemctl is-active --quiet "$SLOT_SERVICE"
 }
 
+capture_test_slot_journal() {
+    [[ -n "$slot_started_at" ]] || return 0
+    if ! journalctl --unit="$SLOT_SERVICE" --since="$slot_started_at" --no-pager --output=short-iso 2>&1 \
+        | redact_secrets | tee "$SLOT_JOURNAL_LOG"; then
+        printf 'Refusing: unable to read the E2E test-slot systemd journal.\n' >&2
+        return 1
+    fi
+    warning_policy_check_file "$SLOT_JOURNAL_LOG" || {
+        printf 'Refusing: E2E test-slot journal contains an unallowlisted WARN or WARNING.\n' >&2
+        return 1
+    }
+}
+
 cleanup_slot() {
     local cleanup_status=0
 
+    if (( test_slot_started != 0 )); then
+        stop_test_slot || cleanup_status=1
+        test_slot_started=0
+    fi
+    capture_test_slot_journal || cleanup_status=1
     if [[ -n "$manifest" && -f "$manifest" ]]; then
         if [[ -f "$(dirname "$manifest")/state-uncertain" ]]; then
             printf 'Refusing: test resource state is uncertain; preserving manifest and resources.\n' >&2
@@ -294,6 +315,7 @@ manifest_sha="$(shasum -a 256 "$manifest" | awk '{print $1}')"
     exit 1
 }
 prepare_test_slot_environment
+slot_started_at="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 systemctl start "$SLOT_SERVICE"
 test_slot_started=1
 for attempt in {1..30}; do
@@ -329,7 +351,7 @@ stop_test_slot
 test_slot_started=0
 cleanup_slot
 [[ "$cleanup_result" == passed ]] || {
-    printf 'Refusing: E2E resource cleanup or staging restoration failed.\n' >&2
+    printf 'Refusing: E2E cleanup, staging restoration, or test-slot warning check failed.\n' >&2
     exit 1
 }
 write_evidence "$tested_commit" "$manifest_sha"

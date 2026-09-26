@@ -21,7 +21,8 @@
 - 修复 staging native edge 使用共享 Nginx PID 路径、可能影响同机服务的问题；安装器会创建 ubuntu 所有的 PID 目录，staging/production Nginx unit 声明各自 PIDFile 并通过所属主进程 reload/stop，staging 部署会在 edge 或公共 Nginx 操作失败时阻断并回滚。
 - 修复移动端版本页因长英文单词横向溢出，以及浏览器默认 body 外边距造成的页面边缘留白；长文本现在会在必要处换行。
 - 修复 staging 候选制品上传受共享 `/tmp` tmpfs 空间/配额影响失败的问题；现在使用按 SHA 隔离的 `/var/tmp/bytedepth-staging-<SHA>`，并在上传前按 JAR 与 manifest 大小预检可用空间。
-- 修复 staging 集成测试 fork 在多项目主机内存紧张时触发 global OOM 的风险；增加停 app 前后的内存门槛，并限制 staging Spring Test context cache。
+- 修复 staging 集成测试 runner 在 `verify` 中重复运行 Surefire 单元测试、导致测试 fork 在多项目主机内存紧张时触发 global OOM 的问题；profile 现在跳过 Surefire、只运行最大堆 512 MiB 的 Failsafe `*IT`，并增加停 app 前后的内存门槛与 Spring Test context cache 限制。
+- 修复 staging E2E 只检查 Playwright stdout、漏检 test-slot systemd journal WARNING 的门禁缺口；E2E evidence 现在要求两路日志都通过 warning policy。
 
 ## [v2.25.15] - 2026-09-26
 

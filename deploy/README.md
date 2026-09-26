@@ -129,7 +129,7 @@ staging 证书在 129 签发，生产边缘只同步精确 SAN 证书并拒绝�
 
 runner 读取显式注入的 ubuntu 所有 MySQL defaults、Redis secret、Meilisearch secret、fixture 和 checksum，按每次 run_id 创建：
 
-在多项目 staging 主机上，集成 runner 要求启动前至少 512 MiB、停止 staging app 后至少 1 GiB `MemAvailable`；`staging-integration` Maven profile 把 Spring Test context cache 限为 16。资源不足会 fail-fast、恢复 staging app，不启动 Surefire fork。
+`staging-integration` Maven profile 跳过 Surefire 单元测试，只由 Failsafe 运行 `*IT` 跨进程集成测试；单元测试由本机和 CI 门禁运行。Failsafe fork 最大堆限制为 512 MiB，Spring Test context cache 限为 16。在多项目 staging 主机上，集成 runner 要求启动前至少 512 MiB、停止 staging app 后至少 1 GiB `MemAvailable`。资源不足会 fail-fast、恢复 staging app，不启动测试 fork。
 
 - MySQL：bytedepth_it_<run_id> 和最小权限用户 bd_it_<run_id>；
 - Redis：保留 logical DB 14，并使用 bytedepth:it:<run_id>: key/session namespace；
@@ -167,6 +167,8 @@ SSH 默认不会转发任意环境变量。远程执行时通过 SSH 标准输�
     unset staging_e2e_username staging_e2e_password
 
 runner 固定使用公开 staging URL、宿主机共享运行时提供的 `/opt/shared-e2e/chrome-linux64/chrome` 和 Playwright ffmpeg。ffmpeg 由 `sudo ./deploy/bootstrap-staging-runtime.sh` 预热并纳入 runtime manifest；runner 不在项目目录下载浏览器或录制工具。它停止 native app，生成 staging-e2e profile 环境，启动 native test-slot，该服务只加载 `/run/bytedepth/staging-native-e2e.env`，内部 edge 保持监听 18081 并将请求转发到 test slot 的 18080；runner 通过公开 `/version` 校验健康，并对健康探测设置连接和总超时。E2E 槽位使用：
+
+runner 会在 test-slot 启动前记录时间，并在停止后读取本轮 systemd journal；Playwright 输出和服务 journal 都必须通过 WARNING 策略检查，任一未允许的 WARN/WARNING 都会阻止写入 E2E evidence，同时仍执行临时资源清理和 staging app 恢复。
 
 - MySQL：bytedepth_e2e_<run_id> 和最小权限用户 bd_e2e_<run_id>；
 - Redis：logical DB 15 与 bytedepth:e2e:<run_id>: namespace；

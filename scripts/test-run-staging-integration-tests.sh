@@ -51,6 +51,11 @@ assert_failsafe_uses_staging_profile() {
         in_profile && /<\/profile>/ { exit }
     ' "$POM")"
     [[ "$profile_block" == *"<spring.profiles.active>\${env.SPRING_PROFILES_ACTIVE}</spring.profiles.active>"* ]]
+    [[ "$profile_block" == *"<artifactId>maven-surefire-plugin</artifactId>"* ]]
+    [[ "$profile_block" == *"<skipTests>true</skipTests>"* ]]
+    [[ "$profile_block" == *"<artifactId>maven-failsafe-plugin</artifactId>"* ]]
+    [[ "$profile_block" == *"<include>**/*IT.java</include>"* ]]
+    [[ "$profile_block" == *"<argLine>\${argLine} -Xmx512m"* ]]
     rg -q '<spring.test.context.cache.maxSize>16</spring.test.context.cache.maxSize>' <<< "$profile_block"
     if rg -n 'bytedepth\.it\.(manifest|redis\.(host|port|password|database|key-namespace))' <<< "$profile_block"; then
         return 1

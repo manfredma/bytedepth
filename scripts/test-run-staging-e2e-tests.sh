@@ -29,6 +29,7 @@ readonly FAKE_BIN="$TEMP_ROOT/bin"
 readonly NPM_ARGS="$TEMP_ROOT/npm.args"
 readonly NPM_ENV="$TEMP_ROOT/npm.env"
 readonly CURL_ARGS="$TEMP_ROOT/curl.args"
+readonly JOURNAL_ARGS="$TEMP_ROOT/journal.args"
 readonly GIT_LOG="$TEMP_ROOT/git.log"
 readonly FLOCK_ARGS="$TEMP_ROOT/flock.args"
 readonly INSTALL_ARGS="$TEMP_ROOT/install.args"
@@ -81,6 +82,8 @@ rg -q 'BYTEDEPTH_STAGING_APP_PORT' "$SOURCE_ROOT/deploy/provision-staging-test-s
 rg -q 'app_port=%s' "$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
 rg -q 'BYTEDEPTH_TEST_MANIFEST|run_id=' "$RUNNER"
 rg -q 'cleanup|restore' "$RUNNER"
+rg -q 'capture_test_slot_journal' "$RUNNER"
+rg -q 'warning_policy_check_file "\$SLOT_JOURNAL_LOG"' "$RUNNER"
 rg -q 'state-uncertain' "$RUNNER"
 rg -q 'runtime_mode=host-native|test_resource_manifest_sha=|cleanup=result=passed' "$RUNNER"
 
@@ -241,6 +244,14 @@ printf 'databases\n16\n'
 SCRIPT
 chmod +x "$FAKE_BIN/redis-cli"
 
+cat > "$FAKE_BIN/journalctl" <<'SCRIPT'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+printf '%s\n' "$@" > "$STAGING_E2E_JOURNAL_ARGS"
+printf '%s\n' "${STAGING_E2E_JOURNAL_OUTPUT:-E2E test-slot journal clean}"
+SCRIPT
+chmod +x "$FAKE_BIN/journalctl"
+
 cat > "$FAKE_BIN/systemctl" <<'SCRIPT'
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -321,6 +332,7 @@ run_runner() {
         STAGING_E2E_NPM_ARGS="$NPM_ARGS" \
         STAGING_E2E_FLOCK_ARGS="$FLOCK_ARGS" \
         STAGING_E2E_CURL_ARGS="$CURL_ARGS" \
+        STAGING_E2E_JOURNAL_ARGS="$JOURNAL_ARGS" \
         STAGING_E2E_LOCK_FILE="$LOCK_FILE" \
         STAGING_E2E_NPM_ENV="$NPM_ENV" \
         STAGING_E2E_GIT_LOG="$GIT_LOG" \
@@ -342,6 +354,7 @@ run_runner() {
         BYTEDEPTH_STAGING_E2E_PASSWORD='fixture-e2e-password' \
         STAGING_E2E_NPM_OUTPUT="${STAGING_E2E_NPM_OUTPUT:-}" \
         STAGING_E2E_NPM_EXIT="${STAGING_E2E_NPM_EXIT:-0}" \
+        STAGING_E2E_JOURNAL_OUTPUT="${STAGING_E2E_JOURNAL_OUTPUT:-}" \
         "$TEMP_ROOT/runner" > "$RUNNER_OUTPUT" 2>&1 || {
             cat "$RUNNER_OUTPUT" >&2
             return 1
@@ -359,6 +372,12 @@ fi
 # The wrapper fixes the staging target and installed Chromium, then records the full deployed SHA.
 write_config staging
 run_runner
+[[ -s "$JOURNAL_ARGS" ]] || {
+    printf 'Expected E2E runner to read the test-slot systemd journal.\n' >&2
+    exit 1
+}
+grep -Fq -- '--since=' "$JOURNAL_ARGS"
+grep -Fq 'bytedepth-staging-native-test-slot.service' "$JOURNAL_ARGS"
 grep -Fqx -- '-x' "$FLOCK_ARGS"
 grep -Fqx "$LOCK_FILE" "$FLOCK_ARGS"
 grep -Fqx 'run' "$NPM_ARGS"
@@ -384,6 +403,15 @@ if STAGING_E2E_NPM_OUTPUT='WARNING: simulated Playwright warning' run_runner; th
     exit 1
 fi
 grep -Fq 'WARNING: simulated Playwright warning' "$RUNNER_OUTPUT"
+[[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
+
+# Warnings sent to the test-slot systemd journal invalidate E2E evidence too.
+rm -f "$GIT_LOG" "$TEMP_ROOT/git.count"
+if STAGING_E2E_JOURNAL_OUTPUT='20:00:00 WARN Redis rate limit timeout' run_runner; then
+    printf 'Expected runner to reject test-slot service warning output.\n' >&2
+    exit 1
+fi
+grep -Fq 'WARN Redis rate limit timeout' "$RUNNER_OUTPUT"
 [[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
 
 # A later failed run likewise invalidates an earlier pass.

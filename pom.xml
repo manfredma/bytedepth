@@ -236,9 +236,8 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <systemPropertyVariables>
-                                <spring.test.context.cache.maxSize>16</spring.test.context.cache.maxSize>
-                            </systemPropertyVariables>
+                            <!-- Unit tests are already covered by local and CI quality; staging only runs cross-process *ITs. -->
+                            <skipTests>true</skipTests>
                         </configuration>
                     </plugin>
                     <plugin>
@@ -259,7 +258,7 @@
                                 Failsafe must load application classes from target/classes instead.
                             -->
                             <classesDirectory>${project.build.outputDirectory}</classesDirectory>
-                            <argLine>${argLine} -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
+                            <argLine>${argLine} -Xmx512m -Xshare:off --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy.version}/byte-buddy-agent-${byte-buddy.version}.jar</argLine>
                             <includes>
                                 <include>**/*IT.java</include>
                             </includes>

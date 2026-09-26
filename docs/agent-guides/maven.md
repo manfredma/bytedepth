@@ -41,7 +41,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw clean install -DskipTests -Dsor
 JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw test -Dsort.skip=true
 ```
 
-`*IT` 只能在 staging 主机由 `run-staging-integration-tests.sh` 运行；它使用 `staging-it` Spring Profile 连接本次 run 的宿主机隔离资源，并执行 `./mvnw -Pstaging-integration verify`。E2E 只能在同一 staging 主机由 `run-staging-e2e-tests.sh` 运行；该 wrapper 固定 `E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn`，通过 `staging-e2e` Spring Profile 启动互斥的原生测试槽位，并使用主机级共享浏览器 `/opt/shared-e2e/chrome-linux64/chrome`，不能用本机浏览器替代。两个命令及其 evidence 传递流程见 [部署手册](../../deploy/README.md#隔离集成测试)。
+`*IT` 只能在 staging 主机由 `run-staging-integration-tests.sh` 运行；它使用 `staging-it` Spring Profile 连接本次 run 的宿主机隔离资源，并执行 `./mvnw -Pstaging-integration verify`。该 profile 显式跳过 Surefire 单元测试，由 Failsafe 只运行 `**/*IT.java`，且 Failsafe 测试 fork 的最大堆限制为 512 MiB；否则 `verify` 会先运行 Surefire，重复执行已由本机和 CI 覆盖的单元测试，并在共享 staging 主机额外占用内存。E2E 只能在同一 staging 主机由 `run-staging-e2e-tests.sh` 运行；该 wrapper 固定 `E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn`，通过 `staging-e2e` Spring Profile 启动互斥的原生测试槽位，并使用主机级共享浏览器 `/opt/shared-e2e/chrome-linux64/chrome`，不能用本机浏览器替代。两个命令及其 evidence 传递流程见 [部署手册](../../deploy/README.md#隔离集成测试)。
 
 ### staging 验证的执行纪律
 
