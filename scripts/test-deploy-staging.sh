@@ -18,6 +18,9 @@ for contract in \
     './deploy/bootstrap-ops-deploy.sh || return 1' \
     'scp' \
     'if ! scp' \
+    'require_remote_upload_space "$artifact_dir"' \
+    'remote_dir="/var/tmp/bytedepth-staging-$3"' \
+    'df -Pk /var/tmp' \
     'find '\''$remote_dir'\'' -depth -delete' \
     'trap cleanup_remote_dir EXIT' \
     'install_release_artifact' \
@@ -43,6 +46,10 @@ for contract in \
         exit 1
     }
 done
+if rg -n '(^|[^[:alnum:]])/tmp/bytedepth-staging-' "$SCRIPT" >/dev/null; then
+    printf 'Staging artifact upload must not use the size-limited /tmp tmpfs.\n' >&2
+    exit 1
+fi
 if rg -n -F '/etc/bytedepth/application.env' "$SCRIPT" >/dev/null; then
     printf 'Staging deployment must not silently fall back to the legacy runtime when native parallel configuration is missing.\n' >&2
     exit 1

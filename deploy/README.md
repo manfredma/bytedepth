@@ -81,6 +81,8 @@ install-host-service.sh 安装 systemd unit、部署 socket、服务账号和数
 
 本机必须有 staging SSH 私钥和已核验的 known_hosts 文件。候选 ref 必须是 origin 上的命名分支或 Tag，且相对 origin/main 修改了 docs/releases/CHANGELOG.md 并通过冻结门禁。候选 JAR 的运行时版本取自冻结版本段（例如 `v2.26.0`），Tag 构建则须与 Maven POM 和 Tag 一致；版本号和 commit SHA 一并写入 JAR 元数据/制品 manifest。候选构建在本机/构建机完成，传输 JAR 和 manifest，staging 只校验并安装制品。
 
+上传暂存目录使用持久文件系统上的 `/var/tmp/bytedepth-staging-<SHA>`，不使用多项目共享且容量受限的 `/tmp` tmpfs。传输前会按 JAR、manifest 实际字节数加 16 MiB 余量检查 `/var/tmp` 可用空间；失败时只删除本候选 SHA 的暂存目录。
+
     export BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts"
     export BYTEDEPTH_SSH_KEY="$HOME/.ssh/ubuntu_2.pem"
     test -r "$BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS" -a -r "$BYTEDEPTH_SSH_KEY"

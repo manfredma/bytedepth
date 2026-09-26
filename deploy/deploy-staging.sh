@@ -103,9 +103,32 @@ available_kib="$(sudo -n awk "/^MemAvailable:/ {print \$2}" /proc/meminfo)"
     ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "$remote_command"
 }
 
+require_remote_upload_space() {
+    local artifact_dir="$1" jar_bytes manifest_bytes required_kib remote_available_kib
+
+    jar_bytes="$(wc -c < "$artifact_dir/app.jar" | tr -d '[:space:]')"
+    manifest_bytes="$(wc -c < "$artifact_dir/artifact.manifest" | tr -d '[:space:]')"
+    [[ "$jar_bytes" =~ ^[0-9]+$ && "$manifest_bytes" =~ ^[0-9]+$ ]] || {
+        printf 'Refusing: staging artifact size could not be determined.\n' >&2
+        return 1
+    }
+    required_kib="$(((jar_bytes + manifest_bytes + 16777216 + 1023) / 1024))"
+    if ! remote_available_kib="$(ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" \
+        "df -Pk /var/tmp | awk 'NR == 2 {print \$4}'")"; then
+        printf 'Refusing: unable to check persistent staging upload space.\n' >&2
+        return 1
+    fi
+    [[ "$remote_available_kib" =~ ^[0-9]+$ && "$remote_available_kib" -ge "$required_kib" ]] || {
+        printf 'Refusing: staging upload needs at least %s KiB in /var/tmp; found %s KiB.\n' \
+            "$required_kib" "${remote_available_kib:-unknown}" >&2
+        return 1
+    }
+}
+
 deploy_external_artifact() {
-    local ref="$1" artifact_dir="$2" commit="$3" remote_dir="/tmp/bytedepth-staging-$3" remote_command
+    local ref="$1" artifact_dir="$2" commit="$3" remote_dir="/var/tmp/bytedepth-staging-$3" remote_command
     require_staging_host_configuration
+    require_remote_upload_space "$artifact_dir"
     ssh "${STAGING_SSH_OPTIONS[@]}" "$STAGING_USER@$STAGING_HOST" "install -d -o ubuntu -g ubuntu -m 0700 '$remote_dir'"
     if ! scp "${STAGING_SSH_OPTIONS[@]}" \
         "$artifact_dir/app.jar" "$artifact_dir/artifact.manifest" "$STAGING_USER@$STAGING_HOST:$remote_dir/"; then
