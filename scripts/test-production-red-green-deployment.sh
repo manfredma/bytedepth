@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly ROOT
 readonly SCRIPT="$ROOT/deploy/deploy-production.sh"
 readonly MIGRATION_LIB="$ROOT/deploy/lib/production-green-migration.sh"
+readonly PUBLIC_ROUTE_HELPER="$ROOT/deploy/lib/production-staging-edge.sh"
 
 [[ -x "$SCRIPT" ]] || { printf 'Expected executable production deployment script.\n' >&2; exit 1; }
 
@@ -40,6 +41,8 @@ require_text 'deploy-production-remote.sh' "$SCRIPT"
 require_text 'validate_artifact_manifest' "$SCRIPT"
 require_text 'install_release_artifact' "$SCRIPT"
 require_text 'production-green' "$SCRIPT"
+require_text 'production_install_staging_edge_routes' "$SCRIPT"
+require_text 'production_install_staging_edge_routes()' "$PUBLIC_ROUTE_HELPER"
 require_text 'release-history' "$SCRIPT"
 require_text 'production_green_prepare()' "$MIGRATION_LIB"
 require_text '"$SOURCE_ROOT/deploy/install-production-green-stack.sh"' "$MIGRATION_LIB"

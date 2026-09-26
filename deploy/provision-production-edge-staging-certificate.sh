@@ -12,11 +12,12 @@ readonly CERT_NAME=staging.bytedepth.cn
 readonly CERT_DIR="/etc/letsencrypt/live/$CERT_NAME"
 SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SOURCE_ROOT
-readonly EDGE_CONFIG_SOURCE="$SOURCE_ROOT/deploy/nginx/staging-legacy-production-entry.conf"
-readonly EDGE_CONFIG=/opt/nginx-conf.d/staging-legacy-production-entry.conf
 
-if [[ ! -r "$EDGE_CONFIG_SOURCE" ]]; then
-    printf 'Missing versioned legacy production-entry config: %s\n' "$EDGE_CONFIG_SOURCE" >&2
+# shellcheck disable=SC1090,SC1091
+source "$SOURCE_ROOT/deploy/lib/production-staging-edge.sh"
+
+if [[ ! -r "$SOURCE_ROOT/deploy/nginx/staging-legacy-production-entry.conf" ]]; then
+    printf 'Missing versioned legacy production-entry config.\n' >&2
     exit 1
 fi
 
@@ -28,8 +29,8 @@ certbot certonly \
     --register-unsafely-without-email \
     --keep-until-expiring \
     --cert-name "$CERT_NAME" \
-    --pre-hook 'systemctl stop nginx.service || true' \
-    --post-hook 'systemctl start nginx.service' \
+    --pre-hook "systemctl stop \"$(if systemctl cat bytedepth-production-green-public-nginx.service >/dev/null 2>&1; then printf '%s' bytedepth-production-green-public-nginx.service; else printf '%s' nginx.service; fi)\" || true" \
+    --post-hook "systemctl start \"$(if systemctl cat bytedepth-production-green-public-nginx.service >/dev/null 2>&1; then printf '%s' bytedepth-production-green-public-nginx.service; else printf '%s' nginx.service; fi)\"" \
     -d "$CERT_NAME"
 
 san_names="$(openssl x509 -in "$CERT_DIR/fullchain.pem" -noout -ext subjectAltName 2>/dev/null || true)"
@@ -54,7 +55,5 @@ if [[ -z "$certificate_public_key" || "$certificate_public_key" != "$private_key
     exit 1
 fi
 
-install -o ubuntu -g ubuntu -m 0644 "$EDGE_CONFIG_SOURCE" "$EDGE_CONFIG"
-nginx -t
-systemctl reload nginx.service
+production_install_staging_edge_routes "$SOURCE_ROOT"
 printf 'Provisioned %s certificate on the production edge.\n' "$CERT_NAME"

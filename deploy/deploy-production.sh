@@ -38,6 +38,8 @@ source "$SOURCE_ROOT/deploy/lib/artifact.sh"
 # shellcheck disable=SC1090,SC1091
 source "$SOURCE_ROOT/deploy/lib/production-green-target.sh"
 # shellcheck disable=SC1090,SC1091
+source "$SOURCE_ROOT/deploy/lib/production-staging-edge.sh"
+# shellcheck disable=SC1090,SC1091
 source "$SOURCE_ROOT/deploy/lib/production-green-migration.sh"
 
 validate_release_tag "$TAG" || { printf 'Release tag must use stable SemVer.\n' >&2; exit 1; }
@@ -224,6 +226,7 @@ trap rollback_on_failure EXIT
 ensure_production_mode "$(current_deploy_mode)"
 require_blue_stack
 prepare_green_config
+production_install_staging_edge_routes "$SOURCE_ROOT"
 
 export BYTEDEPTH_RELEASE_ROOT="$BYTEDEPTH_PRODUCTION_GREEN_RELEASE_ROOT/releases"
 export BYTEDEPTH_CURRENT_LINK="$BYTEDEPTH_PRODUCTION_GREEN_RELEASE_ROOT/current"

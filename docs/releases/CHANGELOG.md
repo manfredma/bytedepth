@@ -19,6 +19,8 @@
 
 ### Fixed
 
+- 修复 native green 公网 Nginx 只加载 `/etc/nginx/conf.d`、而 staging 新旧域名证书路由仍只安装到旧 Docker 目录的问题；现在证书同步、旧 staging 域名兼容跳转和生产发布都会按当前公网入口安装两条显式 SNI 路由，避免未匹配域名拿到其他项目证书并产生证书告警。
+
 - 修复生产 native green final-sync 清空 MySQL、Redis、Meilisearch 数据目录时误删 Redis/Meilisearch 渲染配置、导致数据同步完成但绿色服务无法启动的问题；清理后会重新安装并渲染完整 native 服务栈，并由回归契约检查固定该顺序。
 
 - 修复生产 native green 安装器未验证目标主机 Java 25、导致 systemd 使用不存在的固定路径并在切流前失败的问题；安装器现在会准备并验证 Java 25，并用实际解析路径渲染应用服务。

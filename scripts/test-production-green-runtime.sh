@@ -6,6 +6,7 @@ readonly ROOT
 readonly TARGET_HELPER="$ROOT/deploy/lib/production-green-target.sh"
 readonly CONFIG_EXAMPLE="$ROOT/deploy/production-green.conf.example"
 readonly INSTALLER="$ROOT/deploy/install-production-green-stack.sh"
+readonly PUBLIC_ROUTE_HELPER="$ROOT/deploy/lib/production-staging-edge.sh"
 
 require_file() {
     [[ -f "$1" ]] || {
@@ -25,6 +26,7 @@ require_text() {
 
 require_file "$TARGET_HELPER"
 require_file "$CONFIG_EXAMPLE"
+require_file "$PUBLIC_ROUTE_HELPER"
 
 for unit in mysql redis meilisearch app edge; do
     require_file "$ROOT/deploy/systemd/bytedepth-production-green-$unit.service.in"
@@ -81,6 +83,12 @@ require_text 'Type=simple' "$ROOT/deploy/systemd/bytedepth-production-green-redi
 
 require_text 'production-green' "$INSTALLER"
 require_text 'ubuntu:ubuntu' "$INSTALLER"
+require_text 'production_install_staging_edge_routes()' "$PUBLIC_ROUTE_HELPER"
+require_text '/etc/nginx/conf.d' "$PUBLIC_ROUTE_HELPER"
+require_text '/opt/nginx-conf.d' "$PUBLIC_ROUTE_HELPER"
+require_text 'bytedepth-production-green-public-nginx.service' "$PUBLIC_ROUTE_HELPER"
+require_text 'staging-edge-certificate.conf' "$PUBLIC_ROUTE_HELPER"
+require_text 'staging-legacy-production-entry.conf' "$PUBLIC_ROUTE_HELPER"
 
 for forbidden in '3306' '6379' '7700' '8080' '80' '443'; do
     if rg -n "^[[:space:]]*(BYTEDEPTH_PRODUCTION_GREEN_[A-Z_]+|[a-z_]+_port)=?$forbidden$" "$CONFIG_EXAMPLE" >/dev/null; then

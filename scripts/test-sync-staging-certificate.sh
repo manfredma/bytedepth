@@ -9,6 +9,7 @@ readonly STAGING_SCRIPT="$ROOT/deploy/provision-staging-certificate.sh"
 readonly EDGE_CONFIG="$ROOT/deploy/nginx/staging-edge-certificate.conf"
 readonly LEGACY_EDGE_CONFIG="$ROOT/deploy/nginx/staging-legacy-production-entry.conf"
 readonly DATA_SYNC_SCRIPT="$ROOT/deploy/sync-prod-to-staging.sh"
+readonly PUBLIC_ROUTE_HELPER="$ROOT/deploy/lib/production-staging-edge.sh"
 
 [[ -x "$SCRIPT" ]] || { printf 'Expected executable staging certificate sync script.\n' >&2; exit 1; }
 [[ -x "$LEGACY_SCRIPT" ]] || { printf 'Expected executable legacy staging certificate provisioning script.\n' >&2; exit 1; }
@@ -16,6 +17,7 @@ readonly DATA_SYNC_SCRIPT="$ROOT/deploy/sync-prod-to-staging.sh"
 [[ -f "$EDGE_CONFIG" ]] || { printf 'Expected production edge certificate route.\n' >&2; exit 1; }
 [[ -f "$LEGACY_EDGE_CONFIG" ]] || { printf 'Expected legacy production-entry route.\n' >&2; exit 1; }
 [[ -f "$DATA_SYNC_SCRIPT" ]] || { printf 'Expected production-to-staging sync script.\n' >&2; exit 1; }
+[[ -f "$PUBLIC_ROUTE_HELPER" ]] || { printf 'Expected shared public ingress helper.\n' >&2; exit 1; }
 
 for contract in \
     'SYNC_SSH_KEY' \
@@ -39,8 +41,7 @@ for contract in \
     'openssl pkey' \
     'sha256sum' \
     'subjectAltName' \
-    'nginx -t' \
-    'systemctl reload nginx.service'; do
+    'production_install_staging_edge_routes'; do
     rg -F -- "$contract" "$SCRIPT" "$EDGE_CONFIG" "$LEGACY_EDGE_CONFIG" >/dev/null || {
         printf 'Missing staging certificate sync contract: %s\n' "$contract" >&2
         exit 1
@@ -74,14 +75,26 @@ for contract in \
     'staging-bytedepth.bytedepth.cn' \
     'certbot certonly' \
     '--standalone' \
-    'EDGE_CONFIG_SOURCE' \
+    'SOURCE_ROOT/deploy/nginx' \
     'install -o ubuntu -g ubuntu -m 0644' \
     'https://bytedepth.cn' \
     'checkend 2592000' \
     'openssl pkey' \
-    'subjectAltName'; do
-    rg -F -- "$contract" "$LEGACY_SCRIPT" "$EDGE_CONFIG" "$LEGACY_EDGE_CONFIG" >/dev/null || {
+    'subjectAltName' \
+    'production_install_staging_edge_routes'; do
+    rg -F -- "$contract" "$LEGACY_SCRIPT" "$EDGE_CONFIG" "$LEGACY_EDGE_CONFIG" "$PUBLIC_ROUTE_HELPER" >/dev/null || {
         printf 'Missing legacy staging certificate contract: %s\n' "$contract" >&2
+        exit 1
+    }
+done
+
+for contract in \
+    'production_install_staging_edge_routes()' \
+    '/etc/nginx/conf.d' \
+    '/opt/nginx-conf.d' \
+    'bytedepth-production-green-public-nginx.service'; do
+    rg -F -- "$contract" "$PUBLIC_ROUTE_HELPER" >/dev/null || {
+        printf 'Missing public ingress route contract: %s\n' "$contract" >&2
         exit 1
     }
 done

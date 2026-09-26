@@ -9,13 +9,16 @@ if [[ "${EUID}" -ne 0 ]]; then
 fi
 
 readonly SYNC_CONF=/etc/bytedepth-sync.conf
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+readonly SOURCE_ROOT
 readonly CERT_NAME=staging-bytedepth.bytedepth.cn
 readonly CERT_DIR="/etc/letsencrypt/live/$CERT_NAME"
 readonly LEGACY_CERT_NAME=staging.bytedepth.cn
 readonly LEGACY_CERT_DIR="/etc/letsencrypt/live/$LEGACY_CERT_NAME"
-readonly EDGE_CONFIG=/opt/nginx-conf.d/staging-bytedepth.conf
-readonly LEGACY_EDGE_CONFIG=/opt/nginx-conf.d/staging-legacy-production-entry.conf
 readonly SSH_KNOWN_HOSTS=/root/.ssh/known_hosts
+
+# shellcheck disable=SC1090,SC1091
+source "$SOURCE_ROOT/deploy/lib/production-staging-edge.sh"
 
 if [[ ! -r "$SYNC_CONF" ]]; then
     printf 'Missing %s.\n' "$SYNC_CONF" >&2
@@ -143,17 +146,8 @@ restore_certificate() {
 atomic_replace_file "$TEMP_DIR/fullchain.pem" "$FULLCHAIN_TARGET" 0644
 atomic_replace_file "$TEMP_DIR/privkey.pem" "$PRIVKEY_TARGET" 0600
 
-# Keep both production edge routes versioned: the new hostname is certificate-only,
-# while the legacy hostname redirects to production.
-install -o ubuntu -g ubuntu -m 0644 "$(dirname "$0")/nginx/staging-edge-certificate.conf" "$EDGE_CONFIG"
-install -o ubuntu -g ubuntu -m 0644 "$(dirname "$0")/nginx/staging-legacy-production-entry.conf" "$LEGACY_EDGE_CONFIG"
-if ! nginx -t; then
+if ! production_install_staging_edge_routes "$SOURCE_ROOT"; then
     restore_certificate
-    exit 1
-fi
-if ! systemctl reload nginx.service; then
-    restore_certificate
-    systemctl reload nginx.service || true
     exit 1
 fi
 printf 'Synchronized %s certificate to the production edge.\n' "$CERT_NAME"
