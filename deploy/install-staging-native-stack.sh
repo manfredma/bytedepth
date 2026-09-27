@@ -58,6 +58,39 @@ ensure_service_group_write_access() {
     chmod -R g+rwX "$path"
 }
 
+retire_legacy_web_deployment_socket() {
+    if systemctl is-active --quiet bytedepth-deploy-job.service; then
+        printf 'Refusing: a legacy web deployment task is still running.\n' >&2
+        return 1
+    fi
+    systemctl disable --now bytedepth-deploy.socket >/dev/null 2>&1 || true
+    rm -f /etc/systemd/system/bytedepth-deploy.socket \
+        /etc/systemd/system/bytedepth-deploy@.service \
+        /usr/local/lib/bytedepth-deploy/bytedepth-deploy-socket \
+        /usr/local/lib/bytedepth-deploy/bytedepth-deploy-job \
+        /run/bytedepth-deploy/deploy.sock
+}
+
+retire_legacy_shared_images_nfs() {
+    if [[ -f /etc/exports.d/bytedepth-images.exports ]]; then
+        command -v exportfs >/dev/null || {
+            printf 'Refusing: exportfs is required to remove the retired bytedepth image export.\n' >&2
+            return 1
+        }
+        rm -f /etc/exports.d/bytedepth-images.exports
+        exportfs -ra
+    fi
+    systemctl disable --now bytedepth-images.mount >/dev/null 2>&1 || true
+    if mountpoint -q /mnt/bytedepth-images; then
+        umount /mnt/bytedepth-images
+    fi
+    rm -f /etc/systemd/system/bytedepth-images.mount
+    rmdir /mnt/bytedepth-images 2>/dev/null || true
+}
+
+retire_legacy_web_deployment_socket
+retire_legacy_shared_images_nfs
+
 install -d -o ubuntu -g ubuntu -m 0775 "$native_root" "$native_root/mysql" "$native_root/redis" "$native_root/meilisearch" "$native_root/images" "$native_root/edge"
 install -d -o ubuntu -g ubuntu -m 0700 "$native_root/images-test"
 chown ubuntu:mysql "$native_root/mysql"

@@ -33,6 +33,10 @@ rg -q 'install -d -o ubuntu -g ubuntu -m 0755 /var/www/certbot' "$INSTALLER"
 rg -q 'PUBLIC_NGINX_CONF=/etc/nginx/conf\.d/bytedepth-staging\.conf' "$INSTALLER"
 rg -q 'nginx -t' "$INSTALLER"
 rg -q 'systemctl is-active --quiet nginx\.service' "$INSTALLER"
+rg -q 'retire_legacy_web_deployment_socket' "$INSTALLER"
+rg -q 'retire_legacy_shared_images_nfs' "$INSTALLER"
+rg -q 'systemctl is-active --quiet bytedepth-deploy-job\.service' "$INSTALLER"
+rg -q 'exportfs -ra' "$INSTALLER"
 if rg -n 'systemctl (enable|restart).*nginx\.service|PUBLIC_NGINX_UNIT|nginx\.service\.d' \
     "$INSTALLER" >/dev/null; then
     printf 'Native staging must not take over or restart the shared nginx service.\n' >&2
