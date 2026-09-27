@@ -72,4 +72,3 @@ bytedepth 是 Thymeleaf SSR 应用，所有 Controller 返回视图名或重定�
 - `blog:post:manage` — 管理所有文章（含他人）
 - `blog:series:manage` — 管理专栏
 - `ops:monitor:view` — 查看运维监控
-- `ops:deploy:execute` — 执行部署

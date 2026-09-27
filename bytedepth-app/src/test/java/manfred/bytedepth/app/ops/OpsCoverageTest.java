@@ -21,11 +21,10 @@ class OpsCoverageTest {
         assertNull(new OpsMeiliSearchStatusDTO(true, true).error());
         assertEquals("MeiliSearch health check failed", new OpsMeiliSearchStatusDTO(true, false).error());
         assertFalse(OpsMeiliSearchStatusDTO.unavailable().healthAvailable());
-        assertEquals("UNAVAILABLE", OpsDeploymentStatusDTO.unavailable().state());
     }
 
     @Test
-    void tableWhitelistAndStatusQuery_delegateOnlyApprovedOperations() {
+    void tableWhitelistAndQuery_delegateOnlyApprovedOperations() {
         assertEquals("post", OpsTable.fromName("post").tableName());
         assertEquals(List.of("id", "post_id", "author_id", "content", "created_at"), OpsTable.COMMENT.columns());
         assertThrows(IllegalArgumentException.class, () -> OpsTable.fromName("missing"));
@@ -35,10 +34,6 @@ class OpsCoverageTest {
         when(data.list(OpsTable.POST)).thenReturn(expected);
         assertSame(expected, new OpsTableQryExe(data).execute("post"));
 
-        OpsDeploymentPort deployment = mock(OpsDeploymentPort.class);
-        OpsDeploymentStatusDTO status = OpsDeploymentStatusDTO.unavailable();
-        when(deployment.status()).thenReturn(status);
-        assertSame(status, new OpsDeploymentStatusQryExe(deployment).execute());
     }
 
     @Test

@@ -12,7 +12,6 @@ readonly -a SERVER_SCRIPTS=(
     "$DEPLOY_DIR/provision-staging-test-slot.sh"
     "$DEPLOY_DIR/run-staging-integration-tests.sh"
     "$DEPLOY_DIR/run-staging-e2e-tests.sh"
-    "$DEPLOY_DIR/setup-shared-images-nfs.sh"
     "$DEPLOY_DIR/sync-prod-to-staging.sh"
     "$DEPLOY_DIR/sync-staging-certificate-to-production.sh"
 )

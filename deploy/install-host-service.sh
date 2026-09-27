@@ -48,6 +48,19 @@ ensure_project_tree_ownership() {
     ensure_service_group_write_access /data/meilisearch
 }
 
+retire_legacy_web_deployment_socket() {
+    if systemctl is-active --quiet bytedepth-deploy-job.service; then
+        printf 'Refusing: a legacy web deployment task is still running.\n' >&2
+        return 1
+    fi
+    systemctl disable --now bytedepth-deploy.socket >/dev/null 2>&1 || true
+    rm -f /etc/systemd/system/bytedepth-deploy.socket \
+        /etc/systemd/system/bytedepth-deploy@.service \
+        "$TARGET_ROOT/bytedepth-deploy-socket" \
+        "$TARGET_ROOT/bytedepth-deploy-job" \
+        /run/bytedepth-deploy/deploy.sock
+}
+
 if [[ "${EUID}" -ne 0 ]]; then
     printf 'Run this script with sudo: sudo ./deploy/install-host-service.sh\n' >&2
     exit 1
@@ -55,6 +68,7 @@ fi
 
 ensure_service_account bytedepth bytedepth
 ensure_service_account meilisearch meilisearch
+retire_legacy_web_deployment_socket
 install -d -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" -m 0755 \
     "$TARGET_ROOT" /var/lib/bytedepth-deploy /var/lib/bytedepth-staging/test-slots \
     /opt/bytedepth /opt/bytedepth/releases /etc/bytedepth /etc/bytedepth/secrets \
@@ -68,10 +82,6 @@ ensure_project_tree_ownership
 for unit in bytedepth-app.service bytedepth-test-slot.service mysql.service redis.service meilisearch.service nginx.service; do
     install -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" -m 0644 "$SOURCE_ROOT/deploy/systemd/$unit" "/etc/systemd/system/$unit"
 done
-install -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" -m 0755 "$SOURCE_ROOT/deploy/bin/bytedepth-deploy-socket" "$TARGET_ROOT/bytedepth-deploy-socket"
-install -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" -m 0755 "$SOURCE_ROOT/deploy/bin/bytedepth-deploy-job" "$TARGET_ROOT/bytedepth-deploy-job"
-install -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" -m 0644 "$SOURCE_ROOT/deploy/systemd/bytedepth-deploy.socket" /etc/systemd/system/bytedepth-deploy.socket
-install -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" -m 0644 "$SOURCE_ROOT/deploy/systemd/bytedepth-deploy@.service" /etc/systemd/system/bytedepth-deploy@.service
 if [[ ! -f "$CONFIG_FILE" ]]; then
     printf 'BYTEDEPTH_DEPLOY_MODE=single-host\n' > "$CONFIG_FILE"
     chmod 0600 "$CONFIG_FILE"
@@ -80,4 +90,3 @@ chown "$DEPLOY_USER:$DEPLOY_GROUP" "$CONFIG_FILE"
 
 systemctl daemon-reload
 systemctl enable mysql.service redis.service meilisearch.service bytedepth-app.service nginx.service
-systemctl enable --now bytedepth-deploy.socket

@@ -102,7 +102,7 @@ BYTEDEPTH_STAGING_EVIDENCE_DIR="$evidence_dir" bash scripts/prepare-release.sh 1
 
 staging 回滚非无风险：候选 ref 已执行 Flyway 后，直接部署旧 ref 可能不兼容当前 schema。正确回滚：停止 app → 重新灌入生产基线 → 部署目标 ref → Flyway → 验证。
 
-网页运维页只可展示或请求经过验证的发布版本；它不能把任意 ref、分支或命令交给宿主机。staging 部署只走 SSH 脚本，不使用网页运维部署按钮。
+网页运维页为只读页面，不发起 staging 或生产部署。staging 与生产部署只走本机受控 SSH 脚本。
 
 一次生产发布只能部署一个**新的** Tag 到 175 一次；禁止重复部署已成功记录的 Tag，或把旧 Tag 当作新的生产发布。验收前该 Tag 状态为“待验收”，不能作为回滚基线。
 

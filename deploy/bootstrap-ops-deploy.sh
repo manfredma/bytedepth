@@ -27,7 +27,7 @@ export BYTEDEPTH_COMMIT_ID
 BYTEDEPTH_BUILT_AT="$(date -u +%FT%TZ)"
 export BYTEDEPTH_BUILT_AT
 
-# 安装宿主机服务、数据目录和部署 Socket。应用 JAR 由外部构建机提供，
+# 安装宿主机服务和数据目录。应用 JAR 由外部构建机提供，
 # 本脚本不构建 Maven 项目，也不启动任何容器。
 ./deploy/install-host-service.sh
 systemctl start mysql.service redis.service meilisearch.service

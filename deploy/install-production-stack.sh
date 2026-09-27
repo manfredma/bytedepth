@@ -118,8 +118,22 @@ ensure_native_dependencies() {
     done
 }
 
+retire_legacy_web_deployment_socket() {
+    if systemctl is-active --quiet bytedepth-deploy-job.service; then
+        printf 'Refusing: a legacy web deployment task is still running.\n' >&2
+        return 1
+    fi
+    systemctl disable --now bytedepth-deploy.socket >/dev/null 2>&1 || true
+    rm -f /etc/systemd/system/bytedepth-deploy.socket \
+        /etc/systemd/system/bytedepth-deploy@.service \
+        /usr/local/lib/bytedepth-deploy/bytedepth-deploy-socket \
+        /usr/local/lib/bytedepth-deploy/bytedepth-deploy-job \
+        /run/bytedepth-deploy/deploy.sock
+}
+
 ensure_java_25
 ensure_native_dependencies
+retire_legacy_web_deployment_socket
 
 [[ -r "$ENV_FILE" ]] || {
     printf 'Refusing: %s must be prepared before installing production services.\n' "$ENV_FILE" >&2

@@ -6,8 +6,6 @@
 
 它不是通用数据库或缓存管理工具：不支持任意 SQL、任意 Redis 命令、键值查询、服务控制或服务重启。systemd 服务、日志以及主机 CPU、内存、磁盘和网络应由专用主机监控工具处理。
 
-## 网页受控部署
+## 发布入口
 
-“部署发布版本”需要同时拥有 `ops:monitor:view` 和 `ops:deploy:execute`；后者默认授予 `ADMIN`。按钮只接受稳定 SemVer Tag，向本机受控 Unix Socket 发送 `deploy-tag vX.Y.Z` 请求。宿主机验证 annotated Tag、POM 版本一致性与本节点未部署记录后，才调用受限的完整部署流程；不能传入分支、路径或 Shell 命令。
-
-网页按钮只向部署 Socket 发送受限的稳定 Tag 请求，不能执行任意宿主机命令。按钮只更新**当前节点**；多机发布、初始化、日志、验收与回滚必须严格使用唯一的 [部署手册](../../deploy/README.md)。
+后台运维页只读展示应用与依赖服务状态、提供白名单数据查询。生产发布只使用本地受控入口 `deploy/deploy-production-remote.sh`，按 [部署手册](../../deploy/README.md) 校验 Tag、制品、SHA、部署状态和发布结果；应用进程不持有宿主机部署权限。

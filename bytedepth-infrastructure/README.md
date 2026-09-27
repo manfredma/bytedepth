@@ -9,4 +9,4 @@
 - Redis 数据访问（统计、限流、阅读进度）
 - MeiliSearch 搜索索引
 - 安全认证适配（remember-me token）
-- 运维监控适配（MySQL、Redis、搜索引擎、部署）
+- 运维只读监控适配（MySQL、Redis、搜索引擎）

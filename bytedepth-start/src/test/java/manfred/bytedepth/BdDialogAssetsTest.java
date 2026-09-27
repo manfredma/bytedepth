@@ -43,8 +43,7 @@ class BdDialogAssetsTest {
                 "/templates/admin/series/list.html",
                 "/templates/admin/series/detail.html",
                 "/templates/admin/tags/list.html",
-                "/templates/admin/users/list.html",
-                "/templates/admin/ops/dashboard.html"
+                "/templates/admin/users/list.html"
         );
 
         for (String template : templates) {
@@ -64,8 +63,6 @@ class BdDialogAssetsTest {
                 .contains("data-bd-confirm")
                 .contains("data-bd-confirm-title=\"删除评论\"")
                 .contains("data-bd-confirm-tone=\"danger\"");
-        assertThat(classpathText("/templates/admin/ops/dashboard.html"))
-                .contains("window.BytedepthDialog.confirm");
     }
 
     private String classpathText(String path) throws IOException {

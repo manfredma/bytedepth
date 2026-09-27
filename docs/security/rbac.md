@@ -23,5 +23,5 @@ bytedepth 使用动态 RBAC：角色与权限在数据库中维护，新增权�
 
 - 新增后台能力时，先在 `permission` 表插入权限项并绑定 `ADMIN`，再在 Controller 方法上加 `@PreAuthorize`；不要只靠 URL 规则或页面隐藏来控制授权。
 - 所有权校验由 `ContentOwnershipGuard` 在 Web 侧保证，不能仅用页面隐藏代替；详见 [统一语言](../architecture/ubiquitous-language.md) 的所有权条目。
-- 运维页面与受控部署的权限边界见 [运维页面说明](ops.md)。
+- 运维页面只读监控与数据查询权限见 [运维页面说明](ops.md)；发布由应用外的受控流程执行。
 - 会话与记住我实现见 [会话与认证](authentication.md)。
