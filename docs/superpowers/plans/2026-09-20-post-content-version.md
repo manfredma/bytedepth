@@ -113,6 +113,6 @@
 - [ ] **Step 1: In the new worktree run `npm ci --ignore-scripts --no-audit --no-fund` before any frontend test/lint.**
 - [ ] **Step 2: Run `bash scripts/run-local-quality.sh`; stop on any failure or `WARNING`.**
 - [ ] **Step 3: Run `bash scripts/verify-changed-coverage.sh`; require 100% changed Java coverage.**
-- [ ] **Step 4: Push `feat/post-content-version`, deploy that ref with `./deploy/deploy-staging.sh feat/post-content-version`, and ensure the full compose stack is rebuilt.**
+- [ ] **Step 4: Push `feat/post-content-version`, deploy that ref with `./deploy/deploy-staging.sh feat/post-content-version`, and restart and verify the native staging services.**
 - [ ] **Step 5: Run staging integration and E2E runners against `https://staging-bytedepth.bytedepth.cn/`; verify both result files have the exact deployed SHA, `result=passed`, and no `WARNING`.**
 - [ ] **Step 6: Record the staging acceptance result and report the exact SHA and test counts; do not merge or create a production tag in this task unless the owner explicitly starts the release flow.**

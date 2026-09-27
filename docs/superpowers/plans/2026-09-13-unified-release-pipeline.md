@@ -63,7 +63,7 @@
 - Create: `scripts/test-verify-production-release.sh`
 - Modify: `deploy/README.md`, `docs/releases/README.md`, `scripts/check-staging-checklist.sh`
 
-- [ ] Write a static test requiring the verifier to accept one stable tag, reject other refs, use the real SNI domain, inspect recorded tag/SHA, call `deploy/ctl.sh` rather than bare Compose, and exercise the documented latest/hot/pagination, post, legacy redirect, column, search, project and image read-only queries.
+- [ ] Write a static test requiring the verifier to accept one stable tag, reject other refs, use the real SNI domain, inspect recorded tag/SHA, call `deploy-production-remote.sh` rather than a host-internal entrypoint, and exercise the documented latest/hot/pagination, post, legacy redirect, column, search, project and image read-only queries.
 - [ ] Rename the deploy script and update every repository reference; it must retain annotated-tag, version/POM and duplicate-deployment rejection.
 - [ ] Implement `verify-production-release.sh <tag>` so it derives existing post/column/image paths from the live site, rejects non-200 responses and scans relevant service logs for WARNING/errors without printing secrets.
 - [ ] Add the verifier test to the checklist; run shell tests and `git diff --check`.

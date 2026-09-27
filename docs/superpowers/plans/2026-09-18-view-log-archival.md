@@ -491,7 +491,7 @@ git commit -m "feat: maintain view log tablespaces"
 - Modify: `docs/releases/CHANGELOG.md`
 - Modify: `docs/engineering/view-log-and-analytics.md`
 - Modify: `docs/architecture/database-schema.md`
-- Modify: `deploy/README.md` to state that archival and tablespace jobs run inside the application after the normal full-compose deployment; no host cron or second scheduler is required.
+- Modify: `deploy/README.md` to state that archival and tablespace jobs run inside the application after the normal native service deployment; no host cron or second scheduler is required.
 - Create: `scripts/test-view-log-archive.sh`, using the existing `scripts/test-*.sh` convention.
 
 - [ ] **Step 1: Add a categorized non-empty Unreleased entry before staging.** Use `### Changed` and state that raw access details are retained for seven days while historical hourly PV and daily country aggregates remain available; include migration and rollback compatibility notes.
