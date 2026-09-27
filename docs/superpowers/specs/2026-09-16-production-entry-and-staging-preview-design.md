@@ -25,7 +25,7 @@
 6. 部署成功后调用远端 `scripts/verify-production-release.sh <tag>`；
 7. 本地命令中断后允许重新运行状态查询，不自动重复启动同一 Tag。
 
-现有主机内部脚本增加明确的 host-only 错误提示，并继续保留 root、annotated Tag、版本匹配、重复部署和完整 Compose 等护栏。
+现有主机内部脚本增加明确的 host-only 错误提示，并继续保留 root、annotated Tag、版本匹配、重复部署和native 服务健康等护栏。
 
 ### 2. staging 独立域名
 

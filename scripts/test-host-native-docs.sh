@@ -32,6 +32,12 @@ require_text 'staging-it' "$ROOT/docs/agent-guides/maven.md"
 require_text 'staging-e2e' "$ROOT/docs/agent-guides/maven.md"
 require_text '状态不确定' "$ROOT/docs/engineering/gotchas.md"
 
+if rg -n -i 'docker|compose|testcontainers|production[-_]green|production[-_]blue|红绿部署|蓝环境|绿环境' \
+    "$ROOT/docs" --glob '*.md' --glob '!**/CHANGELOG.md' >/dev/null; then
+    printf 'Active knowledge base retains removed container-runtime or cutover guidance.\n' >&2
+    exit 1
+fi
+
 if rg -n -i 'docker compose|docker-compose|docker restart|docker run|compose up|ctl\.sh|Dockerfile|Testcontainers' \
     "$DEPLOY_GUIDE" "$ROOT/docs/agent-guides/maven.md" "$ROOT/docs/engineering/gotchas.md" >/dev/null; then
     printf 'Normal deployment documentation still instructs the removed Docker runtime.\n' >&2
