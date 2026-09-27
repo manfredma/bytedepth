@@ -21,6 +21,7 @@ ExecStartPre=/bin/sh -c 'test "$(/usr/bin/sha256sum "$BYTEDEPTH_TEST_SLOT_JAR" |
 ExecStart=/usr/bin/java -jar ${BYTEDEPTH_TEST_SLOT_JAR}
 Restart=on-failure
 RestartSec=3s
+SuccessExitStatus=143
 PrivateTmp=true
 NoNewPrivileges=true
 ProtectSystem=strict

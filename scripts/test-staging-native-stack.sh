@@ -77,6 +77,7 @@ rg -q '^ExecReload=/bin/kill -HUP \$MAINPID$' "$UNIT_DIR/bytedepth-staging-nativ
 rg -q '^ExecStop=/bin/kill -QUIT \$MAINPID$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 rg -q 'nginx.pid' "$INSTALLER"
 rg -q '^MemoryMax=64M$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
+rg -q '^SuccessExitStatus=143$' "$UNIT_DIR/bytedepth-staging-native-test-slot.service.in"
 rg -q '^PIDFile=__NATIVE_ROOT__/edge/nginx.pid$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 rg -q '^ExecReload=/bin/kill -HUP \$MAINPID$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 rg -q '^ExecStop=/bin/kill -QUIT \$MAINPID$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"

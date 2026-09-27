@@ -53,6 +53,7 @@
 - staging 集成测试 runner 不使用固定的宿主机 `MemAvailable` 启动门槛；Surefire 在 staging profile 跳过，Failsafe fork 最大堆固定为 512 MiB，Spring Test context cache 限为 16。
 - native staging 中间件必须有 systemd `MemoryMax`：MySQL 512M、Redis 128M、Meilisearch 384M、edge 64M；Redis 同时固定 `maxmemory 64mb` 与 `noeviction`，防止中间件在 2 GiB 宿主机上无限争抢内存。上限是保护阈值，不代表会预留对应内存。中间件重启后必须等待实际端口就绪，不能只检查 systemd active。
 - 各环境的 native 安装入口是独立执行路径；每个入口都必须负责退役旧网页部署 socket、job/unit 和历史 bytedepth NFS export/mount，不能假定另一环境或通用主机安装器已运行。`scripts/test-staging-native-stack.sh` 与 staging checklist 固定此约束。
+- staging E2E test-slot 由 runner 主动停止，JVM 收到 SIGTERM 后以 143 退出是正常清理；unit 必须将 143 配置为成功退出码，避免通过的 E2E 留下 failed systemd 状态。
 - 原生 staging 部署不能因缺少 `/etc/bytedepth/staging-native.conf`、`staging-native.env` 或 Meilisearch 环境文件而静默回退到另一运行模式；运行模式必须在任何服务启动、重启或数据库备份前 fail-fast。2026-09-25 的事故已证明，未受限的旧 MySQL 在约 3.6 GiB 主机上增长到约 3.3 GiB 会触发全局 OOM，使 SSH banner、HTTP 和 systemd 同时失去响应。`ubuntu` 所有者策略还必须同时保证服务组对数据文件的写权限，不能只修正 owner/group 而留下 `640` 等不可写模式。
 - native MySQL 的数据目录必须使用与初始化时一致的 `lower_case_table_names=1`，并由 systemd 创建 `/run/mysqld` 运行目录；不能只依赖初始化命令或发行版默认 unit，否则重启可能因字典大小写模式不一致或运行目录权限失败。MySQL unit 的关键参数由 `test-host-native-runtime.sh` 固定检查。
 - native Meilisearch 必须由 systemd 显式设置 `WorkingDirectory=/data/meilisearch`；其配置或运行时相对路径不能依赖 systemd 默认工作目录，否则快照导入后重启可能把 `config.toml`、`dumps` 等文件写到不可写目录而启动失败。

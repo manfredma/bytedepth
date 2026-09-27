@@ -13,6 +13,7 @@
 
 - staging checklist 纳入此前未执行的生产运行时、测试槽资源隔离、计时证据、日志归档与 checklist 自身契约检查。
 - 将当前 native staging 主机统一为 129.211.6.82；发布默认目标、证书来源和运维文档同步更新，124 明确标记为旧环境。
+- staging 安装入口统一退役旧网页部署 socket 与历史 bytedepth NFS 资源；E2E test-slot 将预期 SIGTERM 退出识别为正常结束，避免成功验证后留下 failed systemd 状态。
 
 ### Removed
 
