@@ -76,7 +76,7 @@ staging_e2e_password="$(security find-generic-password -a admin -s bytedepth-sta
 unset staging_e2e_username staging_e2e_password
 ```
 
-staging runner 必须使用显式注入的凭据与共享运行时，按 `run_id` 隔离资源；测试结果、清理状态和完整 commit SHA 分别写入 integration/E2E evidence。测试主机恢复原运行服务后，检查公开 `/version`、关键页面和日志。当前部署清理变更不等待项目所有者做功能验收；部署验证正常后可继续生产发布。
+staging runner 必须使用显式注入的凭据与共享运行时，按 `run_id` 隔离资源；测试结果、清理状态和完整 commit SHA 分别写入 integration/E2E evidence。测试主机恢复原运行服务后，检查公开 `/version`、关键页面和日志。staging 集成/E2E 与界面功能由项目所有者在 staging 验收；验收通过后才合并候选并进入生产发布。
 
 本机只运行断网、无外部进程的单元测试和静态门禁；集成与 E2E 证据只能来自 staging。staging Maven 仓库唯一位置为宿主机 `/opt/shared-maven/repository`，bootstrap 在全局锁内预热，runner 离线只读复用；`node_modules` 仍按项目 lockfile 安装。
 

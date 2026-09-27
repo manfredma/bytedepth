@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+## [v2.26.4] - 2026-09-27
+
+**Tag**：`v2.26.4`
+**回滚基线**：`v2.26.3`
+
 ### Changed
 
 - staging checklist 纳入此前未执行的生产运行时、测试槽资源隔离、计时证据、日志归档与 checklist 自身契约检查。
@@ -11,8 +16,8 @@
 
 ### Removed
 
-- 移除当前未接入受控发布流程的后台网页部署 socket 通道和旧双机 NFS 图片初始化脚本；native 安装器会安全退役遗留 socket、NFS export 和 mount，后台运维页只保留监控与白名单查询。
-
+- 移除后台网页部署 API、按钮和 Unix socket 部署通道，运维页保留只读监控与白名单查询；Flyway V26 删除旧部署权限及角色关联，native 安装器会退役遗留 socket。
+- 删除旧双机 NFS 图片初始化脚本；native 安装器会撤销 bytedepth 专属旧 NFS export 和 mount，但保留共享 NFS 服务。
 - 删除已无引用的旧 Nginx 部署模板，并清理 ADR 与归档方案中将容器/Compose 部署误写为现行方式的内容。
 
 ## [v2.26.3] - 2026-09-27
