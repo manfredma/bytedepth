@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在 175 上执行：从 124 拉取 staging 域名证书，只在生产边缘提供 TLS 握手，
+# 在 175 上执行：从 129 拉取 staging 域名证书，只在生产边缘提供 TLS 握手，
 # 不代理 staging 内容。用于证书监控同时探测两台机器的场景。
 set -Eeuo pipefail
 

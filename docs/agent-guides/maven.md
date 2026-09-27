@@ -32,7 +32,7 @@ bash scripts/verify-changed-coverage.sh
 
 ## 测试环境边界
 
-本机只运行断网、无外部进程仍可执行的单元测试和静态检查；内存数据库、内存实现与进程内 mock/fake（包括进程内 Redis 实现）都属于单元测试。连接任何独立进程（包括 Redis、MySQL、Flyway、Nginx）的测试属于集成测试，必须在 staging（124）执行；E2E 也必须在 staging 执行。将 `E2E_BASE_URL` 指向 staging 但仍在本机启动浏览器，不属于 staging E2E 验收。本机临时启动 Redis 或其他服务只能用于开发期诊断，不能替代 staging 集成验收。
+本机只运行断网、无外部进程仍可执行的单元测试和静态检查；内存数据库、内存实现与进程内 mock/fake（包括进程内 Redis 实现）都属于单元测试。连接任何独立进程（包括 Redis、MySQL、Flyway、Nginx）的测试属于集成测试，必须在 staging（129.211.6.82）执行；E2E 也必须在 staging 执行。将 `E2E_BASE_URL` 指向 staging 但仍在本机启动浏览器，不属于 staging E2E 验收。本机临时启动 Redis 或其他服务只能用于开发期诊断，不能替代 staging 集成验收。
 
 离线单元测试只使用以下 Java 25 命令；它们不激活 `staging-integration`，默认 Surefire 也会排除 `**/*IT.java`：
 

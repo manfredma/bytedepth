@@ -8,7 +8,7 @@ fi
 
 SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly SOURCE_ROOT
-readonly STAGING_HOST="${BYTEDEPTH_STAGING_HOST:-124.221.143.25}"
+readonly STAGING_HOST="${BYTEDEPTH_STAGING_HOST:-129.211.6.82}"
 readonly STAGING_USER=ubuntu
 readonly STAGING_SSH_KEY="${BYTEDEPTH_SSH_KEY:-${HOME}/.ssh/ubuntu_2.pem}"
 readonly STATE_DIR=/var/lib/bytedepth-staging

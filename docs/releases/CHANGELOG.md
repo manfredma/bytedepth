@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Changed
+
+- 将当前 native staging 主机统一为 129.211.6.82；发布默认目标、证书来源和运维文档同步更新，124 明确标记为旧环境。
+
 ### Removed
 
 - 删除已无引用的旧 Nginx 部署模板，并清理 ADR 与归档方案中将容器/Compose 部署误写为现行方式的内容。

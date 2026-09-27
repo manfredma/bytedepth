@@ -7,6 +7,7 @@ readonly SCRIPT="$ROOT/deploy/deploy-staging.sh"
 
 [[ -x "$SCRIPT" ]] || { printf 'Expected executable staging deployment script.\n' >&2; exit 1; }
 for contract in \
+    'readonly STAGING_HOST="${BYTEDEPTH_STAGING_HOST:-129.211.6.82}"' \
     'deployment-test.lock' \
     'staging-integration' \
     'staging-e2e' \
