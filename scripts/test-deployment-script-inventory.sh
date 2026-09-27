@@ -30,6 +30,9 @@ fi
 for installer in "$ROOT/deploy/install-host-service.sh" "$ROOT/deploy/install-production-stack.sh"; do
     rg -Fq 'systemctl disable --now bytedepth-deploy.socket' "$installer"
     rg -Fq '/run/bytedepth-deploy/deploy.sock' "$installer"
+    rg -Fq 'retire_legacy_shared_images_nfs()' "$installer"
+    rg -Fq 'exportfs -ra' "$installer"
+    rg -Fq 'umount /mnt/bytedepth-images' "$installer"
 done
 
 rg -Fq '网页运维页为只读页面，不发起 staging 或生产部署。' "$ROOT/docs/releases/README.md"

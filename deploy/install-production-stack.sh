@@ -131,9 +131,27 @@ retire_legacy_web_deployment_socket() {
         /run/bytedepth-deploy/deploy.sock
 }
 
+retire_legacy_shared_images_nfs() {
+    if [[ -f /etc/exports.d/bytedepth-images.exports ]]; then
+        command -v exportfs >/dev/null || {
+            printf 'Refusing: exportfs is required to remove the retired bytedepth image export.\n' >&2
+            return 1
+        }
+        rm -f /etc/exports.d/bytedepth-images.exports
+        exportfs -ra
+    fi
+    systemctl disable --now bytedepth-images.mount >/dev/null 2>&1 || true
+    if mountpoint -q /mnt/bytedepth-images; then
+        umount /mnt/bytedepth-images
+    fi
+    rm -f /etc/systemd/system/bytedepth-images.mount
+    rmdir /mnt/bytedepth-images 2>/dev/null || true
+}
+
 ensure_java_25
 ensure_native_dependencies
 retire_legacy_web_deployment_socket
+retire_legacy_shared_images_nfs
 
 [[ -r "$ENV_FILE" ]] || {
     printf 'Refusing: %s must be prepared before installing production services.\n' "$ENV_FILE" >&2

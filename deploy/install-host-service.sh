@@ -61,6 +61,23 @@ retire_legacy_web_deployment_socket() {
         /run/bytedepth-deploy/deploy.sock
 }
 
+retire_legacy_shared_images_nfs() {
+    if [[ -f /etc/exports.d/bytedepth-images.exports ]]; then
+        command -v exportfs >/dev/null || {
+            printf 'Refusing: exportfs is required to remove the retired bytedepth image export.\n' >&2
+            return 1
+        }
+        rm -f /etc/exports.d/bytedepth-images.exports
+        exportfs -ra
+    fi
+    systemctl disable --now bytedepth-images.mount >/dev/null 2>&1 || true
+    if mountpoint -q /mnt/bytedepth-images; then
+        umount /mnt/bytedepth-images
+    fi
+    rm -f /etc/systemd/system/bytedepth-images.mount
+    rmdir /mnt/bytedepth-images 2>/dev/null || true
+}
+
 if [[ "${EUID}" -ne 0 ]]; then
     printf 'Run this script with sudo: sudo ./deploy/install-host-service.sh\n' >&2
     exit 1
@@ -69,6 +86,7 @@ fi
 ensure_service_account bytedepth bytedepth
 ensure_service_account meilisearch meilisearch
 retire_legacy_web_deployment_socket
+retire_legacy_shared_images_nfs
 install -d -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" -m 0755 \
     "$TARGET_ROOT" /var/lib/bytedepth-deploy /var/lib/bytedepth-staging/test-slots \
     /opt/bytedepth /opt/bytedepth/releases /etc/bytedepth /etc/bytedepth/secrets \
