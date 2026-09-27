@@ -202,7 +202,7 @@ Run:
 
 ```bash
 git push -u origin feat/rss-navigation
-ssh -i ~/.ssh/ubuntu_2.pem ubuntu@124.221.143.25 "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh feat/rss-navigation"
+ssh -i ~/.ssh/ubuntu_2.pem ubuntu@129.211.6.82 "cd /opt/bytedepth && sudo ./deploy/deploy-staging.sh feat/rss-navigation"
 ```
 
 Expected: staging deploys the feature ref. Then request project-owner acceptance of the desktop and narrow-screen RSS icon, automatic discovery, fresh publish, and updated published article behavior before creating a PR.

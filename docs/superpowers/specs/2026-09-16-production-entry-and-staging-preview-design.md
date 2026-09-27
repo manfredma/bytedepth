@@ -31,7 +31,7 @@
 
 staging 使用 `staging-bytedepth.bytedepth.cn`，DNS 指向 staging 主机，TLS 证书覆盖该精确域名，Nginx 仅对该 `server_name` 代理 staging 应用。未知 Host 和按 IP 访问不得命中 staging 应用。
 
-证书源在 DNS 指向的 124；若监控同时探测生产边缘 175，175 只同步同一精确 SAN 证书并配置证书-only 路由，TLS 握手后返回 `444`，不得从 175 代理 staging 内容。
+证书源在 DNS 指向的 129；若监控同时探测生产边缘 175，175 只同步同一精确 SAN 证书并配置证书-only 路由，TLS 握手后返回 `444`，不得从 175 代理 staging 内容。
 
 旧域名 `staging.bytedepth.cn` 仍解析到 175，因此在 175 单独签发并续期其精确证书；该域名沿用上一版生产入口逻辑跳转到 `https://bytedepth.cn`，不承载 staging 内容。
 

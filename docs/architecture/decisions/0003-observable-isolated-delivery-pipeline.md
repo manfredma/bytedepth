@@ -8,7 +8,7 @@
 
 当前 staging 部署、集成测试和 E2E 使用同一互斥锁，但没有统一阶段耗时记录。runner 还会重复准备依赖，既延长验收，也将测试结果绑定到一次性运行环境。现有 Git 托管仓库没有 CI 质量门禁。
 
-项目必须保留单元测试与跨进程测试的边界：只有断网、无外部进程的测试可在本机或托管 CI 运行；MySQL、Redis、Flyway、浏览器和 staging HTTP 场景只能在 staging。124/175 是运行环境，不能成为执行来自任意分支代码的通用 CI runner。
+项目必须保留单元测试与跨进程测试的边界：只有断网、无外部进程的测试可在本机或托管 CI 运行；MySQL、Redis、Flyway、浏览器和 staging HTTP 场景只能在 staging。129/175 是运行环境，不能成为执行来自任意分支代码的通用 CI runner。
 
 ## 决策
 
@@ -18,7 +18,7 @@ staging 明确拆为四个入口：受维护者显式调用的 runtime bootstrap
 
 GitHub Actions 使用托管 runner，仅运行纯单元质量门禁及脚本契约测试；不得拥有 staging、生产、SSH 或部署密钥。staging/生产仍由现有受控脚本和发布流程运行。暂不引入 Jenkins 或自托管 runner。
 
-放弃只在终端输出耗时：它无法将失败、结果和提交绑定。放弃 Jenkins：当前单仓库/单 staging 的编排复杂度不足以抵消 Controller、插件、凭据、备份和 agent 隔离成本。放弃将 GitHub runner 安装到 124/175：PR 代码不能在持有环境凭据和服务管理权限的主机上运行。
+放弃只在终端输出耗时：它无法将失败、结果和提交绑定。放弃 Jenkins：当前单仓库/单 staging 的编排复杂度不足以抵消 Controller、插件、凭据、备份和 agent 隔离成本。放弃将 GitHub runner 安装到 129/175：PR 代码不能在持有环境凭据和服务管理权限的主机上运行。
 
 ## 后果
 
@@ -46,6 +46,6 @@ GitHub Actions 使用托管 runner，仅运行纯单元质量门禁及脚本契�
 
 | 信号 | 预设行动 |
 |------|----------|
-| 多仓库、多环境或并发部署需要集中排队、审批和可视化编排 | 评估独立 Jenkins controller 与隔离 agent，禁止复用 124/175 |
+| 多仓库、多环境或并发部署需要集中排队、审批和可视化编排 | 评估独立 Jenkins controller 与隔离 agent，禁止复用 129/175 |
 | staging 集成测试 P95 仍长期超过部署耗时 | 评估专用 staging 测试节点或按服务拆分并行 runner |
 | GitHub 托管 CI 无法满足合规或网络访问限制 | 评估一次性、无生产网络访问的专用 runner |

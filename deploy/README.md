@@ -6,7 +6,7 @@
 
 | 环境 | 主机 | 内容入口 | 运行方式 |
 | --- | --- | --- | --- |
-| staging | 124 | `https://staging-bytedepth.bytedepth.cn/` | 独立 native 服务、数据目录、端口和测试资源 |
+| staging | 129.211.6.82 | `https://staging-bytedepth.bytedepth.cn/` | 独立 native 服务、数据目录、端口和测试资源 |
 | production | 175 | `https://bytedepth.cn/` | native 服务，systemd 管理应用、数据服务和公网入口 |
 
 生产 release 位于 `/opt/bytedepth/production/releases/<version>`，`current` 指向线上版本；持久数据位于 `/data/bytedepth-native-production`。发布恢复记录保存在 `/var/lib/bytedepth-production` 并由 `ubuntu` 持有。staging 数据位于 `/data/bytedepth-native-staging`，测试资源另按 `run_id` 隔离。业务数据库、账号、密钥、端口、unit、route、日志、测试资源和 evidence 不得跨项目共享。
@@ -66,7 +66,7 @@ staging_e2e_password="$(security find-generic-password -a admin -s bytedepth-sta
   printf '%s\n' "$staging_e2e_password"
 } | ssh -i "$BYTEDEPTH_SSH_KEY" \
   -o UserKnownHostsFile="$BYTEDEPTH_STAGING_SSH_KNOWN_HOSTS" \
-  -o StrictHostKeyChecking=yes ubuntu@124.221.143.25 \
+  -o StrictHostKeyChecking=yes ubuntu@129.211.6.82 \
   'IFS= read -r BYTEDEPTH_STAGING_E2E_USERNAME &&
    IFS= read -r BYTEDEPTH_STAGING_E2E_PASSWORD &&
    export BYTEDEPTH_STAGING_E2E_USERNAME BYTEDEPTH_STAGING_E2E_PASSWORD &&
