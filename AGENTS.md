@@ -2,6 +2,10 @@
 
 Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `~/w/w/`；生产为数据节点单机拓扑，staging 预发环境独立部署，唯一部署说明见 `deploy/README.md`；项目知识库入口见 `docs/README.md`。
 
+## 发布边界（当前规则）
+
+发布唯一由 release-platform 页面和 Host Agent 编排；本仓库不创建发布 Tag、不执行 staging/production 部署、不运行项目发布脚本。文档中与此相冲突的旧 Tag、SSH、Docker 或远程部署描述均为历史资料，以 `docs/engineering/release-platform-only.md` 为准。
+
 ## 必须遵守
 
 - 不允许在 `main` 分支直接开发。功能、修复和文档改动必须在独立 `feat/*`、`fix/*` 或 `docs/*` 分支的 Git worktree 中完成；通过前置质量门禁后经 PR 合并。`main` 仅允许受控发布流程写入版本提交。worktree 合并到 `main` 后必须立即删除，不长期保留。详见 [Git 工作流](docs/engineering/git-workflow.md)。
@@ -18,14 +22,13 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 本机可能同 IP 部署多个工程；bytedepth 的 systemd 服务、Nginx 配置和数据目录必须使用带工程前缀的名称/路径，禁止依赖通用服务名或覆盖其他工程的 `/opt/nginx-conf.d/*.conf`。详见 [部署手册](deploy/README.md) 与 [工程陷阱](docs/engineering/gotchas.md)。
 - Nginx 使用项目独立 PID 文件时，PID 目录必须先以 `ubuntu` 所有权创建；systemd `PIDFile` 必须与 Nginx 配置完全一致，`ExecReload`/`ExecStop` 必须通过该 unit 的 `$MAINPID` 发送信号。部署阶段函数经 `record_timed_phase` 调用时不得依赖 `set -e` 隐式传播，edge/公共 Nginx 的 start、reload 和 health 状态必须逐项显式检查并 fail-closed。
 - 改完代码必须跑测试，不能只编译通过。
-- 不带病上线：发布前所有测试（单元、E2E、静态分析）必须全绿；既有的、非本次引入的失败同样不构成放行理由，发现必须当场修复或中止发布并报告，不得以「pre-existing」为由跳过。创建 Release Tag 前，必须有 staging integration 与 E2E 的两份 commit-bound `result=passed` 记录，且其中完整 SHA 均与当前 `main` 的 `HEAD` 一致；每次 staging run 会先作废其旧记录，只有测试、WARNING 检查与 SHA 稳定性均通过才能重写记录。
+- 不带病构建：项目质量检查必须全绿；staging integration/E2E 证据由 release-platform 的 Host Agent 按候选 SHA 生成并展示在页面上，不能用本机结果替代。
 - 每项代码改动必须补齐单元测试；本次改动涉及的业务逻辑分支覆盖率必须达到 100%，并在提交前提供覆盖率验证结果。
-- 执行 Maven Release Plugin 前，`git status --short` 必须为空；`*.releaseBackup` 与 `release.properties` 是本机事务残留，必须执行 `release:clean` 后忽略，绝不提交。
+- 本仓库不执行 Maven Release Plugin，不创建发布 Tag；版本、制品和发布记录由 release-platform 管理。
 - 不得新增 Maven 模块；如确有必要，必须先获得项目所有者的明确同意。
 - 多模块测试前先刷新本地缓存：`./mvnw clean install -DskipTests -Dsort.skip=true`，再跑 `./mvnw test`。
-- 部署时必须通过 `deploy/deploy-staging.sh` 或 `deploy/deploy-production-remote.sh` 传输不可变 JAR，并由 systemd 完整重启应用、校验 `/version` 和 reload Nginx；不能只替换文件或手工启动进程。
-- 每次生产部署必须是一个新的、不可变的 SemVer 发布版本：先完成版本记录并创建新 annotated Git Tag，再部署该 Tag；不得部署 `main`、裸 commit、分支或已部署过的 Tag。
-- 生产部署从本机只能执行 `BYTEDEPTH_PRODUCTION_SSH_KEY=\"$HOME/.ssh/ubuntu_2.pem\" BYTEDEPTH_PRODUCTION_SSH_KNOWN_HOSTS=\"$HOME/.ssh/known_hosts\" ./deploy/deploy-production-remote.sh vX.Y.Z`；`deploy/deploy-production.sh` 是 175 生产主机内部脚本，禁止在本机直接运行或用本机 `sudo` 重试。
+- 部署时由 release-platform 传输并校验不可变制品，由 Host Agent 按 ByteDepth 适配器重启 native 服务、校验 `/version` 和执行验证；项目仓库不得直接执行部署脚本。
+- production 只能提升已经在 staging 页面验收通过的同一不可变制品；项目仓库不直接执行 production 发布或回滚。
 - 前端公共组件必须自隔离，组件之间除相对位置外不得互相影响。环境相关样式必须定义在承载该组件且所有使用页面必加载的组件样式表中，禁止放入仅部分路由加载的页面主题资产；必须有自动化资源归属检查覆盖该约束。
 - staging（129，`129.211.6.82`，`staging-bytedepth.bytedepth.cn`）是唯一的 E2E、集成、部署验收和项目所有者验收环境，尤其适用于界面交互、视觉与布局改动；不得要求项目所有者验收未部署的本机代码。唯一发布流程固定为：实现并补单元测试 → 在候选分支冻结 release/next-SNAPSHOT 版本与 Changelog → 吸收远程最新 `main` → 通过 `CHANGELOG.md` 变更门禁后部署候选 ref（`deploy/deploy-staging.sh <candidate-ref>`）→ **在 staging 跑全部 E2E 与集成验收** → 项目所有者在 staging 验收 → **验收通过后候选分支 fast-forward 合并 `main`**；合并后完整 SHA 必须保持不变，才能创建生产版本、Tag 或部署生产。部署 `main`、未修改 Changelog 的候选或验收后追加提交均必须拒绝。
 - **冻结与验收规则（强制）**：staging 验收的就是待上线版本，不保留“先预览、之后再决定发布”的第二条发布路径。首次 staging 部署前必须确定高于当前正式版本的 release/next-SNAPSHOT 版本，并冻结正式 Changelog（版本标题、Tag、回滚基线必须一致）；验收失败才允许修改代码或 Changelog，修改后旧 evidence 作废，必须重新冻结、部署和验证。验收通过后禁止追加 Changelog、文档或其他提交。该规则与 `docs/releases/README.md`、`scripts/check-staging-changelog-change.sh`、`scripts/test-release-sequence.sh` 一起维护。
@@ -33,7 +36,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - staging 验收和脚本必须使用 `https://staging-bytedepth.bytedepth.cn/`；原 `staging.bytedepth.cn` 不再作为 staging 内容入口。`BYTEDEPTH_ENVIRONMENT=staging` 时，RSS、sitemap 和 RSS 自动发现必须关闭，页面返回 noindex；生产环境保持这些公开入口。新域名只是环境入口，不是安全认证。
 - staging 域名证书以 129 的 Let’s Encrypt 证书为源；若证书监控探测生产边缘 175，必须运行 `deploy/sync-staging-certificate-to-production.sh` 同步精确 SAN 证书，175 只允许 TLS 握手后拒绝内容，不得代理 staging。
 - 旧域名 `staging.bytedepth.cn` 仍解析到 175，必须在 175 单独维护精确 SAN 证书并沿用上一版生产入口逻辑跳转到 `https://bytedepth.cn`；它不是 staging 内容入口。
-- 证书脚本必须 fail-closed 校验证书有效期、证书/私钥匹配、同步配置与 SSH 私钥权限；生产发布 SSH 必须使用显式且已存在的 `known_hosts`，禁止首次连接自动接受主机密钥。
+- 证书、主机和运行时凭据由平台环境配置管理；项目仓库不直接持有或使用生产发布 SSH 凭据。
 - 合并发布时优先使用 Fast-forward；仅当合并后 `main` HEAD 与 staging 已验收候选完整 SHA 完全一致时，才允许复用候选部署和 evidence 并跳过重复 staging 流程；SHA 变化必须重新部署并重新生成两份 evidence。发布脚本的 SHA 校验是最终护栏。
 - 本机只用于开发期的纯单元测试、静态检查和快速反馈，不能作为 E2E、集成或验收依据。单元测试的边界是断网、无外部进程仍可执行：内存数据库、进程内 mock/fake（包括进程内 Redis 实现）均可在本机运行。连接任何独立进程（包括 Redis、MySQL、Flyway、Nginx）的测试属于集成测试，必须在 staging 执行；即使这些服务在本机临时可用，也不得将本机结果作为集成验收依据。本机缺少这些条件时不得卡住功能分支的 staging 部署、测试或验收。
 - 知识沉淀必须写入项目文档（`docs/`、`deploy/`、`AGENTS.md` 等），禁止放入 agent 特有的记忆（如 `~/.claude` 下的 memory 文件）；既有 agent 记忆应迁移到项目文档后删除，不得在 agent 记忆与项目文档间重复维护同一事实。
