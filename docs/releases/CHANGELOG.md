@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Changed
+
+- GitHub quality workflow now runs only for opened, synchronized, or reopened pull requests on Ubuntu 26.04.
+
 ## [v2.26.5] - 2026-09-30
 
 **Tag**：`v2.26.5`
