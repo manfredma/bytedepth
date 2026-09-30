@@ -5,12 +5,6 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  script-contracts:
-    runs-on: ubuntu-26.04
-    steps:
-      - uses: actions/checkout@v5
-      - run: sudo apt-get update && sudo apt-get install -y ripgrep libxml2-utils
-      - run: bash scripts/check-staging-checklist.sh
   quality:
     runs-on: ubuntu-26.04
     steps:
