@@ -5,14 +5,11 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly WORKFLOW="$SOURCE_ROOT/.github/workflows/quality.yml"
 
 [[ -f "$WORKFLOW" ]]
-[[ "$(rg -c '^    runs-on: ubuntu-24\.04$' "$WORKFLOW")" == 2 ]]
+[[ "$(rg -c '^    runs-on: ubuntu-26\.04$' "$WORKFLOW")" == 2 ]]
 ! rg -q 'ubuntu-latest' "$WORKFLOW"
 rg -Fq 'pull_request:' "$WORKFLOW"
-rg -Fq 'push:' "$WORKFLOW"
-rg -Fq -- "- 'main'" "$WORKFLOW"
-rg -Fq -- "- 'feat/**'" "$WORKFLOW"
-rg -Fq -- "- 'fix/**'" "$WORKFLOW"
-rg -Fq -- "- 'docs/**'" "$WORKFLOW"
+! rg -Fq 'push:' "$WORKFLOW"
+rg -Fq 'types: [opened, synchronize, reopened]' "$WORKFLOW"
 rg -Fq 'actions/checkout@v5' "$WORKFLOW"
 rg -Fq 'libxml2-utils' "$WORKFLOW"
 rg -Fq 'fetch-depth: 0' "$WORKFLOW"
