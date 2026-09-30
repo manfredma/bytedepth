@@ -52,6 +52,7 @@
 - staging、集成测试和 E2E 使用共享锁；测试资源按 `run_id` 隔离。资源状态不确定时保留 manifest 和资源，禁止自动删除未知对象，但必须尝试恢复 staging 应用并报告人工恢复入口。
 - staging 集成测试 runner 不使用固定的宿主机 `MemAvailable` 启动门槛；Surefire 在 staging profile 跳过，Failsafe fork 最大堆固定为 512 MiB，Spring Test context cache 限为 16。
 - native staging 中间件必须有 systemd `MemoryMax`：MySQL 512M、Redis 128M、Meilisearch 384M、edge 64M；Redis 同时固定 `maxmemory 64mb` 与 `noeviction`，防止中间件在 2 GiB 宿主机上无限争抢内存。上限是保护阈值，不代表会预留对应内存。中间件重启后必须等待实际端口就绪，不能只检查 systemd active。
+- 长文本换行规则必须属于实际承载内容的组件样式。版本页 `.bd-releases__content` 与文章页正文是不同渲染组件；只在版本页 CSS 增加 `overflow-wrap` 不会修复文章页，文章详情的 `.bd-post-content` 必须由其专属且页面必加载的 `post-content.css` 处理，并在移动端检查整份文档的 `scrollWidth`。
 - 各环境的 native 安装入口是独立执行路径；每个入口都必须负责退役旧网页部署 socket、job/unit 和历史 bytedepth NFS export/mount，不能假定另一环境或通用主机安装器已运行。`scripts/test-staging-native-stack.sh` 与 staging checklist 固定此约束。
 - staging E2E test-slot 由 runner 主动停止，JVM 收到 SIGTERM 后以 143 退出是正常清理；unit 必须将 143 配置为成功退出码，避免通过的 E2E 留下 failed systemd 状态。
 - 原生 staging 部署不能因缺少 `/etc/bytedepth/staging-native.conf`、`staging-native.env` 或 Meilisearch 环境文件而静默回退到另一运行模式；运行模式必须在任何服务启动、重启或数据库备份前 fail-fast。2026-09-25 的事故已证明，未受限的旧 MySQL 在约 3.6 GiB 主机上增长到约 3.3 GiB 会触发全局 OOM，使 SSH banner、HTTP 和 systemd 同时失去响应。`ubuntu` 所有者策略还必须同时保证服务组对数据文件的写权限，不能只修正 owner/group 而留下 `640` 等不可写模式。

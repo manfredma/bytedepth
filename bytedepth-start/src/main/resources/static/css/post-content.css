@@ -1,0 +1,7 @@
+.bd-post-content {
+    overflow-wrap: anywhere;
+}
+
+.bd-post-content pre {
+    overflow-wrap: normal;
+}
