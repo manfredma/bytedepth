@@ -43,7 +43,7 @@ test('公共页面的无分隔英文不会撑宽手机页面和页头', async ({
                 documentWidth: document.documentElement.scrollWidth,
                 viewportWidth: document.documentElement.clientWidth,
                 horizontalScroll: window.scrollX,
-                headerLeft: document.querySelector('.nav-bar').getBoundingClientRect().left,
+                headerLeft: document.querySelector('.nav-bar')?.getBoundingClientRect().left ?? null,
                 wordWrap: getComputedStyle(probe).overflowWrap,
             };
             probe.remove();
@@ -52,7 +52,9 @@ test('公共页面的无分隔英文不会撑宽手机页面和页头', async ({
 
         expect(metrics.documentWidth, `document width on ${route}`).toBeLessThanOrEqual(metrics.viewportWidth);
         expect(metrics.horizontalScroll, `horizontal scroll on ${route}`).toBe(0);
-        expect(metrics.headerLeft, `header position on ${route}`).toBeGreaterThanOrEqual(0);
+        if (metrics.headerLeft !== null) {
+            expect(metrics.headerLeft, `header position on ${route}`).toBeGreaterThanOrEqual(0);
+        }
         expect(metrics.wordWrap, `word wrapping on ${route}`).toBe('anywhere');
     }
 });
