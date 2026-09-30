@@ -345,6 +345,8 @@ class ThemeAssetsTest {
                 "/templates/public/search.html",
                 "/templates/public/about.html",
                 "/templates/public/projects/list.html",
+                "/templates/public/network.html",
+                "/templates/public/releases.html",
                 "/templates/public/profile.html",
                 "/templates/public/login.html",
                 "/templates/public/register.html"

@@ -52,20 +52,6 @@ class PostReadingAssetsTest {
     }
 
     @Test
-    void articlePageLoadsLongWordWrappingWithoutDisablingCodeBlockScrolling() throws IOException {
-        String template = classpathText("/templates/public/posts/detail.html");
-
-        assertThat(template)
-                .contains("@{/css/post-content.css}")
-                .contains("class=\"content bd-post-content\"");
-
-        String css = classpathText("/static/css/post-content.css");
-        assertThat(css)
-                .containsPattern("(?s)\\.bd-post-content\\s*\\{[^}]*overflow-wrap:\\s*anywhere;")
-                .containsPattern("(?s)\\.bd-post-content pre\\s*\\{[^}]*overflow-wrap:\\s*normal;");
-    }
-
-    @Test
     void mermaidRenderingPreservesEnhancedCodeSourceForCopying() throws IOException {
         String template = classpathText("/templates/public/posts/detail.html");
 

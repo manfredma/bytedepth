@@ -42,6 +42,10 @@ html {
     overscroll-behavior-y: none;
 }
 
+body {
+    overflow-wrap: anywhere;
+}
+
 html[data-theme="paper"] {
     --bd-bg: #f7f5f0;
     --bd-surface: #fffaf2;
