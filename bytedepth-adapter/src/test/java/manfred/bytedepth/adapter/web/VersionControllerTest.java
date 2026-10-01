@@ -31,10 +31,9 @@ class VersionControllerTest {
     @Test
     void preservesUnknownFallbackForMissingBuildFields() {
         Properties properties = new Properties();
-        properties.setProperty("version", "unknown");
-        properties.setProperty("commitId", "unknown");
-        properties.setProperty("builtAt", "unknown");
         VersionController.VersionResponse metadata = new VersionController(new BuildProperties(properties)).version();
         assertThat(metadata.version()).isEqualTo("unknown");
+        assertThat(metadata.commitId()).isEqualTo("unknown");
+        assertThat(metadata.builtAt()).isEqualTo("unknown");
     }
 }
