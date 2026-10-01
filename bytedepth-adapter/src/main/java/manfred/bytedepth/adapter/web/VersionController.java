@@ -4,7 +4,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import org.springframework.boot.info.BuildProperties;
-import java.util.Optional;
 
 @RestController
 public class VersionController {
@@ -20,7 +19,7 @@ public class VersionController {
     }
 
     private static String value(String value) {
-        return Optional.ofNullable(value).filter(item -> !item.isBlank()).orElse("unknown");
+        return value == null ? "unknown" : value;
     }
 
     public record VersionResponse(String version, String commitId, String builtAt) {}
