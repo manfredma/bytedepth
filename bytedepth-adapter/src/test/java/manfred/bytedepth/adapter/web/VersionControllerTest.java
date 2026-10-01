@@ -1,35 +1,40 @@
 package manfred.bytedepth.adapter.web;
 
 import org.junit.jupiter.api.Test;
-import java.io.IOException;
-import java.io.InputStream;
+import java.util.Properties;
+import org.springframework.boot.info.BuildProperties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class VersionControllerTest {
     @Test
-    void returnsBuildMetadataFromClasspath() {
-        VersionController.BuildMetadata metadata = new VersionController().version();
-        assertThat(metadata.version()).isNotBlank();
-        assertThat(metadata.commitId()).isNotBlank();
-        assertThat(metadata.builtAt()).isNotBlank();
+    void returnsBuildMetadataFromSpringBootBuildInfo() {
+        Properties properties = new Properties();
+        properties.setProperty("version", "2.26.6-SNAPSHOT");
+        properties.setProperty("commitId", "a".repeat(40));
+        properties.setProperty("builtAt", "2026-10-01T00:00:00Z");
+        VersionController.VersionResponse metadata = new VersionController(new BuildProperties(properties)).version();
+        assertThat(metadata.version()).isEqualTo("2.26.6-SNAPSHOT");
+        assertThat(metadata.commitId()).isEqualTo("a".repeat(40));
+        assertThat(metadata.builtAt()).isEqualTo("2026-10-01T00:00:00Z");
     }
 
     @Test
     void recordExposesAllFields() {
-        VersionController.BuildMetadata metadata =
-                new VersionController.BuildMetadata("1", "commit", "time");
+        VersionController.VersionResponse metadata =
+                new VersionController.VersionResponse("1", "commit", "time");
         assertThat(metadata.version()).isEqualTo("1");
         assertThat(metadata.commitId()).isEqualTo("commit");
         assertThat(metadata.builtAt()).isEqualTo("time");
     }
 
     @Test
-    void handlesMissingAndUnreadableMetadata() {
-        assertThat(VersionController.load(null).version()).isEqualTo("unknown");
-        InputStream broken = new InputStream() {
-            @Override public int read() throws IOException { throw new IOException("broken"); }
-        };
-        assertThat(VersionController.load(broken).version()).isEqualTo("unknown");
+    void preservesUnknownFallbackForMissingBuildFields() {
+        Properties properties = new Properties();
+        properties.setProperty("version", "unknown");
+        properties.setProperty("commitId", "unknown");
+        properties.setProperty("builtAt", "unknown");
+        VersionController.VersionResponse metadata = new VersionController(new BuildProperties(properties)).version();
+        assertThat(metadata.version()).isEqualTo("unknown");
     }
 }

@@ -125,7 +125,7 @@ build_release_artifact() {
     local commit="$3"
     local output_dir="$4"
     local application_version="${5:-}"
-    local build_log jar built_at sha pom_version changelog_version build_properties maven_status candidate java_25_home
+    local build_log jar built_at sha pom_version changelog_version maven_status candidate java_25_home build_built_at build_info
 
     validate_artifact_ref "$release_ref" || return 1
     [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || return 1
@@ -141,7 +141,6 @@ build_release_artifact() {
         return 1
     }
     install -d -m 0700 "$output_dir"
-    build_properties="$source_root/bytedepth-start/src/main/resources/bytedepth-build.properties"
     pom_version="$(awk '
         /^[[:space:]]*<version>[^<]*<\/version>[[:space:]]*$/ {
             line = $0
@@ -170,8 +169,7 @@ build_release_artifact() {
             return 1
         }
     fi
-    install -d "$(dirname "$build_properties")"
-    printf 'version=%s\ncommitId=%s\nbuiltAt=%s\n' "$application_version" "$commit" "${BYTEDEPTH_BUILT_AT:-$(date -u +%FT%TZ)}" > "$build_properties"
+    build_built_at="${BYTEDEPTH_BUILT_AT:-$(date -u +%FT%TZ)}"
     build_log="$(mktemp)"
     # RETURN runs after the function-local scope has ended under some bash
     # versions. Keep cleanup safe with nounset enabled.
@@ -179,7 +177,7 @@ build_release_artifact() {
     set +e
     (
         cd "$source_root" || return 1
-        JAVA_HOME="$java_25_home" ./mvnw clean install -DskipTests -Dsort.skip=true
+        JAVA_HOME="$java_25_home" ./mvnw clean install -Drelease.commit-id="$commit" -Drelease.built-at="$build_built_at" -DskipTests -Dsort.skip=true
         JAVA_HOME="$java_25_home" ./mvnw verify -DskipTests -Dsort.skip=true
     ) 2>&1 | tee "$build_log"
     maven_status="${PIPESTATUS[0]}"
@@ -201,6 +199,9 @@ build_release_artifact() {
         break
     done
     [[ -n "$jar" && -f "$jar" ]] || { printf 'Release JAR was not produced.\n' >&2; return 1; }
+    build_info="$(unzip -p "$jar" META-INF/build-info.properties 2>/dev/null || true)"
+    [[ -n "$build_info" ]] || build_info="$(unzip -p "$jar" BOOT-INF/classes/META-INF/build-info.properties 2>/dev/null || true)"
+    grep -Fqx "build.commitId=$commit" <<<"$build_info" || { printf 'Release JAR build-info commitId mismatch.\n' >&2; return 1; }
     install -m 0644 "$jar" "$output_dir/app.jar"
     built_at="$(date -u +%FT%TZ)"
     sha="$(sha256sum "$output_dir/app.jar" | awk '{print $1}')"

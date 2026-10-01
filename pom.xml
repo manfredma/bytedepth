@@ -34,6 +34,8 @@
         <archunit.version>1.5.0</archunit.version>
         <coverage.data-file>${maven.multiModuleProjectDirectory}/bytedepth-start/target/jacoco-merged.exec</coverage.data-file>
         <coverage.check.skip>true</coverage.check.skip>
+        <release.commit-id>unknown</release.commit-id>
+        <release.built-at>unknown</release.built-at>
     </properties>
 
     <dependencyManagement>
