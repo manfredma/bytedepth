@@ -26,6 +26,7 @@ release-platform API 是标准控制面接口：候选使用 `POST /api/v1/proje
 - 合并前即可发现 staging 集成和 E2E 问题，`main` 不会先进入未经验收的候选状态。
 - 合并和 production 提升之间保持完整 SHA 与不可变 artifact 的一一对应。
 - PR 标题不是制品身份；平台以 PR number 生成 `refs/pull/{number}/head`，以完整 commit SHA 锁定候选。
+- 人工验收的 `releaseTag` 使用 SemVer；项目适配器版本与发布标签是不同字段，不能混填。
 - release-platform 不可用或证据不完整时，PR 可以停留在待验收状态，但不能合并并声称可发布。
 
 ## 验证

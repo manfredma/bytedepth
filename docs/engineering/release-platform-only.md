@@ -50,6 +50,8 @@ POST /api/v1/flow-instances/{flowId}/start
 
 请求需要平台登录会话/授权 Agent 身份、CSRF（浏览器路径）和 `X-Request-Id`；HTTP `202` 或候选创建响应不等于发布成功，必须继续查询流程阶段、日志、artifact 和 evidence。
 
+人工验收的 `releaseTag` 必须是平台接受的 SemVer（例如当前 `pom.xml` 的 `2.26.6-SNAPSHOT` 在发布时使用 `2.26.6`）；项目适配器版本（例如 `bytedepth-v1`）不是发布标签，不能直接填入接受表单。
+
 ## 触发后的监控闭环
 
 触发 flow 后必须保存 `candidateId`、`flowId`、`requestId`、`Idempotency-Key` 和完整 commit SHA，并按下面顺序观察：
