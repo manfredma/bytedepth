@@ -1,6 +1,6 @@
 # ADR-0003: 可观测且隔离的交付流水线
 
-- **状态**: Accepted
+- **状态**: Superseded by [ADR-0021](0021-local-quality-release-platform-agent.md)
 - **日期**: 2026-09-12
 - **决策者**: 项目所有者
 

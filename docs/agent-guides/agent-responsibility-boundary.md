@@ -46,6 +46,6 @@ Agent 在请求项目所有者验收前，必须完成与改动风险匹配的�
 ## 与其他规范的关系
 
 - 发布时序、staging 唯一验收环境和 evidence 约束以 [统一发布流程](../engineering/unified-release-pipeline.md) 与 [Git 工作流](../engineering/git-workflow.md) 为准。
-- PR 合并并取得完整 SHA 后，Agent 可以触发 release-platform 候选任务；任务触发回执属于平台证据，Host Agent 才负责实际构建、部署和验收执行。没有页面或连接器回执时只能交接触发参数，不能声称已触发。
+- PR opened/synchronize 后，release-platform 以 PR head SHA 创建候选并执行 QUALITY/BUILD/staging；Agent 负责核对候选 SHA、读取 flow/stages/logs/evidence，并在 staging 验收通过后合并同一个 SHA。合并后的 `main` SHA 校验通过后，Host Agent 才能提升同一 artifact 到 production。没有平台回执时只能交接触发参数，不能声称已触发或已验收。
 - 测试边界以 [Maven 与测试指南](maven.md) 及 [staging 集成测试边界 ADR](../architecture/decisions/0002-staging-integration-test-boundary.md) 为准。
 - 故障沉淀遵循 [知识库建设原则](../knowledge-base-principles.md)；必须同时记录可验证根因、可执行规则和可重复检查。

@@ -8,7 +8,7 @@ bytedepth 保持现有业务源码和 `bytedepth-start` 运行模块不变；旧
 
 “触发发布”是向 release-platform 创建或提交候选构建/发布任务，属于控制面操作；“执行发布”是 Host Agent 在目标主机上执行构建产物传输、服务重启、健康检查和验收，属于数据面操作。
 
-AI Agent 可以在 PR 合并、完整 commit SHA 已确定后，通过 release-platform 页面或已授权的平台连接器触发候选任务，并记录平台返回的任务/候选标识。AI Agent 不得在仓库工作区直接运行部署脚本、Maven Release、SSH、Tag、远程主机命令或本地替代发布流程。
+PR opened、reopened、synchronize 和 ready_for_review webhook 会让 release-platform 以 PR head 完整 SHA 创建或复用候选。AI Agent 也可以在 release-platform 页面或已授权的平台连接器中触发候选任务，并记录平台返回的任务/候选标识。AI Agent 不得在仓库工作区直接运行部署脚本、Maven Release、SSH、Tag、远程主机命令或本地替代发布流程。
 
 只有拿到 release-platform 的任务回执或页面记录，才能说明“已触发”。如果当前环境没有 release-platform 页面或连接器，必须输出待触发的仓库、完整 SHA、目标环境和候选说明，不能把“已交接”描述成“已触发”。
 
@@ -18,14 +18,14 @@ release-platform 的统一流程实例 API 是 Agent 的标准触发协议：
 
 ```text
 POST /api/v1/projects/{projectId}/candidates
-  body: { "sourceRef": "main", "commitSha": "<40-hex-sha>" }
+  body: { "sourceRef": "refs/pull/<number>/head", "commitSha": "<40-hex-sha>" }
 
 POST /api/v1/flow-instances
   Idempotency-Key: <stable-key>
   body: {
     "operation": "BUILD",
     "projectId": "<uuid>",
-    "sourceRef": "main",
+    "sourceRef": "refs/pull/<number>/head",
     "commitSha": "<40-hex-sha>",
     "parameters": { "mavenProfile": "native" }
   }
@@ -49,6 +49,8 @@ POST /api/v1/flow-instances/{flowId}/start
 ```
 
 请求需要平台登录会话/授权 Agent 身份、CSRF（浏览器路径）和 `X-Request-Id`；HTTP `202` 或候选创建响应不等于发布成功，必须继续查询流程阶段、日志、artifact 和 evidence。
+
+人工验收的 `releaseTag` 必须是平台接受的 SemVer（例如当前 `pom.xml` 的 `2.26.6-SNAPSHOT` 在发布时使用 `2.26.6`）；项目适配器版本（例如 `bytedepth-v1`）不是发布标签，不能直接填入接受表单。
 
 ## 触发后的监控闭环
 
@@ -74,9 +76,9 @@ GET /api/v1/flow-instances/{flowId}/logs?cursor=<cursor>&limit=100
 
 1. 在 release-platform 的“项目”页面绑定 `manfredma/bytedepth` 和 `personal-github-release-platform` 代码账户；
 2. 确认 staging/production 绑定现有主机，不迁移部署目标；
-3. PR 合并后，解析项目 UUID 和完整 commit SHA，创建候选并触发 `BUILD` flow instance，保留 flow/candidate 回执；
+3. PR opened/reopened/synchronize/ready_for_review 后，确认 webhook 创建的候选与 PR head 完整 SHA 一致；必要时手动创建候选并触发 `BUILD` flow instance；
 4. 查询流程阶段、日志和 artifact，确认 QUALITY/BUILD 完成；
 5. 使用同一 artifact UUID 创建并启动 `RELEASE(targetEnvironment=staging)` flow instance，查看 `/version`、健康检查和验收 evidence；
-6. staging 验收后，以同一不可变 artifact 创建 production 提升流程。
+6. staging 集成/E2E 与项目所有者验收通过后，合并同一个 PR head SHA；平台校验 `main` HEAD 与候选 SHA 一致，再提升同一不可变 artifact 到 production。
 
 不得从 bytedepth 工作区直接执行发布命令；项目发布事实以 release-platform 页面和审计记录为准。分支/PR 用于定位源码，完整 commit SHA 用于锁定不可变候选。

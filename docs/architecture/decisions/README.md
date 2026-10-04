@@ -22,10 +22,10 @@
 | -------------------------------------------------------------- | ------------------------------------------------- | ---------- | ---------- |
 | [ADR-0001](0001-published-post-driven-rss.md)                  | 由已发布文章状态动态生成 RSS                      | Proposed   | 2026-09-08 |
 | [ADR-0002](0002-staging-integration-test-boundary.md)          | 将跨进程测试固定为 staging 集成测试               | Accepted   | 2026-09-10 |
-| [ADR-0003](0003-observable-isolated-delivery-pipeline.md)      | 可观测且隔离的交付流水线                          | Accepted   | 2026-09-12 |
+| [ADR-0003](0003-observable-isolated-delivery-pipeline.md)      | 可观测且隔离的交付流水线                          | Superseded | 2026-09-12 |
 | [ADR-0004](0004-shared-staging-chromium.md)                    | 共享 staging Chromium 运行时                      | Accepted   | 2026-09-13 |
 | [ADR-0005](0005-pinned-maven-runtime.md)                       | 固定跨环境 Maven 运行时                           | Accepted   | 2026-09-13 |
-| [ADR-0006](0006-unified-release-pipeline.md)                   | 统一多项目发布流水线                              | Accepted   | 2026-09-13 |
+| [ADR-0006](0006-unified-release-pipeline.md)                   | 统一多项目发布流水线                              | Superseded | 2026-09-13 |
 | [ADR-0007](0007-release-readiness-metadata-gate.md)            | 将发布变更记录前置为 staging 硬门禁               | Proposed   | 2026-09-15 |
 | [ADR-0008](0008-production-entry-and-staging-preview-route.md) | 统一生产远程部署入口与 staging 预览路由           | Proposed   | 2026-09-16 |
 | [ADR-0009](0009-tiered-view-log-retention.md)                  | 分层保留访问统计并由 Spring 定时归档              | Accepted   | 2026-09-18 |
@@ -37,4 +37,5 @@
 | [ADR-0015](0015-obsidian-codeblock-metadata-compatibility.md)  | 兼容 Obsidian Codeblock Customizer 的代码块元数据 | Accepted   | 2026-09-23 |
 | [ADR-0017](0017-native-edge-lifecycle-for-test-slot.md)        | native edge 与 E2E test slot 解耦生命周期         | Proposed   | 2026-09-25 |
 | [ADR-0020](0020-single-native-production-runtime.md)           | 单一宿主机原生生产发布与回退                      | Accepted   | 2026-09-26 |
-| [ADR-0021](0021-local-quality-release-platform-agent.md)       | 本地质量门禁与 release-platform Host Agent 分工   | Accepted   | 2026-10-04 |
+| [ADR-0021](0021-local-quality-release-platform-agent.md)       | 本地质量门禁与 release-platform Host Agent 分工   | Superseded | 2026-10-04 |
+| [ADR-0022](0022-pr-candidate-staging-before-merge.md)          | PR 候选先 staging 验收再合并并提升同一制品        | Accepted   | 2026-10-04 |

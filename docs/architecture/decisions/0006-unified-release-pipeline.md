@@ -1,16 +1,18 @@
 # ADR-0006: 统一多项目发布流水线
 
-- **状态**: Accepted
+- **状态**: Superseded by [ADR-0021](0021-local-quality-release-platform-agent.md)
 - **日期**: 2026-09-13
 - **决策者**: 项目所有者
 
 ## 上下文
 
+> 本 ADR 保留用于历史追溯。GitHub Actions quality workflow 的当前规则已由 ADR-0021 取代。
+
 bytedepth、Career、Daylilt 与 Toolbox 共享 Java、Maven、staging 主机和部分边缘基础设施，却曾以不同脚本名、不同 GitHub Actions 覆盖范围和不同生产回归方式发布。差异会使一次在某项目已修复的门禁问题在另一个项目重现。无凭据质量检查与有 SSH、环境文件、共享锁需求的 staging/生产操作必须保持隔离。
 
 ## 决策
 
-四个项目采用相同的 16 步发布顺序、9 个标准入口和相同的 GitHub `quality` workflow。`quality` 只运行无凭据、无外部进程的本机质量门禁；staging 与生产操作保留在受控脚本和主机上。所有阶段必须零 WARNING，后续步骤拒绝缺少前序证据。
+当时四个项目采用相同的 16 步发布顺序、9 个标准入口和相同的 GitHub `quality` workflow。该方案已被 release-platform 的平台质量与构建流程取代。
 
 放弃只让 Toolbox 跑 workflow 的做法，因为它不能证明四个项目受同一质量约束。放弃把 SSH 部署放进 GitHub-hosted runner 的做法，因为它会扩大生产凭据、共享锁和私有环境文件的暴露面。暂不引入 Jenkins：当前需要的是统一可执行约束，不是额外 CI 平台。
 
