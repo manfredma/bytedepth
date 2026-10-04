@@ -1,708 +1,761 @@
 package manfred.bytedepth.adapter.web.admin;
 
-import manfred.bytedepth.app.analytics.CountryViewStatDTO;
-import manfred.bytedepth.adapter.web.security.SecurityConfig;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
-import manfred.bytedepth.app.ratelimit.RateLimitPort;
+import manfred.bytedepth.adapter.web.security.SecurityConfig;
 import manfred.bytedepth.adapter.web.security.SecurityMockMvcConfig;
 import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
+import manfred.bytedepth.app.analytics.CountryViewStatDTO;
 import manfred.bytedepth.app.analytics.PageViewRankDTO;
 import manfred.bytedepth.app.analytics.PageViewStatsPort;
 import manfred.bytedepth.app.analytics.PostViewRankDTO;
 import manfred.bytedepth.app.analytics.TrendPointDTO;
 import manfred.bytedepth.app.analytics.ViewLogStatsPort;
-import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
+import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
-import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
-import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-@WebMvcTest(value = AdminAnalyticsController.class,
-        excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@WebMvcTest(
+    value = AdminAnalyticsController.class,
+    excludeAutoConfiguration = DataSourceAutoConfiguration.class)
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 @Import({SecurityConfig.class, ThymeleafSecurityHandlerConfig.class, SecurityMockMvcConfig.class})
 class AdminAnalyticsControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockitoBean
-    private UserDetailsService userDetailsService;
-    @MockitoBean
-    private VisitRequestFilter visitRequestFilter;
-    @MockitoBean
-    private PasswordEncoder passwordEncoder;
-    @MockitoBean
-    private RateLimitPort rateLimitPort;
-    @MockitoBean
-    private RateLimitProperties rateLimitProperties;
-    @MockitoBean
-    private ViewLogStatsPort viewLogStatsPort;
-    @MockitoBean
-    private PageViewStatsPort pageViewStatsPort;
-    @MockitoBean
-    private AnalyticsProperties analyticsProperties;
-
-    // ── 认证守卫 ──────────────────────────────────────────
-
-    @Test
-    void analyticsPage_withoutAuth_deniesAccess() throws Exception {
-        mockMvc.perform(get("/admin/analytics"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login"));
-    }
-
-    @Test
-    void topPostsApi_withoutAuth_deniesAccess() throws Exception {
-        mockMvc.perform(get("/admin/analytics/api/top-posts"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login"));
-    }
-
-    // ── 页面端点 ──────────────────────────────────────────
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void analyticsPage_withAdmin_returnsAnalyticsView() throws Exception {
-        when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
-
-        mockMvc.perform(get("/admin/analytics"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/analytics"))
-                .andExpect(model().attribute("analyticsLaunchDate", LocalDate.of(2026, 6, 1)));
-    }
-
-    // ── top-posts：percent 回填逻辑 ───────────────────────
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void topPosts_returnsJsonWithCorrectPercent() throws Exception {
-        PostViewRankDTO r1 = new PostViewRankDTO();
-        r1.setPostId(1L); r1.setPostTitle("Spring入门"); r1.setViewCount(80);
-        PostViewRankDTO r2 = new PostViewRankDTO();
-        r2.setPostId(2L); r2.setPostTitle("Docker实战"); r2.setViewCount(20);
-
-        when(viewLogStatsPort.topPosts(any(), any(), eq(20)))
-                .thenReturn(List.of(r1, r2));
-
-        mockMvc.perform(get("/admin/analytics/api/top-posts").param("period", "week"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].postId").value(1))
-                .andExpect(jsonPath("$[0].percent").value(80.0))
-                .andExpect(jsonPath("$[1].percent").value(20.0));
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void topPosts_emptyResult_returnsEmptyArray() throws Exception {
-        when(viewLogStatsPort.topPosts(any(), any(), anyInt())).thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/analytics/api/top-posts"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$").isEmpty());
-    }
-
-    // ── top-posts：from/to 参数解析 ───────────────────────
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void topPosts_customFromParam_parsedAsStartOfDay() throws Exception {
-        when(viewLogStatsPort.topPosts(any(), any(), anyInt())).thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/analytics/api/top-posts")
-                        .param("from", "2026-06-01")
-                        .param("to", "2026-06-30"))
-                .andExpect(status().isOk());
-
-        ArgumentCaptor<LocalDateTime> startCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
-        verify(viewLogStatsPort).topPosts(startCaptor.capture(), any(), anyInt());
-        assertThat(startCaptor.getValue())
-                .isEqualTo(LocalDate.of(2026, 6, 1).atStartOfDay());
-    }
-
-    // ── countries ─────────────────────────────────────────
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void countries_returnsJsonWithPercent() throws Exception {
-        CountryViewStatDTO cn = new CountryViewStatDTO();
-        cn.setCountry("中国"); cn.setViewCount(60);
-        CountryViewStatDTO us = new CountryViewStatDTO();
-        us.setCountry("美国"); us.setViewCount(40);
-
-        when(viewLogStatsPort.countryStats(any(), any())).thenReturn(List.of(cn, us));
-
-        mockMvc.perform(get("/admin/analytics/api/countries").param("period", "month"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].country").value("中国"))
-                .andExpect(jsonPath("$[0].percent").value(60.0))
-                .andExpect(jsonPath("$[1].percent").value(40.0));
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void countries_withZeroTotal_returnsZeroPercent() throws Exception {
-        CountryViewStatDTO country = new CountryViewStatDTO();
-        country.setCountry("未知");
-        country.setViewCount(0L);
-        when(viewLogStatsPort.countryStats(any(), any())).thenReturn(List.of(country));
-
-        mockMvc.perform(get("/admin/analytics/api/countries"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].percent").value(0.0));
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void countryPosts_returnsJsonWithPercent() throws Exception {
-        PostViewRankDTO rank = new PostViewRankDTO();
-        rank.setPostId(3L);
-        rank.setPostTitle("Java");
-        rank.setViewCount(10L);
-        when(viewLogStatsPort.countryTopPosts(eq("中国"), any(), any(), eq(20)))
-                .thenReturn(List.of(rank));
-
-        mockMvc.perform(get("/admin/analytics/api/country-posts").param("country", "中国"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].postId").value(3))
-                .andExpect(jsonPath("$[0].percent").value(100.0));
-    }
-
-    // ── post-trend：format 由时间跨度决定 ─────────────────
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void postTrend_oneWeekSpan_usesDayFormat() throws Exception {
-        when(viewLogStatsPort.postTrend(any(), any(), any(), any()))
-                .thenReturn(List.of());
-
-        // 用显式 from/to 指定一周跨度，避免依赖"今天是周几"导致边界不稳定
-        mockMvc.perform(get("/admin/analytics/api/post-trend")
-                        .param("postId", "42")
-                        .param("from", "2026-06-30")
-                        .param("to", "2026-07-06"))
-                .andExpect(status().isOk());
-
-        ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
-        verify(viewLogStatsPort, times(2)).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
-        assertThat(fmtCaptor.getAllValues()).containsOnly("%m-%d");
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void postTrend_yearPeriod_usesMonthFormat() throws Exception {
-        when(viewLogStatsPort.postTrend(any(), any(), any(), any()))
-                .thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/analytics/api/post-trend")
-                        .param("postId", "42")
-                        .param("period", "year"))
-                .andExpect(status().isOk());
-
-        ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
-        verify(viewLogStatsPort, times(2)).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
-        assertThat(fmtCaptor.getAllValues()).containsOnly("%Y-%m");
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void postTrend_returnsCompletedTrend() throws Exception {
-        when(viewLogStatsPort.postTrend(any(), any(), any(), eq("%m-%d")))
-                .thenReturn(List.of(trendPoint("07-02", 3)));
-
-        mockMvc.perform(get("/admin/analytics/api/post-trend")
-                        .param("postId", "42")
-                        .param("from", "2026-07-01")
-                        .param("to", "2026-07-03"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.current.length()").value(3))
-                .andExpect(jsonPath("$.current[1].label").value("07-02"))
-                .andExpect(jsonPath("$.current[1].viewCount").value(3))
-                .andExpect(jsonPath("$.previous.length()").value(3))
-                .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void overviewTrend_forOneDay_fillsEveryHourFromMidnight() throws Exception {
-        when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
-                .thenReturn(List.of(trendPoint("02:00", 4)));
-
-        mockMvc.perform(get("/admin/analytics/api/overview-trend")
-                        .param("from", "2026-07-29")
-                        .param("to", "2026-07-29")
-                        .param("granularity", "hour"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.current.length()").value(24))
-                .andExpect(jsonPath("$.current[0].label").value("00:00"))
-                .andExpect(jsonPath("$.current[0].viewCount").value(0))
-                .andExpect(jsonPath("$.current[2].label").value("02:00"))
-                .andExpect(jsonPath("$.current[2].viewCount").value(4))
-                .andExpect(jsonPath("$.current[23].label").value("23:00"));
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void overviewTrend_returnsCurrentAndPreviousWindows() throws Exception {
-        when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
-                .thenReturn(List.of(trendPoint("02:00", 4)));
-
-        mockMvc.perform(get("/admin/analytics/api/overview-trend")
-                        .param("from", "2026-07-29")
-                        .param("to", "2026-07-29")
-                        .param("granularity", "hour"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.current[2].label").value("02:00"))
-                .andExpect(jsonPath("$.current[2].viewCount").value(4))
-                .andExpect(jsonPath("$.previous[2].label").value("02:00"))
-                .andExpect(jsonPath("$.previous[2].viewCount").value(4))
-                .andExpect(jsonPath("$.previousPeriod").value("2026-07-28"));
-
-        verify(viewLogStatsPort, times(2)).overviewTrend(any(), any(), eq("%H:00"));
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void overviewTrend_forMultipleDays_usesDatesAndFillsMissingDays() throws Exception {
-        when(viewLogStatsPort.overviewTrend(any(), any(), eq("%m-%d")))
-                .thenReturn(List.of(trendPoint("07-02", 3)));
-
-        mockMvc.perform(get("/admin/analytics/api/overview-trend")
-                        .param("from", "2026-06-30")
-                        .param("to", "2026-07-06"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.current.length()").value(7))
-                .andExpect(jsonPath("$.current[0].label").value("06-30"))
-                .andExpect(jsonPath("$.current[0].viewCount").value(0))
-                .andExpect(jsonPath("$.current[2].label").value("07-02"))
-                .andExpect(jsonPath("$.current[2].viewCount").value(3))
-                .andExpect(jsonPath("$.current[6].label").value("07-06"));
-    }
-
-    // ── top-pages：percent 回填逻辑 ────────────────────────
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void topPages_returnsJsonWithCorrectPercent() throws Exception {
-        PageViewRankDTO p1 = new PageViewRankDTO();
-        p1.setPagePath("/"); p1.setViewCount(70);
-        PageViewRankDTO p2 = new PageViewRankDTO();
-        p2.setPagePath("/about"); p2.setViewCount(30);
-
-        when(pageViewStatsPort.topPages(any(), any(), eq(20)))
-                .thenReturn(List.of(p1, p2));
-
-        mockMvc.perform(get("/admin/analytics/api/top-pages").param("period", "week"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].pagePath").value("/"))
-                .andExpect(jsonPath("$[0].percent").value(70.0))
-                .andExpect(jsonPath("$[1].percent").value(30.0));
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void topPages_emptyResult_returnsEmptyArray() throws Exception {
-        when(pageViewStatsPort.topPages(any(), any(), anyInt())).thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/analytics/api/top-pages"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$").isEmpty());
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void topPages_customFromParam_parsedAsStartOfDay() throws Exception {
-        when(pageViewStatsPort.topPages(any(), any(), anyInt())).thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/analytics/api/top-pages")
-                        .param("from", "2026-06-01")
-                        .param("to", "2026-06-30"))
-                .andExpect(status().isOk());
-
-        ArgumentCaptor<LocalDateTime> startCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
-        verify(pageViewStatsPort).topPages(startCaptor.capture(), any(), anyInt());
-        assertThat(startCaptor.getValue())
-                .isEqualTo(LocalDate.of(2026, 6, 1).atStartOfDay());
-    }
-
-    // ── page-countries ─────────────────────────────────────
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void pageCountries_returnsJsonWithPercent() throws Exception {
-        CountryViewStatDTO cn = new CountryViewStatDTO();
-        cn.setCountry("中国"); cn.setViewCount(60);
-        when(pageViewStatsPort.pageCountryStats(any(), any())).thenReturn(List.of(cn));
-
-        mockMvc.perform(get("/admin/analytics/api/page-countries").param("period", "month"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].country").value("中国"))
-                .andExpect(jsonPath("$[0].percent").value(100.0));
-    }
-
-    // ── country-pages ──────────────────────────────────────
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void countryPages_returnsJsonWithPercent() throws Exception {
-        PageViewRankDTO rank = new PageViewRankDTO();
-        rank.setPagePath("/about");
-        rank.setViewCount(10L);
-        when(pageViewStatsPort.countryTopPages(eq("中国"), any(), any(), eq(20)))
-                .thenReturn(List.of(rank));
-
-        mockMvc.perform(get("/admin/analytics/api/country-pages").param("country", "中国"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].pagePath").value("/about"))
-                .andExpect(jsonPath("$[0].percent").value(100.0));
-    }
-
-    // ── page-trend：format 由时间跨度决定 ──────────────────
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void pageTrend_usesDayFormatForWeekSpan() throws Exception {
-        when(pageViewStatsPort.pageTrend(any(), any(), any(), any())).thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/analytics/api/page-trend")
-                        .param("pagePath", "/about")
-                        .param("from", "2026-06-30")
-                        .param("to", "2026-07-06"))
-                .andExpect(status().isOk());
-
-        ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
-        verify(pageViewStatsPort, times(2)).pageTrend(eq("/about"), any(), any(), fmtCaptor.capture());
-        assertThat(fmtCaptor.getAllValues()).containsOnly("%m-%d");
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void pageTrend_returnsCompletedTrend() throws Exception {
-        when(pageViewStatsPort.pageTrend(any(), any(), any(), eq("%m-%d")))
-                .thenReturn(List.of(trendPoint("07-02", 3)));
-
-        mockMvc.perform(get("/admin/analytics/api/page-trend")
-                        .param("pagePath", "/")
-                        .param("from", "2026-07-01")
-                        .param("to", "2026-07-03"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.current.length()").value(3))
-                .andExpect(jsonPath("$.current[1].label").value("07-02"))
-                .andExpect(jsonPath("$.current[1].viewCount").value(3))
-                .andExpect(jsonPath("$.previous.length()").value(3))
-                .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
-    }
-
-    // ── page-overview-trend ────────────────────────────────
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void pageOverviewTrend_fillsTimeBuckets() throws Exception {
-        when(pageViewStatsPort.pageOverviewTrend(any(), any(), eq("%m-%d")))
-                .thenReturn(List.of(trendPoint("07-02", 5)));
-
-        mockMvc.perform(get("/admin/analytics/api/page-overview-trend")
-                        .param("from", "2026-06-30")
-                        .param("to", "2026-07-02"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.current.length()").value(3))
-                .andExpect(jsonPath("$.current[0].viewCount").value(0))
-                .andExpect(jsonPath("$.current[2].viewCount").value(5));
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void pageOverviewTrend_returnsCurrentAndPreviousWindows() throws Exception {
-        when(pageViewStatsPort.pageOverviewTrend(any(), any(), eq("%m-%d")))
-                .thenReturn(List.of(trendPoint("07-02", 5)));
-
-        mockMvc.perform(get("/admin/analytics/api/page-overview-trend")
-                        .param("from", "2026-07-01")
-                        .param("to", "2026-07-03"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.current.length()").value(3))
-                .andExpect(jsonPath("$.previous.length()").value(3))
-                .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
-
-        verify(pageViewStatsPort, times(2)).pageOverviewTrend(any(), any(), eq("%m-%d"));
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void pageOverviewTrend_allPeriodReturnsOnlyCurrentWindow() throws Exception {
-        when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
-        when(pageViewStatsPort.pageOverviewTrend(any(), any(), anyString()))
-                .thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/analytics/api/page-overview-trend")
-                        .param("period", "all")
-                        .param("granularity", "hour"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.previous").doesNotExist())
-                .andExpect(jsonPath("$.previousPeriod").doesNotExist());
-
-        verify(pageViewStatsPort).pageOverviewTrend(
-                eq(LocalDate.of(2026, 6, 1).atStartOfDay()), any(), anyString());
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void overviewTrend_usesConfiguredLaunchDateForAllPeriod() throws Exception {
-        when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
-        when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
-                .thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/analytics/api/overview-trend")
-                        .param("period", "all")
-                        .param("granularity", "hour"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.previous").doesNotExist())
-                .andExpect(jsonPath("$.previousPeriod").doesNotExist());
-
-        verify(viewLogStatsPort, times(1)).overviewTrend(
-                eq(LocalDate.of(2026, 6, 1).atStartOfDay()), any(), eq("%H:00"));
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void overviewTrend_allPeriodIgnoresPreLaunchFromDate() throws Exception {
-        when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
-        when(viewLogStatsPort.overviewTrend(any(), any(), anyString()))
-                .thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/analytics/api/overview-trend")
-                        .param("period", "all")
-                        .param("from", "2000-01-01")
-                        .param("to", "2026-09-15"))
-                .andExpect(status().isOk());
-
-        verify(viewLogStatsPort).overviewTrend(
-                eq(LocalDate.of(2026, 6, 1).atStartOfDay()),
-                eq(LocalDate.of(2026, 9, 15).atTime(23, 59, 59)),
-                anyString());
-    }
-
-    // ── 静态工具方法单元测试 ───────────────────────────────
-
-    @Test
-    void toStartTime_weekPeriod_returnsStartOfThisWeek() {
-        LocalDateTime result = AdminAnalyticsController.toStartTime("week", null);
-        // 本周一 00:00（周一为一周起始）
-        assertThat(result.toLocalDate().getDayOfWeek())
-                .isEqualTo(java.time.DayOfWeek.MONDAY);
-        assertThat(result.toLocalTime()).isEqualTo(java.time.LocalTime.MIN);
-        assertThat(result).isBeforeOrEqualTo(LocalDateTime.now());
-        assertThat(result).isAfter(LocalDateTime.now().minusDays(8));
-    }
-
-    @Test
-    void selectedWeek_usesWholeNaturalWeek() {
-        LocalDate selectedDate = LocalDate.of(2026, 9, 16); // Wednesday
-
-        assertThat(AdminAnalyticsController.toStartTime("week", null, selectedDate))
-                .isEqualTo(LocalDateTime.of(2026, 9, 14, 0, 0));
-        assertThat(AdminAnalyticsController.toEndTime("week", null, selectedDate))
-                .isEqualTo(LocalDateTime.of(2026, 9, 20, 23, 59, 59));
-    }
-
-    @Test
-    void selectedMonthAndYear_useWholeNaturalPeriod() {
-        LocalDate selectedDate = LocalDate.of(2026, 2, 15);
-
-        assertThat(AdminAnalyticsController.toEndTime("month", null, selectedDate))
-                .isEqualTo(LocalDateTime.of(2026, 2, 28, 23, 59, 59));
-        assertThat(AdminAnalyticsController.toEndTime("year", null, selectedDate))
-                .isEqualTo(LocalDateTime.of(2026, 12, 31, 23, 59, 59));
-    }
-
-    @Test
-    void toStartTime_customFrom_parsesDate() {
-        LocalDateTime result = AdminAnalyticsController.toStartTime("week", "2026-06-01");
-        assertThat(result).isEqualTo(LocalDateTime.of(2026, 6, 1, 0, 0, 0));
-    }
-
-    @Test
-    void blankExplicitDatesFallBackToTheSelectedPeriod() {
-        assertThat(AdminAnalyticsController.toStartTime("all", " ", LocalDate.now(), LocalDate.of(2026, 6, 1)))
-                .isEqualTo(LocalDateTime.of(2026, 6, 1, 0, 0));
-        assertThat(AdminAnalyticsController.toEndTime("week", " "))
-                .isEqualTo(LocalDate.now().with(java.time.temporal.TemporalAdjusters.nextOrSame(
-                        java.time.DayOfWeek.SUNDAY)).atTime(23, 59, 59));
-    }
-
-    @Test
-    void toStartTime_today_returnsStartOfToday() {
-        LocalDateTime result = AdminAnalyticsController.toStartTime("today", null);
-        assertThat(result).isEqualTo(LocalDate.now().atStartOfDay());
-    }
-
-    @Test
-    void toStartTime_monthPeriod_returnsFirstDayOfThisMonth() {
-        LocalDateTime result = AdminAnalyticsController.toStartTime("month", null);
-        assertThat(result).isEqualTo(LocalDate.now().withDayOfMonth(1).atStartOfDay());
-    }
-
-    @Test
-    void toStartTime_yearPeriod_returnsFirstDayOfThisYear() {
-        LocalDateTime result = AdminAnalyticsController.toStartTime("year", null);
-        assertThat(result).isEqualTo(LocalDate.now().withDayOfYear(1).atStartOfDay());
-    }
-
-    @Test
-    void toStartTime_allPeriod_returnsConfiguredLaunchDate() {
-        LocalDateTime result = AdminAnalyticsController.toStartTime(
-                "all", "2000-01-01", LocalDate.of(2026, 9, 15), LocalDate.of(2026, 6, 1));
-        assertThat(result).isEqualTo(LocalDateTime.of(2026, 6, 1, 0, 0));
-    }
-
-    @Test
-    void toStartTime_allPeriod_withoutLaunchDate_rejectsMissingConfiguration() {
-        assertThatThrownBy(() -> AdminAnalyticsController.toStartTime(
-                "all", null, LocalDate.of(2026, 9, 15)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("launchDate is required for all period");
-    }
-
-    @Test
-    void toEndTime_usesExplicitEndOfDayAndWholeNaturalDayForToday() {
-        assertThat(AdminAnalyticsController.toEndTime("week", "2026-06-30"))
-                .isEqualTo(LocalDateTime.of(2026, 6, 30, 23, 59, 59));
-        assertThat(AdminAnalyticsController.toEndTime("today", null))
-                .isEqualTo(LocalDate.now().atTime(23, 59, 59));
-        assertThat(AdminAnalyticsController.toEndTime("week", null))
-                .isEqualTo(LocalDate.now().with(java.time.temporal.TemporalAdjusters.nextOrSame(
-                        java.time.DayOfWeek.SUNDAY)).atTime(23, 59, 59));
-        assertThat(AdminAnalyticsController.toEndTime("all", null)).isBeforeOrEqualTo(LocalDateTime.now());
-    }
-
-    @Test
-    @WithMockUser(authorities = {"admin:dashboard:view"})
-    void trend_withOnlyOneExplicitDate_stillUsesCustomRangeDetection() throws Exception {
-        when(viewLogStatsPort.postTrend(any(), any(), any(), any())).thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/analytics/api/post-trend")
-                        .param("postId", "42")
-                        .param("from", "2026-06-01"))
-                .andExpect(status().isOk());
-
-        verify(viewLogStatsPort, times(2)).postTrend(eq(42L), any(), any(), any());
-
-        mockMvc.perform(get("/admin/analytics/api/post-trend")
-                        .param("postId", "42")
-                        .param("to", "2026-06-30"))
-                .andExpect(status().isOk());
-
-        verify(viewLogStatsPort, times(4)).postTrend(eq(42L), any(), any(), any());
-
-        mockMvc.perform(get("/admin/analytics/api/post-trend")
-                        .param("postId", "42")
-                        .param("from", " ")
-                        .param("to", " "))
-                .andExpect(status().isOk());
-
-        verify(viewLogStatsPort, times(6)).postTrend(eq(42L), any(), any(), any());
-    }
-
-    @Test
-    void toDateFormat_within2Days_returnsHourFormat() {
-        // 固定时间而非 LocalDateTime.now()：跨 10 小时但保证不跨天，
-        // 避免在 0:00-10:00 运行时 now-10h 落到前一天导致断言 flaky。
-        LocalDateTime start = LocalDateTime.of(2026, 7, 28, 2, 0);
-        assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.of(2026, 7, 28, 12, 0)))
-                .isEqualTo("%H:00");
-    }
-
-    @Test
-    void toDateFormat_acrossTwoDates_returnsDayFormatToAvoidMergingHours() {
-        assertThat(AdminAnalyticsController.toDateFormat(
-                LocalDateTime.of(2026, 7, 28, 0, 0),
-                LocalDateTime.of(2026, 7, 29, 12, 0)))
-                .isEqualTo("%m-%d");
-    }
-
-    @Test
-    void toDateFormat_30Days_returnsDayFormat() {
-        LocalDateTime start = LocalDateTime.of(2026, 1, 1, 0, 0);
-        assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.of(2026, 1, 31, 23, 59, 59)))
-                .isEqualTo("%m-%d");
-    }
-
-    @Test
-    void toDateFormat_exactOneCalendarMonth_returnsDayFormat() {
-        assertThat(AdminAnalyticsController.toDateFormat(
+  @Autowired private MockMvc mockMvc;
+
+  @MockitoBean private UserDetailsService userDetailsService;
+  @MockitoBean private VisitRequestFilter visitRequestFilter;
+  @MockitoBean private PasswordEncoder passwordEncoder;
+  @MockitoBean private RateLimitPort rateLimitPort;
+  @MockitoBean private RateLimitProperties rateLimitProperties;
+  @MockitoBean private ViewLogStatsPort viewLogStatsPort;
+  @MockitoBean private PageViewStatsPort pageViewStatsPort;
+  @MockitoBean private AnalyticsProperties analyticsProperties;
+
+  // ── 认证守卫 ──────────────────────────────────────────
+
+  @Test
+  void analyticsPage_withoutAuth_deniesAccess() throws Exception {
+    mockMvc
+        .perform(get("/admin/analytics"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/login"));
+  }
+
+  @Test
+  void topPostsApi_withoutAuth_deniesAccess() throws Exception {
+    mockMvc
+        .perform(get("/admin/analytics/api/top-posts"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/login"));
+  }
+
+  // ── 页面端点 ──────────────────────────────────────────
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void analyticsPage_withAdmin_returnsAnalyticsView() throws Exception {
+    when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
+
+    mockMvc
+        .perform(get("/admin/analytics"))
+        .andExpect(status().isOk())
+        .andExpect(view().name("admin/analytics"))
+        .andExpect(model().attribute("analyticsLaunchDate", LocalDate.of(2026, 6, 1)));
+  }
+
+  // ── top-posts：percent 回填逻辑 ───────────────────────
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void topPosts_returnsJsonWithCorrectPercent() throws Exception {
+    PostViewRankDTO r1 = new PostViewRankDTO();
+    r1.setPostId(1L);
+    r1.setPostTitle("Spring入门");
+    r1.setViewCount(80);
+    PostViewRankDTO r2 = new PostViewRankDTO();
+    r2.setPostId(2L);
+    r2.setPostTitle("Docker实战");
+    r2.setViewCount(20);
+
+    when(viewLogStatsPort.topPosts(any(), any(), eq(20))).thenReturn(List.of(r1, r2));
+
+    mockMvc
+        .perform(get("/admin/analytics/api/top-posts").param("period", "week"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].postId").value(1))
+        .andExpect(jsonPath("$[0].percent").value(80.0))
+        .andExpect(jsonPath("$[1].percent").value(20.0));
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void topPosts_emptyResult_returnsEmptyArray() throws Exception {
+    when(viewLogStatsPort.topPosts(any(), any(), anyInt())).thenReturn(List.of());
+
+    mockMvc
+        .perform(get("/admin/analytics/api/top-posts"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray())
+        .andExpect(jsonPath("$").isEmpty());
+  }
+
+  // ── top-posts：from/to 参数解析 ───────────────────────
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void topPosts_customFromParam_parsedAsStartOfDay() throws Exception {
+    when(viewLogStatsPort.topPosts(any(), any(), anyInt())).thenReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/top-posts")
+                .param("from", "2026-06-01")
+                .param("to", "2026-06-30"))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<LocalDateTime> startCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+    verify(viewLogStatsPort).topPosts(startCaptor.capture(), any(), anyInt());
+    assertThat(startCaptor.getValue()).isEqualTo(LocalDate.of(2026, 6, 1).atStartOfDay());
+  }
+
+  // ── countries ─────────────────────────────────────────
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void countries_returnsJsonWithPercent() throws Exception {
+    CountryViewStatDTO cn = new CountryViewStatDTO();
+    cn.setCountry("中国");
+    cn.setViewCount(60);
+    CountryViewStatDTO us = new CountryViewStatDTO();
+    us.setCountry("美国");
+    us.setViewCount(40);
+
+    when(viewLogStatsPort.countryStats(any(), any())).thenReturn(List.of(cn, us));
+
+    mockMvc
+        .perform(get("/admin/analytics/api/countries").param("period", "month"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].country").value("中国"))
+        .andExpect(jsonPath("$[0].percent").value(60.0))
+        .andExpect(jsonPath("$[1].percent").value(40.0));
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void countries_withZeroTotal_returnsZeroPercent() throws Exception {
+    CountryViewStatDTO country = new CountryViewStatDTO();
+    country.setCountry("未知");
+    country.setViewCount(0L);
+    when(viewLogStatsPort.countryStats(any(), any())).thenReturn(List.of(country));
+
+    mockMvc
+        .perform(get("/admin/analytics/api/countries"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].percent").value(0.0));
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void countryPosts_returnsJsonWithPercent() throws Exception {
+    PostViewRankDTO rank = new PostViewRankDTO();
+    rank.setPostId(3L);
+    rank.setPostTitle("Java");
+    rank.setViewCount(10L);
+    when(viewLogStatsPort.countryTopPosts(eq("中国"), any(), any(), eq(20)))
+        .thenReturn(List.of(rank));
+
+    mockMvc
+        .perform(get("/admin/analytics/api/country-posts").param("country", "中国"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].postId").value(3))
+        .andExpect(jsonPath("$[0].percent").value(100.0));
+  }
+
+  // ── post-trend：format 由时间跨度决定 ─────────────────
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void postTrend_oneWeekSpan_usesDayFormat() throws Exception {
+    when(viewLogStatsPort.postTrend(any(), any(), any(), any())).thenReturn(List.of());
+
+    // 用显式 from/to 指定一周跨度，避免依赖"今天是周几"导致边界不稳定
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/post-trend")
+                .param("postId", "42")
+                .param("from", "2026-06-30")
+                .param("to", "2026-07-06"))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
+    verify(viewLogStatsPort, times(2)).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
+    assertThat(fmtCaptor.getAllValues()).containsOnly("%m-%d");
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void postTrend_yearPeriod_usesMonthFormat() throws Exception {
+    when(viewLogStatsPort.postTrend(any(), any(), any(), any())).thenReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/post-trend").param("postId", "42").param("period", "year"))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
+    verify(viewLogStatsPort, times(2)).postTrend(eq(42L), any(), any(), fmtCaptor.capture());
+    assertThat(fmtCaptor.getAllValues()).containsOnly("%Y-%m");
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void postTrend_returnsCompletedTrend() throws Exception {
+    when(viewLogStatsPort.postTrend(any(), any(), any(), eq("%m-%d")))
+        .thenReturn(List.of(trendPoint("07-02", 3)));
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/post-trend")
+                .param("postId", "42")
+                .param("from", "2026-07-01")
+                .param("to", "2026-07-03"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.current.length()").value(3))
+        .andExpect(jsonPath("$.current[1].label").value("07-02"))
+        .andExpect(jsonPath("$.current[1].viewCount").value(3))
+        .andExpect(jsonPath("$.previous.length()").value(3))
+        .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void overviewTrend_forOneDay_fillsEveryHourFromMidnight() throws Exception {
+    when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
+        .thenReturn(List.of(trendPoint("02:00", 4)));
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/overview-trend")
+                .param("from", "2026-07-29")
+                .param("to", "2026-07-29")
+                .param("granularity", "hour"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.current.length()").value(24))
+        .andExpect(jsonPath("$.current[0].label").value("00:00"))
+        .andExpect(jsonPath("$.current[0].viewCount").value(0))
+        .andExpect(jsonPath("$.current[2].label").value("02:00"))
+        .andExpect(jsonPath("$.current[2].viewCount").value(4))
+        .andExpect(jsonPath("$.current[23].label").value("23:00"));
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void overviewTrend_returnsCurrentAndPreviousWindows() throws Exception {
+    when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00")))
+        .thenReturn(List.of(trendPoint("02:00", 4)));
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/overview-trend")
+                .param("from", "2026-07-29")
+                .param("to", "2026-07-29")
+                .param("granularity", "hour"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.current[2].label").value("02:00"))
+        .andExpect(jsonPath("$.current[2].viewCount").value(4))
+        .andExpect(jsonPath("$.previous[2].label").value("02:00"))
+        .andExpect(jsonPath("$.previous[2].viewCount").value(4))
+        .andExpect(jsonPath("$.previousPeriod").value("2026-07-28"));
+
+    verify(viewLogStatsPort, times(2)).overviewTrend(any(), any(), eq("%H:00"));
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void overviewTrend_forMultipleDays_usesDatesAndFillsMissingDays() throws Exception {
+    when(viewLogStatsPort.overviewTrend(any(), any(), eq("%m-%d")))
+        .thenReturn(List.of(trendPoint("07-02", 3)));
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/overview-trend")
+                .param("from", "2026-06-30")
+                .param("to", "2026-07-06"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.current.length()").value(7))
+        .andExpect(jsonPath("$.current[0].label").value("06-30"))
+        .andExpect(jsonPath("$.current[0].viewCount").value(0))
+        .andExpect(jsonPath("$.current[2].label").value("07-02"))
+        .andExpect(jsonPath("$.current[2].viewCount").value(3))
+        .andExpect(jsonPath("$.current[6].label").value("07-06"));
+  }
+
+  // ── top-pages：percent 回填逻辑 ────────────────────────
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void topPages_returnsJsonWithCorrectPercent() throws Exception {
+    PageViewRankDTO p1 = new PageViewRankDTO();
+    p1.setPagePath("/");
+    p1.setViewCount(70);
+    PageViewRankDTO p2 = new PageViewRankDTO();
+    p2.setPagePath("/about");
+    p2.setViewCount(30);
+
+    when(pageViewStatsPort.topPages(any(), any(), eq(20))).thenReturn(List.of(p1, p2));
+
+    mockMvc
+        .perform(get("/admin/analytics/api/top-pages").param("period", "week"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].pagePath").value("/"))
+        .andExpect(jsonPath("$[0].percent").value(70.0))
+        .andExpect(jsonPath("$[1].percent").value(30.0));
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void topPages_emptyResult_returnsEmptyArray() throws Exception {
+    when(pageViewStatsPort.topPages(any(), any(), anyInt())).thenReturn(List.of());
+
+    mockMvc
+        .perform(get("/admin/analytics/api/top-pages"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray())
+        .andExpect(jsonPath("$").isEmpty());
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void topPages_customFromParam_parsedAsStartOfDay() throws Exception {
+    when(pageViewStatsPort.topPages(any(), any(), anyInt())).thenReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/top-pages")
+                .param("from", "2026-06-01")
+                .param("to", "2026-06-30"))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<LocalDateTime> startCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+    verify(pageViewStatsPort).topPages(startCaptor.capture(), any(), anyInt());
+    assertThat(startCaptor.getValue()).isEqualTo(LocalDate.of(2026, 6, 1).atStartOfDay());
+  }
+
+  // ── page-countries ─────────────────────────────────────
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void pageCountries_returnsJsonWithPercent() throws Exception {
+    CountryViewStatDTO cn = new CountryViewStatDTO();
+    cn.setCountry("中国");
+    cn.setViewCount(60);
+    when(pageViewStatsPort.pageCountryStats(any(), any())).thenReturn(List.of(cn));
+
+    mockMvc
+        .perform(get("/admin/analytics/api/page-countries").param("period", "month"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].country").value("中国"))
+        .andExpect(jsonPath("$[0].percent").value(100.0));
+  }
+
+  // ── country-pages ──────────────────────────────────────
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void countryPages_returnsJsonWithPercent() throws Exception {
+    PageViewRankDTO rank = new PageViewRankDTO();
+    rank.setPagePath("/about");
+    rank.setViewCount(10L);
+    when(pageViewStatsPort.countryTopPages(eq("中国"), any(), any(), eq(20)))
+        .thenReturn(List.of(rank));
+
+    mockMvc
+        .perform(get("/admin/analytics/api/country-pages").param("country", "中国"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].pagePath").value("/about"))
+        .andExpect(jsonPath("$[0].percent").value(100.0));
+  }
+
+  // ── page-trend：format 由时间跨度决定 ──────────────────
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void pageTrend_usesDayFormatForWeekSpan() throws Exception {
+    when(pageViewStatsPort.pageTrend(any(), any(), any(), any())).thenReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/page-trend")
+                .param("pagePath", "/about")
+                .param("from", "2026-06-30")
+                .param("to", "2026-07-06"))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<String> fmtCaptor = ArgumentCaptor.forClass(String.class);
+    verify(pageViewStatsPort, times(2)).pageTrend(eq("/about"), any(), any(), fmtCaptor.capture());
+    assertThat(fmtCaptor.getAllValues()).containsOnly("%m-%d");
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void pageTrend_returnsCompletedTrend() throws Exception {
+    when(pageViewStatsPort.pageTrend(any(), any(), any(), eq("%m-%d")))
+        .thenReturn(List.of(trendPoint("07-02", 3)));
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/page-trend")
+                .param("pagePath", "/")
+                .param("from", "2026-07-01")
+                .param("to", "2026-07-03"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.current.length()").value(3))
+        .andExpect(jsonPath("$.current[1].label").value("07-02"))
+        .andExpect(jsonPath("$.current[1].viewCount").value(3))
+        .andExpect(jsonPath("$.previous.length()").value(3))
+        .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
+  }
+
+  // ── page-overview-trend ────────────────────────────────
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void pageOverviewTrend_fillsTimeBuckets() throws Exception {
+    when(pageViewStatsPort.pageOverviewTrend(any(), any(), eq("%m-%d")))
+        .thenReturn(List.of(trendPoint("07-02", 5)));
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/page-overview-trend")
+                .param("from", "2026-06-30")
+                .param("to", "2026-07-02"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.current.length()").value(3))
+        .andExpect(jsonPath("$.current[0].viewCount").value(0))
+        .andExpect(jsonPath("$.current[2].viewCount").value(5));
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void pageOverviewTrend_returnsCurrentAndPreviousWindows() throws Exception {
+    when(pageViewStatsPort.pageOverviewTrend(any(), any(), eq("%m-%d")))
+        .thenReturn(List.of(trendPoint("07-02", 5)));
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/page-overview-trend")
+                .param("from", "2026-07-01")
+                .param("to", "2026-07-03"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.current.length()").value(3))
+        .andExpect(jsonPath("$.previous.length()").value(3))
+        .andExpect(jsonPath("$.previousPeriod").value("2026-06-28 至 2026-06-30"));
+
+    verify(pageViewStatsPort, times(2)).pageOverviewTrend(any(), any(), eq("%m-%d"));
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void pageOverviewTrend_allPeriodReturnsOnlyCurrentWindow() throws Exception {
+    when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
+    when(pageViewStatsPort.pageOverviewTrend(any(), any(), anyString())).thenReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/page-overview-trend")
+                .param("period", "all")
+                .param("granularity", "hour"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.previous").doesNotExist())
+        .andExpect(jsonPath("$.previousPeriod").doesNotExist());
+
+    verify(pageViewStatsPort)
+        .pageOverviewTrend(eq(LocalDate.of(2026, 6, 1).atStartOfDay()), any(), anyString());
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void overviewTrend_usesConfiguredLaunchDateForAllPeriod() throws Exception {
+    when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
+    when(viewLogStatsPort.overviewTrend(any(), any(), eq("%H:00"))).thenReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/overview-trend")
+                .param("period", "all")
+                .param("granularity", "hour"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.previous").doesNotExist())
+        .andExpect(jsonPath("$.previousPeriod").doesNotExist());
+
+    verify(viewLogStatsPort, times(1))
+        .overviewTrend(eq(LocalDate.of(2026, 6, 1).atStartOfDay()), any(), eq("%H:00"));
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void overviewTrend_allPeriodIgnoresPreLaunchFromDate() throws Exception {
+    when(analyticsProperties.launchDate()).thenReturn(LocalDate.of(2026, 6, 1));
+    when(viewLogStatsPort.overviewTrend(any(), any(), anyString())).thenReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/overview-trend")
+                .param("period", "all")
+                .param("from", "2000-01-01")
+                .param("to", "2026-09-15"))
+        .andExpect(status().isOk());
+
+    verify(viewLogStatsPort)
+        .overviewTrend(
+            eq(LocalDate.of(2026, 6, 1).atStartOfDay()),
+            eq(LocalDate.of(2026, 9, 15).atTime(23, 59, 59)),
+            anyString());
+  }
+
+  // ── 静态工具方法单元测试 ───────────────────────────────
+
+  @Test
+  void toStartTime_weekPeriod_returnsStartOfThisWeek() {
+    LocalDateTime result = AdminAnalyticsController.toStartTime("week", null);
+    // 本周一 00:00（周一为一周起始）
+    assertThat(result.toLocalDate().getDayOfWeek()).isEqualTo(java.time.DayOfWeek.MONDAY);
+    assertThat(result.toLocalTime()).isEqualTo(java.time.LocalTime.MIN);
+    assertThat(result).isBeforeOrEqualTo(LocalDateTime.now());
+    assertThat(result).isAfter(LocalDateTime.now().minusDays(8));
+  }
+
+  @Test
+  void selectedWeek_usesWholeNaturalWeek() {
+    LocalDate selectedDate = LocalDate.of(2026, 9, 16); // Wednesday
+
+    assertThat(AdminAnalyticsController.toStartTime("week", null, selectedDate))
+        .isEqualTo(LocalDateTime.of(2026, 9, 14, 0, 0));
+    assertThat(AdminAnalyticsController.toEndTime("week", null, selectedDate))
+        .isEqualTo(LocalDateTime.of(2026, 9, 20, 23, 59, 59));
+  }
+
+  @Test
+  void selectedMonthAndYear_useWholeNaturalPeriod() {
+    LocalDate selectedDate = LocalDate.of(2026, 2, 15);
+
+    assertThat(AdminAnalyticsController.toEndTime("month", null, selectedDate))
+        .isEqualTo(LocalDateTime.of(2026, 2, 28, 23, 59, 59));
+    assertThat(AdminAnalyticsController.toEndTime("year", null, selectedDate))
+        .isEqualTo(LocalDateTime.of(2026, 12, 31, 23, 59, 59));
+  }
+
+  @Test
+  void toStartTime_customFrom_parsesDate() {
+    LocalDateTime result = AdminAnalyticsController.toStartTime("week", "2026-06-01");
+    assertThat(result).isEqualTo(LocalDateTime.of(2026, 6, 1, 0, 0, 0));
+  }
+
+  @Test
+  void blankExplicitDatesFallBackToTheSelectedPeriod() {
+    assertThat(
+            AdminAnalyticsController.toStartTime(
+                "all", " ", LocalDate.now(), LocalDate.of(2026, 6, 1)))
+        .isEqualTo(LocalDateTime.of(2026, 6, 1, 0, 0));
+    assertThat(AdminAnalyticsController.toEndTime("week", " "))
+        .isEqualTo(
+            LocalDate.now()
+                .with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY))
+                .atTime(23, 59, 59));
+  }
+
+  @Test
+  void toStartTime_today_returnsStartOfToday() {
+    LocalDateTime result = AdminAnalyticsController.toStartTime("today", null);
+    assertThat(result).isEqualTo(LocalDate.now().atStartOfDay());
+  }
+
+  @Test
+  void toStartTime_monthPeriod_returnsFirstDayOfThisMonth() {
+    LocalDateTime result = AdminAnalyticsController.toStartTime("month", null);
+    assertThat(result).isEqualTo(LocalDate.now().withDayOfMonth(1).atStartOfDay());
+  }
+
+  @Test
+  void toStartTime_yearPeriod_returnsFirstDayOfThisYear() {
+    LocalDateTime result = AdminAnalyticsController.toStartTime("year", null);
+    assertThat(result).isEqualTo(LocalDate.now().withDayOfYear(1).atStartOfDay());
+  }
+
+  @Test
+  void toStartTime_allPeriod_returnsConfiguredLaunchDate() {
+    LocalDateTime result =
+        AdminAnalyticsController.toStartTime(
+            "all", "2000-01-01", LocalDate.of(2026, 9, 15), LocalDate.of(2026, 6, 1));
+    assertThat(result).isEqualTo(LocalDateTime.of(2026, 6, 1, 0, 0));
+  }
+
+  @Test
+  void toStartTime_allPeriod_withoutLaunchDate_rejectsMissingConfiguration() {
+    assertThatThrownBy(
+            () -> AdminAnalyticsController.toStartTime("all", null, LocalDate.of(2026, 9, 15)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("launchDate is required for all period");
+  }
+
+  @Test
+  void toEndTime_usesExplicitEndOfDayAndWholeNaturalDayForToday() {
+    assertThat(AdminAnalyticsController.toEndTime("week", "2026-06-30"))
+        .isEqualTo(LocalDateTime.of(2026, 6, 30, 23, 59, 59));
+    assertThat(AdminAnalyticsController.toEndTime("today", null))
+        .isEqualTo(LocalDate.now().atTime(23, 59, 59));
+    assertThat(AdminAnalyticsController.toEndTime("week", null))
+        .isEqualTo(
+            LocalDate.now()
+                .with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY))
+                .atTime(23, 59, 59));
+    assertThat(AdminAnalyticsController.toEndTime("all", null))
+        .isBeforeOrEqualTo(LocalDateTime.now());
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view"})
+  void trend_withOnlyOneExplicitDate_stillUsesCustomRangeDetection() throws Exception {
+    when(viewLogStatsPort.postTrend(any(), any(), any(), any())).thenReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/post-trend")
+                .param("postId", "42")
+                .param("from", "2026-06-01"))
+        .andExpect(status().isOk());
+
+    verify(viewLogStatsPort, times(2)).postTrend(eq(42L), any(), any(), any());
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/post-trend").param("postId", "42").param("to", "2026-06-30"))
+        .andExpect(status().isOk());
+
+    verify(viewLogStatsPort, times(4)).postTrend(eq(42L), any(), any(), any());
+
+    mockMvc
+        .perform(
+            get("/admin/analytics/api/post-trend")
+                .param("postId", "42")
+                .param("from", " ")
+                .param("to", " "))
+        .andExpect(status().isOk());
+
+    verify(viewLogStatsPort, times(6)).postTrend(eq(42L), any(), any(), any());
+  }
+
+  @Test
+  void toDateFormat_within2Days_returnsHourFormat() {
+    // 固定时间而非 LocalDateTime.now()：跨 10 小时但保证不跨天，
+    // 避免在 0:00-10:00 运行时 now-10h 落到前一天导致断言 flaky。
+    LocalDateTime start = LocalDateTime.of(2026, 7, 28, 2, 0);
+    assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.of(2026, 7, 28, 12, 0)))
+        .isEqualTo("%H:00");
+  }
+
+  @Test
+  void toDateFormat_acrossTwoDates_returnsDayFormatToAvoidMergingHours() {
+    assertThat(
+            AdminAnalyticsController.toDateFormat(
+                LocalDateTime.of(2026, 7, 28, 0, 0), LocalDateTime.of(2026, 7, 29, 12, 0)))
+        .isEqualTo("%m-%d");
+  }
+
+  @Test
+  void toDateFormat_30Days_returnsDayFormat() {
+    LocalDateTime start = LocalDateTime.of(2026, 1, 1, 0, 0);
+    assertThat(
+            AdminAnalyticsController.toDateFormat(start, LocalDateTime.of(2026, 1, 31, 23, 59, 59)))
+        .isEqualTo("%m-%d");
+  }
+
+  @Test
+  void toDateFormat_exactOneCalendarMonth_returnsDayFormat() {
+    assertThat(
+            AdminAnalyticsController.toDateFormat(
+                LocalDateTime.of(2026, 1, 15, 0, 0), LocalDateTime.of(2026, 2, 15, 23, 59, 59)))
+        .isEqualTo("%m-%d");
+  }
+
+  @Test
+  void toDateFormat_dayGranularity_returnsDayFormat() {
+    assertThat(
+            AdminAnalyticsController.toDateFormat(
                 LocalDateTime.of(2026, 1, 15, 0, 0),
-                LocalDateTime.of(2026, 2, 15, 23, 59, 59)))
-                .isEqualTo("%m-%d");
-    }
+                LocalDateTime.of(2026, 1, 15, 23, 59, 59),
+                false,
+                "day"))
+        .isEqualTo("%m-%d");
+  }
 
-    @Test
-    void toDateFormat_dayGranularity_returnsDayFormat() {
-        assertThat(AdminAnalyticsController.toDateFormat(
-                LocalDateTime.of(2026, 1, 15, 0, 0),
-                LocalDateTime.of(2026, 1, 15, 23, 59, 59), false, "day"))
-                .isEqualTo("%m-%d");
-    }
-
-    @Test
-    void customOneDayRange_defaultsToHourFormat() {
-        assertThat(AdminAnalyticsController.toDateFormat(
+  @Test
+  void customOneDayRange_defaultsToHourFormat() {
+    assertThat(
+            AdminAnalyticsController.toDateFormat(
                 LocalDateTime.of(2026, 7, 29, 0, 0),
-                LocalDateTime.of(2026, 7, 29, 23, 59, 59), true, "auto"))
-                .isEqualTo("%H:00");
-    }
+                LocalDateTime.of(2026, 7, 29, 23, 59, 59),
+                true,
+                "auto"))
+        .isEqualTo("%H:00");
+  }
 
-    @Test
-    void drilledDayRange_canRequestHourFormat() {
-        assertThat(AdminAnalyticsController.toDateFormat(
+  @Test
+  void drilledDayRange_canRequestHourFormat() {
+    assertThat(
+            AdminAnalyticsController.toDateFormat(
                 LocalDateTime.of(2026, 7, 29, 0, 0),
-                LocalDateTime.of(2026, 7, 29, 23, 59, 59), true, "hour"))
-                .isEqualTo("%H:00");
-    }
+                LocalDateTime.of(2026, 7, 29, 23, 59, 59),
+                true,
+                "hour"))
+        .isEqualTo("%H:00");
+  }
 
-    @Test
-    void toDateFormat_longerThanOneCalendarMonth_returnsMonthFormat() {
-        assertThat(AdminAnalyticsController.toDateFormat(
-                LocalDateTime.of(2026, 1, 15, 0, 0),
-                LocalDateTime.of(2026, 2, 16, 23, 59, 59)))
-                .isEqualTo("%Y-%m");
-    }
+  @Test
+  void toDateFormat_longerThanOneCalendarMonth_returnsMonthFormat() {
+    assertThat(
+            AdminAnalyticsController.toDateFormat(
+                LocalDateTime.of(2026, 1, 15, 0, 0), LocalDateTime.of(2026, 2, 16, 23, 59, 59)))
+        .isEqualTo("%Y-%m");
+  }
 
-    @Test
-    void toDateFormat_365Days_returnsMonthFormat() {
-        LocalDateTime start = LocalDateTime.now().minusDays(365);
-        assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.now()))
-                .isEqualTo("%Y-%m");
-    }
+  @Test
+  void toDateFormat_365Days_returnsMonthFormat() {
+    LocalDateTime start = LocalDateTime.now().minusDays(365);
+    assertThat(AdminAnalyticsController.toDateFormat(start, LocalDateTime.now()))
+        .isEqualTo("%Y-%m");
+  }
 
-    private static TrendPointDTO trendPoint(String label, long viewCount) {
-        TrendPointDTO point = new TrendPointDTO();
-        point.setLabel(label);
-        point.setViewCount(viewCount);
-        return point;
-    }
+  private static TrendPointDTO trendPoint(String label, long viewCount) {
+    TrendPointDTO point = new TrendPointDTO();
+    point.setLabel(label);
+    point.setViewCount(viewCount);
+    return point;
+  }
 }

@@ -10,28 +10,29 @@
 pagination(currentPage, totalPages, total, pageSize, baseUrl)
 ```
 
-| 参数 | 含义 |
-| --- | --- |
-| `currentPage` | 从 1 开始的当前页。 |
-| `totalPages` | 总页数。 |
-| `total` | 总条数；为 `null` 或 `0` 时不展示计数。 |
-| `pageSize` | 生成 URL 时保留的页大小。 |
-| `baseUrl` | 以 `?` 或 `&` 结尾的 URL 前缀。 |
+| 参数          | 含义                                    |
+| ------------- | --------------------------------------- |
+| `currentPage` | 从 1 开始的当前页。                     |
+| `totalPages`  | 总页数。                                |
+| `total`       | 总条数；为 `null` 或 `0` 时不展示计数。 |
+| `pageSize`    | 生成 URL 时保留的页大小。               |
+| `baseUrl`     | 以 `?` 或 `&` 结尾的 URL 前缀。         |
 
 调用方必须提供这五个模型属性：
 
 ```html
-<div th:if="${totalPages > 1}"
-     th:replace="~{fragments/pagination :: pagination(
-       ${currentPage}, ${totalPages}, ${total}, ${pageSize}, '/admin/posts?')}"></div>
+<div
+  th:if="${totalPages > 1}"
+  th:replace="~{fragments/pagination :: pagination(
+       ${currentPage}, ${totalPages}, ${total}, ${pageSize}, '/admin/posts?')}"
+></div>
 ```
 
 筛选条件必须编码进 `baseUrl` 并以 `&` 结尾，确保翻页和跳页不丢失查询条件：
 
 ```html
-th:with="baseUrl='/posts?' +
-  (${activeTag} != null ? 'tag=' + ${activeTag} + '&' : '') +
-  (${activeCategory} != null ? 'category=' + ${activeCategory} + '&' : '')"
+th:with="baseUrl='/posts?' + (${activeTag} != null ? 'tag=' + ${activeTag} + '&' : '') + (${activeCategory} != null ?
+'category=' + ${activeCategory} + '&' : '')"
 ```
 
 组件自身使用 `bd-pagination-*` 命名空间，负责页码、上一页/下一页、跳页和响应式样式；消费页不应覆盖这些选择器。
@@ -53,9 +54,9 @@ th:with="baseUrl='/posts?' +
 filterBar(action, fields)
 ```
 
-| 参数 | 含义 |
-| --- | --- |
-| `action` | 过滤表单提交的 GET URL，即列表页自身路径。 |
+| 参数     | 含义                                                 |
+| -------- | ---------------------------------------------------- |
+| `action` | 过滤表单提交的 GET URL，即列表页自身路径。           |
 | `fields` | `List<FilterField>`，Controller 构建的配置驱动字段。 |
 
 每个 `FilterField` 由 Controller 用静态工厂构建：`text(name, label, value, placeholder)`、`number(...)` 或 `select(name, label, value, options)`；组件零改动即可新增字段。

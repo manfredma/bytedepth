@@ -5,11 +5,9 @@ import java.util.List;
 
 public interface ViewLogArchivePort {
 
-    List<LocalDateTime> findCandidateBuckets(ViewLogArchiveSource source,
-                                             LocalDateTime cutoff,
-                                             int maxBuckets);
+  List<LocalDateTime> findCandidateBuckets(
+      ViewLogArchiveSource source, LocalDateTime cutoff, int maxBuckets);
 
-    ViewLogArchiveResult archiveBucket(ViewLogArchiveSource source,
-                                       LocalDateTime bucketStart,
-                                       LocalDateTime bucketEnd);
+  ViewLogArchiveResult archiveBucket(
+      ViewLogArchiveSource source, LocalDateTime bucketStart, LocalDateTime bucketEnd);
 }

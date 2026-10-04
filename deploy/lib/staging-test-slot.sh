@@ -1,170 +1,236 @@
 #!/usr/bin/env bash
 # Shared, fail-closed resource contract for the serial staging test slot.
 
-slot_die() { printf 'Refusing: %s\n' "$*" >&2; return 1; }
+slot_die() {
+  printf 'Refusing: %s\n' "$*" >&2
+  return 1
+}
 
 slot_chown_ubuntu() {
-    local path="$1"
-    if [[ "${EUID:-}" -eq 0 ]] && getent passwd ubuntu >/dev/null 2>&1 && getent group ubuntu >/dev/null 2>&1; then
-        chown ubuntu:ubuntu "$path"
-    fi
+  local path="$1"
+  if [[ "${EUID:-}" -eq 0 ]] && getent passwd ubuntu > /dev/null 2>&1 && getent group ubuntu > /dev/null 2>&1; then
+    chown ubuntu:ubuntu "$path"
+  fi
 }
 
 validate_run_id() {
-    [[ ${1:-} =~ ^[0-9]{8}_[0-9]{6}_[a-z0-9]{8}$ ]] || slot_die 'invalid RUN_ID'
+  [[ ${1:-} =~ ^[0-9]{8}_[0-9]{6}_[a-z0-9]{8}$ ]] || slot_die 'invalid RUN_ID'
 }
 
 # GNU stat is available on staging/Linux; BSD stat is used on macOS development hosts.
-slot_stat_user() { stat -c %U "$1" 2>/dev/null || stat -f %Su "$1"; }
-slot_stat_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }
+slot_stat_user() { stat -c %U "$1" 2> /dev/null || stat -f %Su "$1"; }
+slot_stat_mode() { stat -c %a "$1" 2> /dev/null || stat -f %Lp "$1"; }
 slot_redis_cli() {
-    redis-cli -h "${BYTEDEPTH_STAGING_REDIS_HOST:-127.0.0.1}" \
-        -p "${BYTEDEPTH_STAGING_REDIS_PORT:-6379}" "$@"
+  redis-cli -h "${BYTEDEPTH_STAGING_REDIS_HOST:-127.0.0.1}" \
+    -p "${BYTEDEPTH_STAGING_REDIS_PORT:-6379}" "$@"
 }
 staging_mysql_admin() {
-    mysql --defaults-extra-file="${BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE:?BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE is required}" \
-        --host=127.0.0.1 --port="${BYTEDEPTH_STAGING_MYSQL_PORT:?BYTEDEPTH_STAGING_MYSQL_PORT is required}" "$@"
+  mysql --defaults-extra-file="${BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE:?BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE is required}" \
+    --host=127.0.0.1 --port="${BYTEDEPTH_STAGING_MYSQL_PORT:?BYTEDEPTH_STAGING_MYSQL_PORT is required}" "$@"
 }
 slot_test_image_root() { printf '%s\n' "${BYTEDEPTH_STAGING_TEST_IMAGE_ROOT:-/data/images-test}"; }
 slot_root_private() {
-    [[ ! -L $1 && $(slot_stat_user "$1") == ubuntu && $(slot_stat_mode "$1") == 600 ]] || slot_die "not an ubuntu-owned 0600 file: $1"
+  [[ ! -L $1 && $(slot_stat_user "$1") == ubuntu && $(slot_stat_mode "$1") == 600 ]] || slot_die "not an ubuntu-owned 0600 file: $1"
 }
 slot_root_directory() {
-    [[ -d $1 && ! -L $1 && $(slot_stat_user "$1") == ubuntu && $(slot_stat_mode "$1") == 700 && -w $1 ]] || slot_die "not a writable ubuntu-owned 0700 directory: $1"
+  [[ -d $1 && ! -L $1 && $(slot_stat_user "$1") == ubuntu && $(slot_stat_mode "$1") == 700 && -w $1 ]] || slot_die "not a writable ubuntu-owned 0700 directory: $1"
 }
 
 assert_not_staging_resource() {
-    local kind="$1" name="$2" run_id="$3"
-    validate_run_id "$run_id" || return
-    case "$kind:$name" in
-        "mysql:bytedepth_it_$run_id"|"mysql:bytedepth_e2e_$run_id"|\
-        "user:bd_it_$run_id"|"user:bd_e2e_$run_id"|\
-        "meili:posts_it_$run_id"|"meili:posts_e2e_$run_id"|\
-        "redis:bytedepth:it:$run_id:"|"redis:bytedepth:e2e:$run_id:") return 0 ;;
-        directory:*) [[ "$name" == "$(slot_test_image_root)/$run_id/it" || "$name" == "$(slot_test_image_root)/$run_id/e2e" ]] && return 0 ;;
-    esac
-    slot_die "resource is outside RUN_ID scope: $kind"
+  local kind="$1" name="$2" run_id="$3"
+  validate_run_id "$run_id" || return
+  case "$kind:$name" in
+    "mysql:bytedepth_it_$run_id" | "mysql:bytedepth_e2e_$run_id" | \
+      "user:bd_it_$run_id" | "user:bd_e2e_$run_id" | \
+      "meili:posts_it_$run_id" | "meili:posts_e2e_$run_id" | \
+      "redis:bytedepth:it:$run_id:" | "redis:bytedepth:e2e:$run_id:") return 0 ;;
+    directory:*) [[ "$name" == "$(slot_test_image_root)/$run_id/it" || "$name" == "$(slot_test_image_root)/$run_id/e2e" ]] && return 0 ;;
+  esac
+  slot_die "resource is outside RUN_ID scope: $kind"
 }
 
 require_redis_capacity() {
-    local capacity="$1" staging="$2" it="$3" e2e="$4"
-    [[ $capacity =~ ^[0-9]+$ && $staging =~ ^[0-9]+$ && $it =~ ^[0-9]+$ && $e2e =~ ^[0-9]+$ ]] || { slot_die 'invalid Redis DB numbers'; return; }
-    (( 10#$capacity > 10#$it && 10#$capacity > 10#$e2e && 10#$it != 10#$e2e && 10#$it != 10#$staging && 10#$e2e != 10#$staging )) || slot_die 'missing reserved Redis DB capacity or DB overlap'
+  local capacity="$1" staging="$2" it="$3" e2e="$4"
+  [[ $capacity =~ ^[0-9]+$ && $staging =~ ^[0-9]+$ && $it =~ ^[0-9]+$ && $e2e =~ ^[0-9]+$ ]] || {
+    slot_die 'invalid Redis DB numbers'
+    return
+  }
+  ((10#$capacity > 10#$it && 10#$capacity > 10#$e2e && 10#$it != 10#$e2e && 10#$it != 10#$staging && 10#$e2e != 10#$staging)) || slot_die 'missing reserved Redis DB capacity or DB overlap'
 }
 
 slot_manifest_value() { sed -n "s/^$2=//p" "$1"; }
 require_manifest() {
-    local file="$1" run_id profile key value
-    [[ -f $file && ! -L $file ]] || { slot_die 'manifest missing or symlinked'; return; }
-    slot_root_private "$file" || return
-    [[ $(cut -d= -f1 "$file" | sort | uniq -d | wc -l | tr -d ' ') == 0 ]] || { slot_die 'duplicate manifest keys'; return; }
-    [[ $(wc -l < "$file" | tr -d ' ') == 18 ]] || { slot_die 'invalid manifest fields'; return; }
-    run_id="$(slot_manifest_value "$file" run_id)"
-    validate_run_id "$run_id" || return
-    [[ $(slot_manifest_value "$file" candidate_sha) =~ ^[0-9a-f]{40}$ && $(slot_manifest_value "$file" mode) == staging ]] || { slot_die 'invalid candidate SHA or mode'; return; }
-    [[ $(slot_manifest_value "$file" it_db) == "bytedepth_it_$run_id" &&
-        $(slot_manifest_value "$file" it_user) == "bd_it_$run_id" &&
-        $(slot_manifest_value "$file" it_index) == "posts_it_$run_id" &&
-        $(slot_manifest_value "$file" it_namespace) == "bytedepth:it:$run_id:" &&
-        $(slot_manifest_value "$file" e2e_db) == "bytedepth_e2e_$run_id" &&
-        $(slot_manifest_value "$file" e2e_user) == "bd_e2e_$run_id" &&
-        $(slot_manifest_value "$file" e2e_index) == "posts_e2e_$run_id" &&
-        $(slot_manifest_value "$file" e2e_namespace) == "bytedepth:e2e:$run_id:" ]] || {
-        slot_die 'manifest resources are not bound to their profile'
-        return 1
-    }
-    for profile in it e2e; do
-        for kind in mysql user meili redis; do
-            case $kind in
-                mysql) key="${profile}_db" ;;
-                user) key="${profile}_user" ;;
-                meili) key="${profile}_index" ;;
-                redis) key="${profile}_namespace" ;;
-            esac
-            value="$(slot_manifest_value "$file" "$key")"
-            assert_not_staging_resource "$kind" "$value" "$run_id" || return
-        done
-        value="$(slot_manifest_value "$file" "${profile}_redis_db")"
-        [[ $value =~ ^[0-9]+$ ]] || { slot_die 'invalid Redis DB'; return; }
-        value="$(slot_manifest_value "$file" "${profile}_key_uid")"
-        [[ $value =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] || { slot_die 'invalid scoped Meili key UID'; return; }
+  local file="$1" run_id profile key value
+  [[ -f $file && ! -L $file ]] || {
+    slot_die 'manifest missing or symlinked'
+    return
+  }
+  slot_root_private "$file" || return
+  [[ $(cut -d= -f1 "$file" | sort | uniq -d | wc -l | tr -d ' ') == 0 ]] || {
+    slot_die 'duplicate manifest keys'
+    return
+  }
+  [[ $(wc -l < "$file" | tr -d ' ') == 18 ]] || {
+    slot_die 'invalid manifest fields'
+    return
+  }
+  run_id="$(slot_manifest_value "$file" run_id)"
+  validate_run_id "$run_id" || return
+  [[ $(slot_manifest_value "$file" candidate_sha) =~ ^[0-9a-f]{40}$ && $(slot_manifest_value "$file" mode) == staging ]] || {
+    slot_die 'invalid candidate SHA or mode'
+    return
+  }
+  [[ $(slot_manifest_value "$file" it_db) == "bytedepth_it_$run_id" &&
+  $(slot_manifest_value "$file" it_user) == "bd_it_$run_id" &&
+  $(slot_manifest_value "$file" it_index) == "posts_it_$run_id" &&
+  $(slot_manifest_value "$file" it_namespace) == "bytedepth:it:$run_id:" &&
+  $(slot_manifest_value "$file" e2e_db) == "bytedepth_e2e_$run_id" &&
+  $(slot_manifest_value "$file" e2e_user) == "bd_e2e_$run_id" &&
+  $(slot_manifest_value "$file" e2e_index) == "posts_e2e_$run_id" &&
+  $(slot_manifest_value "$file" e2e_namespace) == "bytedepth:e2e:$run_id:" ]] || {
+    slot_die 'manifest resources are not bound to their profile'
+    return 1
+  }
+  for profile in it e2e; do
+    for kind in mysql user meili redis; do
+      case $kind in
+        mysql) key="${profile}_db" ;;
+        user) key="${profile}_user" ;;
+        meili) key="${profile}_index" ;;
+        redis) key="${profile}_namespace" ;;
+      esac
+      value="$(slot_manifest_value "$file" "$key")"
+      assert_not_staging_resource "$kind" "$value" "$run_id" || return
     done
-    [[ $(slot_manifest_value "$file" app_port) == "${BYTEDEPTH_STAGING_APP_PORT:?BYTEDEPTH_STAGING_APP_PORT is required}" ]] || { slot_die 'invalid test app port'; return; }
-    [[ $(slot_manifest_value "$file" it_env) == "$(dirname "$file")/staging-it.env" && $(slot_manifest_value "$file" e2e_env) == "$(dirname "$file")/staging-e2e.env" ]] || { slot_die 'invalid environment path'; return; }
-    [[ $(slot_manifest_value "$file" it_redis_db) == 14 && $(slot_manifest_value "$file" e2e_redis_db) == 15 ]] || { slot_die 'invalid reserved Redis DBs'; return; }
-    slot_root_directory "$(dirname "$file")" || return
-    require_redis_capacity "${BYTEDEPTH_TEST_REDIS_CAPACITY:?}" "${BYTEDEPTH_TEST_STAGING_REDIS_DB:?}" "$(slot_manifest_value "$file" it_redis_db)" "$(slot_manifest_value "$file" e2e_redis_db)"
+    value="$(slot_manifest_value "$file" "${profile}_redis_db")"
+    [[ $value =~ ^[0-9]+$ ]] || {
+      slot_die 'invalid Redis DB'
+      return
+    }
+    value="$(slot_manifest_value "$file" "${profile}_key_uid")"
+    [[ $value =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] || {
+      slot_die 'invalid scoped Meili key UID'
+      return
+    }
+  done
+  [[ $(slot_manifest_value "$file" app_port) == "${BYTEDEPTH_STAGING_APP_PORT:?BYTEDEPTH_STAGING_APP_PORT is required}" ]] || {
+    slot_die 'invalid test app port'
+    return
+  }
+  [[ $(slot_manifest_value "$file" it_env) == "$(dirname "$file")/staging-it.env" && $(slot_manifest_value "$file" e2e_env) == "$(dirname "$file")/staging-e2e.env" ]] || {
+    slot_die 'invalid environment path'
+    return
+  }
+  [[ $(slot_manifest_value "$file" it_redis_db) == 14 && $(slot_manifest_value "$file" e2e_redis_db) == 15 ]] || {
+    slot_die 'invalid reserved Redis DBs'
+    return
+  }
+  slot_root_directory "$(dirname "$file")" || return
+  require_redis_capacity "${BYTEDEPTH_TEST_REDIS_CAPACITY:?}" "${BYTEDEPTH_TEST_STAGING_REDIS_DB:?}" "$(slot_manifest_value "$file" it_redis_db)" "$(slot_manifest_value "$file" e2e_redis_db)"
 }
 
 validate_fixture() {
-    local fixture="$1" normalized_fixture
-    [[ -f $fixture && ! -L $fixture ]] || { slot_die 'fixture missing'; return 1; }
-    for token in article category admin; do
-        grep -Eqi "INSERT[[:space:]]+INTO[[:space:]]+.*$token" "$fixture" || { slot_die "fixture lacks $token insert"; return 1; }
-    done
-    grep -Eq '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || { slot_die 'fixture lacks administrator password hash'; return 1; }
-    normalized_fixture="$(tr '\n\r\t' ' ' < "$fixture")"
-    if grep -n -E -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])\\[[:alpha:]!#.]|(^|[[:space:];])(system|delimiter|pager|tee|source|use|connect|status|warnings|nowarning|charset|prompt|rehash|edit|go|print)([[:space:];]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|EVENT|TRIGGER|PROCEDURE|FUNCTION|VIEW|ROLE|TABLESPACE|SERVER|LOGFILE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+(DATA|XML)|INTO[[:space:]]+OUTFILE|RENAME([[:space:]]+(TABLE|USER))?|CALL|LOCK[[:space:]]+TABLES|SET([[:space:]]+(GLOBAL|PERSIST|PERSIST_ONLY|SESSION))?|PREPARE|EXECUTE|DEALLOCATE)([[:space:]]|;|$)' <<< "$normalized_fixture"; then
-        slot_die 'fixture contains unsafe SQL or qualified production tables'
-        return 1
-    fi
-    if printf '%s\n' "$normalized_fixture" | sed 's/;/;\n/g' \
-        | grep -n -E -i '^[[:space:]]*(INSERT[[:space:]]+INTO|CREATE[[:space:]]+TABLE)[[:space:]]+[^[:space:];]+[[:space:]]*\.'; then
-        slot_die 'fixture contains qualified production tables'
-        return 1
-    fi
+  local fixture="$1" normalized_fixture
+  [[ -f $fixture && ! -L $fixture ]] || {
+    slot_die 'fixture missing'
+    return 1
+  }
+  for token in article category admin; do
+    grep -Eqi "INSERT[[:space:]]+INTO[[:space:]]+.*$token" "$fixture" || {
+      slot_die "fixture lacks $token insert"
+      return 1
+    }
+  done
+  grep -Eq '\$2[aby]\$|\$argon2(id|i)\$' "$fixture" || {
+    slot_die 'fixture lacks administrator password hash'
+    return 1
+  }
+  normalized_fixture="$(tr '\n\r\t' ' ' < "$fixture")"
+  if grep -n -E -i '(^|[^a-z])(admin123|changeme|production|bytedepth\.cn)([^a-z]|$)|(--|#|/\*|\*/)|(^|[[:space:];])\\[[:alpha:]!#.]|(^|[[:space:];])(system|delimiter|pager|tee|source|use|connect|status|warnings|nowarning|charset|prompt|rehash|edit|go|print)([[:space:];]|$)|(^|[[:space:];])(USE|DELETE|UPDATE|DROP|ALTER|TRUNCATE|CREATE[[:space:]]+(DATABASE|USER|EVENT|TRIGGER|PROCEDURE|FUNCTION|VIEW|ROLE|TABLESPACE|SERVER|LOGFILE)|GRANT|REVOKE|FLUSH|SOURCE|LOAD[[:space:]]+(DATA|XML)|INTO[[:space:]]+OUTFILE|RENAME([[:space:]]+(TABLE|USER))?|CALL|LOCK[[:space:]]+TABLES|SET([[:space:]]+(GLOBAL|PERSIST|PERSIST_ONLY|SESSION))?|PREPARE|EXECUTE|DEALLOCATE)([[:space:]]|;|$)' <<< "$normalized_fixture"; then
+    slot_die 'fixture contains unsafe SQL or qualified production tables'
+    return 1
+  fi
+  if printf '%s\n' "$normalized_fixture" | sed 's/;/;\n/g' \
+    | grep -n -E -i '^[[:space:]]*(INSERT[[:space:]]+INTO|CREATE[[:space:]]+TABLE)[[:space:]]+[^[:space:];]+[[:space:]]*\.'; then
+    slot_die 'fixture contains qualified production tables'
+    return 1
+  fi
 }
 
 mysql_exec() {
-    local database="$1" sql="$2" run_id="$3"
-    assert_not_staging_resource mysql "$database" "$run_id" || return
-    [[ $sql == 'SELECT DATABASE()' ]] || { slot_die 'unsupported SQL in mysql_exec'; return; }
-    staging_mysql_admin --batch --skip-column-names "$database" -e "$sql"
+  local database="$1" sql="$2" run_id="$3"
+  assert_not_staging_resource mysql "$database" "$run_id" || return
+  [[ $sql == 'SELECT DATABASE()' ]] || {
+    slot_die 'unsupported SQL in mysql_exec'
+    return
+  }
+  staging_mysql_admin --batch --skip-column-names "$database" -e "$sql"
 }
 
 redis_scan_delete() {
-    local db="$1" namespace="$2" run_id="$3" key keys before=0 after=0
-    [[ $# == 3 ]] || { slot_die 'unexpected Redis operation'; return; }
-    assert_not_staging_resource redis "$namespace" "$run_id" || return
-    [[ $db == "$BYTEDEPTH_TEST_IT_REDIS_DB" || $db == "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'unreserved Redis DB'; return; }
-    keys="$(slot_redis_cli -n "$db" --scan --pattern "${namespace}*")" || return
-    while IFS= read -r key; do
-        [[ -n $key ]] || continue
-        [[ $key == "$namespace"* ]] || { slot_die 'Redis scan returned out-of-scope key'; return; }
-        ((before+=1))
-        slot_redis_cli -n "$db" DEL "$key" >/dev/null || return
-    done <<< "$keys"
-    keys="$(slot_redis_cli -n "$db" --scan --pattern "${namespace}*")" || return
-    while IFS= read -r key; do [[ -z $key ]] || ((after+=1)); done <<< "$keys"
-    (( after == 0 )) || slot_die "Redis cleanup left $after keys (found $before)"
+  local db="$1" namespace="$2" run_id="$3" key keys before=0 after=0
+  [[ $# == 3 ]] || {
+    slot_die 'unexpected Redis operation'
+    return
+  }
+  assert_not_staging_resource redis "$namespace" "$run_id" || return
+  [[ $db == "$BYTEDEPTH_TEST_IT_REDIS_DB" || $db == "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || {
+    slot_die 'unreserved Redis DB'
+    return
+  }
+  keys="$(slot_redis_cli -n "$db" --scan --pattern "${namespace}*")" || return
+  while IFS= read -r key; do
+    [[ -n $key ]] || continue
+    [[ $key == "$namespace"* ]] || {
+      slot_die 'Redis scan returned out-of-scope key'
+      return
+    }
+    ((before += 1))
+    slot_redis_cli -n "$db" DEL "$key" > /dev/null || return
+  done <<< "$keys"
+  keys="$(slot_redis_cli -n "$db" --scan --pattern "${namespace}*")" || return
+  while IFS= read -r key; do [[ -z $key ]] || ((after += 1)); done <<< "$keys"
+  ((after == 0)) || slot_die "Redis cleanup left $after keys (found $before)"
 }
 
 meili_wait_task() {
-    local task_id="$1" result attempt
-    [[ $task_id =~ ^[0-9]+$ ]] || { slot_die 'invalid Meili task id'; return; }
-    for ((attempt=0; attempt<30; attempt++)); do
-        result="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/tasks/$task_id")" || return
-        [[ $result == *'"status":"succeeded"'* || $result == *'"status": "succeeded"'* ]] && return 0
-        [[ $result == *'"status":"failed"'* || $result == *'"status": "failed"'* ]] && { slot_die 'Meili task failed'; return; }
-        sleep 1
-    done
-    slot_die 'Meili task timeout'
+  local task_id="$1" result attempt
+  [[ $task_id =~ ^[0-9]+$ ]] || {
+    slot_die 'invalid Meili task id'
+    return
+  }
+  for ((attempt = 0; attempt < 30; attempt++)); do
+    result="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/tasks/$task_id")" || return
+    [[ $result == *'"status":"succeeded"'* || $result == *'"status": "succeeded"'* ]] && return 0
+    [[ $result == *'"status":"failed"'* || $result == *'"status": "failed"'* ]] && {
+      slot_die 'Meili task failed'
+      return
+    }
+    sleep 1
+  done
+  slot_die 'Meili task timeout'
 }
 
 write_resource_digest() {
-    local manifest="$1" output="$2"
-    require_manifest "$manifest" || return
-    (umask 077; { for key in run_id candidate_sha it_db e2e_db it_index e2e_index; do slot_manifest_value "$manifest" "$key"; done; } | shasum -a 256 | awk '{print $1}' > "$output")
+  local manifest="$1" output="$2"
+  require_manifest "$manifest" || return
+  (
+    umask 077
+    { for key in run_id candidate_sha it_db e2e_db it_index e2e_index; do slot_manifest_value "$manifest" "$key"; done; } | shasum -a 256 | awk '{print $1}' > "$output"
+  )
 }
 
 staging_resource_snapshot() {
-    local staging_db="$1" redis_snapshot meili_stats record key_hex dump_hex ttl ttl_state key_id value_hash scan_file failed
-    [[ $staging_db =~ ^[0-9]+$ && $staging_db != "$BYTEDEPTH_TEST_IT_REDIS_DB" && $staging_db != "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || { slot_die 'invalid staging Redis DB'; return; }
-    scan_file="$(mktemp)"
-    # Keep the /tmp file owned by its creating process until the shell has finished redirecting
-    # Redis output into it. Ubuntu's protected_regular policy rejects a root
-    # overwrite of a non-root file in the sticky /tmp directory.
-    if ! slot_redis_cli -n "$staging_db" --raw EVAL '
+  local staging_db="$1" redis_snapshot meili_stats record key_hex dump_hex ttl ttl_state key_id value_hash scan_file failed
+  [[ $staging_db =~ ^[0-9]+$ && $staging_db != "$BYTEDEPTH_TEST_IT_REDIS_DB" && $staging_db != "$BYTEDEPTH_TEST_E2E_REDIS_DB" ]] || {
+    slot_die 'invalid staging Redis DB'
+    return
+  }
+  scan_file="$(mktemp)"
+  # Keep the /tmp file owned by its creating process until the shell has finished redirecting
+  # Redis output into it. Ubuntu's protected_regular policy rejects a root
+  # overwrite of a non-root file in the sticky /tmp directory.
+  if ! slot_redis_cli -n "$staging_db" --raw EVAL '
 local function hex(value)
   local result = {}
   for i = 1, #value do result[i] = string.format("%02x", string.byte(value, i)) end
@@ -181,47 +247,65 @@ repeat
 until cursor == "0"
 return rows
 ' 0 > "$scan_file"; then
-        rm -f -- "$scan_file"
-        return 1
-    fi
-    redis_snapshot=''
-    failed=0
-    while IFS= read -r record || [[ -n $record ]]; do
-        # redis-cli --raw prints one empty line for an empty Lua array.  An
-        # empty staging DB is valid; it is not a malformed snapshot record.
-        [[ -n $record ]] || continue
-        [[ $record == *$'\t'*$'\t'* ]] || { failed=1; break; }
-        IFS=$'\t' read -r key_hex ttl dump_hex <<< "$record"
-        [[ -n $dump_hex ]] || { failed=1; break; }
-        key_id="$(printf '%s' "$key_hex" | shasum -a 256 | awk '{print $1}')" || { failed=1; break; }
-        value_hash="$(printf '%s' "$dump_hex" | shasum -a 256 | awk '{print $1}')" || { failed=1; break; }
-        case "$ttl" in
-            -1) ttl_state=persistent ;;
-            -2) continue ;;
-            [0-9]*) ttl_state=expiring ;;
-            *) failed=1; break ;;
-        esac
-        redis_snapshot+="redis:$key_id"$'\t'"$ttl_state"$'\t'"$value_hash"$'\t'"$ttl"$'\n'
-    done < "$scan_file"
     rm -f -- "$scan_file"
-    (( failed == 0 )) || { slot_die 'invalid Redis snapshot response'; return 1; }
-    redis_snapshot="${redis_snapshot%$'\n'}"
-    meili_stats="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/stats" | jq -cS .)" || return
-    printf 'meta\tcaptured_at\t%s\t0\n' "$(date +%s)"
-    printf '%s\n' "$redis_snapshot"
-    printf 'meili:index\tpersistent\t%s\t-1\n' "$(printf '%s' "$meili_stats" | shasum -a 256 | awk '{print $1}')"
+    return 1
+  fi
+  redis_snapshot=''
+  failed=0
+  while IFS= read -r record || [[ -n $record ]]; do
+    # redis-cli --raw prints one empty line for an empty Lua array.  An
+    # empty staging DB is valid; it is not a malformed snapshot record.
+    [[ -n $record ]] || continue
+    [[ $record == *$'\t'*$'\t'* ]] || {
+      failed=1
+      break
+    }
+    IFS=$'\t' read -r key_hex ttl dump_hex <<< "$record"
+    [[ -n $dump_hex ]] || {
+      failed=1
+      break
+    }
+    key_id="$(printf '%s' "$key_hex" | shasum -a 256 | awk '{print $1}')" || {
+      failed=1
+      break
+    }
+    value_hash="$(printf '%s' "$dump_hex" | shasum -a 256 | awk '{print $1}')" || {
+      failed=1
+      break
+    }
+    case "$ttl" in
+      -1) ttl_state=persistent ;;
+      -2) continue ;;
+      [0-9]*) ttl_state=expiring ;;
+      *)
+        failed=1
+        break
+        ;;
+    esac
+    redis_snapshot+="redis:$key_id"$'\t'"$ttl_state"$'\t'"$value_hash"$'\t'"$ttl"$'\n'
+  done < "$scan_file"
+  rm -f -- "$scan_file"
+  ((failed == 0)) || {
+    slot_die 'invalid Redis snapshot response'
+    return 1
+  }
+  redis_snapshot="${redis_snapshot%$'\n'}"
+  meili_stats="$(curl -fsS -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/posts/stats" | jq -cS .)" || return
+  printf 'meta\tcaptured_at\t%s\t0\n' "$(date +%s)"
+  printf '%s\n' "$redis_snapshot"
+  printf 'meili:index\tpersistent\t%s\t-1\n' "$(printf '%s' "$meili_stats" | shasum -a 256 | awk '{print $1}')"
 }
 
 verify_staging_resource_baseline() {
-    local staging_db="$1" baseline="$2" current
-    current="$(mktemp "$(dirname "$baseline")/.staging-current.XXXXXX")"
-    slot_chown_ubuntu "$current"
-    chmod 0600 "$current"
-    if ! staging_resource_snapshot "$staging_db" > "$current"; then
-        rm -f -- "$current"
-        return 1
-    fi
-    if ! awk -F '\t' '
+  local staging_db="$1" baseline="$2" current
+  current="$(mktemp "$(dirname "$baseline")/.staging-current.XXXXXX")"
+  slot_chown_ubuntu "$current"
+  chmod 0600 "$current"
+  if ! staging_resource_snapshot "$staging_db" > "$current"; then
+    rm -f -- "$current"
+    return 1
+  fi
+  if ! awk -F '\t' '
         FNR == NR {
             if ($1 == "meta") { baseline_time = $3; next }
             baseline_type[$1] = $2; baseline_hash[$1] = $3; baseline_ttl[$1] = $4; next
@@ -246,8 +330,8 @@ verify_staging_resource_baseline() {
             for (key in current_type) if (!(key in baseline_type)) exit 1
         }
     ' "$baseline" "$current"; then
-        rm -f -- "$current"
-        return 1
-    fi
     rm -f -- "$current"
+    return 1
+  fi
+  rm -f -- "$current"
 }

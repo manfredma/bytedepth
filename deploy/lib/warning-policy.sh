@@ -4,9 +4,9 @@
 # allowlisted. Keep the allowlist narrow: a technical-debt entry may permit a
 # known warning, but it must not weaken the gate for unrelated warnings.
 warning_policy_check_file() {
-    local log_file="${1:?warning log path is required}"
+  local log_file="${1:?warning log path is required}"
 
-    awk '
+  awk '
         function lower(value) { return tolower(value) }
         {
             line = lower($0)

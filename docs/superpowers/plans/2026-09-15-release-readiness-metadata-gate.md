@@ -24,10 +24,12 @@
 ### Task 1: 共享发布就绪检查器与单元契约测试
 
 **Files:**
+
 - Create: `scripts/check-release-readiness.sh`
 - Create: `scripts/test-check-release-readiness.sh`
 
 **Interfaces:**
+
 - Consumes: optional `--target <ref>` (default `HEAD`), `--base <ref>` (default `origin/main`), and `--mode candidate|release` (default `candidate`); repository root is derived from the script location.
 - Produces: exit `0` when the target has no runtime change or a valid `Unreleased`; exit non-zero with a remediation message otherwise.
 
@@ -88,11 +90,13 @@ git commit -m "test: define release readiness metadata gate"
 ### Task 2: Enforce the gate in local quality and CI
 
 **Files:**
+
 - Modify: `scripts/run-local-quality.sh`
 - Modify: `scripts/test-run-local-quality.sh`
 - Modify: `.github/workflows/quality.yml` only if its command does not already invoke `run-local-quality.sh`
 
 **Interfaces:**
+
 - Consumes: `scripts/check-release-readiness.sh` with default `HEAD`/`origin/main`.
 - Produces: local and PR quality fail before build/test when runtime changes lack `Unreleased`.
 
@@ -138,10 +142,12 @@ git commit -m "ci: enforce release metadata in quality gate"
 ### Task 3: Enforce the gate before staging build and deployment
 
 **Files:**
+
 - Modify: `deploy/deploy-staging.sh`
 - Modify: `scripts/test-deploy-staging.sh`
 
 **Interfaces:**
+
 - Consumes: fetched candidate SHA and `origin/main` from the shared checker.
 - Produces: staging deployment refusal before runtime preflight/build/rollout when the candidate is not release-ready.
 
@@ -185,12 +191,14 @@ git commit -m "deploy: gate staging on release metadata"
 ### Task 4: Enforce the gate at merge and release preparation
 
 **Files:**
+
 - Modify: `scripts/merge-main-after-quality.sh`
 - Modify: `scripts/prepare-release.sh`
 - Modify: `scripts/test-prepare-release.sh`
 - Create or modify: `scripts/test-merge-main-after-quality.sh`
 
 **Interfaces:**
+
 - Consumes: remote candidate SHA before merge and clean `main` after merge.
 - Produces: merge refusal for an unready candidate and release-time defense-in-depth without replacing formal version-title/evidence checks.
 
@@ -224,6 +232,7 @@ git commit -m "release: enforce readiness before merge and tag"
 ### Task 5: Make the written process unambiguous and wire the checklist
 
 **Files:**
+
 - Modify: `AGENTS.md`
 - Modify: `docs/releases/README.md`
 - Modify: `docs/engineering/git-workflow.md`
@@ -232,6 +241,7 @@ git commit -m "release: enforce readiness before merge and tag"
 - Modify: `scripts/test-staging-checklist.sh`
 
 **Interfaces:**
+
 - Consumes: the final shared checker and its exact failure contract.
 - Produces: one canonical wording and static checks proving every required entry point remains wired.
 
@@ -269,6 +279,7 @@ git commit -m "docs: make release readiness gate unambiguous"
 ### Task 6: Full verification and staging refusal/acceptance proof
 
 **Files:**
+
 - Modify only if a test exposes a defect; otherwise no additional files.
 
 - [ ] **Step 1: Run all focused shell contracts**

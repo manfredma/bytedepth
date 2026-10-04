@@ -9,11 +9,16 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CreateProjectCmdExe {
 
-    private final ProjectRepository projectRepository;
+  private final ProjectRepository projectRepository;
 
-    public Long execute(String name, String description, String techStack,
-                        String githubUrl, String demoUrl, int sortOrder) {
-        Project project = Project.create(name, description, techStack, githubUrl, demoUrl, sortOrder);
-        return projectRepository.save(project).getId();
-    }
+  public Long execute(
+      String name,
+      String description,
+      String techStack,
+      String githubUrl,
+      String demoUrl,
+      int sortOrder) {
+    Project project = Project.create(name, description, techStack, githubUrl, demoUrl, sortOrder);
+    return projectRepository.save(project).getId();
+  }
 }

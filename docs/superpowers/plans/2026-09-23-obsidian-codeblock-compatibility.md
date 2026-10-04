@@ -23,6 +23,7 @@
 ### Task 1: Extend the metadata contract
 
 **Files:**
+
 - Modify: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/util/CodeBlockMetadata.java`
 - Test: `bytedepth-adapter/src/test/java/manfred/bytedepth/adapter/web/util/CodeBlockMetadataTest.java`
 
@@ -34,6 +35,7 @@
 ### Task 2: Render plugin-compatible tabs without breaking legacy tabs
 
 **Files:**
+
 - Modify: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/util/EnhancedCodeBlockRenderer.java`
 - Test: `bytedepth-adapter/src/test/java/manfred/bytedepth/adapter/web/util/MarkdownRendererTest.java`
 
@@ -45,6 +47,7 @@
 ### Task 3: Add Obsidian-side Codeblock Customizer validation
 
 **Files:**
+
 - Modify: `/Users/maxingfang/.codex/skills/obsidian-note-checker/checker.py`
 - Modify: `/Users/maxingfang/.codex/skills/obsidian-note-checker/test_checker.py`
 - Modify: `/Users/maxingfang/.codex/skills/obsidian-note-checker/SKILL.md`
@@ -59,6 +62,7 @@
 ### Task 4: Add commit-bound E2E coverage
 
 **Files:**
+
 - Modify: `tests/e2e/code-blocks.spec.js`
 
 - [x] **Step 1: Extend the generated staging article** with a Codeblock Customizer-style `group/tab/title` Java/Go/Python group while retaining the legacy `tabs` case.

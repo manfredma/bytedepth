@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RemovePostFromSeriesCmdExe {
 
-    private final PostRepository postRepository;
+  private final PostRepository postRepository;
 
-    public void execute(Long postId) {
-        postRepository.clearPostSeries(postId);
-    }
+  public void execute(Long postId) {
+    postRepository.clearPostSeries(postId);
+  }
 }

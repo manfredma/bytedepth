@@ -9,13 +9,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ActivateUserCmdExe {
 
-    private final UserRepository userRepository;
+  private final UserRepository userRepository;
 
-    public void execute(Long userId) {
-        var user = userRepository.findById(userId)
-            .orElseThrow(() -> new DomainException("用户不存在：" + userId));
-        user.activate();
-        userRepository.save(user);
-        userRepository.assignRole(userId, "USER");
-    }
+  public void execute(Long userId) {
+    var user =
+        userRepository.findById(userId).orElseThrow(() -> new DomainException("用户不存在：" + userId));
+    user.activate();
+    userRepository.save(user);
+    userRepository.assignRole(userId, "USER");
+  }
 }

@@ -1,5 +1,7 @@
 package manfred.bytedepth.adapter.web.admin;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.adapter.web.security.ContentOwnershipGuard;
 import manfred.bytedepth.app.series.AppendPostToSeriesCmdExe;
@@ -20,99 +22,112 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 @PreAuthorize("hasAnyAuthority('admin:dashboard:view', 'blog:series:edit:own')")
 @Controller
 @RequestMapping("/admin/series")
 @RequiredArgsConstructor
 public class AdminSeriesDetailController {
 
-    private final GetSeriesDetailQryExe getSeriesDetailQryExe;
-    private final AppendPostToSeriesCmdExe appendPostToSeriesCmdExe;
-    private final RemovePostFromSeriesCmdExe removePostFromSeriesCmdExe;
-    private final MovePostInSeriesCmdExe movePostInSeriesCmdExe;
-    private final SeriesRepository seriesRepository;
-    private final ContentOwnershipGuard contentOwnershipGuard;
+  private final GetSeriesDetailQryExe getSeriesDetailQryExe;
+  private final AppendPostToSeriesCmdExe appendPostToSeriesCmdExe;
+  private final RemovePostFromSeriesCmdExe removePostFromSeriesCmdExe;
+  private final MovePostInSeriesCmdExe movePostInSeriesCmdExe;
+  private final SeriesRepository seriesRepository;
+  private final ContentOwnershipGuard contentOwnershipGuard;
 
-    private static final int CANDIDATE_PAGE_SIZE = 10;
+  private static final int CANDIDATE_PAGE_SIZE = 10;
 
-    @GetMapping("/{slug}")
-    public String detail(Authentication authentication, @PathVariable String slug,
-                         @RequestParam(defaultValue = "1") int candidatePage,
-                         @RequestParam(defaultValue = "") String q,
-                         Model model) {
-        SeriesDetailDTO series = getSeriesDetailQryExe.execute(slug);
-        contentOwnershipGuard.requireSeriesOwner(authentication, series.getId());
-        model.addAttribute("series", series);
+  @GetMapping("/{slug}")
+  public String detail(
+      Authentication authentication,
+      @PathVariable String slug,
+      @RequestParam(defaultValue = "1") int candidatePage,
+      @RequestParam(defaultValue = "") String q,
+      Model model) {
+    SeriesDetailDTO series = getSeriesDetailQryExe.execute(slug);
+    contentOwnershipGuard.requireSeriesOwner(authentication, series.getId());
+    model.addAttribute("series", series);
 
-        Long seriesId = series.getId();
-        boolean canManage = contentOwnershipGuard.canManageSeries(authentication);
-        Long authorId = canManage ? null : contentOwnershipGuard.currentUserId(authentication);
-        long total = canManage ? seriesRepository.countCandidatesForSeries(seriesId, q)
-                : seriesRepository.countCandidatesForSeriesByAuthor(seriesId, authorId, q);
-        long totalPages = Math.max(1, (total + CANDIDATE_PAGE_SIZE - 1) / CANDIDATE_PAGE_SIZE);
-        List<SeriesPostItem> candidates = canManage
-                ? seriesRepository.findCandidatesForSeries(seriesId, q, candidatePage, CANDIDATE_PAGE_SIZE)
-                : seriesRepository.findCandidatesForSeriesByAuthor(seriesId, authorId, q, candidatePage, CANDIDATE_PAGE_SIZE);
-        List<CandidatePostDTO> candidateDTOs = candidates.stream().map(item -> {
-            CandidatePostDTO dto = new CandidatePostDTO();
-            dto.setId(item.id());
-            dto.setTitle(item.title());
-            dto.setStatus(item.status() != null ? item.status() : "");
-            return dto;
-        }).collect(Collectors.toList());
+    Long seriesId = series.getId();
+    boolean canManage = contentOwnershipGuard.canManageSeries(authentication);
+    Long authorId = canManage ? null : contentOwnershipGuard.currentUserId(authentication);
+    long total =
+        canManage
+            ? seriesRepository.countCandidatesForSeries(seriesId, q)
+            : seriesRepository.countCandidatesForSeriesByAuthor(seriesId, authorId, q);
+    long totalPages = Math.max(1, (total + CANDIDATE_PAGE_SIZE - 1) / CANDIDATE_PAGE_SIZE);
+    List<SeriesPostItem> candidates =
+        canManage
+            ? seriesRepository.findCandidatesForSeries(
+                seriesId, q, candidatePage, CANDIDATE_PAGE_SIZE)
+            : seriesRepository.findCandidatesForSeriesByAuthor(
+                seriesId, authorId, q, candidatePage, CANDIDATE_PAGE_SIZE);
+    List<CandidatePostDTO> candidateDTOs =
+        candidates.stream()
+            .map(
+                item -> {
+                  CandidatePostDTO dto = new CandidatePostDTO();
+                  dto.setId(item.id());
+                  dto.setTitle(item.title());
+                  dto.setStatus(item.status() != null ? item.status() : "");
+                  return dto;
+                })
+            .collect(Collectors.toList());
 
-        model.addAttribute("candidates", candidateDTOs);
-        model.addAttribute("candidatePage", candidatePage);
-        model.addAttribute("candidateTotalPages", totalPages);
-        model.addAttribute("candidateTotal", total);
-        model.addAttribute("candidatePageSize", CANDIDATE_PAGE_SIZE);
-        model.addAttribute("q", q);
-        return "admin/series/detail";
-    }
+    model.addAttribute("candidates", candidateDTOs);
+    model.addAttribute("candidatePage", candidatePage);
+    model.addAttribute("candidateTotalPages", totalPages);
+    model.addAttribute("candidateTotal", total);
+    model.addAttribute("candidatePageSize", CANDIDATE_PAGE_SIZE);
+    model.addAttribute("q", q);
+    return "admin/series/detail";
+  }
 
-    /** 移入文章（追加到末尾） */
-    @PostMapping("/{slug}/posts")
-    public String appendPost(Authentication authentication, @PathVariable String slug,
-                             @RequestParam Long postId,
-                             @RequestParam(defaultValue = "1") int candidatePage,
-                             @RequestParam(defaultValue = "") String q) {
-        SeriesDetailDTO series = getSeriesDetailQryExe.execute(slug);
-        contentOwnershipGuard.requireSeriesOwner(authentication, series.getId());
-        contentOwnershipGuard.requirePostOwner(authentication, postId);
-        appendPostToSeriesCmdExe.execute(postId, series.getId());
-        return "redirect:/admin/series/" + slug + "?candidatePage=" + candidatePage + "&q=" + q;
-    }
+  /** 移入文章（追加到末尾） */
+  @PostMapping("/{slug}/posts")
+  public String appendPost(
+      Authentication authentication,
+      @PathVariable String slug,
+      @RequestParam Long postId,
+      @RequestParam(defaultValue = "1") int candidatePage,
+      @RequestParam(defaultValue = "") String q) {
+    SeriesDetailDTO series = getSeriesDetailQryExe.execute(slug);
+    contentOwnershipGuard.requireSeriesOwner(authentication, series.getId());
+    contentOwnershipGuard.requirePostOwner(authentication, postId);
+    appendPostToSeriesCmdExe.execute(postId, series.getId());
+    return "redirect:/admin/series/" + slug + "?candidatePage=" + candidatePage + "&q=" + q;
+  }
 
-    /** 移出文章 */
-    @PostMapping("/{slug}/posts/{postId}/remove")
-    public String removePost(Authentication authentication, @PathVariable String slug, @PathVariable Long postId) {
-        SeriesDetailDTO series = getSeriesDetailQryExe.execute(slug);
-        contentOwnershipGuard.requireSeriesOwner(authentication, series.getId());
-        contentOwnershipGuard.requirePostOwner(authentication, postId);
-        removePostFromSeriesCmdExe.execute(postId);
-        return "redirect:/admin/series/" + slug;
-    }
+  /** 移出文章 */
+  @PostMapping("/{slug}/posts/{postId}/remove")
+  public String removePost(
+      Authentication authentication, @PathVariable String slug, @PathVariable Long postId) {
+    SeriesDetailDTO series = getSeriesDetailQryExe.execute(slug);
+    contentOwnershipGuard.requireSeriesOwner(authentication, series.getId());
+    contentOwnershipGuard.requirePostOwner(authentication, postId);
+    removePostFromSeriesCmdExe.execute(postId);
+    return "redirect:/admin/series/" + slug;
+  }
 
-    /** 上移 */
-    @PostMapping("/{slug}/posts/{postId}/up")
-    public String moveUp(Authentication authentication, @PathVariable String slug, @PathVariable Long postId) {
-        SeriesDetailDTO series = getSeriesDetailQryExe.execute(slug);
-        contentOwnershipGuard.requireSeriesOwner(authentication, series.getId());
-        contentOwnershipGuard.requirePostOwner(authentication, postId);
-        movePostInSeriesCmdExe.execute(series.getId(), postId, MovePostInSeriesCmdExe.Direction.UP);
-        return "redirect:/admin/series/" + slug;
-    }
+  /** 上移 */
+  @PostMapping("/{slug}/posts/{postId}/up")
+  public String moveUp(
+      Authentication authentication, @PathVariable String slug, @PathVariable Long postId) {
+    SeriesDetailDTO series = getSeriesDetailQryExe.execute(slug);
+    contentOwnershipGuard.requireSeriesOwner(authentication, series.getId());
+    contentOwnershipGuard.requirePostOwner(authentication, postId);
+    movePostInSeriesCmdExe.execute(series.getId(), postId, MovePostInSeriesCmdExe.Direction.UP);
+    return "redirect:/admin/series/" + slug;
+  }
 
-    /** 下移 */
-    @PostMapping("/{slug}/posts/{postId}/down")
-    public String moveDown(Authentication authentication, @PathVariable String slug, @PathVariable Long postId) {
-        SeriesDetailDTO series = getSeriesDetailQryExe.execute(slug);
-        contentOwnershipGuard.requireSeriesOwner(authentication, series.getId());
-        contentOwnershipGuard.requirePostOwner(authentication, postId);
-        movePostInSeriesCmdExe.execute(series.getId(), postId, MovePostInSeriesCmdExe.Direction.DOWN);
-        return "redirect:/admin/series/" + slug;
-    }
+  /** 下移 */
+  @PostMapping("/{slug}/posts/{postId}/down")
+  public String moveDown(
+      Authentication authentication, @PathVariable String slug, @PathVariable Long postId) {
+    SeriesDetailDTO series = getSeriesDetailQryExe.execute(slug);
+    contentOwnershipGuard.requireSeriesOwner(authentication, series.getId());
+    contentOwnershipGuard.requirePostOwner(authentication, postId);
+    movePostInSeriesCmdExe.execute(series.getId(), postId, MovePostInSeriesCmdExe.Direction.DOWN);
+    return "redirect:/admin/series/" + slug;
+  }
 }

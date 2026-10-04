@@ -8,26 +8,26 @@ readonly CONFIG_EXAMPLE="$ROOT/deploy/production.conf.example"
 readonly INSTALLER="$ROOT/deploy/install-production-stack.sh"
 
 require_file() {
-    [[ -f "$1" ]] || {
-        printf 'Missing production runtime file: %s\n' "$1" >&2
-        exit 1
-    }
+  [[ -f "$1" ]] || {
+    printf 'Missing production runtime file: %s\n' "$1" >&2
+    exit 1
+  }
 }
 
 require_text() {
-    local needle="$1"
-    local file="$2"
-    rg -F -- "$needle" "$file" >/dev/null || {
-        printf 'Missing production native contract in %s: %s\n' "$file" "$needle" >&2
-        exit 1
-    }
+  local needle="$1"
+  local file="$2"
+  rg -F -- "$needle" "$file" > /dev/null || {
+    printf 'Missing production native contract in %s: %s\n' "$file" "$needle" >&2
+    exit 1
+  }
 }
 
 require_file "$TARGET_HELPER"
 require_file "$CONFIG_EXAMPLE"
 
 for unit in mysql redis meilisearch app edge public-nginx; do
-    require_file "$ROOT/deploy/systemd/bytedepth-production-$unit.service.in"
+  require_file "$ROOT/deploy/systemd/bytedepth-production-$unit.service.in"
 done
 
 require_text 'BYTEDEPTH_PRODUCTION_ROOT=/data/bytedepth-native-production' "$CONFIG_EXAMPLE"
@@ -47,10 +47,10 @@ require_text 'bytedepth-production-edge.service' "$TARGET_HELPER"
 require_text 'bytedepth-production-public-nginx.service' "$TARGET_HELPER"
 
 for unit in mysql redis meilisearch app edge public-nginx; do
-    unit_file="$ROOT/deploy/systemd/bytedepth-production-$unit.service.in"
-    require_text 'bytedepth-production-' "$unit_file"
-    require_text 'User=' "$unit_file"
-    require_text 'MemoryMax=' "$unit_file"
+  unit_file="$ROOT/deploy/systemd/bytedepth-production-$unit.service.in"
+  require_text 'bytedepth-production-' "$unit_file"
+  require_text 'User=' "$unit_file"
+  require_text 'MemoryMax=' "$unit_file"
 done
 require_text 'User=bytedepth' "$ROOT/deploy/systemd/bytedepth-production-app.service.in"
 require_text 'User=ubuntu' "$ROOT/deploy/systemd/bytedepth-production-edge.service.in"
@@ -100,34 +100,34 @@ TEMP_ROOT="$(mktemp -d)"
 readonly TEMP_ROOT
 trap 'python3 -c "from pathlib import Path; import shutil; shutil.rmtree(Path(\"$TEMP_ROOT\"), ignore_errors=True)"' EXIT
 printf '%s\n' \
-    '# Production config source' \
-    'BYTEDEPTH_PRODUCTION_PROFILE_ROOT=/data/bytedepth-native-production' \
-    'BYTEDEPTH_PRODUCTION_PROFILE_MYSQL_PORT=13306' \
-    'BYTEDEPTH_PRODUCTION_PROFILE_REDIS_PORT=16379' \
-    'BYTEDEPTH_PRODUCTION_PROFILE_MEILI_PORT=17700' \
-    'BYTEDEPTH_PRODUCTION_PROFILE_APP_PORT=18080' \
-    'BYTEDEPTH_PRODUCTION_PROFILE_EDGE_PORT=18081' > "$TEMP_ROOT/source.conf"
+  '# Production config source' \
+  'BYTEDEPTH_PRODUCTION_PROFILE_ROOT=/data/bytedepth-native-production' \
+  'BYTEDEPTH_PRODUCTION_PROFILE_MYSQL_PORT=13306' \
+  'BYTEDEPTH_PRODUCTION_PROFILE_REDIS_PORT=16379' \
+  'BYTEDEPTH_PRODUCTION_PROFILE_MEILI_PORT=17700' \
+  'BYTEDEPTH_PRODUCTION_PROFILE_APP_PORT=18080' \
+  'BYTEDEPTH_PRODUCTION_PROFILE_EDGE_PORT=18081' > "$TEMP_ROOT/source.conf"
 # shellcheck disable=SC1090
 source "$TARGET_HELPER"
 normalize_production_config_file "$TEMP_ROOT/source.conf" "$TEMP_ROOT/production.conf" "$(id -un):$(id -gn)"
 export BYTEDEPTH_PRODUCTION_CONFIG="$TEMP_ROOT/production.conf"
 load_production_target
-[[ "$BYTEDEPTH_PRODUCTION_ROOT" == /data/bytedepth-native-production \
-    && "$BYTEDEPTH_PRODUCTION_MYSQL_PORT" == 13306 \
-    && "$BYTEDEPTH_PRODUCTION_RUNTIME_MODE" == production-native ]] || {
-    printf 'Production configuration keys were not normalized correctly.\n' >&2
-    exit 1
+[[ "$BYTEDEPTH_PRODUCTION_ROOT" == /data/bytedepth-native-production &&
+  "$BYTEDEPTH_PRODUCTION_MYSQL_PORT" == 13306 &&
+  "$BYTEDEPTH_PRODUCTION_RUNTIME_MODE" == production-native ]] || {
+  printf 'Production configuration keys were not normalized correctly.\n' >&2
+  exit 1
 }
-if rg -n '^#' "$TEMP_ROOT/production.conf" >/dev/null; then
-    printf 'Normalized production configuration must not keep temporary transition notes.\n' >&2
-    exit 1
+if rg -n '^#' "$TEMP_ROOT/production.conf" > /dev/null; then
+  printf 'Normalized production configuration must not keep temporary transition notes.\n' >&2
+  exit 1
 fi
 
 for forbidden in '3306' '6379' '7700' '8080' '80' '443'; do
-    if rg -n "^[[:space:]]*(BYTEDEPTH_PRODUCTION_[A-Z_]+|[a-z_]+_port)=?$forbidden$" "$CONFIG_EXAMPLE" >/dev/null; then
-        printf 'Production production configuration reuses a default port: %s\n' "$forbidden" >&2
-        exit 1
-    fi
+  if rg -n "^[[:space:]]*(BYTEDEPTH_PRODUCTION_[A-Z_]+|[a-z_]+_port)=?$forbidden$" "$CONFIG_EXAMPLE" > /dev/null; then
+    printf 'Production production configuration reuses a default port: %s\n' "$forbidden" >&2
+    exit 1
+  fi
 done
 
 printf 'Production native runtime contract passed.\n'

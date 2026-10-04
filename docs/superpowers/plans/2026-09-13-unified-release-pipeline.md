@@ -22,6 +22,7 @@
 ### Task 1: Establish the correct base and executable local-quality interface
 
 **Files:**
+
 - Modify: `scripts/run-local-quality.sh`, `scripts/test-run-local-quality.sh`, `scripts/check-staging-checklist.sh`, `scripts/test-staging-checklist.sh`
 
 - [ ] Merge accepted #97 with `gh pr merge 97 --squash`, fetch `origin/main`, create `feat/unified-release-pipeline` worktree from it, and rebase this documentation branch before copying its ADR/spec/guide.
@@ -33,6 +34,7 @@
 ### Task 2: Add the common GitHub quality workflow
 
 **Files:**
+
 - Create: `.github/workflows/quality.yml`
 - Create: `scripts/test-github-quality-workflow.sh`
 - Modify: `scripts/check-staging-checklist.sh`, `scripts/test-staging-checklist.sh`
@@ -46,6 +48,7 @@
 ### Task 3: Make staging runtime bootstrap idempotent through `--ensure`
 
 **Files:**
+
 - Modify: `deploy/bootstrap-staging-runtime.sh`, `deploy/lib/staging-runtime.sh`
 - Modify: `scripts/test-staging-runtime.sh`
 
@@ -58,6 +61,7 @@
 ### Task 4: Standardize production script names and verification
 
 **Files:**
+
 - Rename: `deploy/deploy-release.sh` to `deploy/deploy-production.sh`
 - Create: `scripts/verify-production-release.sh`
 - Create: `scripts/test-verify-production-release.sh`
@@ -72,6 +76,7 @@
 ### Task 5: Align documentation and enforce the implementation
 
 **Files:**
+
 - Modify: `AGENTS.md`, `docs/README.md`, `docs/engineering/git-workflow.md`, `docs/releases/README.md`, `deploy/README.md`
 - Copy from approved docs branch: ADR, design spec and `docs/engineering/unified-release-pipeline.md`
 

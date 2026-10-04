@@ -8,23 +8,23 @@ readonly INSTALLER="$ROOT/deploy/install-host-service.sh"
 readonly BOOTSTRAP="$ROOT/deploy/bootstrap-staging-runtime.sh"
 
 require_file() {
-    [[ -f "$1" ]] || {
-        printf 'Missing host-native runtime file: %s\n' "$1" >&2
-        exit 1
-    }
+  [[ -f "$1" ]] || {
+    printf 'Missing host-native runtime file: %s\n' "$1" >&2
+    exit 1
+  }
 }
 
 require_text() {
-    local needle="$1"
-    local file="$2"
-    rg -F -- "$needle" "$file" >/dev/null || {
-        printf 'Missing runtime contract in %s: %s\n' "$file" "$needle" >&2
-        exit 1
-    }
+  local needle="$1"
+  local file="$2"
+  rg -F -- "$needle" "$file" > /dev/null || {
+    printf 'Missing runtime contract in %s: %s\n' "$file" "$needle" >&2
+    exit 1
+  }
 }
 
 for unit in bytedepth-app.service bytedepth-test-slot.service mysql.service redis.service meilisearch.service nginx.service; do
-    require_file "$UNIT_DIR/$unit"
+  require_file "$UNIT_DIR/$unit"
 done
 
 require_text 'User=bytedepth' "$UNIT_DIR/bytedepth-app.service"
@@ -34,8 +34,8 @@ require_text 'Requires=mysql.service redis.service meilisearch.service' "$UNIT_D
 require_text 'EnvironmentFile=-/etc/bytedepth/application-production.env' "$UNIT_DIR/bytedepth-app.service"
 require_text 'ReadWritePaths=/data/images' "$UNIT_DIR/bytedepth-app.service"
 if rg -q 'ReadWritePaths=.*current' "$UNIT_DIR/bytedepth-app.service"; then
-    printf 'Running application must not be able to modify the current release JAR.\n' >&2
-    exit 1
+  printf 'Running application must not be able to modify the current release JAR.\n' >&2
+  exit 1
 fi
 require_text 'EnvironmentFile=/run/bytedepth/staging-e2e.env' "$UNIT_DIR/bytedepth-test-slot.service"
 require_text 'Conflicts=bytedepth-app.service' "$UNIT_DIR/bytedepth-test-slot.service"
@@ -64,9 +64,9 @@ require_text 'ExecStart=/usr/local/bin/meilisearch --config-file-path /etc/meili
 
 require_text 'Description=Shared Nginx reverse proxy' "$UNIT_DIR/nginx.service"
 require_text 'After=network-online.target' "$UNIT_DIR/nginx.service"
-if rg -n 'Requires=bytedepth-app\.service|127\.0\.0\.1:8080/version|ExecStartPre=/usr/bin/curl' "$UNIT_DIR/nginx.service" >/dev/null; then
-    printf 'Shared nginx.service must not depend on one project or one application port.\n' >&2
-    exit 1
+if rg -n 'Requires=bytedepth-app\.service|127\.0\.0\.1:8080/version|ExecStartPre=/usr/bin/curl' "$UNIT_DIR/nginx.service" > /dev/null; then
+  printf 'Shared nginx.service must not depend on one project or one application port.\n' >&2
+  exit 1
 fi
 require_text "ExecStart=/usr/sbin/nginx -g 'daemon on; master_process on;'" "$UNIT_DIR/nginx.service"
 require_text 'ExecReload=/bin/kill -HUP $MAINPID' "$UNIT_DIR/nginx.service"
@@ -74,13 +74,13 @@ require_text 'ExecStop=/bin/kill -QUIT $MAINPID' "$UNIT_DIR/nginx.service"
 require_text 'PIDFile=/run/nginx.pid' "$UNIT_DIR/nginx.service"
 
 for unit in mysql.service redis.service meilisearch.service; do
-    require_text '127.0.0.1' "$UNIT_DIR/$unit"
+  require_text '127.0.0.1' "$UNIT_DIR/$unit"
 done
 
 if rg -n -i 'compose|STAGING_MAVEN_IMAGE|prewarm-production-maven-cache' \
-    "$ROOT/deploy" --glob '*.sh' --glob '*.yml' --glob '*.yaml' --glob '*.service' >/dev/null; then
-    printf 'Runtime/deployment scripts retain removed runtime dependencies.\n' >&2
-    exit 1
+  "$ROOT/deploy" --glob '*.sh' --glob '*.yml' --glob '*.yaml' --glob '*.service' > /dev/null; then
+  printf 'Runtime/deployment scripts retain removed runtime dependencies.\n' >&2
+  exit 1
 fi
 
 printf 'Host-native runtime contract passed.\n'

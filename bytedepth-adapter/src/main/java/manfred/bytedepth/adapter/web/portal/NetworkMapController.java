@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 @RequiredArgsConstructor
 public class NetworkMapController {
 
-    private final NetworkMapProperties networkMapProperties;
+  private final NetworkMapProperties networkMapProperties;
 
-    @GetMapping("/network")
-    public String network(Model model) {
-        model.addAttribute("groups", networkMapProperties.getGroups());
-        return "public/network";
-    }
+  @GetMapping("/network")
+  public String network(Model model) {
+    model.addAttribute("groups", networkMapProperties.getGroups());
+    return "public/network";
+  }
 }

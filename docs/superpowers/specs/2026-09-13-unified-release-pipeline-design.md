@@ -31,17 +31,17 @@ bytedepth、Career、Daylilt、Toolbox 对齐相同发布顺序、入口名称�
 
 ## 9 个标准入口
 
-| 入口 | 职责 |
-|---|---|
-| `scripts/run-local-quality.sh` | Node 安装、Java 单测、前端测试/lint、覆盖率与静态检查；不访问外部进程。 |
-| `scripts/check-staging-checklist.sh` | 测试所有 staging/发布脚本的静态自动化约束；由质量与发版流程调用。 |
-| `.github/workflows/quality.yml` | PR、main push 与 feat/fix/docs 开发分支 push 的无凭据质量 workflow，只调用本机质量和静态约束。 |
-| `deploy/deploy-staging.sh` | 部署命名分支或 main，锁定转换并作废 evidence。 |
-| `deploy/bootstrap-staging-runtime.sh --ensure` | 在共享锁下验证 manifest；缺失或失配才预热 Maven、项目 node_modules 和共享浏览器。 |
-| `deploy/run-staging-integration-tests.sh` | 仅 staging 的跨进程集成测试。 |
-| `deploy/run-staging-e2e-tests.sh` | 仅 staging、使用共享 Chromium 的 E2E。 |
-| `scripts/prepare-release.sh` | 仅干净 main；校验两份 main-SHA evidence 后创建 Tag。 |
-| `deploy/deploy-production-remote.sh`、远端 `deploy/deploy-production.sh` 与 `scripts/verify-production-release.sh` | 从本机部署不可变 Tag，并以统一入口执行项目特有生产回归。 |
+| 入口                                                                                                               | 职责                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `scripts/run-local-quality.sh`                                                                                     | Node 安装、Java 单测、前端测试/lint、覆盖率与静态检查；不访问外部进程。                        |
+| `scripts/check-staging-checklist.sh`                                                                               | 测试所有 staging/发布脚本的静态自动化约束；由质量与发版流程调用。                              |
+| `.github/workflows/quality.yml`                                                                                    | PR、main push 与 feat/fix/docs 开发分支 push 的无凭据质量 workflow，只调用本机质量和静态约束。 |
+| `deploy/deploy-staging.sh`                                                                                         | 部署命名分支或 main，锁定转换并作废 evidence。                                                 |
+| `deploy/bootstrap-staging-runtime.sh --ensure`                                                                     | 在共享锁下验证 manifest；缺失或失配才预热 Maven、项目 node_modules 和共享浏览器。              |
+| `deploy/run-staging-integration-tests.sh`                                                                          | 仅 staging 的跨进程集成测试。                                                                  |
+| `deploy/run-staging-e2e-tests.sh`                                                                                  | 仅 staging、使用共享 Chromium 的 E2E。                                                         |
+| `scripts/prepare-release.sh`                                                                                       | 仅干净 main；校验两份 main-SHA evidence 后创建 Tag。                                           |
+| `deploy/deploy-production-remote.sh`、远端 `deploy/deploy-production.sh` 与 `scripts/verify-production-release.sh` | 从本机部署不可变 Tag，并以统一入口执行项目特有生产回归。                                       |
 
 ## 验证
 

@@ -21,6 +21,7 @@
 ### Task 1: Lock the navigation boundary with a failing unit test
 
 **Files:**
+
 - Create: `bytedepth-start/src/test/js/series-navigation.test.js`
 
 - [ ] **Step 1: Write the failing test**
@@ -36,6 +37,7 @@
 ### Task 2: Remove the page-level interceptor
 
 **Files:**
+
 - Modify: `bytedepth-start/src/main/resources/templates/public/posts/detail.html`
 - Delete: `bytedepth-start/src/main/resources/static/js/series-navigation.js`
 
@@ -49,6 +51,7 @@
 ### Task 3: Add the navigation regression E2E
 
 **Files:**
+
 - Modify: `tests/e2e/series-navigation.spec.js`
 
 - [ ] **Step 1: Add a test that waits for a real document navigation**
@@ -64,6 +67,7 @@
 ### Task 4: Run verification gates
 
 **Files:**
+
 - Verify: ADR, frontend pattern rule, changelog, unit test, E2E test and source diff.
 
 - [ ] **Step 1: Run frontend unit tests and lint**

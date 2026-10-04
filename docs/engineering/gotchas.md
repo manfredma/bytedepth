@@ -6,7 +6,7 @@
 
 **故障复盘不能止于修复当前报错。** 一旦发现流程、配置、测试或部署遗漏，必须把“现象 → 根因 → 明确规则 → 自动检查 → 发布前证据”一起提交。自动检查应优先覆盖正常路径，让正确顺序自动发生；只有合并冲突、外部服务不可用等不可预防的特殊情况，才允许以失败后人工处理作为流程分支。
 
-发布流程的具体例子是 Changelog：任何用户可见、运行时、部署或配置改动，在首次 staging 前必须有非空、分类明确的 `## Unreleased`；质量检查、staging 部署、合并和正式发布入口都必须自动校验。开发分支 push 还必须直接触发 GitHub quality，避免等到合并脚本才发现没有可等待的检查。权威实现见 [`check-release-readiness.sh`](../../scripts/check-release-readiness.sh)、[统一发布流程](unified-release-pipeline.md) 和 [发布管理](../releases/README.md)。
+发布流程的具体例子是 Changelog：任何用户可见、运行时、部署或配置改动，在首次 staging 前必须有非空、分类明确的 `## Unreleased`；本地质量、release-platform QUALITY、staging、合并和正式发布入口都必须自动校验。质量证据必须在 PR 前本地完成，release-platform 再按 PR head 完整 SHA 执行平台质量、构建和 staging 验收，验收通过后才合并同一 SHA。权威实现见 [`check-release-readiness.sh`](../../scripts/check-release-readiness.sh)、[统一发布流程](unified-release-pipeline.md) 和 [发布管理](../releases/README.md)。
 
 合并脚本在 fetch 分支后必须显式更新 `refs/remotes/origin/<branch>`；只写 `git fetch origin <branch> main` 可能只更新 `FETCH_HEAD`，随后 `git rev-parse origin/<branch>` 会失败。该 refspec 由 `test-merge-main-after-quality.sh` 固定检查。
 
@@ -37,7 +37,7 @@
 
 ## 部署
 
-- 生产为单机（175），staging 预发独立部署（129.211.6.82）。AI Agent 修改并合并 PR → release-platform 按完整 SHA 构建 → staging 集成/E2E/验收 → 平台提升同一制品到 production；完整操作以 [平台发布说明](release-platform-only.md) 为准。
+- 生产为单机（175），staging 预发独立部署（129.211.6.82）。AI Agent 修改并创建 PR → release-platform 按 PR head 完整 SHA 构建并发布 staging → 集成/E2E/验收通过后合并同一 SHA → 平台提升同一制品到 production；完整操作以 [平台发布说明](release-platform-only.md) 为准。
 - 服务由 systemd 管理，应用发布使用不可变 JAR、SHA256 manifest 和 `current` 软链接；JAR 由 `ubuntu` 持有并按发布权限安装，运行中的应用不能改写当前发布。
 - 平台发布失败时由 release-platform 页面重试或回滚；项目仓库不提供 `deploy-staging.sh`、`deploy-production.sh` 等发布入口。
 - staging 的数据每周由生产覆盖，会清空 staging 写测试数据。staging 回滚需重新灌入兼容的数据基线再部署旧 JAR，非无风险。

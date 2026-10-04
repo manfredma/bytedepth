@@ -1,8 +1,8 @@
 (function (root) {
-  'use strict';
+  "use strict";
 
   function pad(value) {
-    return String(value).padStart(2, '0');
+    return String(value).padStart(2, "0");
   }
 
   function format(date) {
@@ -18,20 +18,26 @@
 
   function rangeForPeriod(period, now, launchDate) {
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (period === 'today') { return { from: format(date), to: format(date) }; }
-    if (period === 'week') {
+    if (period === "today") {
+      return { from: format(date), to: format(date) };
+    }
+    if (period === "week") {
       const from = startOfWeek(date);
-      const to = new Date(from); to.setDate(to.getDate() + 6);
+      const to = new Date(from);
+      to.setDate(to.getDate() + 6);
       return { from: format(from), to: format(to) };
     }
-    if (period === 'month') {
-      return { from: format(new Date(date.getFullYear(), date.getMonth(), 1)), to: format(new Date(date.getFullYear(), date.getMonth() + 1, 0)) };
+    if (period === "month") {
+      return {
+        from: format(new Date(date.getFullYear(), date.getMonth(), 1)),
+        to: format(new Date(date.getFullYear(), date.getMonth() + 1, 0)),
+      };
     }
-    if (period === 'year') {
+    if (period === "year") {
       return { from: format(new Date(date.getFullYear(), 0, 1)), to: format(new Date(date.getFullYear(), 11, 31)) };
     }
     if (!launchDate) {
-      throw new Error('launchDate is required for all period');
+      throw new Error("launchDate is required for all period");
     }
     return { from: launchDate, to: format(date) };
   }

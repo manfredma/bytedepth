@@ -25,12 +25,14 @@
 ### Task 1: Record the decision and its durable operating contract
 
 **Files:**
+
 - Create: `docs/architecture/decisions/0000-template.md`
 - Create: `docs/architecture/decisions/0001-published-post-driven-rss.md`
 - Create: `docs/architecture/decisions/README.md`
 - Modify: `AGENTS.md`, `docs/README.md`, `docs/architecture/overview.md`, `docs/architecture/routes.md`, `docs/agent-guides/obsidian-sync.md`
 
 **Interfaces:**
+
 - Produces: ADR-0001 as the authority for dynamic RSS derivation; the sync guide states no separate RSS synchronization action exists.
 
 - [ ] **Step 1: Document the architectural decision**
@@ -61,10 +63,12 @@ git commit -m "docs: record RSS publication decision"
 ### Task 2: Make RSS recency and media type observable through tests
 
 **Files:**
+
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/portal/SimplePortalControllerCoverageTest.java`
 - Create: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/portal/FeedControllerWebMvcTest.java`
 
 **Interfaces:**
+
 - Consumes: `FeedController.feed()` and `GET /feed.xml`.
 - Produces: failing tests that require latest-change ordering and an RSS-specific HTTP representation.
 
@@ -91,10 +95,12 @@ Expected: FAIL because the mapping currently declares `application/xml`.
 ### Task 3: Implement the dynamic RSS contract
 
 **Files:**
+
 - Modify: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/portal/FeedController.java`
 - Test: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/portal/SimplePortalControllerCoverageTest.java`, `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/portal/FeedControllerWebMvcTest.java`
 
 **Interfaces:**
+
 - Consumes: `PostRepository.findAllPublished(): List<Post>` and nullable `Post.getPublishedAt()/getUpdatedAt()`.
 - Produces: `GET /feed.xml` as RSS 2.0 in descending `latestChange` order, up to 20 entries, with `application/rss+xml`.
 
@@ -118,6 +124,7 @@ git commit -m "feat: refresh RSS from published post changes"
 ### Task 4: Add visual and automatic RSS discovery through shared fragments
 
 **Files:**
+
 - Modify: `bytedepth-start/src/main/resources/templates/fragments/nav.html`
 - Modify: `bytedepth-start/src/main/resources/templates/fragments/pwa-head.html`
 - Modify: `bytedepth-start/src/main/resources/static/css/nav.css`
@@ -125,6 +132,7 @@ git commit -m "feat: refresh RSS from published post changes"
 - Create: `bytedepth-start/src/test/js/rss-navigation.test.js`
 
 **Interfaces:**
+
 - Produces: an accessible `/feed.xml` link in the shared navigation and an `application/rss+xml` alternate link in the shared public head fragment.
 
 - [ ] **Step 1: Write failing template and stylesheet tests**
@@ -157,9 +165,11 @@ git commit -m "feat: expose RSS in shared navigation"
 ### Task 5: Run full gates and hand off to staging
 
 **Files:**
+
 - Modify: `docs/releases/CHANGELOG.md` only if the repository's release process requires an unreleased entry before review.
 
 **Interfaces:**
+
 - Verifies: Java RSS behavior, Java production coverage, frontend tests/lint, deployment-script regression, and staging behavior.
 
 - [ ] **Step 1: Remove the temporary visual-preview artifact**

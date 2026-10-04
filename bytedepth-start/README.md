@@ -5,6 +5,7 @@ Spring Boot 启动入口与配置。集成所有模块，提供 Flyway 迁移、
 **依赖方向：** adapter, infrastructure
 
 **责任：**
+
 - Spring Boot 启动类
 - 应用配置（application.yml）
 - 静态资源（CSS、JS、图片）

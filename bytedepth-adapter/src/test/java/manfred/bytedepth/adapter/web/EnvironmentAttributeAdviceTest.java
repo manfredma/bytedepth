@@ -8,33 +8,33 @@ import org.springframework.ui.Model;
 
 class EnvironmentAttributeAdviceTest {
 
-    @Test
-    void injectsConfiguredEnvironment() {
-        Model model = new ConcurrentModel();
-        EnvironmentAttributeAdvice advice = new EnvironmentAttributeAdvice("staging");
+  @Test
+  void injectsConfiguredEnvironment() {
+    Model model = new ConcurrentModel();
+    EnvironmentAttributeAdvice advice = new EnvironmentAttributeAdvice("staging");
 
-        advice.addEnvironmentAttribute(model);
+    advice.addEnvironmentAttribute(model);
 
-        assertThat(model.getAttribute("environment")).isEqualTo("staging");
-    }
+    assertThat(model.getAttribute("environment")).isEqualTo("staging");
+  }
 
-    @Test
-    void defaultsToProductionWhenNull() {
-        Model model = new ConcurrentModel();
-        EnvironmentAttributeAdvice advice = new EnvironmentAttributeAdvice(null);
+  @Test
+  void defaultsToProductionWhenNull() {
+    Model model = new ConcurrentModel();
+    EnvironmentAttributeAdvice advice = new EnvironmentAttributeAdvice(null);
 
-        advice.addEnvironmentAttribute(model);
+    advice.addEnvironmentAttribute(model);
 
-        assertThat(model.getAttribute("environment")).isEqualTo("production");
-    }
+    assertThat(model.getAttribute("environment")).isEqualTo("production");
+  }
 
-    @Test
-    void defaultsToProductionWhenBlank() {
-        Model model = new ConcurrentModel();
-        EnvironmentAttributeAdvice advice = new EnvironmentAttributeAdvice("  ");
+  @Test
+  void defaultsToProductionWhenBlank() {
+    Model model = new ConcurrentModel();
+    EnvironmentAttributeAdvice advice = new EnvironmentAttributeAdvice("  ");
 
-        advice.addEnvironmentAttribute(model);
+    advice.addEnvironmentAttribute(model);
 
-        assertThat(model.getAttribute("environment")).isEqualTo("production");
-    }
+    assertThat(model.getAttribute("environment")).isEqualTo("production");
+  }
 }

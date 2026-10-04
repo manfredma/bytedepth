@@ -1,0 +1,15 @@
+node_modules/
+target/
+build/
+dist/
+coverage/
+generated/
+vendor/
+*.min.js
+*.min.css
+*.map
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+*.svg
+**/src/main/resources/templates/**/*.html

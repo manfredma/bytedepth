@@ -16,15 +16,15 @@ Redis 重启会丢失普通 Session；勾选记住我的用户靠签名 cookie �
 
 实际实现为无状态 `TokenBasedRememberMeServices`——自包含签名 cookie（用户名 + 过期时间 + HMAC），不依赖数据库存储。历史设计曾用 JDBC `PersistentTokenRepositoryImpl` + `persistent_logins` 表，V13 建表后 V23 删除，已改为无状态方案。
 
-| 配置 | 值 |
-| --- | --- |
-| Cookie 名 | `bytedepth-remember-me` |
-| 表单参数 | `remember-me` |
-| 有效期 | 30 天（`30 * 24 * 60 * 60` 秒） |
-| HttpOnly | 是（Spring 默认） |
-| SameSite | `Lax` |
-| Secure | 由 `BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE` 控制，默认 `false`，HTTPS 部署设 `true` |
-| 签名密钥 | 由 `BYTEDEPTH_REMEMBER_ME_KEY` 注入，默认本地值不可用于生产 |
+| 配置      | 值                                                                               |
+| --------- | -------------------------------------------------------------------------------- |
+| Cookie 名 | `bytedepth-remember-me`                                                          |
+| 表单参数  | `remember-me`                                                                    |
+| 有效期    | 30 天（`30 * 24 * 60 * 60` 秒）                                                  |
+| HttpOnly  | 是（Spring 默认）                                                                |
+| SameSite  | `Lax`                                                                            |
+| Secure    | 由 `BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE` 控制，默认 `false`，HTTPS 部署设 `true` |
+| 签名密钥  | 由 `BYTEDEPTH_REMEMBER_ME_KEY` 注入，默认本地值不可用于生产                      |
 
 无状态方案在 Session 过期后，浏览器并发请求各自校验同一 cookie，不会因 token 轮换互相失效。
 

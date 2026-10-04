@@ -1,6 +1,10 @@
 package manfred.bytedepth;
 
-import manfred.bytedepth.app.analytics.ArchiveViewLogsCmdExe;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+
+import java.time.ZoneId;
 import manfred.bytedepth.app.analytics.ViewLogArchivePort;
 import manfred.bytedepth.app.analytics.ViewLogRetentionPolicy;
 import org.junit.jupiter.api.Test;
@@ -8,37 +12,34 @@ import org.mockito.MockedStatic;
 import org.springframework.boot.SpringApplication;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.time.ZoneId;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.mock;
-
 class BytedepthApplicationTest {
 
-    @Test
-    void mainStartsTheSpringApplicationWithItsArguments() {
-        try (MockedStatic<SpringApplication> springApplication = mockStatic(SpringApplication.class)) {
-            BytedepthApplication.main(new String[]{"--spring.main.web-application-type=none"});
+  @Test
+  void mainStartsTheSpringApplicationWithItsArguments() {
+    try (MockedStatic<SpringApplication> springApplication = mockStatic(SpringApplication.class)) {
+      BytedepthApplication.main(new String[] {"--spring.main.web-application-type=none"});
 
-            springApplication.verify(() -> SpringApplication.run(BytedepthApplication.class,
-                    new String[]{"--spring.main.web-application-type=none"}));
-        }
+      springApplication.verify(
+          () ->
+              SpringApplication.run(
+                  BytedepthApplication.class,
+                  new String[] {"--spring.main.web-application-type=none"}));
     }
+  }
 
-    @Test
-    void archiveUseCaseBeanIsBuiltFromItsPortAndRetentionPolicy() {
-        var port = mock(ViewLogArchivePort.class);
-        var policy = new ViewLogRetentionPolicy(7, ZoneId.of("Asia/Shanghai"));
+  @Test
+  void archiveUseCaseBeanIsBuiltFromItsPortAndRetentionPolicy() {
+    var port = mock(ViewLogArchivePort.class);
+    var policy = new ViewLogRetentionPolicy(7, ZoneId.of("Asia/Shanghai"));
 
-        assertNotNull(new BytedepthApplication().archiveViewLogsCmdExe(port, policy));
-    }
+    assertNotNull(new BytedepthApplication().archiveViewLogsCmdExe(port, policy));
+  }
 
-    @Test
-    void providesAQualifiedAsyncTaskExecutor() {
-        ThreadPoolTaskExecutor executor = new BytedepthApplication().taskExecutor();
+  @Test
+  void providesAQualifiedAsyncTaskExecutor() {
+    ThreadPoolTaskExecutor executor = new BytedepthApplication().taskExecutor();
 
-        assertNotNull(executor);
-        assertNotNull(executor.getThreadNamePrefix());
-    }
+    assertNotNull(executor);
+    assertNotNull(executor.getThreadNamePrefix());
+  }
 }

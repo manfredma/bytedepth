@@ -24,11 +24,13 @@
 ### Task 1: Lock metadata parsing and compatibility behavior with unit tests
 
 **Files:**
+
 - Create: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/util/CodeBlockMetadata.java`
 - Test: `bytedepth-adapter/src/test/java/manfred/bytedepth/adapter/web/util/CodeBlockMetadataTest.java`
 - Modify: `bytedepth-adapter/src/test/java/manfred/bytedepth/adapter/web/util/MarkdownRendererTest.java`
 
 **Interfaces:**
+
 - Produces `CodeBlockMetadata.parse(String info)` with immutable fields `language`, `title`, `fold`, and `tabGroup`.
 - `parse` treats the first info token as the language, recognizes `title:` and `file:` values, recognizes the bare `fold` flag, recognizes `tabs:<id>`, and returns an unenhanced result for ordinary language-only info.
 
@@ -41,10 +43,12 @@
 ### Task 2: Render only opted-in blocks and explicit contiguous tab groups
 
 **Files:**
+
 - Modify: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/util/MarkdownRenderer.java`
 - Modify: `bytedepth-adapter/src/test/java/manfred/bytedepth/adapter/web/util/MarkdownRendererTest.java`
 
 **Interfaces:**
+
 - `MarkdownRenderer.render(String markdown)` continues to return the existing output for ordinary Markdown.
 - Opted-in output uses `bd-code-block`, `bd-code-block__header`, and `bd-code-tabs` classes, with escaped labels and code text.
 - Same-group tabs are emitted only for adjacent fenced blocks with the same non-empty `tabs` identifier; unrelated nodes or identifier changes terminate a group.
@@ -58,6 +62,7 @@
 ### Task 3: Add isolated copy, fold, and tab interaction
 
 **Files:**
+
 - Create: `bytedepth-start/src/main/resources/static/js/code-blocks.js`
 - Create: `bytedepth-start/src/main/resources/static/css/code-blocks.css`
 - Create: `bytedepth-start/src/test/js/code-blocks.test.js`
@@ -65,6 +70,7 @@
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/PostReadingAssetsTest.java`
 
 **Interfaces:**
+
 - `code-blocks.js` binds only `#post-article .bd-code-block` and `.bd-code-tabs`; it must not query or mutate ordinary `pre` elements.
 - Copy uses `navigator.clipboard.writeText` with a tested fallback path and exposes an accessible status label.
 - Folding uses native `details` state where possible; tabs use buttons with `role="tab"`, `aria-selected`, and panel visibility state.
@@ -79,6 +85,7 @@
 ### Task 4: Add regression documentation and quality coverage
 
 **Files:**
+
 - Modify: `docs/releases/CHANGELOG.md`
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/ThemeAssetsTest.java`
 - Create or modify: `tests/e2e/code-blocks.spec.js`
