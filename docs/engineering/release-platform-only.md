@@ -70,6 +70,8 @@ GET /api/v1/flow-instances/{flowId}/logs?cursor=<cursor>&limit=100
 - `SUCCEEDED`：查询 artifact/evidence，核对 artifact 的项目、完整 commit SHA、不可变 digest 与目标环境；只接受服务端持久化状态。
 - `CANCELED`：视为未发布，不得继续提升 production。
 
+同一错误连续重试仍失败时必须停止重复操作。例如 production `IMPORT_ARTIFACT` 连续出现 `curl: (92) HTTP/2 stream 1 was not closed cleanly`，应保留 production candidate、task、log reference、完整 SHA 和 artifact digest，交由 release-platform 修复 Host Agent 的传输协议或回退策略；不能把重复 retry 当成成功。
+
 轮询必须有明确的总超时、最后一次观察时间和失败原因；日志源不可用时记录 `LOG_SOURCE_UNAVAILABLE`，不能把空日志当成成功。只有 `BUILD` 成功且 artifact 已校验后，才能创建 `RELEASE(staging)`；只有 staging evidence 已通过，才能创建同一 artifact 的 production flow。
 
 发布流程：
