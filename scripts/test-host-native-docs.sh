@@ -23,35 +23,23 @@ for file in \
     [[ -f "$file" ]] || { printf 'Missing required documentation file: %s\n' "$file" >&2; exit 1; }
 done
 
-require_text '宿主机原生' "$DEPLOY_GUIDE"
-require_text '129.211.6.82' "$DEPLOY_GUIDE"
+require_text 'release-platform' "$DEPLOY_GUIDE"
 require_text '129.211.6.82' "$ROOT/AGENTS.md"
 require_text 'systemd' "$DEPLOY_GUIDE"
-require_text 'run-staging-integration-tests.sh' "$DEPLOY_GUIDE"
-require_text 'run-staging-e2e-tests.sh' "$DEPLOY_GUIDE"
-require_text 'runtime_mode=host-native' "$ROOT/docs/releases/README.md"
-require_text 'staging-it' "$ROOT/docs/agent-guides/maven.md"
-require_text 'staging-e2e' "$ROOT/docs/agent-guides/maven.md"
+require_text '完整 commit SHA' "$ROOT/docs/releases/README.md"
 require_text '状态不确定' "$ROOT/docs/engineering/gotchas.md"
 
 if rg -n '124\.221\.143\.25|staging（124|staging \(124\)' \
     "$ROOT/AGENTS.md" "$DEPLOY_GUIDE" "$ROOT/docs/agent-guides/maven.md" \
     "$ROOT/docs/engineering/git-workflow.md" "$ROOT/docs/releases/README.md" \
-    "$ROOT/deploy/deploy-staging.sh" "$ROOT/deploy/sync-staging-certificate-to-production.sh" \
     "$ROOT/deploy/nginx/staging-edge-certificate.conf" >/dev/null; then
     printf 'Current staging deployment guidance still points to legacy host 124.\n' >&2
     exit 1
 fi
 
-if rg -n -i 'docker|compose|testcontainers|production[-_]green|production[-_]blue|红绿部署|蓝环境|绿环境' \
-    "$ROOT/docs" --glob '*.md' --glob '!**/CHANGELOG.md' >/dev/null; then
-    printf 'Active knowledge base retains removed container-runtime or cutover guidance.\n' >&2
-    exit 1
-fi
-
-if rg -n -i 'docker compose|docker-compose|docker restart|docker run|compose up|ctl\.sh|Dockerfile|Testcontainers' \
-    "$DEPLOY_GUIDE" "$ROOT/docs/agent-guides/maven.md" "$ROOT/docs/engineering/gotchas.md" >/dev/null; then
-    printf 'Normal deployment documentation still instructs the removed Docker runtime.\n' >&2
+if rg -n -i 'docker compose|docker-compose|docker restart|docker run|compose up|deploy-production-remote\.sh|deploy-staging\.sh|deploy-production\.sh' \
+    "$DEPLOY_GUIDE" "$ROOT/docs/engineering/release-platform-only.md" "$ROOT/docs/releases/README.md" >/dev/null; then
+    printf 'Current deployment documentation still exposes a removed runtime or project release entrypoint.\n' >&2
     exit 1
 fi
 

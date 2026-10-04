@@ -1,5 +1,7 @@
 # 通过 release-platform 发布
 
+这里的 AI Agent 负责在 bytedepth 仓库内修改源码、创建分支、运行本地质量检查和提交 PR；Host Agent 是部署主机上的执行进程，只执行 release-platform 签名下发的固定任务。AI Agent 不得直接调用项目仓库中的部署脚本，也不得通过 SSH 操作 staging 或 production。
+
 bytedepth 保持现有业务源码和 `bytedepth-start` 运行模块不变；旧的 staging/production 发布入口、环境安装入口和 release prepare/verify 脚本已删除。项目质量检查仍在仓库内执行，发布脚本由 release-platform 的项目适配器和 Host Agent 统一维护。
 
 发布流程：
@@ -10,4 +12,4 @@ bytedepth 保持现有业务源码和 `bytedepth-start` 运行模块不变；旧
 4. 通过构建详情发布 staging，查看日志、`/version`、健康检查和验收证据；
 5. staging 验收后，在“发布”页面提升同一不可变制品到 production。
 
-不得从 bytedepth 工作区直接执行发布命令；项目发布事实以 release-platform 页面和审计记录为准。
+不得从 bytedepth 工作区直接执行发布命令；项目发布事实以 release-platform 页面和审计记录为准。分支/PR 用于定位源码，完整 commit SHA 用于锁定不可变候选。
