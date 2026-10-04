@@ -121,6 +121,13 @@ class ThemeAssetsTest {
   }
 
   @Test
+  void adminLayoutResetsBodyMarginSoTheSharedHeaderTouchesTheViewport() throws Exception {
+    String css = classpathText("/static/css/admin-layout.css");
+
+    assertThat(css).contains("body {\n  margin: 0;\n}");
+  }
+
+  @Test
   void adminTemplatesDeclareMobileViewport() throws Exception {
     List<String> templates =
         List.of(
