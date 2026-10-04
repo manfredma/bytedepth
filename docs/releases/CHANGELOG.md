@@ -1,12 +1,17 @@
 # Changelog
 
-本文件同时记录开发中的 `## Unreleased` 和正式发布版本。候选冻结前，用户可见、运行时、部署或配置变更记录在非空且分类明确的 `Unreleased`；冻结时将候选条目移入正式版本段并清空 `Unreleased`。正式版本条目必须与一个不可变 annotated Git Tag 一一对应，已部署条目不得留在 `Unreleased`。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
+本文件同时记录开发中的 `## Unreleased` 和正式发布版本。候选构建前，用户可见、运行时、部署或配置变更记录在非空且分类明确的 `Unreleased`。版本、制品、验收和发布记录由 release-platform 管理；本仓库不创建发布 Tag。格式参考 Keep a Changelog，版本号遵循 Semantic Versioning。
 
 ## Unreleased
 
 ### Changed
 
 - GitHub quality workflow now runs only for opened, synchronized, or reopened pull requests on Ubuntu 26.04.
+- AI Agent 修改代码后由 PR 合并，release-platform 使用完整 commit SHA 完成构建、staging 验收和 production 提升；项目仓库不再提供发布脚本。
+
+### Removed
+
+- 删除项目侧 staging/production 发布、远程发布、生产验证及其专用契约测试；统一由 release-platform 的 Host Agent 执行。
 
 ## [v2.26.5] - 2026-09-30
 

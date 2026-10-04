@@ -5,7 +5,6 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly ROOT
 readonly NGINX_ROOT="$ROOT/deploy/nginx/staging-root.conf"
 readonly NGINX_TEMPLATE="$ROOT/deploy/nginx/staging.conf.template"
-readonly STAGING_DEPLOY="$ROOT/deploy/deploy-staging.sh"
 readonly NAV_TEMPLATE="$ROOT/bytedepth-start/src/main/resources/templates/fragments/nav.html"
 readonly HEAD_TEMPLATE="$ROOT/bytedepth-start/src/main/resources/templates/fragments/pwa-head.html"
 readonly PLAYWRIGHT_CONFIG="$ROOT/playwright.config.mjs"
@@ -21,8 +20,6 @@ grep -Fq 'X-Robots-Tag "noindex, nofollow, noarchive" always' "$NGINX_TEMPLATE"
 grep -Fq 'Referrer-Policy "no-referrer" always' "$NGINX_TEMPLATE"
 grep -Fq 'if ($host != ${BYTEDEPTH_DOMAIN})' "$NGINX_TEMPLATE"
 grep -Fq 'staging-bytedepth.bytedepth.cn' "$E2E_RUNNER"
-grep -Fq 'BYTEDEPTH_ENVIRONMENT=staging' "$STAGING_DEPLOY"
-grep -Fq 'BYTEDEPTH_DOMAIN=staging-bytedepth.bytedepth.cn' "$STAGING_DEPLOY"
 if grep -Eq 'Requires=bytedepth-app\.service|127\.0\.0\.1:8080/version' "$ROOT/deploy/systemd/nginx.service"; then
     printf 'Shared nginx.service must not be coupled to the bytedepth app.\n' >&2
     exit 1

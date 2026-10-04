@@ -20,7 +20,7 @@
 - 访问日志原表可能沿用 MySQL 的 `utf8mb4_0900_ai_ci`，归档国家统计表固定为 `utf8mb4_unicode_ci`；国家分布查询把原始明细与归档统计 `UNION ALL` 时，两个分支的国家字段和原始分组表达式必须显式 `COLLATE utf8mb4_unicode_ci`，否则 MySQL 会以 1271 失败，后台图表表现为没有数据。对应 SQL 契约测试必须锁定该归一化。
 - 使用 `@ConfigurationProperties` 的不可变 record 如果声明了重载构造器，必须在 canonical constructor 上显式标注 `@ConstructorBinding`；否则本地单测可能通过，但完整 staging Spring 上下文会因找不到默认构造器启动失败。对应属性类应由配置契约脚本检查。
 - **staging 门禁先预检、后执行**：部署、集成测试与 E2E 在单机上互斥，重复运行的时间主要来自镜像构建和启动浏览器，不应在 staging 上逐个猜测前提。先在本机用 runner 的 fake/fixture 测试验证脚本逻辑；首次 staging 运行前一次性确认部署 SHA、服务健康、可用磁盘、固定浏览器路径和真实 E2E 数据。失败时保存日志并只针对第一个可复现错误修复，修复先通过离线脚本测试，再重跑 staging。不要因猜测缺浏览器而安装系统 Chromium，也不要依赖会被数据同步清除的固定文章 slug。
-- **旧 staging 主机 124 的上传限制（历史记录）**：当时该主机的 `/tmp` 是多项目共享 tmpfs，可能因其他项目的临时制品或 `ubuntu` 用户配额耗尽而拒绝写入，即使单个 JAR 小于 `df` 显示的剩余容量。候选 JAR 和 manifest 暂存到按 SHA 命名的 `/var/tmp/bytedepth-staging-<SHA>`，并按实际文件大小预检可用空间；自动约束见 `scripts/test-deploy-staging.sh`。失败清理只能删除本候选目录，不能清理其他项目临时文件。
+- **旧 staging 主机 124 的上传限制（历史记录）**：该历史问题已经由 release-platform 的不可变文件制品和 Host Agent 传输路径接管；项目仓库不再上传候选 JAR，也不再维护项目侧的传输脚本。故障排查以 release-platform 任务日志、制品摘要和 Host Agent 结果为准。
 - **staging integration 只运行受限的 Failsafe `*IT`**：单元测试已由本机和 CI 执行；`staging-integration` profile 必须跳过 Surefire，否则会在 staging 再运行全套单测，占用共享 JVM 内存。曾有 Surefire fork 使用约 664 MiB 后被 global OOM killer 杀掉；Failsafe fork 最大堆固定为 512 MiB，Spring Test context cache 限为 16；不得把 exit 137 当测试通过或重试掩盖。
 - **staging E2E warning 要同时检查进程输出和 systemd journal**：Playwright stdout 不包含 test-slot 应用日志；runner 必须用运行时记录的 start timestamp 读取本轮 unit journal，并与 Playwright log 一起通过 WARNING policy。Redis fail-open、数据库或服务初始化 WARN 都不能因为 runner 原先只看 Playwright 输出而漏过。
 - staging E2E 的共享浏览器运行时不只包含 Chromium，还包含 Playwright ffmpeg；缺少 `/root/.cache/ms-playwright/ffmpeg-*/ffmpeg-linux` 会在创建 browser context 前让所有用例失败。必须由 `bootstrap-staging-runtime.sh` 统一安装/校验并写入 runtime manifest，不能在项目目录下载浏览器或在 runner 中临时安装。
@@ -37,9 +37,9 @@
 
 ## 部署
 
-- 生产为单机（175），staging 预发独立部署（129.211.6.82）。staging 候选部署 → 集成测试 → E2E → 所有者验收 → 合并 `main` → 新 Tag 生产发布，完整操作以 [部署手册](../../deploy/README.md) 为准。
+- 生产为单机（175），staging 预发独立部署（129.211.6.82）。AI Agent 修改并合并 PR → release-platform 按完整 SHA 构建 → staging 集成/E2E/验收 → 平台提升同一制品到 production；完整操作以 [平台发布说明](release-platform-only.md) 为准。
 - 服务由 systemd 管理，应用发布使用不可变 JAR、SHA256 manifest 和 `current` 软链接；JAR 由 `ubuntu` 持有并按发布权限安装，运行中的应用不能改写当前发布。
-- `deploy-staging.sh` 和 `deploy-production.sh` 在切换后健康检查或 Nginx reload 失败时尝试恢复旧发布；自动回滚只恢复代码和服务，不回滚已执行的 Flyway 迁移。
+- 平台发布失败时由 release-platform 页面重试或回滚；项目仓库不提供 `deploy-staging.sh`、`deploy-production.sh` 等发布入口。
 - staging 的数据每周由生产覆盖，会清空 staging 写测试数据。staging 回滚需重新灌入兼容的数据基线再部署旧 JAR，非无风险。
 - 运维脚本必须在 staging 或 dry-run 模式先完整跑通，再用于生产。同步验收必须比较数据库记录和图片文件数；首页返回 200 不能证明图片目录完整。
 - 涉及 sudo 的脚本必须使用显式绝对路径和显式参数，不依赖用户级 SSH 配置、`$HOME` 或不稳定的 `$PATH`。
@@ -69,7 +69,7 @@
 - 对 `ubuntu:ubuntu`、0600 的项目配置，不能把 `sudo test -r <file>` 当作跨主机可移植的唯一检查；旧 staging 主机 124 的预检中该形式出现假失败，而 `sudo cat >/dev/null` 正常。权限、所有权和内容校验要分别执行，不能因检查命令异常而切换部署方案。
 - 部署命令被中断或失败后，先检查并停止处于 `activating/auto-restart` 的 native app，再重试；不得把失败重启循环留在后台，否则会持续消耗内存并污染下一次预检。重试前必须重新校验 unit、端口、`/version` 和 deploy history。
 - 生产版本确认直接读取 ubuntu 所有的 `/var/lib/bytedepth-deploy/release-history`；当前发布和 SHA 还要与 `/opt/bytedepth/production/current/artifact.manifest` 交叉核对。
-- 生产发布配置可能来自历史变量命名。必须在停止服务前将 root/port 字段解析到 canonical 名称、验证当前 native 回退 JAR 与公网版本，并将规范化文件设为 ubuntu 所有；`test-production-runtime.sh` 和 `test-production-deployment.sh` 固定该顺序。
+- **生产发布配置由平台管理**：项目仓库不解析生产 SSH、Tag 或发布变量，也不在停止服务前操作主机；Host Agent 按 release-platform 下发的项目环境和不可变制品执行校验。
 - 生产当前回退 JAR 的早期 manifest 可能没有 `application_version`；只在验证 release Tag、目录名、commit 和 JAR SHA 后允许从 Tag 推导回退版本。上传的新制品仍必须包含并校验 `application_version`。
 - staging 制品上传使用的 `/tmp/bytedepth-staging-<SHA>` 只允许作为单次传输目录；上传失败和远程安装结束都必须清理它。staging 的 `/tmp` 是独立 tmpfs，历史 JAR 残留会耗尽 tmpfs，即使根分区仍有大量空间也会让 `scp` 写入失败。
 - staging 测试槽抓取 Redis 基线时，`redis-cli --raw` 对空 Lua 数组会输出一个空行；空 staging Redis 库是合法状态，解析器必须跳过该空行，不能误报快照损坏。

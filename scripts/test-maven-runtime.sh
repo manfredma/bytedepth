@@ -11,10 +11,9 @@ grep -Fqx -- '--enable-native-access=ALL-UNNAMED' "$ROOT/.mvn/jvm.config"
 grep -Fqx -- '--sun-misc-unsafe-memory-access=allow' "$ROOT/.mvn/jvm.config"
 grep -Fqx -- '-Xshare:off' "$ROOT/.mvn/jvm.config"
 rg -F -- '"$SOURCE_ROOT/mvnw"' "$ROOT/scripts/run-local-quality.sh" >/dev/null
-rg -F -- '"$SOURCE_ROOT/mvnw"' "$ROOT/scripts/prepare-release.sh" >/dev/null
 rg -F -- './mvnw -o -Pstaging-integration verify' "$ROOT/deploy/run-staging-integration-tests.sh" >/dev/null
 if rg -n --regexp '(^|[[:space:]])mvn([[:space:]]|$)|MAVEN_OPTS=|maven:[0-9]' \
-    "$ROOT/deploy/run-staging-integration-tests.sh" "$ROOT/scripts/run-local-quality.sh" "$ROOT/scripts/prepare-release.sh"; then
+    "$ROOT/deploy/run-staging-integration-tests.sh" "$ROOT/scripts/run-local-quality.sh"; then
     printf 'Maven invocations must use the repository Maven Wrapper without host Maven or floating images.\n' >&2
     exit 1
 fi

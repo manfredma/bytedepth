@@ -4,7 +4,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 
 ## 发布边界（当前规则）
 
-发布唯一由 release-platform 页面和 Host Agent 编排；本仓库不创建发布 Tag、不执行 staging/production 部署、不运行项目发布脚本。文档中与此相冲突的旧 Tag、SSH、Docker 或远程部署描述均为历史资料，以 `docs/engineering/release-platform-only.md` 为准。
+发布唯一由 release-platform 页面和 Host Agent 编排；本仓库不创建发布 Tag、不执行 staging/production 部署、不运行项目发布脚本。这里的“AI Agent”指在本仓库内修改源码、创建分支和提交 PR 的开发代理；“Host Agent”指部署主机上执行 release-platform 固定任务的运行代理，两者职责不能混淆。文档中与此相冲突的旧 Tag、SSH、Docker 或远程部署描述均为历史资料，以 `docs/engineering/release-platform-only.md` 为准。
 
 ## 必须遵守
 
@@ -30,11 +30,11 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 部署时由 release-platform 传输并校验不可变制品，由 Host Agent 按 ByteDepth 适配器重启 native 服务、校验 `/version` 和执行验证；项目仓库不得直接执行部署脚本。
 - production 只能提升已经在 staging 页面验收通过的同一不可变制品；项目仓库不直接执行 production 发布或回滚。
 - 前端公共组件必须自隔离，组件之间除相对位置外不得互相影响。环境相关样式必须定义在承载该组件且所有使用页面必加载的组件样式表中，禁止放入仅部分路由加载的页面主题资产；必须有自动化资源归属检查覆盖该约束。
-- staging（129，`129.211.6.82`，`staging-bytedepth.bytedepth.cn`）是唯一的 E2E、集成、部署验收和项目所有者验收环境，尤其适用于界面交互、视觉与布局改动；不得要求项目所有者验收未部署的本机代码。唯一发布流程固定为：实现并补单元测试 → 在候选分支冻结 release/next-SNAPSHOT 版本与 Changelog → 吸收远程最新 `main` → 通过 `CHANGELOG.md` 变更门禁后部署候选 ref（`deploy/deploy-staging.sh <candidate-ref>`）→ **在 staging 跑全部 E2E 与集成验收** → 项目所有者在 staging 验收 → **验收通过后候选分支 fast-forward 合并 `main`**；合并后完整 SHA 必须保持不变，才能创建生产版本、Tag 或部署生产。部署 `main`、未修改 Changelog 的候选或验收后追加提交均必须拒绝。
-- **冻结与验收规则（强制）**：staging 验收的就是待上线版本，不保留“先预览、之后再决定发布”的第二条发布路径。首次 staging 部署前必须确定高于当前正式版本的 release/next-SNAPSHOT 版本，并冻结正式 Changelog（版本标题、Tag、回滚基线必须一致）；验收失败才允许修改代码或 Changelog，修改后旧 evidence 作废，必须重新冻结、部署和验证。验收通过后禁止追加 Changelog、文档或其他提交。该规则与 `docs/releases/README.md`、`scripts/check-staging-changelog-change.sh`、`scripts/test-release-sequence.sh` 一起维护。
-- 发布前必须核对生产 `/version`、生产 release-history 与最新 Tag。`Unreleased` 只描述尚未部署的变化；发布冻结时把实际已部署的旧条目归档到对应版本，并将本次候选变更转入正式版本段。该状态由 `scripts/check-release-readiness.sh --mode frozen-candidate` 在 staging、合并和 release 前自动验证，契约见 `scripts/test-check-release-readiness.sh`。
+- staging（129，`129.211.6.82`，`staging-bytedepth.bytedepth.cn`）是唯一的 E2E、集成、部署验收和项目所有者验收环境。AI Agent 完成源码修改并合并 PR 后，只需将目标分支/PR 和完整 commit SHA 交给 release-platform；平台负责 QUALITY、BUILD、staging 发布、日志、重试、验收和 production 提升。production 只能提升同一个已验收的不可变制品；项目工作区不得执行任何发布、回滚或远程主机命令。
+- **验收规则（强制）**：staging 验收的就是待上线版本。AI Agent 修改代码后必须通过 PR 合并，release-platform 使用同一完整 commit SHA 执行 staging；验收失败时重新修改、重新构建和重新验收，验收通过后只能提升同一不可变制品到 production。项目仓库不维护 Tag、SSH 发布顺序或本地发布脚本。
+- 版本、制品、验收和发布记录以 release-platform 页面为准；项目仓库的 `CHANGELOG.md` 只记录产品变化，不再维护 Tag、SSH 发布顺序或本地 release gate。
 - staging 验收和脚本必须使用 `https://staging-bytedepth.bytedepth.cn/`；原 `staging.bytedepth.cn` 不再作为 staging 内容入口。`BYTEDEPTH_ENVIRONMENT=staging` 时，RSS、sitemap 和 RSS 自动发现必须关闭，页面返回 noindex；生产环境保持这些公开入口。新域名只是环境入口，不是安全认证。
-- staging 域名证书以 129 的 Let’s Encrypt 证书为源；若证书监控探测生产边缘 175，必须运行 `deploy/sync-staging-certificate-to-production.sh` 同步精确 SAN 证书，175 只允许 TLS 握手后拒绝内容，不得代理 staging。
+- staging 域名证书、主机绑定和运行时凭据由 release-platform 环境配置管理；项目仓库不得提供或调用证书同步、主机 SSH 或远程部署脚本。
 - 旧域名 `staging.bytedepth.cn` 仍解析到 175，必须在 175 单独维护精确 SAN 证书并沿用上一版生产入口逻辑跳转到 `https://bytedepth.cn`；它不是 staging 内容入口。
 - 证书、主机和运行时凭据由平台环境配置管理；项目仓库不直接持有或使用生产发布 SSH 凭据。
 - 合并发布时优先使用 Fast-forward；仅当合并后 `main` HEAD 与 staging 已验收候选完整 SHA 完全一致时，才允许复用候选部署和 evidence 并跳过重复 staging 流程；SHA 变化必须重新部署并重新生成两份 evidence。发布脚本的 SHA 校验是最终护栏。
@@ -50,7 +50,7 @@ Spring Boot 多模块博客（DDD 分层）+ Obsidian 笔记同步。笔记库 `
 - 新增或改造后台管理页面、侧边栏导航：见 [docs/architecture/admin-layout.md](docs/architecture/admin-layout.md)
 - Maven、测试、打包、运行 jar：见 [docs/agent-guides/maven.md](docs/agent-guides/maven.md)
 - 笔记同步、Obsidian 导入：见 [docs/agent-guides/obsidian-sync.md](docs/agent-guides/obsidian-sync.md)
-- 远程部署、生产单机与 staging 预发拓扑、初始化与验证：见 [deploy/README.md](deploy/README.md)（唯一部署说明）
+- release-platform 接入和 AI Agent 工作流：见 [平台发布说明](docs/engineering/release-platform-only.md)；`deploy/README.md` 只描述平台执行所需的运行时与测试辅助约定。
 - 版本号、Tag、变更记录、发布与回滚：见 [docs/releases/README.md](docs/releases/README.md)
 - 代码质量与改动检查：见 [docs/agent-guides/code-quality.md](docs/agent-guides/code-quality.md)
 - 前端组件隔离约束：见 [docs/agent-guides/frontend-components.md](docs/agent-guides/frontend-components.md)
