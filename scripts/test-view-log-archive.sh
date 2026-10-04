@@ -25,8 +25,8 @@ aggregate_line="$(awk '/id="insertExactHourlyAggregates"/ {print NR; exit}' "$AR
 increment_line="$(awk '/id="incrementHourlyAggregates"/ {print NR; exit}' "$ARCHIVE_MAPPER")"
 delete_line="$(awk '/id="deleteBucket"/ {print NR; exit}' "$ARCHIVE_MAPPER")"
 [[ -n "$aggregate_line" && -n "$increment_line" && -n "$delete_line" ]]
-(( aggregate_line < delete_line ))
-(( increment_line < delete_line ))
+((aggregate_line < delete_line))
+((increment_line < delete_line))
 
 grep -Fq '@Param("cutoff")' "$POST_DETAIL"
 grep -Fq 'fixedDelayString' "$ARCHIVE_JOB"
@@ -41,8 +41,8 @@ grep -Fq '## Unreleased' "$CHANGELOG"
 grep -Fq '### Changed' "$CHANGELOG"
 grep -Fq '最近 7 天' "$CHANGELOG"
 if grep -Fq '待下一版本开发内容' "$CHANGELOG"; then
-    printf 'Unreleased must not contain a placeholder-only entry.\n' >&2
-    exit 1
+  printf 'Unreleased must not contain a placeholder-only entry.\n' >&2
+  exit 1
 fi
 
 printf 'View log archive retention contract passed.\n'

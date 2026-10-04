@@ -4,8 +4,8 @@
 set -Eeuo pipefail
 
 if [[ "${EUID}" -ne 0 ]]; then
-    printf 'Run with sudo: sudo ./deploy/provision-production-edge-staging-certificate.sh\n' >&2
-    exit 1
+  printf 'Run with sudo: sudo ./deploy/provision-production-edge-staging-certificate.sh\n' >&2
+  exit 1
 fi
 
 readonly CERT_NAME=staging.bytedepth.cn
@@ -16,42 +16,42 @@ readonly EDGE_CONFIG_SOURCE="$SOURCE_ROOT/deploy/nginx/staging-legacy-production
 readonly EDGE_CONFIG=/opt/nginx-conf.d/staging-legacy-production-entry.conf
 
 if [[ ! -r "$EDGE_CONFIG_SOURCE" ]]; then
-    printf 'Missing versioned legacy production-entry config: %s\n' "$EDGE_CONFIG_SOURCE" >&2
-    exit 1
+  printf 'Missing versioned legacy production-entry config: %s\n' "$EDGE_CONFIG_SOURCE" >&2
+  exit 1
 fi
 
 certbot certonly \
-    --standalone \
-    --preferred-challenges http \
-    --non-interactive \
-    --agree-tos \
-    --register-unsafely-without-email \
-    --keep-until-expiring \
-    --cert-name "$CERT_NAME" \
-    --pre-hook 'systemctl stop nginx.service || true' \
-    --post-hook 'systemctl start nginx.service' \
-    -d "$CERT_NAME"
+  --standalone \
+  --preferred-challenges http \
+  --non-interactive \
+  --agree-tos \
+  --register-unsafely-without-email \
+  --keep-until-expiring \
+  --cert-name "$CERT_NAME" \
+  --pre-hook 'systemctl stop nginx.service || true' \
+  --post-hook 'systemctl start nginx.service' \
+  -d "$CERT_NAME"
 
-san_names="$(openssl x509 -in "$CERT_DIR/fullchain.pem" -noout -ext subjectAltName 2>/dev/null || true)"
+san_names="$(openssl x509 -in "$CERT_DIR/fullchain.pem" -noout -ext subjectAltName 2> /dev/null || true)"
 if ! printf '%s\n' "$san_names" \
-    | tr ',' '\n' \
-    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
-    | grep -Fx "DNS:$CERT_NAME" >/dev/null; then
-    printf 'Refusing: production edge certificate does not contain exact SAN DNS:%s\n' "$CERT_NAME" >&2
-    exit 1
+  | tr ',' '\n' \
+  | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+  | grep -Fx "DNS:$CERT_NAME" > /dev/null; then
+  printf 'Refusing: production edge certificate does not contain exact SAN DNS:%s\n' "$CERT_NAME" >&2
+  exit 1
 fi
 
-if ! openssl x509 -checkend 2592000 -noout -in "$CERT_DIR/fullchain.pem" >/dev/null; then
-    printf 'Refusing: production edge certificate is expired or expires within 30 days.\n' >&2
-    exit 1
+if ! openssl x509 -checkend 2592000 -noout -in "$CERT_DIR/fullchain.pem" > /dev/null; then
+  printf 'Refusing: production edge certificate is expired or expires within 30 days.\n' >&2
+  exit 1
 fi
 certificate_public_key="$(openssl x509 -in "$CERT_DIR/fullchain.pem" -pubkey -noout \
-    | openssl pkey -pubin -outform DER 2>/dev/null | sha256sum | awk '{print $1}')"
-private_key_public_key="$(openssl pkey -in "$CERT_DIR/privkey.pem" -pubout -outform DER 2>/dev/null \
-    | sha256sum | awk '{print $1}')"
+  | openssl pkey -pubin -outform DER 2> /dev/null | sha256sum | awk '{print $1}')"
+private_key_public_key="$(openssl pkey -in "$CERT_DIR/privkey.pem" -pubout -outform DER 2> /dev/null \
+  | sha256sum | awk '{print $1}')"
 if [[ -z "$certificate_public_key" || "$certificate_public_key" != "$private_key_public_key" ]]; then
-    printf 'Refusing: production edge certificate and private key do not match.\n' >&2
-    exit 1
+  printf 'Refusing: production edge certificate and private key do not match.\n' >&2
+  exit 1
 fi
 
 install -o ubuntu -g ubuntu -m 0644 "$EDGE_CONFIG_SOURCE" "$EDGE_CONFIG"

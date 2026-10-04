@@ -9,11 +9,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CreateCategoryCmdExe {
 
-    private final CategoryRepository categoryRepository;
+  private final CategoryRepository categoryRepository;
 
-    public Long execute(String name, String slug, Long parentId) {
-        Category category = Category.create(name, slug, parentId);
-        Category saved = categoryRepository.save(category);
-        return saved.getId();
-    }
+  public Long execute(String name, String slug, Long parentId) {
+    Category category = Category.create(name, slug, parentId);
+    Category saved = categoryRepository.save(category);
+    return saved.getId();
+  }
 }

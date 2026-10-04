@@ -10,13 +10,16 @@ readonly TARGET_LIB="$ROOT/deploy/lib/staging-native-target.sh"
 readonly PUBLIC_NGINX_TEMPLATE="$ROOT/deploy/nginx/staging-native-public.conf.template"
 
 for path in "$INSTALLER" "$EXAMPLE" "$TARGET_LIB" "$PUBLIC_NGINX_TEMPLATE" \
-    "$UNIT_DIR/bytedepth-staging-native-mysql.service.in" \
-    "$UNIT_DIR/bytedepth-staging-native-redis.service.in" \
-    "$UNIT_DIR/bytedepth-staging-native-meilisearch.service.in" \
-    "$UNIT_DIR/bytedepth-staging-native-app.service.in" \
-    "$UNIT_DIR/bytedepth-staging-native-edge.service.in" \
-    "$UNIT_DIR/bytedepth-staging-native-test-slot.service.in"; do
-    [[ -f "$path" ]] || { printf 'Missing staging-native stack asset: %s\n' "$path" >&2; exit 1; }
+  "$UNIT_DIR/bytedepth-staging-native-mysql.service.in" \
+  "$UNIT_DIR/bytedepth-staging-native-redis.service.in" \
+  "$UNIT_DIR/bytedepth-staging-native-meilisearch.service.in" \
+  "$UNIT_DIR/bytedepth-staging-native-app.service.in" \
+  "$UNIT_DIR/bytedepth-staging-native-edge.service.in" \
+  "$UNIT_DIR/bytedepth-staging-native-test-slot.service.in"; do
+  [[ -f "$path" ]] || {
+    printf 'Missing staging-native stack asset: %s\n' "$path" >&2
+    exit 1
+  }
 done
 
 rg -q 'BYTEDEPTH_NATIVE_ROOT=/data/bytedepth-native-staging' "$EXAMPLE"
@@ -38,9 +41,9 @@ rg -q 'retire_legacy_shared_images_nfs' "$INSTALLER"
 rg -q 'systemctl is-active --quiet bytedepth-deploy-job\.service' "$INSTALLER"
 rg -q 'exportfs -ra' "$INSTALLER"
 if rg -n 'systemctl (enable|restart).*nginx\.service|PUBLIC_NGINX_UNIT|nginx\.service\.d' \
-    "$INSTALLER" >/dev/null; then
-    printf 'Native staging must not take over or restart the shared nginx service.\n' >&2
-    exit 1
+  "$INSTALLER" > /dev/null; then
+  printf 'Native staging must not take over or restart the shared nginx service.\n' >&2
+  exit 1
 fi
 rg -Fq 'native_root" == /data/bytedepth-native-staging' "$INSTALLER"
 rg -q 'BYTEDEPTH_NATIVE_STACK_MODE=parallel' "$INSTALLER"
@@ -81,17 +84,17 @@ rg -q '^SuccessExitStatus=143$' "$UNIT_DIR/bytedepth-staging-native-test-slot.se
 rg -q '^PIDFile=__NATIVE_ROOT__/edge/nginx.pid$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 rg -q '^ExecReload=/bin/kill -HUP \$MAINPID$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 rg -q '^ExecStop=/bin/kill -QUIT \$MAINPID$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
-if rg -n '^Requires=bytedepth-staging-native-app\.service$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in" >/dev/null; then
-    printf 'Native staging edge must not stop with the app; E2E test-slot must be able to reuse the public edge.\n' >&2
-    exit 1
+if rg -n '^Requires=bytedepth-staging-native-app\.service$' "$UNIT_DIR/bytedepth-staging-native-edge.service.in" > /dev/null; then
+  printf 'Native staging edge must not stop with the app; E2E test-slot must be able to reuse the public edge.\n' >&2
+  exit 1
 fi
 rg -q '^After=bytedepth-staging-native-app\.service ' "$UNIT_DIR/bytedepth-staging-native-edge.service.in"
 rg -q 'Conflicts=bytedepth-staging-native-app.service' "$UNIT_DIR/bytedepth-staging-native-test-slot.service.in"
 rg -q 'ReadWritePaths=__NATIVE_ROOT__/images-test' "$UNIT_DIR/bytedepth-staging-native-test-slot.service.in"
 if rg -n '(/data/mysql|/data/redis|/data/meilisearch|:3306|:6379|:7700|:8080)' \
-    "$UNIT_DIR/bytedepth-staging-native-"*.in >/dev/null; then
-    printf 'Staging-native units must not reuse Docker data roots or default ports.\n' >&2
-    exit 1
+  "$UNIT_DIR/bytedepth-staging-native-"*.in > /dev/null; then
+  printf 'Staging-native units must not reuse Docker data roots or default ports.\n' >&2
+  exit 1
 fi
 
 printf 'Staging-native parallel stack contract passed.\n'

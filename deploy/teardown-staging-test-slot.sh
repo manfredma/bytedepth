@@ -5,74 +5,103 @@ umask 077
 source "$(dirname "${BASH_SOURCE[0]}")/lib/staging-test-slot.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/lib/staging-native-target.sh"
 
-[[ $EUID == 0 ]] || { slot_die 'run as root'; exit 1; }
+[[ $EUID == 0 ]] || {
+  slot_die 'run as root'
+  exit 1
+}
 load_staging_native_target
-[[ ${BYTEDEPTH_DEPLOY_MODE:-} == staging && ${BYTEDEPTH_TEST_SLOT_LOCK_HELD:-} == 1 ]] || { slot_die 'staging mode and deployment-test lock are required'; exit 1; }
-[[ $# == 2 && $1 == --manifest ]] || { slot_die 'usage: --manifest PATH'; exit 1; }
+[[ ${BYTEDEPTH_DEPLOY_MODE:-} == staging && ${BYTEDEPTH_TEST_SLOT_LOCK_HELD:-} == 1 ]] || {
+  slot_die 'staging mode and deployment-test lock are required'
+  exit 1
+}
+[[ $# == 2 && $1 == --manifest ]] || {
+  slot_die 'usage: --manifest PATH'
+  exit 1
+}
 manifest="$2"
 state_dir="${BYTEDEPTH_TEST_STATE_DIR:?}"
 slot_root_directory "$state_dir"
 slot_root_directory "$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT"
-[[ $manifest == "$state_dir/"*/manifest ]] || { slot_die 'manifest outside state directory'; exit 1; }
+[[ $manifest == "$state_dir/"*/manifest ]] || {
+  slot_die 'manifest outside state directory'
+  exit 1
+}
 require_manifest "$manifest"
 run_id="$(slot_manifest_value "$manifest" run_id)"
-[[ $manifest == "$state_dir/$run_id/manifest" ]] || { slot_die 'manifest path does not match RUN_ID'; exit 1; }
+[[ $manifest == "$state_dir/$run_id/manifest" ]] || {
+  slot_die 'manifest path does not match RUN_ID'
+  exit 1
+}
 for secret in "${BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE:?}" "${BYTEDEPTH_TEST_REDIS_SECRET_FILE:?}" "${BYTEDEPTH_TEST_MEILI_SECRET_FILE:?}"; do slot_root_private "$secret"; done
 for profile in it e2e; do
-    slot_root_private "$(slot_manifest_value "$manifest" "${profile}_env")"
+  slot_root_private "$(slot_manifest_value "$manifest" "${profile}_env")"
 done
 baseline="$(dirname "$manifest")/staging-baseline"
 slot_root_private "$baseline"
 if [[ -e "$(dirname "$manifest")/state-uncertain" ]]; then
-    slot_die 'provision state is uncertain; refusing destructive cleanup until manual recovery'
-    exit 1
+  slot_die 'provision state is uncertain; refusing destructive cleanup until manual recovery'
+  exit 1
 fi
-REDISCLI_AUTH="$(< "$BYTEDEPTH_TEST_REDIS_SECRET_FILE")"; export REDISCLI_AUTH
-BYTEDEPTH_TEST_MEILI_API_KEY="$(< "$BYTEDEPTH_TEST_MEILI_SECRET_FILE")"; export BYTEDEPTH_TEST_MEILI_API_KEY
+REDISCLI_AUTH="$(< "$BYTEDEPTH_TEST_REDIS_SECRET_FILE")"
+export REDISCLI_AUTH
+BYTEDEPTH_TEST_MEILI_API_KEY="$(< "$BYTEDEPTH_TEST_MEILI_SECRET_FILE")"
+export BYTEDEPTH_TEST_MEILI_API_KEY
 BYTEDEPTH_TEST_MEILI_URL="${BYTEDEPTH_TEST_MEILI_URL:-http://127.0.0.1:$BYTEDEPTH_STAGING_MEILI_PORT}"
-[[ $BYTEDEPTH_TEST_MEILI_URL == "http://127.0.0.1:$BYTEDEPTH_STAGING_MEILI_PORT" ]] || { slot_die 'Meili must use local endpoint'; exit 1; }
+[[ $BYTEDEPTH_TEST_MEILI_URL == "http://127.0.0.1:$BYTEDEPTH_STAGING_MEILI_PORT" ]] || {
+  slot_die 'Meili must use local endpoint'
+  exit 1
+}
 export BYTEDEPTH_TEST_MEILI_URL
 
 failed=0
 if systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then
-    if ! systemctl stop "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE" || systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then
-        slot_die 'test slot service could not be stopped; refusing destructive cleanup'
-        exit 1
-    fi
+  if ! systemctl stop "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE" || systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then
+    slot_die 'test slot service could not be stopped; refusing destructive cleanup'
+    exit 1
+  fi
 fi
 for profile in it e2e; do
-    db="$(slot_manifest_value "$manifest" "${profile}_db")"
-    user="$(slot_manifest_value "$manifest" "${profile}_user")"
-    index="$(slot_manifest_value "$manifest" "${profile}_index")"
-    key_uid="$(slot_manifest_value "$manifest" "${profile}_key_uid")"
-    namespace="$(slot_manifest_value "$manifest" "${profile}_namespace")"
-    redis_db="$(slot_manifest_value "$manifest" "${profile}_redis_db")"
-    redis_scan_delete "$redis_db" "$namespace" "$run_id" || failed=1
-    index_status="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index")" || { failed=1; index_status=000; }
-    if [[ $index_status == 200 ]]; then
-        task="$(curl -fsS -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index" | jq -er '.taskUid')" && meili_wait_task "$task" || failed=1
-    elif [[ $index_status != 404 ]]; then failed=1; fi
-    key_status="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid")" || { failed=1; key_status=000; }
-    if [[ $key_status == 200 ]]; then
-        [[ $(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid") == 204 ]] || failed=1
-    elif [[ $key_status != 404 ]]; then failed=1; fi
-    staging_mysql_admin -e "DROP USER IF EXISTS '$user'@'localhost'; DROP DATABASE IF EXISTS \`$db\`" || failed=1
-    [[ $(staging_mysql_admin --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'") == 0 ]] || failed=1
-    image_dir="$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT/$run_id/$profile"
-    assert_not_staging_resource directory "$image_dir" "$run_id" || failed=1
-    if [[ -d $image_dir && ! -L $image_dir ]]; then
-        # The exact RUN_ID/profile directory is the only recursive target.
-        rm -r -- "$image_dir" || failed=1
-    fi
+  db="$(slot_manifest_value "$manifest" "${profile}_db")"
+  user="$(slot_manifest_value "$manifest" "${profile}_user")"
+  index="$(slot_manifest_value "$manifest" "${profile}_index")"
+  key_uid="$(slot_manifest_value "$manifest" "${profile}_key_uid")"
+  namespace="$(slot_manifest_value "$manifest" "${profile}_namespace")"
+  redis_db="$(slot_manifest_value "$manifest" "${profile}_redis_db")"
+  redis_scan_delete "$redis_db" "$namespace" "$run_id" || failed=1
+  index_status="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index")" || {
+    failed=1
+    index_status=000
+  }
+  if [[ $index_status == 200 ]]; then
+    task="$(curl -fsS -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/indexes/$index" | jq -er '.taskUid')" && meili_wait_task "$task" || failed=1
+  elif [[ $index_status != 404 ]]; then failed=1; fi
+  key_status="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid")" || {
+    failed=1
+    key_status=000
+  }
+  if [[ $key_status == 200 ]]; then
+    [[ $(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $BYTEDEPTH_TEST_MEILI_API_KEY" "$BYTEDEPTH_TEST_MEILI_URL/keys/$key_uid") == 204 ]] || failed=1
+  elif [[ $key_status != 404 ]]; then failed=1; fi
+  staging_mysql_admin -e "DROP USER IF EXISTS '$user'@'localhost'; DROP DATABASE IF EXISTS \`$db\`" || failed=1
+  [[ $(staging_mysql_admin --batch --skip-column-names -e "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$db'") == 0 ]] || failed=1
+  image_dir="$BYTEDEPTH_STAGING_TEST_IMAGE_ROOT/$run_id/$profile"
+  assert_not_staging_resource directory "$image_dir" "$run_id" || failed=1
+  if [[ -d $image_dir && ! -L $image_dir ]]; then
+    # The exact RUN_ID/profile directory is the only recursive target.
+    rm -r -- "$image_dir" || failed=1
+  fi
 done
 verify_staging_resource_baseline "$BYTEDEPTH_TEST_STAGING_REDIS_DB" "$baseline" || failed=1
 systemctl start "$BYTEDEPTH_STAGING_APP_SERVICE" || failed=1
 systemctl is-active --quiet "$BYTEDEPTH_STAGING_APP_SERVICE" || failed=1
-if (( failed != 0 )); then slot_die 'cleanup or staging restoration failed; preserving manifest'; exit 1; fi
+if ((failed != 0)); then
+  slot_die 'cleanup or staging restoration failed; preserving manifest'
+  exit 1
+fi
 for profile in it e2e; do
-    env_file="$(slot_manifest_value "$manifest" "${profile}_env")"
-    [[ $env_file == "$(dirname "$manifest")/staging-$profile.env" ]] || exit 1
-    rm -- "$env_file"
+  env_file="$(slot_manifest_value "$manifest" "${profile}_env")"
+  [[ $env_file == "$(dirname "$manifest")/staging-$profile.env" ]] || exit 1
+  rm -- "$env_file"
 done
 rm -- "$manifest"
 rm -- "$baseline"

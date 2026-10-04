@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
 // 保留现有测试的 Jest mock API；Vitest 的 vi 与这些调用语义一致。
 globalThis.jest = vi;
@@ -9,5 +9,5 @@ HTMLDialogElement.prototype.showModal = function () {
 };
 HTMLDialogElement.prototype.close = function (returnValue) {
   this.open = false;
-  this.returnValue = returnValue || '';
+  this.returnValue = returnValue || "";
 };

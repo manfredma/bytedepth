@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequiredArgsConstructor
 public class ProjectController {
 
-    private final ListProjectsQryExe listProjectsQryExe;
+  private final ListProjectsQryExe listProjectsQryExe;
 
-    @GetMapping
-    public String list(Model model) {
-        model.addAttribute("projects", listProjectsQryExe.execute());
-        return "public/projects/list";
-    }
+  @GetMapping
+  public String list(Model model) {
+    model.addAttribute("projects", listProjectsQryExe.execute());
+    return "public/projects/list";
+  }
 }

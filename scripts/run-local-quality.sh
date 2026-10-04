@@ -9,6 +9,8 @@ source "$SOURCE_ROOT/scripts/lib/java-25.sh"
 
 cd "$SOURCE_ROOT"
 npm ci --ignore-scripts --no-audit --no-fund
+bash scripts/format-check.sh --all
+bash scripts/test-format-code.sh
 readonly JAVA_25_HOME="$(resolve_java_25)"
 JAVA_HOME="$JAVA_25_HOME" "$SOURCE_ROOT/mvnw" clean install -DskipTests -Dsort.skip=true
 JAVA_HOME="$JAVA_25_HOME" "$SOURCE_ROOT/mvnw" test -Dsort.skip=true

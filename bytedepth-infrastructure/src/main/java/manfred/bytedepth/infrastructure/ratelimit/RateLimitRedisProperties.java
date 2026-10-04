@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "bytedepth.rate-limit.redis")
 public class RateLimitRedisProperties {
-    private String host = "localhost";
-    private int port = 6379;
-    private String password = "";
-    private int database;
-    private String keyNamespace = "";
-    private Duration timeout = Duration.ofSeconds(1);
+  private String host = "localhost";
+  private int port = 6379;
+  private String password = "";
+  private int database;
+  private String keyNamespace = "";
+  private Duration timeout = Duration.ofSeconds(1);
 }

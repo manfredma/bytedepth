@@ -19,13 +19,13 @@ infrastructure ────┴────────────┘
 start ───────────▶ adapter + infrastructure
 ```
 
-| 模块 | 责任 |
-| --- | --- |
-| `bytedepth-domain` | 领域模型和 Repository 抽象；不依赖框架或持久化 API。 |
-| `bytedepth-app` | 查询/命令用例、DTO 与端口；只依赖领域层。 |
-| `bytedepth-infrastructure` | MyBatis、Redis、搜索等端口实现；依赖 app 和 domain。 |
-| `bytedepth-adapter` | Web Controller、页面渲染、输入适配与安全配置；依赖 app，不直接使用持久化或 Redis API。 |
-| `bytedepth-start` | Spring Boot 启动、配置、数据库迁移和跨模块测试。 |
+| 模块                       | 责任                                                                                   |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| `bytedepth-domain`         | 领域模型和 Repository 抽象；不依赖框架或持久化 API。                                   |
+| `bytedepth-app`            | 查询/命令用例、DTO 与端口；只依赖领域层。                                              |
+| `bytedepth-infrastructure` | MyBatis、Redis、搜索等端口实现；依赖 app 和 domain。                                   |
+| `bytedepth-adapter`        | Web Controller、页面渲染、输入适配与安全配置；依赖 app，不直接使用持久化或 Redis API。 |
+| `bytedepth-start`          | Spring Boot 启动、配置、数据库迁移和跨模块测试。                                       |
 
 ## 架构守护
 

@@ -1,17 +1,17 @@
 /**
  * @jest-environment jsdom
  */
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 const themeSwitcherJs = fs.readFileSync(
-  path.resolve(__dirname, '../../main/resources/static/js/theme-switcher.js'),
-  'utf-8'
+  path.resolve(__dirname, "../../main/resources/static/js/theme-switcher.js"),
+  "utf-8",
 );
 
-describe('theme-switcher.js', () => {
+describe("theme-switcher.js", () => {
   beforeEach(() => {
-    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.removeAttribute("data-theme");
     localStorage.clear();
     document.body.innerHTML = `
       <div class="theme-switcher">
@@ -25,57 +25,57 @@ describe('theme-switcher.js', () => {
     `;
   });
 
-  test('applies default theme when no theme is stored', () => {
+  test("applies default theme when no theme is stored", () => {
     eval(themeSwitcherJs);
-    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
-  test('persists and restores selected theme via localStorage', () => {
-    localStorage.setItem('bytedepth.theme', 'midnight');
+  test("persists and restores selected theme via localStorage", () => {
+    localStorage.setItem("bytedepth.theme", "midnight");
     eval(themeSwitcherJs);
-    expect(document.documentElement.getAttribute('data-theme')).toBe('midnight');
+    expect(document.documentElement.getAttribute("data-theme")).toBe("midnight");
   });
 
-  test('falls back to default when stored theme is invalid', () => {
-    localStorage.setItem('bytedepth.theme', 'invalid');
+  test("falls back to default when stored theme is invalid", () => {
+    localStorage.setItem("bytedepth.theme", "invalid");
     eval(themeSwitcherJs);
-    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
-  test('toggles menu open/close on trigger click', () => {
+  test("toggles menu open/close on trigger click", () => {
     eval(themeSwitcherJs);
-    const trigger = document.querySelector('.theme-trigger');
-    const switcher = document.querySelector('.theme-switcher');
+    const trigger = document.querySelector(".theme-trigger");
+    const switcher = document.querySelector(".theme-switcher");
 
     trigger.click();
-    expect(switcher.classList.contains('open')).toBe(true);
-    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    expect(switcher.classList.contains("open")).toBe(true);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
 
     trigger.click();
-    expect(switcher.classList.contains('open')).toBe(false);
-    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(switcher.classList.contains("open")).toBe(false);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
   });
 
-  test('selecting a theme closes the menu and updates aria attributes', () => {
+  test("selecting a theme closes the menu and updates aria attributes", () => {
     eval(themeSwitcherJs);
-    const trigger = document.querySelector('.theme-trigger');
+    const trigger = document.querySelector(".theme-trigger");
     const option = document.querySelector('[data-theme-option="paper"]');
 
     trigger.click();
     option.click();
 
-    expect(document.querySelector('.theme-switcher').classList.contains('open')).toBe(false);
-    expect(document.documentElement.getAttribute('data-theme')).toBe('paper');
-    expect(localStorage.getItem('bytedepth.theme')).toBe('paper');
+    expect(document.querySelector(".theme-switcher").classList.contains("open")).toBe(false);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("paper");
+    expect(localStorage.getItem("bytedepth.theme")).toBe("paper");
   });
 
-  test('clicking outside closes all open menus', () => {
+  test("clicking outside closes all open menus", () => {
     eval(themeSwitcherJs);
-    const trigger = document.querySelector('.theme-trigger');
+    const trigger = document.querySelector(".theme-trigger");
     trigger.click();
-    expect(document.querySelector('.theme-switcher').classList.contains('open')).toBe(true);
+    expect(document.querySelector(".theme-switcher").classList.contains("open")).toBe(true);
 
-    document.dispatchEvent(new Event('click'));
-    expect(document.querySelector('.theme-switcher').classList.contains('open')).toBe(false);
+    document.dispatchEvent(new Event("click"));
+    expect(document.querySelector(".theme-switcher").classList.contains("open")).toBe(false);
   });
 });

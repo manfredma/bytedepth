@@ -1,171 +1,175 @@
 /* 阅读批注：所有视觉与状态均限制在 bd-annotation 命名空间。 */
 .bd-annotation-scope {
-    --bd-annotation-ink: #202938;
-    --bd-annotation-muted: #738094;
-    --bd-annotation-line: #e7ebf1;
-    --bd-annotation-panel: #ffffff;
-    --bd-annotation-accent: #315efb;
-    --bd-annotation-accent-soft: #edf2ff;
+  --bd-annotation-ink: #202938;
+  --bd-annotation-muted: #738094;
+  --bd-annotation-line: #e7ebf1;
+  --bd-annotation-panel: #ffffff;
+  --bd-annotation-accent: #315efb;
+  --bd-annotation-accent-soft: #edf2ff;
 }
 
 .bd-annotation-scope .bd-annotation-highlight {
-    /* 标记会按正文的内联节点拆分；横向内边距会在相邻片段之间留下断口。 */
-    padding: 0 0 2px;
-    border-radius: 2px;
-    background: transparent;
-    box-decoration-break: clone;
-    cursor: pointer;
-    color: inherit;
-    text-decoration-line: underline;
-    text-decoration-thickness: 2px;
-    text-decoration-skip-ink: none;
-    text-underline-offset: .23em;
-    transition: color 160ms ease, text-decoration-thickness 160ms ease;
+  /* 标记会按正文的内联节点拆分；横向内边距会在相邻片段之间留下断口。 */
+  padding: 0 0 2px;
+  border-radius: 2px;
+  background: transparent;
+  box-decoration-break: clone;
+  cursor: pointer;
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 0.23em;
+  transition:
+    color 160ms ease,
+    text-decoration-thickness 160ms ease;
 }
 
 .bd-annotation-scope .bd-annotation-highlight:hover {
-    text-decoration-thickness: 3px;
+  text-decoration-thickness: 3px;
 }
 
 /* 有评注的选区使用圆角框，与只有线型的划线明确区分。 */
 .bd-annotation-scope .bd-annotation-highlight.bd-annotation-has-comment {
-    padding: 0;
-    background: transparent;
-    text-decoration: none;
+  padding: 0;
+  background: transparent;
+  text-decoration: none;
 }
 
 /* 框锚正文文字容器：absolute 相对 .content，随其滚动整体带走，无需逐帧 JS 跟随。 */
 .bd-annotation-scope .content {
-    position: relative;
+  position: relative;
 }
 
 .bd-annotation-comment-outline-layer {
-    inset: 0;
-    pointer-events: none;
-    position: absolute;
-    z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
 }
 
 .bd-annotation-comment-outline {
-    border: 1px solid var(--bd-annotation-mark-color);
-    border-style: dashed;
-    border-radius: 5px;
-    box-sizing: border-box;
-    pointer-events: none;
-    position: absolute;
-    top: 0;
-    left: 0;
+  border: 1px solid var(--bd-annotation-mark-color);
+  border-style: dashed;
+  border-radius: 5px;
+  box-sizing: border-box;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 /* 选中态正文划线框：仅加深边框，不填充背景。 */
 .bd-annotation-comment-outline-active {
-    border: 2px solid #202938;
-    border-style: solid;
+  border: 2px solid #202938;
+  border-style: solid;
 }
 
 .bd-annotation-scope .bd-annotation-comment-trigger {
-    position: absolute;
-    top: -1px;
-    left: 4px;
-    pointer-events: auto;
-    z-index: 1;
-    min-width: 0;
-    min-height: 0;
-    padding: 0 4px;
-    border: 0;
-    border-radius: 3px;
-    background: var(--card, #fff);
-    color: var(--bd-annotation-mark-color);
-    cursor: pointer;
-    font: 700 10px/16px var(--sans, sans-serif);
-    letter-spacing: .04em;
-    transform: translateY(-50%);
-    white-space: nowrap;
+  position: absolute;
+  top: -1px;
+  left: 4px;
+  pointer-events: auto;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--card, #fff);
+  color: var(--bd-annotation-mark-color);
+  cursor: pointer;
+  font: 700 10px/16px var(--sans, sans-serif);
+  letter-spacing: 0.04em;
+  transform: translateY(-50%);
+  white-space: nowrap;
 }
 
 .bd-annotation-scope .bd-annotation-comment-trigger:hover,
 .bd-annotation-scope .bd-annotation-comment-trigger:focus-visible {
-    background: var(--bd-annotation-mark-color);
-    color: #fff;
-    outline: none;
+  background: var(--bd-annotation-mark-color);
+  color: #fff;
+  outline: none;
 }
 
 .bd-annotation-scope .bd-annotation-color-yellow {
-    --bd-annotation-mark-color: #d69e2e;
-    text-decoration-color: var(--bd-annotation-mark-color);
-    text-decoration-style: wavy;
+  --bd-annotation-mark-color: #d69e2e;
+  text-decoration-color: var(--bd-annotation-mark-color);
+  text-decoration-style: wavy;
 }
 
 .bd-annotation-scope .bd-annotation-color-red {
-    --bd-annotation-mark-color: #dc6c67;
-    text-decoration-color: var(--bd-annotation-mark-color);
-    text-decoration-style: solid;
+  --bd-annotation-mark-color: #dc6c67;
+  text-decoration-color: var(--bd-annotation-mark-color);
+  text-decoration-style: solid;
 }
 
 .bd-annotation-scope .bd-annotation-color-green {
-    --bd-annotation-mark-color: #45a979;
-    text-decoration-color: var(--bd-annotation-mark-color);
-    text-decoration-style: dashed;
+  --bd-annotation-mark-color: #45a979;
+  text-decoration-color: var(--bd-annotation-mark-color);
+  text-decoration-style: dashed;
 }
 
 .bd-annotation-scope .bd-annotation-color-blue {
-    --bd-annotation-mark-color: #5d8fd9;
-    text-decoration-color: var(--bd-annotation-mark-color);
-    text-decoration-style: double;
+  --bd-annotation-mark-color: #5d8fd9;
+  text-decoration-color: var(--bd-annotation-mark-color);
+  text-decoration-style: double;
 }
 
 .bd-annotation-toolbar-item .rt-btn {
-    position: relative;
+  position: relative;
 }
 
 .bd-annotation-toolbar-count {
-    display: grid;
-    place-items: center;
-    position: absolute;
-    z-index: 2;
-    top: -6px;
-    right: -6px;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 4px;
-    box-sizing: border-box;
-    border: 2px solid #fff;
-    border-radius: 99px;
-    /* 工具栏位于 .bd-annotation-scope 外，不能依赖其 CSS 变量。 */
-    background: #d83c55;
-    color: #fff;
-    font: 700 11px/1 var(--sans, sans-serif);
-    text-align: center;
-    box-shadow: 0 1px 3px rgba(35, 42, 56, .25);
+  display: grid;
+  place-items: center;
+  position: absolute;
+  z-index: 2;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: 2px solid #fff;
+  border-radius: 99px;
+  /* 工具栏位于 .bd-annotation-scope 外，不能依赖其 CSS 变量。 */
+  background: #d83c55;
+  color: #fff;
+  font: 700 11px/1 var(--sans, sans-serif);
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(35, 42, 56, 0.25);
 }
 
 .bd-annotation-sidebar {
-    position: fixed;
-    z-index: 310;
-    display: flex;
-    flex-direction: column;
-    top: 74px;
-    right: 16px;
-    width: min(380px, calc(100vw - 32px));
-    height: calc(100dvh - 90px);
-    overflow: hidden;
-    box-sizing: border-box;
-    border: 1px solid rgba(223, 228, 238, .92);
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 18px 52px rgba(27, 39, 62, .18), 0 2px 9px rgba(27, 39, 62, .08);
-    color: var(--bd-annotation-ink);
-    font-family: var(--sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-    opacity: 0;
-    pointer-events: none;
-    /* 关闭时立即消失无过渡（transition:none），打开时才有淡入过渡。 */
-    transition: none;
+  position: fixed;
+  z-index: 310;
+  display: flex;
+  flex-direction: column;
+  top: 74px;
+  right: 16px;
+  width: min(380px, calc(100vw - 32px));
+  height: calc(100dvh - 90px);
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid rgba(223, 228, 238, 0.92);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow:
+    0 18px 52px rgba(27, 39, 62, 0.18),
+    0 2px 9px rgba(27, 39, 62, 0.08);
+  color: var(--bd-annotation-ink);
+  font-family: var(--sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  opacity: 0;
+  pointer-events: none;
+  /* 关闭时立即消失无过渡（transition:none），打开时才有淡入过渡。 */
+  transition: none;
 }
 
 .bd-annotation-sidebar.bd-annotation-sidebar-open {
-    opacity: 1;
-    pointer-events: auto;
-    transition: opacity 160ms ease;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 160ms ease;
 }
 
 /*
@@ -174,233 +178,293 @@
  * 侧栏宽度随屏宽 clamp 自适应，跨屏宽平滑缩放无突变。
  */
 @media (min-width: 769px) {
-    body.bd-annotation-comments-open .container {
-        /* 侧栏打开时整体横向不收缩：保持与关闭时一致的 max-width 80vw，
+  body.bd-annotation-comments-open .container {
+    /* 侧栏打开时整体横向不收缩：保持与关闭时一致的 max-width 80vw，
            仅去掉左右 padding 让正文与侧栏并排填满卡片宽度。 */
-        margin: 32px auto;
-        padding: 0 0 64px;
-    }
+    margin: 32px auto;
+    padding: 0 0 64px;
+  }
 
-    .bd-annotation-scope.bd-annotation-reading-layout-open {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) clamp(240px, 24vw, 360px);
-        align-items: start;
-        justify-content: center;
-        gap: 0.5vw;
-    }
+  .bd-annotation-scope.bd-annotation-reading-layout-open {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(240px, 24vw, 360px);
+    align-items: start;
+    justify-content: center;
+    gap: 0.5vw;
+  }
 
-    .bd-annotation-reading-layout-open .bd-annotation-reading-content {
-        min-width: 0;
-        /* 专栏收起按钮 fixed 在左侧约 36px 宽，左侧预留 3vw 避让；右侧再收窄一半拉近距离。 */
-        padding: 3vw 0.875vw;
-        grid-column: 1;
-        grid-row: 1;
-    }
+  .bd-annotation-reading-layout-open .bd-annotation-reading-content {
+    min-width: 0;
+    /* 专栏收起按钮 fixed 在左侧约 36px 宽，左侧预留 3vw 避让；右侧再收窄一半拉近距离。 */
+    padding: 3vw 0.875vw;
+    grid-column: 1;
+    grid-row: 1;
+  }
 
-    .bd-annotation-reading-layout-open .bd-annotation-sidebar {
-        position: fixed;
-        z-index: 1;
-        /* 与文章卡片顶部齐平：导航栏 60px + 卡片 margin 32px = 92px。 */
-        top: 92px;
-        /* 贴 container(80vw 居中) 右沿内侧：右沿距视口右 10vw。 */
-        right: 10vw;
-        left: auto;
-        grid-column: 2;
-        grid-row: 1;
-        width: clamp(240px, 24vw, 360px);
-        height: calc(100dvh - 128px);
-        opacity: 1;
-        pointer-events: auto;
-        transform: none;
-        transition: none;
-    }
+  .bd-annotation-reading-layout-open .bd-annotation-sidebar {
+    position: fixed;
+    z-index: 1;
+    /* 与文章卡片顶部齐平：导航栏 60px + 卡片 margin 32px = 92px。 */
+    top: 92px;
+    /* 贴 container(80vw 居中) 右沿内侧：右沿距视口右 10vw。 */
+    right: 10vw;
+    left: auto;
+    grid-column: 2;
+    grid-row: 1;
+    width: clamp(240px, 24vw, 360px);
+    height: calc(100dvh - 128px);
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    transition: none;
+  }
 }
 
 .bd-annotation-sidebar-header {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 21px 21px 6px;
-    border-bottom: 1px solid var(--bd-annotation-line);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 21px 21px 6px;
+  border-bottom: 1px solid var(--bd-annotation-line);
 }
 
 .bd-annotation-sidebar-eyebrow {
-    display: block;
-    margin-bottom: 4px;
-    color: var(--bd-annotation-muted);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .08em;
+  display: block;
+  margin-bottom: 4px;
+  color: var(--bd-annotation-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .bd-annotation-sidebar-title strong {
-    font-size: 17px;
-    letter-spacing: -.01em;
+  font-size: 17px;
+  letter-spacing: -0.01em;
 }
 
 .bd-annotation-comment-count {
-    display: inline-grid;
-    min-width: 20px;
-    height: 20px;
-    margin-left: 5px;
-    border-radius: 99px;
-    background: var(--bd-annotation-accent-soft);
-    color: var(--bd-annotation-accent);
-    font-size: 11px;
-    line-height: 20px;
-    text-align: center;
-    vertical-align: 2px;
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 5px;
+  border-radius: 99px;
+  background: var(--bd-annotation-accent-soft);
+  color: var(--bd-annotation-accent);
+  font-size: 11px;
+  line-height: 20px;
+  text-align: center;
+  vertical-align: 2px;
 }
 
 .bd-annotation-sidebar-close {
-    display: grid;
-    width: 32px;
-    height: 32px;
-    border: 0;
-    border-radius: 10px;
-    background: transparent;
-    color: var(--bd-annotation-muted);
-    cursor: pointer;
-    place-items: center;
-    transition: background-color 160ms ease, color 160ms ease;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--bd-annotation-muted);
+  cursor: pointer;
+  place-items: center;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
 }
 
-.bd-annotation-sidebar-close:hover { background: #f1f4f8; color: var(--bd-annotation-ink); }
-.bd-annotation-sidebar-close svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.bd-annotation-sidebar-close:hover {
+  background: #f1f4f8;
+  color: var(--bd-annotation-ink);
+}
+.bd-annotation-sidebar-close svg {
+  width: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
 
 /* 展示方式切换：segmented control，自隔离字体/盒模型。 */
 .bd-annotation-layout-switch {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    margin-right: 4px;
-    padding: 2px;
-    border: 1px solid var(--bd-annotation-line);
-    border-radius: 9px;
-    background: #f1f4f8;
-    font-family: var(--sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 4px;
+  padding: 2px;
+  border: 1px solid var(--bd-annotation-line);
+  border-radius: 9px;
+  background: #f1f4f8;
+  font-family: var(--sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
 }
 .bd-annotation-layout-switch button {
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--bd-annotation-muted);
-    cursor: pointer;
-    font: 600 11px/1 var(--sans, sans-serif);
-    letter-spacing: .02em;
-    padding: 5px 9px;
-    transition: background-color 160ms ease, color 160ms ease;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--bd-annotation-muted);
+  cursor: pointer;
+  font: 600 11px/1 var(--sans, sans-serif);
+  letter-spacing: 0.02em;
+  padding: 5px 9px;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
 }
-.bd-annotation-layout-switch button:hover { color: var(--bd-annotation-ink); }
+.bd-annotation-layout-switch button:hover {
+  color: var(--bd-annotation-ink);
+}
 .bd-annotation-layout-switch button[aria-pressed="true"] {
-    background: var(--bd-annotation-panel);
-    color: var(--bd-annotation-accent);
-    box-shadow: 0 1px 3px rgba(26, 39, 62, .12);
+  background: var(--bd-annotation-panel);
+  color: var(--bd-annotation-accent);
+  box-shadow: 0 1px 3px rgba(26, 39, 62, 0.12);
 }
 
 .bd-annotation-feed {
-    position: relative;
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 12px 18px 36px;
-    scrollbar-color: #d8dee9 transparent;
-    scrollbar-width: thin;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 18px 36px;
+  scrollbar-color: #d8dee9 transparent;
+  scrollbar-width: thin;
 }
 
 .bd-annotation-feed-item {
-    position: relative;
-    right: auto;
-    left: auto;
-    box-sizing: border-box;
-    padding: 11px 13px 10px;
-    border: 1px solid #e7ebf1;
-    border-radius: 12px;
-    background: var(--bd-annotation-panel);
-    box-shadow: 0 3px 11px rgba(26, 39, 62, .055);
-    transition: opacity 100ms linear;
+  position: relative;
+  right: auto;
+  left: auto;
+  box-sizing: border-box;
+  padding: 11px 13px 10px;
+  border: 1px solid #e7ebf1;
+  border-radius: 12px;
+  background: var(--bd-annotation-panel);
+  box-shadow: 0 3px 11px rgba(26, 39, 62, 0.055);
+  transition: opacity 100ms linear;
 }
 
-.bd-annotation-feed-spacer { display: none; }
+.bd-annotation-feed-spacer {
+  display: none;
+}
 
 /* 跟随型布局：PC(≥769px) fixed 侧栏下，卡片脱离常规流、按划线高度绝对定位，随正文滚动联动。
    compact 型保持常规流堆叠（默认 .bd-annotation-feed-item 的 position: relative）。 */
-.bd-annotation-feed-follow .bd-annotation-feed-spacer { display: block; }
+.bd-annotation-feed-follow .bd-annotation-feed-spacer {
+  display: block;
+}
 @media (min-width: 769px) {
-    .bd-annotation-feed-follow .bd-annotation-feed-item {
-        position: absolute;
-        top: 0;
-        right: 18px;
-        left: 18px;
-        will-change: transform;
-    }
+  .bd-annotation-feed-follow .bd-annotation-feed-item {
+    position: absolute;
+    top: 0;
+    right: 18px;
+    left: 18px;
+    will-change: transform;
+  }
 }
 
-.bd-annotation-feed-item[data-color="yellow"] { --bd-annotation-item-color: #d69e2e; }
-.bd-annotation-feed-item[data-color="red"] { --bd-annotation-item-color: #dc6c67; }
-.bd-annotation-feed-item[data-color="green"] { --bd-annotation-item-color: #45a979; }
-.bd-annotation-feed-item[data-color="blue"] { --bd-annotation-item-color: #5d8fd9; }
+.bd-annotation-feed-item[data-color="yellow"] {
+  --bd-annotation-item-color: #d69e2e;
+}
+.bd-annotation-feed-item[data-color="red"] {
+  --bd-annotation-item-color: #dc6c67;
+}
+.bd-annotation-feed-item[data-color="green"] {
+  --bd-annotation-item-color: #45a979;
+}
+.bd-annotation-feed-item[data-color="blue"] {
+  --bd-annotation-item-color: #5d8fd9;
+}
 
 /* 当前聚焦批注：只加深卡片边框，不改背景/文字/阴影。 */
 .bd-annotation-feed-item-active {
-    border-color: #5b6b85;
+  border-color: #5b6b85;
 }
 
 .bd-annotation-feed-item-active::before {
-    content: "";
-    position: absolute;
-    top: 8px;
-    bottom: 8px;
-    left: 0;
-    width: 4px;
-    border-radius: 0 3px 3px 0;
-    background: var(--bd-annotation-item-color, #315efb);
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 4px;
+  border-radius: 0 3px 3px 0;
+  background: var(--bd-annotation-item-color, #315efb);
 }
 
 .bd-annotation-feed-item > blockquote,
 .bd-annotation-composer-quote {
-    overflow: hidden;
-    margin: 0 0 5px;
-    padding-bottom: 0;
-    padding-left: 9px;
-    border-bottom: .5px solid var(--bd-annotation-item-color, #9ab2ff);
-    border-left: 2px solid var(--bd-annotation-item-color, #9ab2ff);
-    color: #66758b;
-    font-size: 12px;
-    font-style: normal;
-    line-height: 1.55;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  overflow: hidden;
+  margin: 0 0 5px;
+  padding-bottom: 0;
+  padding-left: 9px;
+  border-bottom: 0.5px solid var(--bd-annotation-item-color, #9ab2ff);
+  border-left: 2px solid var(--bd-annotation-item-color, #9ab2ff);
+  color: #66758b;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.55;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.bd-annotation-composer-quote { border-bottom: 0; }
+.bd-annotation-composer-quote {
+  border-bottom: 0;
+}
 
 .bd-annotation-feed-text {
-    margin: 0;
-    color: #243b5a;
-    font-family: Georgia, "Songti SC", "SimSun", serif;
-    font-size: 13px;
-    font-weight: 400;
-    line-height: 1.7;
-    white-space: normal;
+  margin: 0;
+  color: #243b5a;
+  font-family: Georgia, "Songti SC", "SimSun", serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.7;
+  white-space: normal;
 }
 
 /* Markdown 保持书页批注的紧凑节奏，不继承文章正文的大区块样式。 */
-.bd-annotation-feed-text > :first-child { margin-top: 0; }
-.bd-annotation-feed-text > :last-child { margin-bottom: 0; }
-.bd-annotation-feed-text p { margin: .38em 0; }
+.bd-annotation-feed-text > :first-child {
+  margin-top: 0;
+}
+.bd-annotation-feed-text > :last-child {
+  margin-bottom: 0;
+}
+.bd-annotation-feed-text p {
+  margin: 0.38em 0;
+}
 .bd-annotation-feed-text ul,
-.bd-annotation-feed-text ol { margin: .38em 0; padding-left: 1.35em; }
-.bd-annotation-feed-text li + li { margin-top: .16em; }
-.bd-annotation-feed-text a { color: inherit; text-decoration-color: var(--bd-annotation-item-color, #9ab2ff); text-underline-offset: 2px; }
-.bd-annotation-feed-text code { padding: 1px 3px; border-radius: 3px; background: #f0f3f8; font: .88em/1.4 var(--mono, monospace); }
-.bd-annotation-feed-text pre { margin: .45em 0; padding: 7px 8px; overflow-x: auto; border-radius: 5px; background: #f0f3f8; font: 11px/1.5 var(--mono, monospace); }
-.bd-annotation-feed-text pre code { padding: 0; background: transparent; font: inherit; }
+.bd-annotation-feed-text ol {
+  margin: 0.38em 0;
+  padding-left: 1.35em;
+}
+.bd-annotation-feed-text li + li {
+  margin-top: 0.16em;
+}
+.bd-annotation-feed-text a {
+  color: inherit;
+  text-decoration-color: var(--bd-annotation-item-color, #9ab2ff);
+  text-underline-offset: 2px;
+}
+.bd-annotation-feed-text code {
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: #f0f3f8;
+  font: 0.88em/1.4 var(--mono, monospace);
+}
+.bd-annotation-feed-text pre {
+  margin: 0.45em 0;
+  padding: 7px 8px;
+  overflow-x: auto;
+  border-radius: 5px;
+  background: #f0f3f8;
+  font: 11px/1.5 var(--mono, monospace);
+}
+.bd-annotation-feed-text pre code {
+  padding: 0;
+  background: transparent;
+  font: inherit;
+}
 .bd-annotation-feed-text h1,
 .bd-annotation-feed-text h2,
 .bd-annotation-feed-text h3,
@@ -412,180 +476,360 @@
 .bd-annotation-mobile-note h3,
 .bd-annotation-mobile-note h4,
 .bd-annotation-mobile-note h5,
-.bd-annotation-mobile-note h6 { margin: .42em 0 .2em; font: 600 1em/1.45 var(--sans, sans-serif); }
+.bd-annotation-mobile-note h6 {
+  margin: 0.42em 0 0.2em;
+  font: 600 1em/1.45 var(--sans, sans-serif);
+}
 .bd-annotation-feed-text blockquote,
-.bd-annotation-mobile-note blockquote { margin: .42em 0; padding-left: 8px; border-left: 2px solid var(--bd-annotation-item-color, #9ab2ff); color: #66758b; }
+.bd-annotation-mobile-note blockquote {
+  margin: 0.42em 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--bd-annotation-item-color, #9ab2ff);
+  color: #66758b;
+}
 .bd-annotation-feed-text table,
-.bd-annotation-mobile-note table { display: block; max-width: 100%; margin: .45em 0; overflow-x: auto; border-collapse: collapse; font: 11px/1.45 var(--sans, sans-serif); }
+.bd-annotation-mobile-note table {
+  display: block;
+  max-width: 100%;
+  margin: 0.45em 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font: 11px/1.45 var(--sans, sans-serif);
+}
 .bd-annotation-feed-text th,
 .bd-annotation-feed-text td,
 .bd-annotation-mobile-note th,
-.bd-annotation-mobile-note td { padding: 3px 5px; border: 1px solid #dce2ec; text-align: left; }
+.bd-annotation-mobile-note td {
+  padding: 3px 5px;
+  border: 1px solid #dce2ec;
+  text-align: left;
+}
 .bd-annotation-feed-text img,
-.bd-annotation-mobile-note img { display: block; max-width: 100%; height: auto; margin: .45em 0; border-radius: 4px; }
-.bd-annotation-mobile-note > :first-child { margin-top: 0; }
-.bd-annotation-mobile-note > :last-child { margin-bottom: 0; }
+.bd-annotation-mobile-note img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.45em 0;
+  border-radius: 4px;
+}
+.bd-annotation-mobile-note > :first-child {
+  margin-top: 0;
+}
+.bd-annotation-mobile-note > :last-child {
+  margin-bottom: 0;
+}
 
 .bd-annotation-feed-footer {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 8px;
-    min-height: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  min-height: 20px;
 }
 
 .bd-annotation-feed-meta {
-    color: var(--bd-annotation-muted);
-    font-size: 11px;
-    line-height: 20px;
+  color: var(--bd-annotation-muted);
+  font-size: 11px;
+  line-height: 20px;
 }
 
 .bd-annotation-feed-type {
-    font: 600 11px/20px var(--sans, sans-serif);
+  font: 600 11px/20px var(--sans, sans-serif);
 }
-.bd-annotation-type-blue { color: #315efb; }
-.bd-annotation-type-yellow { color: #b7791f; }
-.bd-annotation-type-green { color: #25855a; }
-.bd-annotation-type-red { color: #ca5b56; }
+.bd-annotation-type-blue {
+  color: #315efb;
+}
+.bd-annotation-type-yellow {
+  color: #b7791f;
+}
+.bd-annotation-type-green {
+  color: #25855a;
+}
+.bd-annotation-type-red {
+  color: #ca5b56;
+}
 
 .bd-annotation-feed-actions {
-    display: flex;
-    gap: 4px;
-    margin-left: auto;
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .bd-annotation-feed-actions button,
 .bd-annotation-composer-cancel {
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--bd-annotation-muted);
-    cursor: pointer;
-    font: inherit;
-    font-size: 12px;
-    padding: 4px 6px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--bd-annotation-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 6px;
 }
 
 .bd-annotation-feed-actions button:hover,
-.bd-annotation-composer-cancel:hover { background: #f0f3f8; color: var(--bd-annotation-ink); }
-
+.bd-annotation-composer-cancel:hover {
+  background: #f0f3f8;
+  color: var(--bd-annotation-ink);
+}
 
 .bd-annotation-empty {
-    margin: 44px 18px;
-    color: var(--bd-annotation-muted);
-    font-size: 13px;
-    line-height: 1.7;
-    text-align: center;
+  margin: 44px 18px;
+  color: var(--bd-annotation-muted);
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: center;
 }
 
 .bd-annotation-composer {
-    position: absolute;
-    z-index: 2;
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
-    padding: 14px;
-    border: 1px solid #dce5ff;
-    border-radius: 14px;
-    background: #fff;
-    box-shadow: 0 12px 30px rgba(42, 67, 128, .18);
+  position: absolute;
+  z-index: 2;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  padding: 14px;
+  border: 1px solid #dce5ff;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(42, 67, 128, 0.18);
 }
 
 .bd-annotation-feed-item-editing {
-    border-color: #c9d7ff;
-    box-shadow: 0 5px 16px rgba(49, 94, 251, .10);
+  border-color: #c9d7ff;
+  box-shadow: 0 5px 16px rgba(49, 94, 251, 0.1);
 }
 
 .bd-annotation-feed-item .bd-annotation-composer {
-    position: static;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
+  position: static;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-.bd-annotation-composer-quote { margin-bottom: 10px; }
+.bd-annotation-composer-quote {
+  margin-bottom: 10px;
+}
 
 .bd-annotation-composer-text {
-    display: block;
-    width: 100%;
-    min-height: 74px;
-    box-sizing: border-box;
-    padding: 9px 10px;
-    border: 1px solid #dce2ec;
-    border-radius: 9px;
-    background: #fbfcfe;
-    color: var(--bd-annotation-ink);
-    font: 13px/1.55 var(--sans, sans-serif);
-    outline: none;
-    resize: vertical;
+  display: block;
+  width: 100%;
+  min-height: 74px;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid #dce2ec;
+  border-radius: 9px;
+  background: #fbfcfe;
+  color: var(--bd-annotation-ink);
+  font: 13px/1.55 var(--sans, sans-serif);
+  outline: none;
+  resize: vertical;
 }
 
-.bd-annotation-composer-text:focus { border-color: #84a2ff; background: #fff; box-shadow: 0 0 0 3px rgba(49, 94, 251, .10); }
-.bd-annotation-composer-controls { display: flex; align-items: center; gap: 4px; margin-top: 10px; font-family: var(--sans, sans-serif); }
-.bd-annotation-composer-controls-spacer { flex: 1; }
-.bd-annotation-type-picker { position: relative; }
-.bd-annotation-type-trigger { display: inline-flex; align-items: center; gap: 2px; padding: 4px 1px; border: 0; background: transparent; color: #315efb; cursor: pointer; font: 600 12px/1.4 var(--sans, sans-serif); }
-.bd-annotation-type-trigger[data-color="yellow"] { color: #b7791f; }
-.bd-annotation-type-trigger[data-color="green"] { color: #25855a; }
-.bd-annotation-type-trigger[data-color="red"] { color: #ca5b56; }
-.bd-annotation-type-menu { position: absolute; z-index: 4; bottom: calc(100% + 7px); left: -6px; display: grid; min-width: 116px; padding: 5px; border: 1px solid #dce2ec; border-radius: 9px; background: #fff; box-shadow: 0 8px 22px rgba(27, 39, 62, .16); }
-.bd-annotation-type-menu[hidden] { display: none; }
-.bd-annotation-type-menu button { padding: 6px 7px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; text-align: left; font: 600 12px/1.4 var(--sans, sans-serif); }
-.bd-annotation-type-menu button:hover { background: #f0f3f8; }
-.bd-annotation-visibility-label { color: var(--bd-annotation-muted); font-size: 12px; }
-.bd-annotation-visibility { border: 0; background: transparent; color: var(--bd-annotation-ink); cursor: pointer; font: 11px/1.4 var(--sans, sans-serif); }
-.bd-annotation-composer-controls .bd-annotation-composer-cancel { padding: 4px 3px; }
-.bd-annotation-composer-save { border: 0; border-radius: 8px; background: var(--bd-annotation-accent); color: #fff; cursor: pointer; font: 600 12px/1 var(--sans, sans-serif); padding: 7px 8px; transition: background-color 160ms ease, transform 160ms ease; }
-.bd-annotation-composer-save:hover { background: #244bdb; transform: translateY(-1px); }
-.bd-annotation-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.bd-annotation-composer-text:focus {
+  border-color: #84a2ff;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(49, 94, 251, 0.1);
+}
+.bd-annotation-composer-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-family: var(--sans, sans-serif);
+}
+.bd-annotation-composer-controls-spacer {
+  flex: 1;
+}
+.bd-annotation-type-picker {
+  position: relative;
+}
+.bd-annotation-type-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 1px;
+  border: 0;
+  background: transparent;
+  color: #315efb;
+  cursor: pointer;
+  font: 600 12px/1.4 var(--sans, sans-serif);
+}
+.bd-annotation-type-trigger[data-color="yellow"] {
+  color: #b7791f;
+}
+.bd-annotation-type-trigger[data-color="green"] {
+  color: #25855a;
+}
+.bd-annotation-type-trigger[data-color="red"] {
+  color: #ca5b56;
+}
+.bd-annotation-type-menu {
+  position: absolute;
+  z-index: 4;
+  bottom: calc(100% + 7px);
+  left: -6px;
+  display: grid;
+  min-width: 116px;
+  padding: 5px;
+  border: 1px solid #dce2ec;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(27, 39, 62, 0.16);
+}
+.bd-annotation-type-menu[hidden] {
+  display: none;
+}
+.bd-annotation-type-menu button {
+  padding: 6px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: 600 12px/1.4 var(--sans, sans-serif);
+}
+.bd-annotation-type-menu button:hover {
+  background: #f0f3f8;
+}
+.bd-annotation-visibility-label {
+  color: var(--bd-annotation-muted);
+  font-size: 12px;
+}
+.bd-annotation-visibility {
+  border: 0;
+  background: transparent;
+  color: var(--bd-annotation-ink);
+  cursor: pointer;
+  font: 11px/1.4 var(--sans, sans-serif);
+}
+.bd-annotation-composer-controls .bd-annotation-composer-cancel {
+  padding: 4px 3px;
+}
+.bd-annotation-composer-save {
+  border: 0;
+  border-radius: 8px;
+  background: var(--bd-annotation-accent);
+  color: #fff;
+  cursor: pointer;
+  font: 600 12px/1 var(--sans, sans-serif);
+  padding: 7px 8px;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+.bd-annotation-composer-save:hover {
+  background: #244bdb;
+  transform: translateY(-1px);
+}
+.bd-annotation-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 
 .bd-annotation-popup {
-    position: fixed;
-    z-index: 330;
-    display: none;
-    align-items: center;
-    gap: 2px;
-    padding: 5px;
-    border: 1px solid rgba(214, 221, 233, .96);
-    border-radius: 12px;
-    background: rgba(31, 41, 55, .96);
-    box-shadow: 0 10px 28px rgba(18, 28, 45, .25);
-    color: #f8fafc;
-    transform-origin: top left;
+  position: fixed;
+  z-index: 330;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+  border: 1px solid rgba(214, 221, 233, 0.96);
+  border-radius: 12px;
+  background: rgba(31, 41, 55, 0.96);
+  box-shadow: 0 10px 28px rgba(18, 28, 45, 0.25);
+  color: #f8fafc;
+  transform-origin: top left;
 }
 
-.bd-annotation-popup.bd-annotation-popup-open { display: flex; animation: bd-annotation-pop-in 150ms ease-out forwards; }
-@keyframes bd-annotation-pop-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-.bd-annotation-popup button { min-height: 30px; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; font: 500 12px/1 var(--sans, sans-serif); padding: 0 10px; }
-.bd-annotation-popup button:hover { background: rgba(255, 255, 255, .14); }
-.bd-annotation-popup button[data-color] { display: grid; width: 38px; padding: 0; color: transparent; place-items: center; }
-.bd-annotation-popup button[data-color]::before { width: 22px; height: 12px; content: ""; }
-.bd-annotation-popup button[data-color="yellow"]::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='12' viewBox='0 0 22 12'%3E%3Cpath d='M1 7c2.5-5 5.5 5 8 0s5.5 5 8 0' fill='none' stroke='%23f7c948' stroke-linecap='round' stroke-width='2.2'/%3E%3C/svg%3E") center/22px 12px no-repeat; }
-.bd-annotation-popup button[data-color="red"]::before { border-bottom: 2px solid #eb807b; }
-.bd-annotation-popup button[data-color="green"]::before { border-bottom: 2px dashed #61bf8d; }
-.bd-annotation-popup button[data-color="blue"]::before { border-bottom: 4px double #6fa3ef; }
-.bd-annotation-popup .bd-annotation-copy-result { padding: 0 8px; color: #f8fafc; font: 500 12px/30px var(--sans, sans-serif); white-space: nowrap; }
+.bd-annotation-popup.bd-annotation-popup-open {
+  display: flex;
+  animation: bd-annotation-pop-in 150ms ease-out forwards;
+}
+@keyframes bd-annotation-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.bd-annotation-popup button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: 500 12px/1 var(--sans, sans-serif);
+  padding: 0 10px;
+}
+.bd-annotation-popup button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.bd-annotation-popup button[data-color] {
+  display: grid;
+  width: 38px;
+  padding: 0;
+  color: transparent;
+  place-items: center;
+}
+.bd-annotation-popup button[data-color]::before {
+  width: 22px;
+  height: 12px;
+  content: "";
+}
+.bd-annotation-popup button[data-color="yellow"]::before {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='12' viewBox='0 0 22 12'%3E%3Cpath d='M1 7c2.5-5 5.5 5 8 0s5.5 5 8 0' fill='none' stroke='%23f7c948' stroke-linecap='round' stroke-width='2.2'/%3E%3C/svg%3E")
+    center/22px 12px no-repeat;
+}
+.bd-annotation-popup button[data-color="red"]::before {
+  border-bottom: 2px solid #eb807b;
+}
+.bd-annotation-popup button[data-color="green"]::before {
+  border-bottom: 2px dashed #61bf8d;
+}
+.bd-annotation-popup button[data-color="blue"]::before {
+  border-bottom: 4px double #6fa3ef;
+}
+.bd-annotation-popup .bd-annotation-copy-result {
+  padding: 0 8px;
+  color: #f8fafc;
+  font: 500 12px/30px var(--sans, sans-serif);
+  white-space: nowrap;
+}
 
 .bd-annotation-mobile-note {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 330;
-    max-width: min(304px, calc(100vw - 24px));
-    padding: 13px 14px;
-    border: 1px solid rgba(218, 225, 236, .96);
-    border-radius: 13px;
-    background: rgba(255, 255, 255, .98);
-    box-shadow: 0 12px 30px rgba(24, 39, 66, .18);
-    color: var(--bd-annotation-ink);
-    font: 13px/1.55 var(--sans, sans-serif);
-    will-change: transform;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 330;
+  max-width: min(304px, calc(100vw - 24px));
+  padding: 13px 14px;
+  border: 1px solid rgba(218, 225, 236, 0.96);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 12px 30px rgba(24, 39, 66, 0.18);
+  color: var(--bd-annotation-ink);
+  font: 13px/1.55 var(--sans, sans-serif);
+  will-change: transform;
 }
 
 @media (max-width: 768px) {
-    .bd-annotation-toolbar-item,
-    .bd-annotation-sidebar { display: none !important; }
-    .bd-annotation-comments-open .reading-toolbar .rt-item:not(.bd-annotation-toolbar-item) { display: flex; }
-    .bd-annotation-scope .bd-annotation-comment-trigger { display: none; }
+  .bd-annotation-toolbar-item,
+  .bd-annotation-sidebar {
+    display: none !important;
+  }
+  .bd-annotation-comments-open .reading-toolbar .rt-item:not(.bd-annotation-toolbar-item) {
+    display: flex;
+  }
+  .bd-annotation-scope .bd-annotation-comment-trigger {
+    display: none;
+  }
 }

@@ -21,12 +21,14 @@
 ### Task 1: Record the architecture and release intent
 
 **Files:**
+
 - Create: `docs/architecture/decisions/0010-post-content-version.md`
 - Modify: `docs/architecture/decisions/README.md`
 - Create: `docs/superpowers/specs/2026-09-20-post-content-version-design.md`
 - Modify: `docs/releases/CHANGELOG.md`
 
 **Interfaces:**
+
 - Produces the accepted storage decision and the `Unreleased` release metadata required by staging gates.
 
 - [ ] **Step 1: Add the ADR, spec, and ADR index entry.**
@@ -37,10 +39,12 @@
 ### Task 2: Add the domain version invariant with tests
 
 **Files:**
+
 - Modify: `bytedepth-domain/src/main/java/manfred/bytedepth/domain/post/Post.java`
 - Test: `bytedepth-domain/src/test/java/manfred/bytedepth/domain/post/PostTest.java`
 
 **Interfaces:**
+
 - Produces `Post#getContentVersion()` and a domain `updateContent` rule that increments only for title/body changes.
 
 - [ ] **Step 1: Add failing tests for create=`1`, title-only increment, body-only increment, and unchanged title/body preserving the version.**
@@ -53,12 +57,14 @@
 ### Task 3: Persist and migrate `content_version`
 
 **Files:**
+
 - Create: `bytedepth-start/src/main/resources/db/migration/V24__add_post_content_version.sql`
 - Modify: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/post/PostDO.java`
 - Modify: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/post/PostRepositoryImpl.java`
 - Test: `bytedepth-infrastructure/src/test/java/manfred/bytedepth/infrastructure/post/PostRepositoryImplTest.java`
 
 **Interfaces:**
+
 - Produces a non-null `post.content_version` column and bidirectional DO/entity mapping.
 
 - [ ] **Step 1: Add repository mapping assertions for saving and reading a non-default version.**
@@ -71,12 +77,14 @@
 ### Task 4: Expose the version through the application query model
 
 **Files:**
+
 - Modify: `bytedepth-app/src/main/java/manfred/bytedepth/app/post/query/PostDTO.java`
 - Modify: `bytedepth-app/src/main/java/manfred/bytedepth/app/post/query/GetPostQryExe.java`
 - Test: `bytedepth-app/src/test/java/manfred/bytedepth/app/post/query/GetPostQryExeTest.java`
 - Test: `bytedepth-app/src/test/java/manfred/bytedepth/app/post/command/UpdatePostCmdExeTest.java`
 
 **Interfaces:**
+
 - Produces `PostDTO#getContentVersion()` for public detail rendering; existing update command continues to invoke the domain invariant.
 
 - [ ] **Step 1: Add a query assertion that a reconstructed post version is copied to `PostDTO`.**
@@ -89,11 +97,13 @@
 ### Task 5: Render the version metadata on public article details
 
 **Files:**
+
 - Modify: `bytedepth-start/src/main/resources/templates/public/posts/detail.html`
 - Test: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/portal/PostControllerTest.java` or the existing detail-rendering test that asserts the template model
 - Test: `bytedepth-start/src/test/java/manfred/bytedepth/ThemeAssetsTest.java` only if a static template contract is needed
 
 **Interfaces:**
+
 - Consumes `PostDTO.contentVersion`; renders a localized `版本 vN` item beside the existing article metadata without adding a new shared component or route.
 
 - [ ] **Step 1: Add a template contract assertion for `版本 v` and `post.contentVersion`.**
@@ -105,9 +115,11 @@
 ### Task 6: Run quality gates and staging acceptance
 
 **Files:**
+
 - Modify only files already listed above unless a failing contract test identifies a directly related documentation or test update.
 
 **Interfaces:**
+
 - Produces a clean feature branch, local quality evidence, staging integration evidence, and staging E2E evidence for the same deployed SHA.
 
 - [ ] **Step 1: In the new worktree run `npm ci --ignore-scripts --no-audit --no-fund` before any frontend test/lint.**

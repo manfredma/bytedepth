@@ -33,10 +33,10 @@ staging 在导航栏下方显示独立的环境提示条：
 
 首版目录：
 
-| 分组 | 条目 |
-| --- | --- |
+| 分组           | 条目                                                                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ByteDepth 站点 | ByteDepth（`https://bytedepth.cn`）、Career（`https://career.bytedepth.cn`）、Toolbox（`https://toolbox.bytedepth.cn`）、工作台（`https://workbench.bytedepth.cn`） |
-| 常用技术站点 | Spring Framework 文档、Java 文档、MDN Web Docs、GitHub Docs |
+| 常用技术站点   | Spring Framework 文档、Java 文档、MDN Web Docs、GitHub Docs                                                                                                         |
 
 技术站点全部使用官方一手文档入口：`docs.spring.io`、`docs.oracle.com/en/java/`、`developer.mozilla.org`、`docs.github.com`。它们是当前稳定的官方文档入口。[Spring Framework 文档](https://docs.spring.io/spring-framework/reference/index.html)、[Java 文档](https://docs.oracle.com/en/java/index.html)、[MDN](https://developer.mozilla.org/en-US/docs/MDN/index.html)、[GitHub Docs](https://docs.github.com/en)。
 

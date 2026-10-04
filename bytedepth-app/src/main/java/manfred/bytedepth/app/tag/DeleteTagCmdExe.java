@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DeleteTagCmdExe {
 
-    private final TagRepository tagRepository;
+  private final TagRepository tagRepository;
 
-    public void execute(Long tagId) {
-        tagRepository.deleteWithPostAssociations(tagId);
-    }
+  public void execute(Long tagId) {
+    tagRepository.deleteWithPostAssociations(tagId);
+  }
 }

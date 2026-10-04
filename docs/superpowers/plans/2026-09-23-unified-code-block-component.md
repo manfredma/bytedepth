@@ -24,6 +24,7 @@
 ## Task 1: Lock the metadata and renderer contract with failing tests
 
 **Files:**
+
 - Modify: `bytedepth-adapter/src/test/java/manfred/bytedepth/adapter/web/util/MarkdownRendererTest.java`
 - Modify: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/util/CodeBlockMetadata.java`
 - Modify: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/util/EnhancedCodeBlockRenderer.java`
@@ -42,6 +43,7 @@
 ## Task 2: Add safe line-number and syntax-highlight rendering
 
 **Files:**
+
 - Add: `bytedepth-start/src/main/resources/static/vendor/prism/prism.js`
 - Add: `bytedepth-start/src/main/resources/static/vendor/prism/prism-java.min.js`
 - Add: `bytedepth-start/src/main/resources/static/vendor/prism/prism-python.min.js`
@@ -70,6 +72,7 @@
 ## Task 3: Align visual behavior and regression coverage
 
 **Files:**
+
 - Modify: `bytedepth-start/src/test/js/code-blocks.test.js`
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/PostReadingAssetsTest.java`
 - Modify: `tests/e2e/code-blocks.spec.js`
@@ -85,6 +88,7 @@
 ## Task 4: Documentation, changelog, and quality gates
 
 **Files:**
+
 - Modify: `CHANGELOG.md`
 - Modify: `docs/architecture/decisions/README.md` if ADR indexing needs consistency
 - Modify: `docs/architecture/decisions/0014-unified-code-block-component.md` only if implementation reveals a contract mismatch

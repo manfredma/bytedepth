@@ -85,13 +85,13 @@
 
 ## 文件清单
 
-| 文件 | 改动 |
-|------|------|
-| `bytedepth-adapter/.../FeedController.java` | 最近变更排序、日期选择与 RSS 专用媒体类型 |
-| `bytedepth-start/.../fragments/nav.html` | 标准 RSS 图标链接 |
-| `bytedepth-start/.../static/css/nav.css` | 隔离的 `.nav-rss` 样式与响应式保证 |
-| `bytedepth-start/.../fragments/pwa-head.html` | RSS 自动发现标记 |
-| `bytedepth-start/src/test/...` | feed MVC 与公共模板行为测试 |
-| `docs/agent-guides/obsidian-sync.md` | 自动纳入与远程验证规则 |
-| `docs/architecture/routes.md` | feed 路由参考 |
-| `docs/architecture/decisions/*`、`AGENTS.md`、`docs/architecture/overview.md` | ADR 机制与 ADR-0001 |
+| 文件                                                                          | 改动                                      |
+| ----------------------------------------------------------------------------- | ----------------------------------------- |
+| `bytedepth-adapter/.../FeedController.java`                                   | 最近变更排序、日期选择与 RSS 专用媒体类型 |
+| `bytedepth-start/.../fragments/nav.html`                                      | 标准 RSS 图标链接                         |
+| `bytedepth-start/.../static/css/nav.css`                                      | 隔离的 `.nav-rss` 样式与响应式保证        |
+| `bytedepth-start/.../fragments/pwa-head.html`                                 | RSS 自动发现标记                          |
+| `bytedepth-start/src/test/...`                                                | feed MVC 与公共模板行为测试               |
+| `docs/agent-guides/obsidian-sync.md`                                          | 自动纳入与远程验证规则                    |
+| `docs/architecture/routes.md`                                                 | feed 路由参考                             |
+| `docs/architecture/decisions/*`、`AGENTS.md`、`docs/architecture/overview.md` | ADR 机制与 ADR-0001                       |

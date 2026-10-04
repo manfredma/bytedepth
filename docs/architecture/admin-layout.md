@@ -6,16 +6,16 @@
 
 ```html
 <head>
-  <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
+  <link rel="stylesheet" th:href="@{/css/admin-layout.css}" />
 </head>
 <body>
-<nav th:replace="~{fragments/nav :: navbar(false)}"></nav>
-<div class="admin-shell">
-  <aside th:replace="~{fragments/admin-sidebar :: sidebar('your-key')}"></aside>
-  <main class="admin-main">
-    <div class="container"><!-- 页面内容 --></div>
-  </main>
-</div>
+  <nav th:replace="~{fragments/nav :: navbar(false)}"></nav>
+  <div class="admin-shell">
+    <aside th:replace="~{fragments/admin-sidebar :: sidebar('your-key')}"></aside>
+    <main class="admin-main">
+      <div class="container"><!-- 页面内容 --></div>
+    </main>
+  </div>
 </body>
 ```
 
@@ -35,8 +35,7 @@
 在 `admin-sidebar.html` 的对应分区新增导航项，并同时完成路由权限与 active key：
 
 ```html
-<a href="/admin/new-page" class="admin-sidebar-item"
-   th:classappend="${active == 'new-key'} ? ' active' : ''">
+<a href="/admin/new-page" class="admin-sidebar-item" th:classappend="${active == 'new-key'} ? ' active' : ''">
   <span class="si-icon">🔧</span>新功能
 </a>
 ```

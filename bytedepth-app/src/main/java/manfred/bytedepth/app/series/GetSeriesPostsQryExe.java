@@ -1,30 +1,31 @@
 package manfred.bytedepth.app.series;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.post.MarkdownTextExtractor;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 @Component
 @RequiredArgsConstructor
 public class GetSeriesPostsQryExe {
 
-    private final SeriesRepository seriesRepository;
+  private final SeriesRepository seriesRepository;
 
-    public List<SeriesPostItemDTO> execute(Long seriesId) {
-        return seriesRepository.findPublishedPostsBySeries(seriesId).stream()
-                .map(item -> {
-                    SeriesPostItemDTO dto = new SeriesPostItemDTO();
-                    dto.setId(item.id());
-                    dto.setSlug(item.slug());
-                    dto.setTitle(item.title());
-                    dto.setSeriesOrder(item.seriesOrder());
-                    dto.setEstimatedReadingMinutes(MarkdownTextExtractor.estimatedReadingMinutes(item.content()));
-                    return dto;
-                })
-                .collect(Collectors.toList());
-    }
+  public List<SeriesPostItemDTO> execute(Long seriesId) {
+    return seriesRepository.findPublishedPostsBySeries(seriesId).stream()
+        .map(
+            item -> {
+              SeriesPostItemDTO dto = new SeriesPostItemDTO();
+              dto.setId(item.id());
+              dto.setSlug(item.slug());
+              dto.setTitle(item.title());
+              dto.setSeriesOrder(item.seriesOrder());
+              dto.setEstimatedReadingMinutes(
+                  MarkdownTextExtractor.estimatedReadingMinutes(item.content()));
+              return dto;
+            })
+        .collect(Collectors.toList());
+  }
 }

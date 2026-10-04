@@ -1,13 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const template = fs.readFileSync(
-  path.resolve(__dirname, '../../main/resources/templates/public/index.html'),
-  'utf-8'
-);
+const template = fs.readFileSync(path.resolve(__dirname, "../../main/resources/templates/public/index.html"), "utf-8");
 const inlineScript = template.match(/<script>\s*([\s\S]*?)\s*<\/script>/)[1];
 
-describe('homepage slogan', () => {
+describe("homepage slogan", () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="slogan-display">
@@ -15,16 +12,16 @@ describe('homepage slogan', () => {
         <p id="slogan-author"></p>
       </div>
     `;
-    vi.spyOn(window, 'setInterval').mockImplementation(() => 0);
+    vi.spyOn(window, "setInterval").mockImplementation(() => 0);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  test('renders a non-empty initial slogan', () => {
+  test("renders a non-empty initial slogan", () => {
     expect(() => eval(inlineScript)).not.toThrow();
-    expect(document.getElementById('slogan-quote').textContent).not.toBe('');
-    expect(document.getElementById('slogan-author').textContent).not.toBe('');
+    expect(document.getElementById("slogan-quote").textContent).not.toBe("");
+    expect(document.getElementById("slogan-author").textContent).not.toBe("");
   });
 });

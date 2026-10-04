@@ -17,56 +17,62 @@ import org.springframework.data.redis.core.ValueOperations;
 
 class RedisReadingProgressTokenAdapterTest {
 
-    private StringRedisTemplate redisTemplate;
-    private ValueOperations<String, String> values;
-    private RedisReadingProgressTokenAdapter adapter;
+  private StringRedisTemplate redisTemplate;
+  private ValueOperations<String, String> values;
+  private RedisReadingProgressTokenAdapter adapter;
 
-    @BeforeEach
-    @SuppressWarnings("unchecked")
-    void setUp() {
-        redisTemplate = org.mockito.Mockito.mock(StringRedisTemplate.class);
-        values = org.mockito.Mockito.mock(ValueOperations.class);
-        when(redisTemplate.opsForValue()).thenReturn(values);
-        adapter = new RedisReadingProgressTokenAdapter(redisTemplate, new RedisKeyNamespace(""));
-    }
+  @BeforeEach
+  @SuppressWarnings("unchecked")
+  void setUp() {
+    redisTemplate = org.mockito.Mockito.mock(StringRedisTemplate.class);
+    values = org.mockito.Mockito.mock(ValueOperations.class);
+    when(redisTemplate.opsForValue()).thenReturn(values);
+    adapter = new RedisReadingProgressTokenAdapter(redisTemplate, new RedisKeyNamespace(""));
+  }
 
-    @Test
-    void issuesPostBoundTokenForOneDay() {
-        adapter.issue(new PostViewedEvent(12L, null, "203.0.113.1", "agent", null,
-                "token-1", LocalDateTime.now()));
+  @Test
+  void issuesPostBoundTokenForOneDay() {
+    adapter.issue(
+        new PostViewedEvent(
+            12L, null, "203.0.113.1", "agent", null, "token-1", LocalDateTime.now()));
 
-        verify(values).set("bytedepth:reading-progress:token-1", "12", Duration.ofHours(24));
-    }
+    verify(values).set("bytedepth:reading-progress:token-1", "12", Duration.ofHours(24));
+  }
 
-    @Test
-    void acceptsOnlyTokenBoundToSamePost() {
-        when(values.get("bytedepth:reading-progress:token-1")).thenReturn("12");
+  @Test
+  void acceptsOnlyTokenBoundToSamePost() {
+    when(values.get("bytedepth:reading-progress:token-1")).thenReturn("12");
 
-        assertTrue(adapter.belongsToPost("token-1", 12L));
-        assertFalse(adapter.belongsToPost("token-1", 13L));
-    }
+    assertTrue(adapter.belongsToPost("token-1", 12L));
+    assertFalse(adapter.belongsToPost("token-1", 13L));
+  }
 
-    @Test
-    void toleratesRedisFailuresWithoutIssuingOrAcceptingAToken() {
-        doThrow(new IllegalStateException("redis unavailable"))
-                .when(values).set("bytedepth:reading-progress:token-1", "12", Duration.ofHours(24));
-        adapter.issue(new PostViewedEvent(12L, null, "203.0.113.1", "agent", null,
-                "token-1", LocalDateTime.now()));
-        when(values.get("bytedepth:reading-progress:token-1"))
-                .thenThrow(new IllegalStateException("redis unavailable"));
+  @Test
+  void toleratesRedisFailuresWithoutIssuingOrAcceptingAToken() {
+    doThrow(new IllegalStateException("redis unavailable"))
+        .when(values)
+        .set("bytedepth:reading-progress:token-1", "12", Duration.ofHours(24));
+    adapter.issue(
+        new PostViewedEvent(
+            12L, null, "203.0.113.1", "agent", null, "token-1", LocalDateTime.now()));
+    when(values.get("bytedepth:reading-progress:token-1"))
+        .thenThrow(new IllegalStateException("redis unavailable"));
 
-        assertFalse(adapter.belongsToPost("token-1", 12L));
-    }
+    assertFalse(adapter.belongsToPost("token-1", 12L));
+  }
 
-    @Test
-    void namespacesIssuedAndLookedUpTokens() {
-        adapter = new RedisReadingProgressTokenAdapter(redisTemplate,
-                new RedisKeyNamespace("bytedepth:it:r1:"));
-        adapter.issue(new PostViewedEvent(12L, null, "203.0.113.1", "agent", null,
-                "token-1", LocalDateTime.now()));
-        when(values.get("bytedepth:it:r1:bytedepth:reading-progress:token-1")).thenReturn("12");
+  @Test
+  void namespacesIssuedAndLookedUpTokens() {
+    adapter =
+        new RedisReadingProgressTokenAdapter(
+            redisTemplate, new RedisKeyNamespace("bytedepth:it:r1:"));
+    adapter.issue(
+        new PostViewedEvent(
+            12L, null, "203.0.113.1", "agent", null, "token-1", LocalDateTime.now()));
+    when(values.get("bytedepth:it:r1:bytedepth:reading-progress:token-1")).thenReturn("12");
 
-        assertTrue(adapter.belongsToPost("token-1", 12L));
-        verify(values).set("bytedepth:it:r1:bytedepth:reading-progress:token-1", "12", Duration.ofHours(24));
-    }
+    assertTrue(adapter.belongsToPost("token-1", 12L));
+    verify(values)
+        .set("bytedepth:it:r1:bytedepth:reading-progress:token-1", "12", Duration.ofHours(24));
+  }
 }

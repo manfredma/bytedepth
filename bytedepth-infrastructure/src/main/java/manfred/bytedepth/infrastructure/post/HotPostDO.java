@@ -6,5 +6,5 @@ import lombok.Setter;
 @Getter
 @Setter
 public class HotPostDO extends PostDO {
-    private Long viewCount;
+  private Long viewCount;
 }

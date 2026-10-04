@@ -21,6 +21,7 @@
 ### Task 1: 锁定顶部导航渲染契约（TDD）
 
 **Files:**
+
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/portal/PostControllerSeriesDetailRenderingTest.java`
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/PostReadingAssetsTest.java`
 
@@ -30,6 +31,7 @@
 ### Task 2: 实现顶部导航组件
 
 **Files:**
+
 - Modify: `bytedepth-start/src/main/resources/templates/public/posts/detail.html`
 
 - [ ] **Step 1: 写最小模板实现**：在专栏上下文块与文章标题之间增加 `nav.series-top-nav`；中间文章输出同专栏上一篇/下一篇，首篇/末篇输出边界动作，链接使用 slug 或专栏 slug。
@@ -39,6 +41,7 @@
 ### Task 3: 质量门禁与 staging 验收
 
 **Files:**
+
 - Modify: `docs/releases/CHANGELOG.md`
 
 - [ ] **Step 1: 增加 `## Unreleased` 分类条目**：记录文章详情页新增顶部专栏上一篇/下一篇导航。

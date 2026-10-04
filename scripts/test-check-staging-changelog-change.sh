@@ -16,10 +16,10 @@ git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm base
 
 assert_fails() {
-    if "$@" >/dev/null 2>&1; then
-        printf 'Expected command to fail: %s\n' "$*" >&2
-        exit 1
-    fi
+  if "$@" > /dev/null 2>&1; then
+    printf 'Expected command to fail: %s\n' "$*" >&2
+    exit 1
+  fi
 }
 
 git -C "$TEMP_REPO" checkout -q -b candidate
@@ -27,13 +27,13 @@ printf '%s\n' 'class RuntimeChange {}' > "$TEMP_REPO/src/main/java/RuntimeChange
 git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm runtime-only
 run_check() {
-    (cd "$TEMP_REPO" && bash "$SOURCE_ROOT/scripts/check-staging-changelog-change.sh" "$@")
+  (cd "$TEMP_REPO" && bash "$SOURCE_ROOT/scripts/check-staging-changelog-change.sh" "$@")
 }
 
 assert_fails run_check --target candidate --base main
 
 printf '%s\n' '# Changelog' '' '## Unreleased' '' '### Changed' '' '- Candidate is frozen for staging.' \
-    > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+  > "$TEMP_REPO/docs/releases/CHANGELOG.md"
 git -C "$TEMP_REPO" add .
 git -C "$TEMP_REPO" commit -qm freeze-changelog
 run_check --target candidate --base main

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 @Component("markdownExcerpt")
 public class MarkdownExcerpt {
 
-    public String excerpt(String markdown, int maxLength) {
-        return MarkdownTextExtractor.excerpt(markdown, maxLength);
-    }
+  public String excerpt(String markdown, int maxLength) {
+    return MarkdownTextExtractor.excerpt(markdown, maxLength);
+  }
 }

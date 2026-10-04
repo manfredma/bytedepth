@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class TrendPointDTO {
-    private String label;
-    private long viewCount;
+  private String label;
+  private long viewCount;
 }

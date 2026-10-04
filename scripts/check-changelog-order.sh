@@ -5,8 +5,8 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly CHANGELOG_FILE="${1:-$SOURCE_ROOT/docs/releases/CHANGELOG.md}"
 
 if [[ ! -f "$CHANGELOG_FILE" || -L "$CHANGELOG_FILE" ]]; then
-    printf 'Changelog order check refused: missing or symlinked file %s.\n' "$CHANGELOG_FILE" >&2
-    exit 1
+  printf 'Changelog order check refused: missing or symlinked file %s.\n' "$CHANGELOG_FILE" >&2
+  exit 1
 fi
 
 awk '
