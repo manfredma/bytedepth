@@ -42,8 +42,8 @@ bash scripts/run-local-quality.sh
 - 部署时由 release-platform 传输并校验不可变制品，由 Host Agent 按 ByteDepth 适配器重启 native 服务、校验 `/version` 和执行验证；项目仓库不得直接执行部署脚本。
 - production 只能提升已经在 staging 页面验收通过的同一不可变制品；项目仓库不直接执行 production 发布或回滚。
 - 前端公共组件必须自隔离，组件之间除相对位置外不得互相影响。环境相关样式必须定义在承载该组件且所有使用页面必加载的组件样式表中，禁止放入仅部分路由加载的页面主题资产；必须有自动化资源归属检查覆盖该约束。
-- staging（129，`129.211.6.82`，`staging-bytedepth.bytedepth.cn`）是唯一的 E2E、集成、部署验收和项目所有者验收环境。AI Agent 完成源码修改并合并 PR 后，只需将目标分支/PR 和完整 commit SHA 交给 release-platform；平台负责 QUALITY、BUILD、staging 发布、日志、重试、验收和 production 提升。production 只能提升同一个已验收的不可变制品；项目工作区不得执行任何发布、回滚或远程主机命令。
-- **验收规则（强制）**：staging 验收的就是待上线版本。AI Agent 修改代码后必须通过 PR 合并，release-platform 使用同一完整 commit SHA 执行 staging；验收失败时重新修改、重新构建和重新验收，验收通过后只能提升同一不可变制品到 production。项目仓库不维护 Tag、SSH 发布顺序或本地发布脚本。
+- staging（129，`129.211.6.82`，`staging-bytedepth.bytedepth.cn`）是唯一的 E2E、集成、部署验收和项目所有者验收环境。PR opened/synchronize 后，release-platform 以 PR head 完整 SHA 创建候选并负责 QUALITY、BUILD、staging 发布、日志、重试和验收；验收通过后才允许合并同一个 SHA。合并后平台校验 `main` HEAD 与已验收候选 SHA 一致，再提升同一不可变制品到 production；项目工作区不得执行任何发布、回滚或远程主机命令。
+- **验收规则（强制）**：staging 验收先于 PR 合并，验收的就是待上线候选。验收失败时重新修改、重新构建和重新验收；合并时必须保持已验收候选完整 SHA 不变。若 `main` SHA 与验收候选不一致，必须重新构建、重新 staging 和重新生成 evidence，不能复用旧验收。production 只能提升同一已验收不可变制品；项目仓库不维护 Tag、SSH 发布顺序或本地发布脚本。
 - 版本、制品、验收和发布记录以 release-platform 页面为准；项目仓库的 `CHANGELOG.md` 只记录产品变化，不再维护 Tag、SSH 发布顺序或本地 release gate。
 - staging 验收和脚本必须使用 `https://staging-bytedepth.bytedepth.cn/`；原 `staging.bytedepth.cn` 不再作为 staging 内容入口。`BYTEDEPTH_ENVIRONMENT=staging` 时，RSS、sitemap 和 RSS 自动发现必须关闭，页面返回 noindex；生产环境保持这些公开入口。新域名只是环境入口，不是安全认证。
 - staging 域名证书、主机绑定和运行时凭据由 release-platform 环境配置管理；项目仓库不得提供或调用证书同步、主机 SSH 或远程部署脚本。

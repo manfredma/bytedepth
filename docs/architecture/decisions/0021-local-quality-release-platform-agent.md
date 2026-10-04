@@ -1,6 +1,6 @@
 # ADR-0021: 本地质量门禁与 release-platform Host Agent 分工
 
-- **状态**: Accepted
+- **状态**: Superseded by [ADR-0022](0022-pr-candidate-staging-before-merge.md)
 - **日期**: 2026-10-04
 - **决策者**: 项目所有者与维护团队
 - **取代**: [ADR-0003](0003-observable-isolated-delivery-pipeline.md)、[ADR-0006](0006-unified-release-pipeline.md)
@@ -13,12 +13,12 @@ bytedepth 曾通过 `.github/workflows/quality.yml` 在 PR 上重复执行本地
 
 1. 本仓库的 AI Agent/开发者在 PR 前执行 `bash scripts/run-local-quality.sh`，完成 formatter、构建、单元测试、前端测试、lint、coverage 和脚本契约。
 2. 删除 bytedepth 仓库的 GitHub Actions quality workflow 及其专用契约测试；GitHub 只承载代码、PR 和评审，不执行项目质量门禁。
-3. PR 合并后，release-platform 使用同一完整 `main` SHA 执行 QUALITY/BUILD；平台页面和 Host Agent evidence 是候选质量与发布事实来源。
-4. 本地质量结果不能替代 release-platform 对合并后候选 SHA 的重新执行；release-platform 结果也不改变本地提交前质量门禁的责任。
+3. PR head 在合并前，release-platform 使用完整 SHA 执行 QUALITY/BUILD、staging 验收；平台页面和 Host Agent evidence 是候选质量与发布事实来源。
+4. 本地质量结果不能替代 release-platform 对 PR head 候选 SHA 的重新执行；release-platform 结果也不改变本地提交前质量门禁的责任。
 
 ## 触发与监控
 
-发布触发不是部署脚本调用，而是 release-platform 控制面流程：创建候选、创建并启动 `BUILD` flow instance，轮询 flow/stages/logs，确认不可变 artifact 后创建并启动同 artifact 的 `RELEASE(staging)` flow。每个 flow 必须保存 candidate/flow/request/idempotency 标识，并以服务端状态、日志、artifact 和 evidence 判断完成、等待、失败或可重试状态。
+发布触发不是部署脚本调用，而是 release-platform 控制面流程：以 PR head 创建候选，创建并启动 `BUILD` flow instance，轮询 flow/stages/logs，确认不可变 artifact 后创建并启动同 artifact 的 `RELEASE(staging)` flow；验收通过后才合并同一 SHA，并在 `main` SHA 校验通过后提升 production。每个 flow 必须保存 candidate/flow/request/idempotency 标识，并以服务端状态、日志、artifact 和 evidence 判断完成、等待、失败或可重试状态。
 
 ## 后果
 
