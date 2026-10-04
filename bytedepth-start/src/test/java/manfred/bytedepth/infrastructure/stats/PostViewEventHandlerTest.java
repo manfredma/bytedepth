@@ -1,5 +1,10 @@
 package manfred.bytedepth.infrastructure.stats;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
 import manfred.bytedepth.domain.stats.PostViewedEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -8,69 +13,67 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class PostViewEventHandlerTest {
 
-    @Mock
-    private GeoIpService geoIpService;
+  @Mock private GeoIpService geoIpService;
 
-    @Mock
-    private PostViewLogMapper postViewLogMapper;
+  @Mock private PostViewLogMapper postViewLogMapper;
 
-    @InjectMocks
-    private PostViewEventHandler handler;
+  @InjectMocks private PostViewEventHandler handler;
 
-    @Test
-    void onPostViewed_loggedInUser_savesAllFields() {
-        var event = new PostViewedEvent(
-                10L, 99L, "8.8.8.8", "Mozilla/5.0", "https://google.com",
-                "visit-token",
-                LocalDateTime.of(2026, 6, 29, 12, 0));
-        when(geoIpService.resolve("8.8.8.8")).thenReturn(new GeoInfo("China", "Beijing"));
+  @Test
+  void onPostViewed_loggedInUser_savesAllFields() {
+    var event =
+        new PostViewedEvent(
+            10L,
+            99L,
+            "8.8.8.8",
+            "Mozilla/5.0",
+            "https://google.com",
+            "visit-token",
+            LocalDateTime.of(2026, 6, 29, 12, 0));
+    when(geoIpService.resolve("8.8.8.8")).thenReturn(new GeoInfo("China", "Beijing"));
 
-        handler.onPostViewed(event);
+    handler.onPostViewed(event);
 
-        ArgumentCaptor<PostViewLogDO> captor = ArgumentCaptor.forClass(PostViewLogDO.class);
-        verify(postViewLogMapper).upsertVisit(captor.capture());
-        PostViewLogDO saved = captor.getValue();
-        assertThat(saved.getPostId()).isEqualTo(10L);
-        assertThat(saved.getUserId()).isEqualTo(99L);
-        assertThat(saved.getIp()).isEqualTo("8.8.8.8");
-        assertThat(saved.getUserAgent()).isEqualTo("Mozilla/5.0");
-        assertThat(saved.getReferer()).isEqualTo("https://google.com");
-        assertThat(saved.getCountry()).isEqualTo("China");
-        assertThat(saved.getCity()).isEqualTo("Beijing");
-        assertThat(saved.getVisitedAt()).isEqualTo(LocalDateTime.of(2026, 6, 29, 12, 0));
-        assertThat(saved.getVisitToken()).isEqualTo("visit-token");
-    }
+    ArgumentCaptor<PostViewLogDO> captor = ArgumentCaptor.forClass(PostViewLogDO.class);
+    verify(postViewLogMapper).upsertVisit(captor.capture());
+    PostViewLogDO saved = captor.getValue();
+    assertThat(saved.getPostId()).isEqualTo(10L);
+    assertThat(saved.getUserId()).isEqualTo(99L);
+    assertThat(saved.getIp()).isEqualTo("8.8.8.8");
+    assertThat(saved.getUserAgent()).isEqualTo("Mozilla/5.0");
+    assertThat(saved.getReferer()).isEqualTo("https://google.com");
+    assertThat(saved.getCountry()).isEqualTo("China");
+    assertThat(saved.getCity()).isEqualTo("Beijing");
+    assertThat(saved.getVisitedAt()).isEqualTo(LocalDateTime.of(2026, 6, 29, 12, 0));
+    assertThat(saved.getVisitToken()).isEqualTo("visit-token");
+  }
 
-    @Test
-    void onPostViewed_anonymousUser_savesNullUserId() {
-        var event = new PostViewedEvent(5L, null, "1.2.3.4", "curl/7.0", null, "visit-token",
-                LocalDateTime.now());
-        when(geoIpService.resolve("1.2.3.4")).thenReturn(GeoInfo.unknown());
+  @Test
+  void onPostViewed_anonymousUser_savesNullUserId() {
+    var event =
+        new PostViewedEvent(
+            5L, null, "1.2.3.4", "curl/7.0", null, "visit-token", LocalDateTime.now());
+    when(geoIpService.resolve("1.2.3.4")).thenReturn(GeoInfo.unknown());
 
-        handler.onPostViewed(event);
+    handler.onPostViewed(event);
 
-        ArgumentCaptor<PostViewLogDO> captor = ArgumentCaptor.forClass(PostViewLogDO.class);
-        verify(postViewLogMapper).upsertVisit(captor.capture());
-        assertThat(captor.getValue().getUserId()).isNull();
-        assertThat(captor.getValue().getCountry()).isEmpty();
-    }
+    ArgumentCaptor<PostViewLogDO> captor = ArgumentCaptor.forClass(PostViewLogDO.class);
+    verify(postViewLogMapper).upsertVisit(captor.capture());
+    assertThat(captor.getValue().getUserId()).isNull();
+    assertThat(captor.getValue().getCountry()).isEmpty();
+  }
 
-    @Test
-    void onPostViewed_geoResolutionFails_stillSavesLog() {
-        var event = new PostViewedEvent(1L, null, "bad-ip", null, null, "visit-token", LocalDateTime.now());
-        when(geoIpService.resolve("bad-ip")).thenReturn(GeoInfo.unknown());
+  @Test
+  void onPostViewed_geoResolutionFails_stillSavesLog() {
+    var event =
+        new PostViewedEvent(1L, null, "bad-ip", null, null, "visit-token", LocalDateTime.now());
+    when(geoIpService.resolve("bad-ip")).thenReturn(GeoInfo.unknown());
 
-        handler.onPostViewed(event);
+    handler.onPostViewed(event);
 
-        verify(postViewLogMapper).upsertVisit(any(PostViewLogDO.class));
-    }
+    verify(postViewLogMapper).upsertVisit(any(PostViewLogDO.class));
+  }
 }

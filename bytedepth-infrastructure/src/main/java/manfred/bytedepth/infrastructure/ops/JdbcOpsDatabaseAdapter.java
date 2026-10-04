@@ -8,15 +8,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class JdbcOpsDatabaseAdapter implements OpsDatabasePort {
 
-    private final JdbcTemplate jdbcTemplate;
+  private final JdbcTemplate jdbcTemplate;
 
-    public JdbcOpsDatabaseAdapter(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
+  public JdbcOpsDatabaseAdapter(JdbcTemplate jdbcTemplate) {
+    this.jdbcTemplate = jdbcTemplate;
+  }
 
-    @Override
-    public OpsDatabaseStatusDTO inspect() {
-        String databaseName = jdbcTemplate.queryForObject("SELECT DATABASE()", String.class);
-        return new OpsDatabaseStatusDTO(true, databaseName);
-    }
+  @Override
+  public OpsDatabaseStatusDTO inspect() {
+    String databaseName = jdbcTemplate.queryForObject("SELECT DATABASE()", String.class);
+    return new OpsDatabaseStatusDTO(true, databaseName);
+  }
 }

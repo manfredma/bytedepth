@@ -44,32 +44,32 @@ retentionCutoff = floorToHour(now(Asia/Shanghai) - 7 days)
 
 ### 4.1 `post_view_hourly_stat`
 
-| 列 | 类型 | 说明 |
-| --- | --- | --- |
-| stat_hour | DATETIME | 小时起点，例如 `2026-09-18 17:00:00` |
-| post_id | BIGINT | 文章 ID |
-| view_count | BIGINT | 该小时文章 PV |
+| 列         | 类型     | 说明                                 |
+| ---------- | -------- | ------------------------------------ |
+| stat_hour  | DATETIME | 小时起点，例如 `2026-09-18 17:00:00` |
+| post_id    | BIGINT   | 文章 ID                              |
+| view_count | BIGINT   | 该小时文章 PV                        |
 
 主键：`(stat_hour, post_id)`。
 
 ### 4.2 `page_view_hourly_stat`
 
-| 列 | 类型 | 说明 |
-| --- | --- | --- |
-| stat_hour | DATETIME | 小时起点 |
-| page_path | VARCHAR(255) | 页面路径 |
-| view_count | BIGINT | 该小时页面 PV |
+| 列         | 类型         | 说明          |
+| ---------- | ------------ | ------------- |
+| stat_hour  | DATETIME     | 小时起点      |
+| page_path  | VARCHAR(255) | 页面路径      |
+| view_count | BIGINT       | 该小时页面 PV |
 
 主键：`(stat_hour, page_path)`。
 
 ### 4.3 `post_view_country_daily_stat`
 
-| 列 | 类型 | 说明 |
-| --- | --- | --- |
-| stat_date | DATE | 自然日 |
-| post_id | BIGINT | 文章 ID |
-| country | VARCHAR(64) | 与现有 GeoIP 展示口径一致，空值统一为未知 |
-| view_count | BIGINT | 该日该文章该国家 PV |
+| 列         | 类型        | 说明                                      |
+| ---------- | ----------- | ----------------------------------------- |
+| stat_date  | DATE        | 自然日                                    |
+| post_id    | BIGINT      | 文章 ID                                   |
+| country    | VARCHAR(64) | 与现有 GeoIP 展示口径一致，空值统一为未知 |
+| view_count | BIGINT      | 该日该文章该国家 PV                       |
 
 主键：`(stat_date, post_id, country)`，查询索引覆盖 `(post_id, stat_date)` 和 `(country, stat_date)`。
 
@@ -79,12 +79,12 @@ retentionCutoff = floorToHour(now(Asia/Shanghai) - 7 days)
 
 ### 4.5 `view_log_archive_bucket`
 
-| 列 | 类型 | 说明 |
-| --- | --- | --- |
-| source | VARCHAR(16) | `post` 或 `page` |
-| bucket_start | DATETIME | 已处理小时起点 |
-| archived_at | DATETIME | 最近一次归档完成时间 |
-| archived_row_count | BIGINT | 本次删除的明细数，用于审计和维护阈值 |
+| 列                 | 类型        | 说明                                 |
+| ------------------ | ----------- | ------------------------------------ |
+| source             | VARCHAR(16) | `post` 或 `page`                     |
+| bucket_start       | DATETIME    | 已处理小时起点                       |
+| archived_at        | DATETIME    | 最近一次归档完成时间                 |
+| archived_row_count | BIGINT      | 本次删除的明细数，用于审计和维护阈值 |
 
 主键：`(source, bucket_start)`。
 
@@ -92,12 +92,12 @@ retentionCutoff = floorToHour(now(Asia/Shanghai) - 7 days)
 
 ### 4.6 `view_log_tablespace_state`
 
-| 列 | 类型 | 说明 |
-| --- | --- | --- |
-| source | VARCHAR(16) | `post` 或 `page` |
-| deleted_rows_since_optimize | BIGINT | 上次该来源表空间维护成功后累计删除的明细数 |
-| last_optimized_at | DATETIME | 最近一次该来源表维护成功时间，可为空 |
-| updated_at | DATETIME | 状态更新时间 |
+| 列                          | 类型        | 说明                                       |
+| --------------------------- | ----------- | ------------------------------------------ |
+| source                      | VARCHAR(16) | `post` 或 `page`                           |
+| deleted_rows_since_optimize | BIGINT      | 上次该来源表空间维护成功后累计删除的明细数 |
+| last_optimized_at           | DATETIME    | 最近一次该来源表维护成功时间，可为空       |
+| updated_at                  | DATETIME    | 状态更新时间                               |
 
 主键：`(source)`。归档事务在删除明细的同一事务中累加该来源的计数；表空间维护仅在对应计数达到阈值且 `OPTIMIZE TABLE` 成功后清零，避免维护失败后丢失待维护信号。
 

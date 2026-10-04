@@ -5,6 +5,7 @@
 **依赖方向：** app, domain
 
 **责任：**
+
 - MyBatis-Plus 数据访问（Post、Comment、User 等）
 - Redis 数据访问（统计、限流、阅读进度）
 - MeiliSearch 搜索索引

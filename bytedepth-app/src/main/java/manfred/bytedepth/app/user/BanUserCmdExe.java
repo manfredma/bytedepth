@@ -9,12 +9,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class BanUserCmdExe {
 
-    private final UserRepository userRepository;
+  private final UserRepository userRepository;
 
-    public void execute(Long userId) {
-        var user = userRepository.findById(userId)
-            .orElseThrow(() -> new DomainException("用户不存在：" + userId));
-        user.ban();
-        userRepository.save(user);
-    }
+  public void execute(Long userId) {
+    var user =
+        userRepository.findById(userId).orElseThrow(() -> new DomainException("用户不存在：" + userId));
+    user.ban();
+    userRepository.save(user);
+  }
 }

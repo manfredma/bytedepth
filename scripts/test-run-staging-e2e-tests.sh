@@ -38,12 +38,12 @@ readonly CURRENT_SHA='0123456789abcdef0123456789abcdef01234567'
 trap 'rm -rf "$TEMP_ROOT"' EXIT
 
 if [[ ! -f "$RUNNER" ]]; then
-    printf 'Expected staging E2E runner at %s\n' "$RUNNER" >&2
-    exit 1
+  printf 'Expected staging E2E runner at %s\n' "$RUNNER" >&2
+  exit 1
 fi
 [[ -f "$TEST_SLOT_SERVICE" ]] || {
-    printf 'Expected native E2E test-slot systemd service.\n' >&2
-    exit 1
+  printf 'Expected native E2E test-slot systemd service.\n' >&2
+  exit 1
 }
 rg -q 'Conflicts=bytedepth-app\.service' "$TEST_SLOT_SERVICE"
 rg -q 'EnvironmentFile=.*staging-e2e' "$TEST_SLOT_SERVICE"
@@ -51,18 +51,18 @@ rg -q 'BYTEDEPTH_TEST_SLOT_JAR|current/app\.jar' "$TEST_SLOT_SERVICE"
 rg -q 'ExecStartPre=.*bytedepth-app\.service|is-active.*bytedepth-app\.service' "$TEST_SLOT_SERVICE"
 rg -q 'RequiresMountsFor=/data/images' "$TEST_SLOT_SERVICE"
 if [[ ! -x "$RUNNER" ]] || [[ "$(git ls-files -s "$RUNNER" | awk '{print $1}')" != '100755' ]]; then
-    printf 'Expected staging E2E runner to be tracked as executable.\n' >&2
-    exit 1
+  printf 'Expected staging E2E runner to be tracked as executable.\n' >&2
+  exit 1
 fi
 grep -Fqx 'readonly CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome' "$RUNNER"
 if rg -q '\.e2e/chrome-linux64|playwright install' "$RUNNER"; then
-    printf 'Staging E2E runner must not retain a project-local Chromium contract.\n' >&2
-    exit 1
+  printf 'Staging E2E runner must not retain a project-local Chromium contract.\n' >&2
+  exit 1
 fi
 ANNOTATION_E2E="$SOURCE_ROOT/tests/e2e/annotation.spec.js"
 if rg -q 'window\.scrollTo\(0, 500\)' "$ANNOTATION_E2E"; then
-    printf 'Annotation viewport E2E must not use a layout-dependent fixed scroll distance.\n' >&2
-    exit 1
+  printf 'Annotation viewport E2E must not use a layout-dependent fixed scroll distance.\n' >&2
+  exit 1
 fi
 rg -q 'window\.scrollBy' "$ANNOTATION_E2E"
 rg -q 'expect\.poll' "$ANNOTATION_E2E"
@@ -97,15 +97,15 @@ printf 'meili-test-secret\n' > "$FIXTURE_MEILI_SECRET"
 printf 'fixture sql\n' > "$FIXTURE_SQL"
 shasum -a 256 "$FIXTURE_SQL" | awk '{print $1}' > "$FIXTURE_SQL_SHA256"
 chmod 600 "$FIXTURE_MYSQL_DEFAULTS" "$FIXTURE_REDIS_SECRET" "$FIXTURE_MEILI_SECRET" "$FIXTURE_SQL" "$FIXTURE_SQL_SHA256"
-cat > "$FIXTURE_CHROMIUM" <<'SCRIPT'
+cat > "$FIXTURE_CHROMIUM" << 'SCRIPT'
 #!/usr/bin/env bash
 printf 'Google Chrome for Testing 151.0.7922.34\n'
 SCRIPT
 chmod +x "$FIXTURE_CHROMIUM"
 sed 's@^readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome$@readonly SHARED_CHROMIUM_EXECUTABLE='"$FIXTURE_CHROMIUM"'@' \
-    "$SOURCE_ROOT/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
+  "$SOURCE_ROOT/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
 mkdir -p "$(dirname "$FIXTURE_FFMPEG")"
-cat > "$FIXTURE_FFMPEG" <<'SCRIPT'
+cat > "$FIXTURE_FFMPEG" << 'SCRIPT'
 #!/usr/bin/env bash
 printf 'ffmpeg version 7.0 fixture\n'
 SCRIPT
@@ -115,11 +115,11 @@ mv "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh.tmp" "$FIXTURE_SOURCE/deploy/l
 cp "$SOURCE_ROOT/deploy/lib/warning-policy.sh" "$FIXTURE_SOURCE/deploy/lib/warning-policy.sh"
 cp "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh" "$FIXTURE_SOURCE/deploy/lib/staging-test-slot.sh"
 cp "$SOURCE_ROOT/deploy/lib/staging-native-target.sh" "$FIXTURE_SOURCE/deploy/lib/staging-native-target.sh"
-cat >> "$FIXTURE_SOURCE/deploy/lib/staging-test-slot.sh" <<'SCRIPT'
+cat >> "$FIXTURE_SOURCE/deploy/lib/staging-test-slot.sh" << 'SCRIPT'
 slot_root_private() { return 0; }
 slot_root_directory() { [[ -d "$1" && ! -L "$1" ]]; }
 SCRIPT
-cat > "$FIXTURE_SOURCE/deploy/provision-staging-test-slot.sh" <<'SCRIPT'
+cat > "$FIXTURE_SOURCE/deploy/provision-staging-test-slot.sh" << 'SCRIPT'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 while [[ $# -gt 0 ]]; do
@@ -171,7 +171,7 @@ chmod 600 "$manifest"
 mkdir -p "$run_dir/images"
 SCRIPT
 chmod +x "$FIXTURE_SOURCE/deploy/provision-staging-test-slot.sh"
-cat > "$FIXTURE_SOURCE/deploy/teardown-staging-test-slot.sh" <<'SCRIPT'
+cat > "$FIXTURE_SOURCE/deploy/teardown-staging-test-slot.sh" << 'SCRIPT'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 printf 'app-active\n' > "$STAGING_E2E_SYSTEMCTL_STATE"
@@ -180,27 +180,27 @@ chmod +x "$FIXTURE_SOURCE/deploy/teardown-staging-test-slot.sh"
 printf 'ref=main\ncommit=%s\ndeployed_at=2026-09-10T10:11:12Z\n---\n' "$CURRENT_SHA" > "$DEPLOY_HISTORY"
 
 sed \
-    -e "s@^readonly SOURCE_ROOT=/opt/bytedepth\$@readonly SOURCE_ROOT=$FIXTURE_SOURCE@" \
-    -e "s@^readonly CONFIG_FILE=/etc/bytedepth-deploy.conf\$@readonly CONFIG_FILE=$FIXTURE_CONFIG@" \
-    -e "s@^readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history\$@readonly EVIDENCE_DIR=$EVIDENCE_DIR@" \
-    -e "s@^readonly RUNTIME_MANIFEST=/var/lib/bytedepth-staging/runtime/manifest\$@readonly RUNTIME_MANIFEST=$RUNTIME_MANIFEST@" \
-    -e "s@^readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history\$@readonly DEPLOY_HISTORY=$DEPLOY_HISTORY@" \
-    -e "s@^readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock\$@readonly LOCK_FILE=$LOCK_FILE@" \
-    -e "s@^readonly TEST_STATE_DIR=/var/lib/bytedepth-staging/test-slots\$@readonly TEST_STATE_DIR=$FIXTURE_ROOT/test-slots@" \
-    -e "s@^readonly SLOT_PROVISION=/opt/bytedepth/deploy/provision-staging-test-slot.sh\$@readonly SLOT_PROVISION=$FIXTURE_SOURCE/deploy/provision-staging-test-slot.sh@" \
-    -e "s@^readonly SLOT_TEARDOWN=/opt/bytedepth/deploy/teardown-staging-test-slot.sh\$@readonly SLOT_TEARDOWN=$FIXTURE_SOURCE/deploy/teardown-staging-test-slot.sh@" \
-    -e "s@^[[:space:]]*readonly SLOT_ENV=/run/bytedepth/staging-native-e2e.env\$@    readonly SLOT_ENV=$FIXTURE_ROOT/staging-e2e.env@" \
-    -e "s@^[[:space:]]*readonly SLOT_ENV=/run/bytedepth/staging-e2e.env\$@    readonly SLOT_ENV=$FIXTURE_ROOT/staging-e2e.env@" \
-    -e "s@^readonly SLOT_RUNTIME_DIR=/run/bytedepth\$@readonly SLOT_RUNTIME_DIR=$FIXTURE_ROOT/runtime@" \
-    -e "s@^readonly SLOT_JAR=/opt/bytedepth/current/app.jar\$@readonly SLOT_JAR=$FIXTURE_JAR@" \
-    -e "s@^readonly CHROMIUM_EXECUTABLE=.*\$@readonly CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM@" \
-    -e '/^if \[\[ "${EUID}" -ne 0 \]\]; then$/,/^fi$/d' \
-    "$RUNNER" > "$TEMP_ROOT/runner"
+  -e "s@^readonly SOURCE_ROOT=/opt/bytedepth\$@readonly SOURCE_ROOT=$FIXTURE_SOURCE@" \
+  -e "s@^readonly CONFIG_FILE=/etc/bytedepth-deploy.conf\$@readonly CONFIG_FILE=$FIXTURE_CONFIG@" \
+  -e "s@^readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history\$@readonly EVIDENCE_DIR=$EVIDENCE_DIR@" \
+  -e "s@^readonly RUNTIME_MANIFEST=/var/lib/bytedepth-staging/runtime/manifest\$@readonly RUNTIME_MANIFEST=$RUNTIME_MANIFEST@" \
+  -e "s@^readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history\$@readonly DEPLOY_HISTORY=$DEPLOY_HISTORY@" \
+  -e "s@^readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock\$@readonly LOCK_FILE=$LOCK_FILE@" \
+  -e "s@^readonly TEST_STATE_DIR=/var/lib/bytedepth-staging/test-slots\$@readonly TEST_STATE_DIR=$FIXTURE_ROOT/test-slots@" \
+  -e "s@^readonly SLOT_PROVISION=/opt/bytedepth/deploy/provision-staging-test-slot.sh\$@readonly SLOT_PROVISION=$FIXTURE_SOURCE/deploy/provision-staging-test-slot.sh@" \
+  -e "s@^readonly SLOT_TEARDOWN=/opt/bytedepth/deploy/teardown-staging-test-slot.sh\$@readonly SLOT_TEARDOWN=$FIXTURE_SOURCE/deploy/teardown-staging-test-slot.sh@" \
+  -e "s@^[[:space:]]*readonly SLOT_ENV=/run/bytedepth/staging-native-e2e.env\$@    readonly SLOT_ENV=$FIXTURE_ROOT/staging-e2e.env@" \
+  -e "s@^[[:space:]]*readonly SLOT_ENV=/run/bytedepth/staging-e2e.env\$@    readonly SLOT_ENV=$FIXTURE_ROOT/staging-e2e.env@" \
+  -e "s@^readonly SLOT_RUNTIME_DIR=/run/bytedepth\$@readonly SLOT_RUNTIME_DIR=$FIXTURE_ROOT/runtime@" \
+  -e "s@^readonly SLOT_JAR=/opt/bytedepth/current/app.jar\$@readonly SLOT_JAR=$FIXTURE_JAR@" \
+  -e "s@^readonly CHROMIUM_EXECUTABLE=.*\$@readonly CHROMIUM_EXECUTABLE=$FIXTURE_CHROMIUM@" \
+  -e '/^if \[\[ "${EUID}" -ne 0 \]\]; then$/,/^fi$/d' \
+  "$RUNNER" > "$TEMP_ROOT/runner"
 chmod +x "$TEMP_ROOT/runner"
 bash -c 'source "$1"; write_runtime_manifest "$2" "$3"' -- \
-    "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh" "$RUNTIME_MANIFEST" "$FIXTURE_SOURCE"
+  "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh" "$RUNTIME_MANIFEST" "$FIXTURE_SOURCE"
 
-cat > "$FAKE_BIN/flock" <<'SCRIPT'
+cat > "$FAKE_BIN/flock" << 'SCRIPT'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "$STAGING_E2E_FLOCK_ARGS"
 [[ "$1" == '-x' ]]
@@ -211,7 +211,7 @@ exec "$@"
 SCRIPT
 chmod +x "$FAKE_BIN/flock"
 
-cat > "$FAKE_BIN/npm" <<'SCRIPT'
+cat > "$FAKE_BIN/npm" << 'SCRIPT'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "$STAGING_E2E_NPM_ARGS"
 printf 'E2E_BASE_URL=%s\nE2E_POST_SLUG=%s\nE2E_ADMIN_USERNAME=%s\nE2E_LOCAL_HOST_RESOLVER_RULE=%s\nPLAYWRIGHT_CHROMIUM_EXECUTABLE=%s\n' "$E2E_BASE_URL" "$E2E_POST_SLUG" "$E2E_ADMIN_USERNAME" "$E2E_LOCAL_HOST_RESOLVER_RULE" "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" > "$STAGING_E2E_NPM_ENV"
@@ -227,7 +227,7 @@ exit "${STAGING_E2E_NPM_EXIT:-0}"
 SCRIPT
 chmod +x "$FAKE_BIN/npm"
 
-cat > "$FAKE_BIN/curl" <<'SCRIPT'
+cat > "$FAKE_BIN/curl" << 'SCRIPT'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "$STAGING_E2E_CURL_ARGS"
 if [[ "${*: -1}" == */version ]]; then
@@ -238,13 +238,13 @@ fi
 SCRIPT
 chmod +x "$FAKE_BIN/curl"
 
-cat > "$FAKE_BIN/redis-cli" <<'SCRIPT'
+cat > "$FAKE_BIN/redis-cli" << 'SCRIPT'
 #!/usr/bin/env bash
 printf 'databases\n16\n'
 SCRIPT
 chmod +x "$FAKE_BIN/redis-cli"
 
-cat > "$FAKE_BIN/journalctl" <<'SCRIPT'
+cat > "$FAKE_BIN/journalctl" << 'SCRIPT'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 printf '%s\n' "$@" > "$STAGING_E2E_JOURNAL_ARGS"
@@ -252,7 +252,7 @@ printf '%s\n' "${STAGING_E2E_JOURNAL_OUTPUT:-E2E test-slot journal clean}"
 SCRIPT
 chmod +x "$FAKE_BIN/journalctl"
 
-cat > "$FAKE_BIN/systemctl" <<'SCRIPT'
+cat > "$FAKE_BIN/systemctl" << 'SCRIPT'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 action="$1"
@@ -275,7 +275,7 @@ esac
 SCRIPT
 chmod +x "$FAKE_BIN/systemctl"
 
-cat > "$FAKE_BIN/git" <<'SCRIPT'
+cat > "$FAKE_BIN/git" << 'SCRIPT'
 #!/usr/bin/env bash
 printf 'git %s\n' "$*" >> "$STAGING_E2E_GIT_LOG"
 if [[ "$*" == *'rev-parse HEAD'* ]]; then
@@ -295,7 +295,7 @@ exit 1
 SCRIPT
 chmod +x "$FAKE_BIN/git"
 
-cat > "$FAKE_BIN/install" <<'SCRIPT'
+cat > "$FAKE_BIN/install" << 'SCRIPT'
 #!/usr/bin/env bash
 printf '%s\n' "$@" >> "$STAGING_E2E_INSTALL_ARGS"
 arguments=()
@@ -315,8 +315,8 @@ SCRIPT
 chmod +x "$FAKE_BIN/install"
 
 write_config() {
-    printf 'BYTEDEPTH_DEPLOY_MODE=%s\n' "$1" > "$FIXTURE_CONFIG"
-    cat > "$FIXTURE_NATIVE_CONFIG" <<'EOF'
+  printf 'BYTEDEPTH_DEPLOY_MODE=%s\n' "$1" > "$FIXTURE_CONFIG"
+  cat > "$FIXTURE_NATIVE_CONFIG" << 'EOF'
 BYTEDEPTH_NATIVE_STACK_MODE=parallel
 BYTEDEPTH_NATIVE_ROOT=/data/bytedepth-native-staging
 BYTEDEPTH_NATIVE_MYSQL_PORT=13306
@@ -328,44 +328,44 @@ EOF
 }
 
 run_runner() {
-    PATH="$FAKE_BIN:$PATH" \
-        STAGING_E2E_NPM_ARGS="$NPM_ARGS" \
-        STAGING_E2E_FLOCK_ARGS="$FLOCK_ARGS" \
-        STAGING_E2E_CURL_ARGS="$CURL_ARGS" \
-        STAGING_E2E_JOURNAL_ARGS="$JOURNAL_ARGS" \
-        STAGING_E2E_LOCK_FILE="$LOCK_FILE" \
-        STAGING_E2E_NPM_ENV="$NPM_ENV" \
-        STAGING_E2E_GIT_LOG="$GIT_LOG" \
-        STAGING_E2E_GIT_COUNT="$TEMP_ROOT/git.count" \
-        STAGING_E2E_INSTALL_ARGS="$INSTALL_ARGS" \
-        STAGING_E2E_SYSTEMCTL_STATE="$SYSTEMCTL_STATE" \
-        STAGING_E2E_SHA="$CURRENT_SHA" \
-        BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE="$FIXTURE_MYSQL_DEFAULTS" \
-        BYTEDEPTH_TEST_REDIS_SECRET_FILE="$FIXTURE_REDIS_SECRET" \
-        BYTEDEPTH_TEST_MEILI_SECRET_FILE="$FIXTURE_MEILI_SECRET" \
-        BYTEDEPTH_TEST_FIXTURE="$FIXTURE_SQL" \
-        BYTEDEPTH_TEST_FIXTURE_SHA256_FILE="$FIXTURE_SQL_SHA256" \
-        BYTEDEPTH_TEST_STAGING_REDIS_DB=1 \
-        BYTEDEPTH_TEST_IT_REDIS_DB=14 \
-        BYTEDEPTH_TEST_E2E_REDIS_DB=15 \
-        BYTEDEPTH_STAGING_NATIVE_CONFIG="$FIXTURE_NATIVE_CONFIG" \
-        STAGING_E2E_CHROMIUM="$FIXTURE_CHROMIUM" \
-        BYTEDEPTH_STAGING_E2E_USERNAME='fixture-e2e-admin' \
-        BYTEDEPTH_STAGING_E2E_PASSWORD='fixture-e2e-password' \
-        STAGING_E2E_NPM_OUTPUT="${STAGING_E2E_NPM_OUTPUT:-}" \
-        STAGING_E2E_NPM_EXIT="${STAGING_E2E_NPM_EXIT:-0}" \
-        STAGING_E2E_JOURNAL_OUTPUT="${STAGING_E2E_JOURNAL_OUTPUT:-}" \
-        "$TEMP_ROOT/runner" > "$RUNNER_OUTPUT" 2>&1 || {
-            cat "$RUNNER_OUTPUT" >&2
-            return 1
-        }
+  PATH="$FAKE_BIN:$PATH" \
+    STAGING_E2E_NPM_ARGS="$NPM_ARGS" \
+    STAGING_E2E_FLOCK_ARGS="$FLOCK_ARGS" \
+    STAGING_E2E_CURL_ARGS="$CURL_ARGS" \
+    STAGING_E2E_JOURNAL_ARGS="$JOURNAL_ARGS" \
+    STAGING_E2E_LOCK_FILE="$LOCK_FILE" \
+    STAGING_E2E_NPM_ENV="$NPM_ENV" \
+    STAGING_E2E_GIT_LOG="$GIT_LOG" \
+    STAGING_E2E_GIT_COUNT="$TEMP_ROOT/git.count" \
+    STAGING_E2E_INSTALL_ARGS="$INSTALL_ARGS" \
+    STAGING_E2E_SYSTEMCTL_STATE="$SYSTEMCTL_STATE" \
+    STAGING_E2E_SHA="$CURRENT_SHA" \
+    BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE="$FIXTURE_MYSQL_DEFAULTS" \
+    BYTEDEPTH_TEST_REDIS_SECRET_FILE="$FIXTURE_REDIS_SECRET" \
+    BYTEDEPTH_TEST_MEILI_SECRET_FILE="$FIXTURE_MEILI_SECRET" \
+    BYTEDEPTH_TEST_FIXTURE="$FIXTURE_SQL" \
+    BYTEDEPTH_TEST_FIXTURE_SHA256_FILE="$FIXTURE_SQL_SHA256" \
+    BYTEDEPTH_TEST_STAGING_REDIS_DB=1 \
+    BYTEDEPTH_TEST_IT_REDIS_DB=14 \
+    BYTEDEPTH_TEST_E2E_REDIS_DB=15 \
+    BYTEDEPTH_STAGING_NATIVE_CONFIG="$FIXTURE_NATIVE_CONFIG" \
+    STAGING_E2E_CHROMIUM="$FIXTURE_CHROMIUM" \
+    BYTEDEPTH_STAGING_E2E_USERNAME='fixture-e2e-admin' \
+    BYTEDEPTH_STAGING_E2E_PASSWORD='fixture-e2e-password' \
+    STAGING_E2E_NPM_OUTPUT="${STAGING_E2E_NPM_OUTPUT:-}" \
+    STAGING_E2E_NPM_EXIT="${STAGING_E2E_NPM_EXIT:-0}" \
+    STAGING_E2E_JOURNAL_OUTPUT="${STAGING_E2E_JOURNAL_OUTPUT:-}" \
+    "$TEMP_ROOT/runner" > "$RUNNER_OUTPUT" 2>&1 || {
+    cat "$RUNNER_OUTPUT" >&2
+    return 1
+  }
 }
 
 # A non-staging host is rejected before Playwright starts.
 write_config single-host
 if run_runner; then
-    printf 'Expected runner to reject a non-staging deployment mode.\n' >&2
-    exit 1
+  printf 'Expected runner to reject a non-staging deployment mode.\n' >&2
+  exit 1
 fi
 [[ ! -e "$NPM_ARGS" ]]
 
@@ -373,8 +373,8 @@ fi
 write_config staging
 run_runner
 [[ -s "$JOURNAL_ARGS" ]] || {
-    printf 'Expected E2E runner to read the test-slot systemd journal.\n' >&2
-    exit 1
+  printf 'Expected E2E runner to read the test-slot systemd journal.\n' >&2
+  exit 1
 }
 grep -Fq -- '--since=' "$JOURNAL_ARGS"
 grep -Fq 'bytedepth-staging-native-test-slot.service' "$JOURNAL_ARGS"
@@ -399,8 +399,8 @@ grep -Fqx 'ubuntu' "$INSTALL_ARGS"
 # A warning invalidates a previous pass before Playwright starts and cannot mint a replacement.
 rm -f "$GIT_LOG" "$TEMP_ROOT/git.count"
 if STAGING_E2E_NPM_OUTPUT='WARNING: simulated Playwright warning' run_runner; then
-    printf 'Expected runner to reject Playwright warning output.\n' >&2
-    exit 1
+  printf 'Expected runner to reject Playwright warning output.\n' >&2
+  exit 1
 fi
 grep -Fq 'WARNING: simulated Playwright warning' "$RUNNER_OUTPUT"
 [[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
@@ -408,8 +408,8 @@ grep -Fq 'WARNING: simulated Playwright warning' "$RUNNER_OUTPUT"
 # Warnings sent to the test-slot systemd journal invalidate E2E evidence too.
 rm -f "$GIT_LOG" "$TEMP_ROOT/git.count"
 if STAGING_E2E_JOURNAL_OUTPUT='20:00:00 WARN Redis rate limit timeout' run_runner; then
-    printf 'Expected runner to reject test-slot service warning output.\n' >&2
-    exit 1
+  printf 'Expected runner to reject test-slot service warning output.\n' >&2
+  exit 1
 fi
 grep -Fq 'WARN Redis rate limit timeout' "$RUNNER_OUTPUT"
 [[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
@@ -420,8 +420,8 @@ run_runner
 [[ -e "$EVIDENCE_DIR/staging-e2e" ]]
 rm -f "$GIT_LOG" "$TEMP_ROOT/git.count"
 if STAGING_E2E_NPM_EXIT=17 run_runner; then
-    printf 'Expected runner to reject failed Playwright.\n' >&2
-    exit 1
+  printf 'Expected runner to reject failed Playwright.\n' >&2
+  exit 1
 fi
 grep -Fq 'Staging E2E tests failed.' "$RUNNER_OUTPUT"
 [[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
@@ -429,8 +429,8 @@ grep -Fq 'Staging E2E tests failed.' "$RUNNER_OUTPUT"
 # The deployed checkout must not advance while Playwright is running.
 rm -f "$GIT_LOG" "$TEMP_ROOT/git.count"
 if STAGING_E2E_SHA_AFTER=ffffffffffffffffffffffffffffffffffffffff run_runner; then
-    printf 'Expected runner to reject a changed checkout after Playwright.\n' >&2
-    exit 1
+  printf 'Expected runner to reject a changed checkout after Playwright.\n' >&2
+  exit 1
 fi
 grep -Fq 'checked-out commit changed during staging E2E tests' "$RUNNER_OUTPUT"
 [[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
@@ -442,8 +442,8 @@ run_runner
 printf 'ref=main\ncommit=ffffffffffffffffffffffffffffffffffffffff\ndeployed_at=2026-09-10T10:11:12Z\n---\n' > "$DEPLOY_HISTORY"
 rm -f "$GIT_LOG" "$TEMP_ROOT/git.count" "$NPM_ARGS"
 if run_runner; then
-    printf 'Expected runner to reject an app deployment SHA different from the checkout.\n' >&2
-    exit 1
+  printf 'Expected runner to reject an app deployment SHA different from the checkout.\n' >&2
+  exit 1
 fi
 grep -Fq 'staging app deployment does not match the tested checkout commit' "$RUNNER_OUTPUT"
 [[ ! -e "$NPM_ARGS" ]]

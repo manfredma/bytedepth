@@ -5,10 +5,10 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly DEPLOY_DOC="$SOURCE_ROOT/deploy/README.md"
 
 require_doc_line() {
-    rg -F -- "$1" "$DEPLOY_DOC" >/dev/null || {
-        printf 'Missing staging E2E credential injection contract: %s\n' "$1" >&2
-        exit 1
-    }
+  rg -F -- "$1" "$DEPLOY_DOC" > /dev/null || {
+    printf 'Missing staging E2E credential injection contract: %s\n' "$1" >&2
+    exit 1
+  }
 }
 
 require_doc_line 'SSH 默认不会转发任意环境变量'
@@ -23,8 +23,8 @@ if awk '
     in_code && /BYTEDEPTH_STAGING_E2E_PASSWORD=.*ssh/ { found = 1 }
     END { exit found ? 0 : 1 }
 ' "$DEPLOY_DOC"; then
-    printf 'Staging E2E password must not be placed in an SSH command environment prefix.\n' >&2
-    exit 1
+  printf 'Staging E2E password must not be placed in an SSH command environment prefix.\n' >&2
+  exit 1
 fi
 
 printf 'Staging E2E credential injection contract passed.\n'

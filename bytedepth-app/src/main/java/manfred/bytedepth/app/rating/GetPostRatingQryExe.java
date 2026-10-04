@@ -8,12 +8,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class GetPostRatingQryExe {
 
-    private final PostRatingRepository postRatingRepository;
+  private final PostRatingRepository postRatingRepository;
 
-    public PostRatingDTO execute(Long postId, String visitorToken) {
-        var stats = postRatingRepository.getStats(postId);
-        Integer visitorScore = visitorToken == null ? null
-                : postRatingRepository.findScore(postId, visitorToken).orElse(null);
-        return new PostRatingDTO(stats.averageRating(), stats.ratingCount(), visitorScore);
-    }
+  public PostRatingDTO execute(Long postId, String visitorToken) {
+    var stats = postRatingRepository.getStats(postId);
+    Integer visitorScore =
+        visitorToken == null
+            ? null
+            : postRatingRepository.findScore(postId, visitorToken).orElse(null);
+    return new PostRatingDTO(stats.averageRating(), stats.ratingCount(), visitorScore);
+  }
 }

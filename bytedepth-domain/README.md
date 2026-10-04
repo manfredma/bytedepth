@@ -5,6 +5,7 @@
 **依赖方向：** 无内部依赖（最底层模块）
 
 **责任：**
+
 - 领域实体（Post、Comment、User、Category、Tag、Series 等）
 - 值对象与枚举
 - Repository 接口定义

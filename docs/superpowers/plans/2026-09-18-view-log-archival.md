@@ -27,6 +27,7 @@
 ### Task 1: Add the retention policy contract with tests first
 
 **Files:**
+
 - Create: `bytedepth-app/src/main/java/manfred/bytedepth/app/analytics/ViewLogRetentionPolicy.java`
 - Create: `bytedepth-app/src/main/java/manfred/bytedepth/app/analytics/ViewLogArchivePort.java`
 - Create: `bytedepth-app/src/main/java/manfred/bytedepth/app/analytics/ViewLogArchiveSource.java`
@@ -36,6 +37,7 @@
 - Test: `bytedepth-app/src/test/java/manfred/bytedepth/app/analytics/ViewLogArchiveResultTest.java`
 
 **Interfaces:**
+
 - `ViewLogRetentionPolicy(int retentionDays, ZoneId zone)` exposes `retentionCutoff(LocalDateTime now)`, `detailCutoff(LocalDateTime now)`, and `bucketStart(LocalDateTime value)`.
 - `ViewLogArchivePort` exposes `List<LocalDateTime> findCandidateBuckets(ViewLogArchiveSource source, LocalDateTime cutoff, int maxBuckets)` and `ViewLogArchiveResult archiveBucket(ViewLogArchiveSource source, LocalDateTime bucketStart, LocalDateTime bucketEnd)`.
 - `ViewLogArchiveSource` has `POST("post")` and `PAGE("page")` values.
@@ -92,11 +94,13 @@ git commit -m "feat: define view log retention policy"
 ### Task 2: Add the Flyway aggregate and archive-state schema
 
 **Files:**
+
 - Create: `bytedepth-start/src/main/resources/db/migration/V25__add_view_log_archive_stats.sql`
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/MigrationScriptsTest.java`
 - Modify: `docs/architecture/database-schema.md`
 
 **Interfaces:**
+
 - The migration creates `post_view_hourly_stat`, `page_view_hourly_stat`, `post_view_country_daily_stat`, `page_view_country_daily_stat`, `view_log_archive_bucket`, and `view_log_tablespace_state` exactly as specified in Section 4 of the spec.
 - All aggregate counts are `BIGINT NOT NULL DEFAULT 0`; all aggregate tables use InnoDB and composite primary keys that support their query ranges.
 
@@ -157,10 +161,12 @@ git commit -m "feat: add view log aggregate tables"
 ### Task 3: Implement the application archive use case with pure unit tests
 
 **Files:**
+
 - Create: `bytedepth-app/src/main/java/manfred/bytedepth/app/analytics/ArchiveViewLogsCmdExe.java`
 - Test: `bytedepth-app/src/test/java/manfred/bytedepth/app/analytics/ArchiveViewLogsCmdExeTest.java`
 
 **Interfaces:**
+
 - `ArchiveViewLogsCmdExe(ViewLogArchivePort, ViewLogRetentionPolicy)` exposes `ViewLogArchiveRunResult archive(LocalDateTime now, int maxBucketsPerSource)`.
 - The use case processes `ViewLogArchiveSource.POST` and `ViewLogArchiveSource.PAGE` independently, asks the port for at most `maxBucketsPerSource` candidates older than `retentionCutoff`, calls `archiveBucket(source, start, start.plusHours(1))` once per candidate, and returns total bucket/aggregate/deleted counts.
 - The use case never calls deletion directly; atomic aggregate/delete/state handling remains inside the infrastructure port implementation.
@@ -214,6 +220,7 @@ git commit -m "feat: add view log archive use case"
 ### Task 4: Implement atomic MySQL aggregation, late-row handling, and named locking
 
 **Files:**
+
 - Create: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/ViewLogArchiveMapper.java`
 - Create: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/ViewLogArchiveAdapter.java`
 - Create: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/ViewLogArchiveBucket.java`
@@ -221,6 +228,7 @@ git commit -m "feat: add view log archive use case"
 - Test: `bytedepth-infrastructure/src/test/java/manfred/bytedepth/infrastructure/stats/ViewLogArchiveAdapterTest.java`
 
 **Interfaces:**
+
 - `ViewLogArchiveAdapter` implements `ViewLogArchivePort`.
 - `ViewLogArchiveMapper` provides source-specific candidate lookup, state lookup, exact first-archive inserts, late-row increment inserts, source-specific deletes, archive-state insert/update, and tablespace-deletion-counter increment.
 - The mapper contract is explicit: `findCandidateBuckets(source, cutoff, max)`, `findBucketState(source, bucketStart)`, `insertExactAggregates(source, start, end)`, `incrementAggregates(source, start, end)`, `deleteBucket(source, start, end)`, `insertBucketState(bucket)`, `updateBucketState(bucket)`, and `incrementTablespaceDeletedRows(source, deletedRows)`.
@@ -285,6 +293,7 @@ git commit -m "feat: archive view logs atomically"
 ### Task 5: Switch analytics queries to aggregate-plus-raw sources
 
 **Files:**
+
 - Modify: `bytedepth-infrastructure/src/main/resources/mapper/ViewLogStatsMapper.xml`
 - Modify: `bytedepth-infrastructure/src/main/resources/mapper/PageViewStatsMapper.xml`
 - Modify: `bytedepth-infrastructure/src/test/java/manfred/bytedepth/infrastructure/stats/MyBatisViewLogStatsAdapterTest.java`
@@ -292,6 +301,7 @@ git commit -m "feat: archive view logs atomically"
 - Create: `bytedepth-infrastructure/src/test/java/manfred/bytedepth/infrastructure/stats/ViewLogStatsSqlContractTest.java`
 
 **Interfaces:**
+
 - Keep every existing `ViewLogStatsMapper` and `PageViewStatsMapper` Java method signature unchanged.
 - XML queries union aggregate rows and raw rows, then group by the existing DTO dimensions.
 
@@ -346,6 +356,7 @@ git commit -m "feat: query archived view statistics"
 ### Task 6: Enforce seven-day detail visibility and add scheduled job configuration
 
 **Files:**
+
 - Modify: `bytedepth-app/src/main/java/manfred/bytedepth/app/analytics/PostViewLogPort.java`
 - Modify: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/PostViewLogMapper.java`
 - Modify: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/MyBatisPostViewLogAdapter.java`
@@ -358,6 +369,7 @@ git commit -m "feat: query archived view statistics"
 - Test: `bytedepth-infrastructure/src/test/java/manfred/bytedepth/infrastructure/stats/ViewLogArchiveJobTest.java`
 
 **Interfaces:**
+
 - Change `PostViewLogPort.findPage` to `findPage(Long postId, Long userId, LocalDateTime cutoff, int offset, int size)`.
 - Change `PostViewLogPort.countPage` to `countPage(Long postId, Long userId, LocalDateTime cutoff)`.
 - `AdminViewLogController` receives a fixed-in-test `Clock`, computes `retentionPolicy.detailCutoff(LocalDateTime.now(clock))`, and passes it to both methods.
@@ -446,6 +458,7 @@ git commit -m "feat: schedule seven-day view log retention"
 ### Task 7: Add low-peak tablespace maintenance with safe thresholds
 
 **Files:**
+
 - Create: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/ViewLogTablespaceMaintenanceJob.java`
 - Create: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/stats/ViewLogTablespaceMaintenanceMapper.java`
 - Create: `bytedepth-infrastructure/src/main/resources/mapper/ViewLogTablespaceMaintenanceMapper.xml`
@@ -454,6 +467,7 @@ git commit -m "feat: schedule seven-day view log retention"
 - Modify: `bytedepth-start/src/main/resources/application.yml`
 
 **Interfaces:**
+
 - The job checks `view_log_tablespace_state.deleted_rows_since_optimize` and table fragmentation metadata, then only invokes fixed SQL identifiers `OPTIMIZE TABLE post_view_log` and `OPTIMIZE TABLE page_view_log` when configured thresholds are met; it resets each source counter only after that source succeeds.
 - It never builds a table name from request input and never runs inside the archive transaction.
 
@@ -488,6 +502,7 @@ git commit -m "feat: maintain view log tablespaces"
 ### Task 8: Add release documentation, operational checks, and query-contract coverage
 
 **Files:**
+
 - Modify: `docs/releases/CHANGELOG.md`
 - Modify: `docs/engineering/view-log-and-analytics.md`
 - Modify: `docs/architecture/database-schema.md`
@@ -522,6 +537,7 @@ git commit -m "docs: document view log retention policy"
 ### Task 9: Run local quality, coverage, and staging acceptance
 
 **Files:**
+
 - Modify only files required by failed verification; do not broaden scope.
 - Evidence: staging integration and E2E records tied to the candidate commit SHA.
 

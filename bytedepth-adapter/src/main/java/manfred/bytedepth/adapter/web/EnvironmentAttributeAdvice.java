@@ -9,16 +9,15 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 @ControllerAdvice
 public class EnvironmentAttributeAdvice {
 
-    private final String environment;
+  private final String environment;
 
-    public EnvironmentAttributeAdvice(
-            @Value("${bytedepth.environment:production}") String environment) {
-        this.environment = (environment == null || environment.isBlank())
-                ? "production" : environment;
-    }
+  public EnvironmentAttributeAdvice(
+      @Value("${bytedepth.environment:production}") String environment) {
+    this.environment = (environment == null || environment.isBlank()) ? "production" : environment;
+  }
 
-    @ModelAttribute
-    public void addEnvironmentAttribute(Model model) {
-        model.addAttribute("environment", environment);
-    }
+  @ModelAttribute
+  public void addEnvironmentAttribute(Model model) {
+    model.addAttribute("environment", environment);
+  }
 }

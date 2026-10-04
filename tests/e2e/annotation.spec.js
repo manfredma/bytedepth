@@ -1,380 +1,413 @@
-import {expect, test} from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
-const postSlug = process.env.E2E_POST_SLUG ?? 'hello-bytedepth-3';
+const postSlug = process.env.E2E_POST_SLUG ?? "hello-bytedepth-3";
 const postPath = `/posts/${postSlug}`;
 
 function captureBrowserErrors(page) {
-    const errors = [];
-    page.on('pageerror', error => errors.push(error.message));
-    page.on('console', message => {
-        if (message.type() === 'error') {
-            errors.push(message.text());
-        }
-    });
-    return errors;
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.push(message.text());
+    }
+  });
+  return errors;
 }
 
 async function selectArticleText(page, start, length) {
-    await page.locator('#post-article .content').evaluate((content, rangeData) => {
-        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
-        let node;
-        let consumed = 0;
-        let startNode;
-        let endNode;
-        let startOffset;
-        let endOffset;
-        while ((node = walker.nextNode())) {
-            const end = consumed + node.textContent.length;
-            if (!startNode && rangeData.start >= consumed && rangeData.start < end) {
-                startNode = node;
-                startOffset = rangeData.start - consumed;
-            }
-            if (startNode && rangeData.start + rangeData.length <= end) {
-                endNode = node;
-                endOffset = rangeData.start + rangeData.length - consumed;
-                break;
-            }
-            consumed = end;
+  await page.locator("#post-article .content").evaluate(
+    (content, rangeData) => {
+      const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+      let node;
+      let consumed = 0;
+      let startNode;
+      let endNode;
+      let startOffset;
+      let endOffset;
+      while ((node = walker.nextNode())) {
+        const end = consumed + node.textContent.length;
+        if (!startNode && rangeData.start >= consumed && rangeData.start < end) {
+          startNode = node;
+          startOffset = rangeData.start - consumed;
         }
-        if (!startNode || !endNode) {
-            throw new Error('unable to select requested article text');
+        if (startNode && rangeData.start + rangeData.length <= end) {
+          endNode = node;
+          endOffset = rangeData.start + rangeData.length - consumed;
+          break;
         }
-        const range = document.createRange();
-        range.setStart(startNode, startOffset);
-        range.setEnd(endNode, endOffset);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        document.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));
-        // 浏览器在真实拖选结束后还会派发一次 click；普通正文不能因此立刻关闭菜单。
-        content.dispatchEvent(new MouseEvent('click', {bubbles: true}));
-    }, {start, length});
+        consumed = end;
+      }
+      if (!startNode || !endNode) {
+        throw new Error("unable to select requested article text");
+      }
+      const range = document.createRange();
+      range.setStart(startNode, startOffset);
+      range.setEnd(endNode, endOffset);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      // 浏览器在真实拖选结束后还会派发一次 click；普通正文不能因此立刻关闭菜单。
+      content.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    },
+    { start, length },
+  );
 }
 
 async function waitForAnnotationReady(page) {
-    // Staging articles can be large enough for the mobile emulation to finish
-    // streaming the HTML after Playwright's default 5-second assertion timeout.
-    await expect(page.locator('#post-article[data-bd-annotation-ready="true"]'))
-        .toBeVisible({timeout: 15_000});
+  // Staging articles can be large enough for the mobile emulation to finish
+  // streaming the HTML after Playwright's default 5-second assertion timeout.
+  await expect(page.locator('#post-article[data-bd-annotation-ready="true"]')).toBeVisible({ timeout: 15_000 });
 }
 
 function visibleAnnotationMark(page, id) {
-    // 同一划线可跨多个文本节点，其中换行节点会生成隐藏的空 mark。
-    return page.locator(`mark[data-id="${id}"]`).filter({hasText: /\S/});
+  // 同一划线可跨多个文本节点，其中换行节点会生成隐藏的空 mark。
+  return page.locator(`mark[data-id="${id}"]`).filter({ hasText: /\S/ });
 }
 
 async function removeAnnotation(page, id) {
-    await page.evaluate(async annotationId => {
-        const token = document.querySelector('meta[name="_csrf"]').content;
-        const response = await fetch(`${window.location.pathname}/annotations/${annotationId}`, {
-            method: 'DELETE', headers: {'X-CSRF-TOKEN': token}
-        });
-        if (response.status !== 204) {
-            throw new Error(`annotation cleanup failed: ${response.status}`);
-        }
-    }, id);
+  await page.evaluate(async (annotationId) => {
+    const token = document.querySelector('meta[name="_csrf"]').content;
+    const response = await fetch(`${window.location.pathname}/annotations/${annotationId}`, {
+      method: "DELETE",
+      headers: { "X-CSRF-TOKEN": token },
+    });
+    if (response.status !== 204) {
+      throw new Error(`annotation cleanup failed: ${response.status}`);
+    }
+  }, id);
 }
 
 async function createCommentAnnotation(page, annotationText, startOffset = 0) {
-    const selectedText = await page.locator('#post-article .content').evaluate((content, start) => {
-        const text = Array.from(content.childNodes).map(node => node.textContent).join('');
-        return text.slice(start, start + 2);
-    }, startOffset);
-    return page.evaluate(async ({text, start, selectedText}) => {
-        const token = document.querySelector('meta[name="_csrf"]').content;
-        const response = await fetch(`${window.location.pathname}/annotations`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': token},
-            body: JSON.stringify({
-                selectedText, annotationText: text, color: 'yellow', visibility: 'PUBLIC',
-                startOffset: start, endOffset: start + 2
-            })
-        });
-        if (!response.ok) {
-            throw new Error(`annotation setup failed: ${response.status}`);
-        }
-        return response.json();
-    }, {text: annotationText, start: startOffset, selectedText});
+  const selectedText = await page.locator("#post-article .content").evaluate((content, start) => {
+    const text = Array.from(content.childNodes)
+      .map((node) => node.textContent)
+      .join("");
+    return text.slice(start, start + 2);
+  }, startOffset);
+  return page.evaluate(
+    async ({ text, start, selectedText }) => {
+      const token = document.querySelector('meta[name="_csrf"]').content;
+      const response = await fetch(`${window.location.pathname}/annotations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": token },
+        body: JSON.stringify({
+          selectedText,
+          annotationText: text,
+          color: "yellow",
+          visibility: "PUBLIC",
+          startOffset: start,
+          endOffset: start + 2,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`annotation setup failed: ${response.status}`);
+      }
+      return response.json();
+    },
+    { text: annotationText, start: startOffset, selectedText },
+  );
 }
 
-test.describe('划线评论', () => {
-    test('移动端：选中文字后只显示划线操作', async ({page}, testInfo) => {
-        test.skip(testInfo.project.name !== 'mobile-chromium', '仅在移动 Chromium 执行');
-        const errors = captureBrowserErrors(page);
-        await page.goto(postPath, {waitUntil: 'commit'});
-        await waitForAnnotationReady(page);
+test.describe("划线评论", () => {
+  test("移动端：选中文字后只显示划线操作", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-chromium", "仅在移动 Chromium 执行");
+    const errors = captureBrowserErrors(page);
+    await page.goto(postPath, { waitUntil: "commit" });
+    await waitForAnnotationReady(page);
 
-        const popup = page.locator('.bd-annotation-popup');
-        await selectArticleText(page, 0, 2);
-        await expect(popup).toHaveClass(/bd-annotation-popup-open/);
-        await expect(popup.getByRole('button', {name: '划线'})).toBeVisible();
-        await expect(popup.getByRole('button', {name: '复制'})).toHaveCount(0);
-        await expect(popup.getByRole('button', {name: '评论'})).toHaveCount(0);
-        await popup.getByRole('button', {name: '划线'}).click();
-        await popup.getByRole('button', {name: '返回'}).click();
-        await expect(popup.getByRole('button', {name: '复制'})).toHaveCount(0);
-        await expect(popup.getByRole('button', {name: '评论'})).toHaveCount(0);
-        expect(errors).toEqual([]);
+    const popup = page.locator(".bd-annotation-popup");
+    await selectArticleText(page, 0, 2);
+    await expect(popup).toHaveClass(/bd-annotation-popup-open/);
+    await expect(popup.getByRole("button", { name: "划线" })).toBeVisible();
+    await expect(popup.getByRole("button", { name: "复制" })).toHaveCount(0);
+    await expect(popup.getByRole("button", { name: "评论" })).toHaveCount(0);
+    await popup.getByRole("button", { name: "划线" }).click();
+    await popup.getByRole("button", { name: "返回" }).click();
+    await expect(popup.getByRole("button", { name: "复制" })).toHaveCount(0);
+    await expect(popup.getByRole("button", { name: "评论" })).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+
+  test("桌面端：拖选后显示两级菜单，并可创建和删除评论", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "仅在桌面 Chromium 执行");
+    const errors = captureBrowserErrors(page);
+    page.on("dialog", (dialog) => dialog.accept());
+    await page.goto(postPath, { waitUntil: "commit" });
+    await waitForAnnotationReady(page);
+
+    const popup = page.locator(".bd-annotation-popup");
+    await selectArticleText(page, 0, 2);
+    await expect(popup.getByRole("button", { name: "划线" })).toBeVisible();
+    await page.locator(".bd-annotation-reading-content > h1").click();
+    await expect(popup).not.toHaveClass(/bd-annotation-popup-open/);
+
+    await selectArticleText(page, 0, 2);
+    await expect(popup.getByRole("button", { name: "划线" })).toBeVisible();
+    await popup.getByRole("button", { name: "划线" }).click();
+    await expect(popup.getByRole("button", { name: "琥珀色波浪线" })).toBeVisible();
+
+    await popup.getByRole("button", { name: "返回" }).click();
+    await popup.getByRole("button", { name: "评论" }).click();
+    await expect(page.locator("#bd-annotation-sidebar")).toHaveClass(/bd-annotation-sidebar-open/);
+    const composer = page.locator(".bd-annotation-composer");
+    await composer.locator(".bd-annotation-composer-text").fill("Playwright 端到端评论");
+    await expect(composer.locator(".bd-annotation-visibility")).toHaveValue("PUBLIC");
+    const saveResponse = page.waitForResponse(
+      (response) => response.url().endsWith("/annotations") && response.request().method() === "POST",
+    );
+    await composer.getByRole("button", { name: "保存" }).click();
+    const saved = await (await saveResponse).json();
+    const savedItem = page.locator(`.bd-annotation-feed-item[data-id="${saved.id}"]`);
+    try {
+      await expect(savedItem.locator(".bd-annotation-feed-text")).toHaveText("Playwright 端到端评论");
+      await page.locator(".bd-annotation-sidebar-close").click();
+      await page.locator("#bd-annotation-sidebar-toggle").click();
+      await expect(page.locator("#bd-annotation-sidebar")).toHaveClass(/bd-annotation-sidebar-open/);
+      await savedItem.getByRole("button", { name: "删除" }).click();
+      await expect(savedItem).toHaveCount(0);
+      expect(errors).toEqual([]);
+    } finally {
+      if (await savedItem.count()) {
+        await removeAnnotation(page, saved.id);
+      }
+    }
+  });
+
+  test("移动端：点击已有评论的划线显示基础评论内容", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-chromium", "仅在移动 Chromium 执行");
+    const errors = captureBrowserErrors(page);
+    await page.goto(postPath, { waitUntil: "commit" });
+    await waitForAnnotationReady(page);
+    const annotation = await createCommentAnnotation(page, "移动端基础评论");
+    try {
+      await page.reload({ waitUntil: "commit" });
+      await waitForAnnotationReady(page);
+      await visibleAnnotationMark(page, annotation.id).first().click();
+      await expect(page.locator(".bd-annotation-mobile-note")).toHaveText("移动端基础评论");
+      expect(errors).toEqual([]);
+    } finally {
+      await removeAnnotation(page, annotation.id);
+    }
+  });
+
+  test("桌面端：侧栏打开时选词仍先显示操作菜单", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "仅在桌面 Chromium 执行");
+    const errors = captureBrowserErrors(page);
+    await page.goto(postPath, { waitUntil: "commit" });
+    await waitForAnnotationReady(page);
+
+    await page.locator("#bd-annotation-sidebar-toggle").click();
+    await expect(page.locator("#bd-annotation-sidebar")).toHaveClass(/bd-annotation-sidebar-open/);
+    await selectArticleText(page, 0, 2);
+
+    const popup = page.locator(".bd-annotation-popup");
+    await expect(popup.getByRole("button", { name: "划线" })).toBeVisible();
+    await expect(page.locator(".bd-annotation-composer")).toBeHidden();
+    expect(errors).toEqual([]);
+  });
+
+  test("桌面端：已有划线仍可再次划线，并可删除自己的划线", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "仅在桌面 Chromium 执行");
+    const errors = captureBrowserErrors(page);
+    await page.goto(postPath, { waitUntil: "commit" });
+    await waitForAnnotationReady(page);
+    const popup = page.locator(".bd-annotation-popup");
+    const createdIds = [];
+    try {
+      await selectArticleText(page, 0, 4);
+      await popup.getByRole("button", { name: "划线" }).click();
+      const firstResponse = page.waitForResponse(
+        (response) => response.url().endsWith("/annotations") && response.request().method() === "POST",
+      );
+      await popup.getByRole("button", { name: "琥珀色波浪线" }).click();
+      const first = await (await firstResponse).json();
+      createdIds.push(first.id);
+      await expect(visibleAnnotationMark(page, first.id).first()).toBeVisible();
+
+      await selectArticleText(page, 2, 2);
+      await popup.getByRole("button", { name: "划线" }).click();
+      const secondResponse = page.waitForResponse(
+        (response) => response.url().endsWith("/annotations") && response.request().method() === "POST",
+      );
+      await popup.getByRole("button", { name: "珊瑚色直线" }).click();
+      const second = await (await secondResponse).json();
+      createdIds.push(second.id);
+      await expect(page.locator(`mark[data-id="${first.id}"] mark[data-id="${second.id}"]`).first()).toBeVisible();
+
+      await page.evaluate(() => window.getSelection().removeAllRanges());
+      await visibleAnnotationMark(page, second.id).last().click();
+      await expect(popup.getByRole("button", { name: "删除划线" })).toBeVisible();
+      const deleteResponse = page.waitForResponse(
+        (response) => response.url().endsWith(`/annotations/${second.id}`) && response.request().method() === "DELETE",
+      );
+      await popup.getByRole("button", { name: "删除划线" }).click();
+      await deleteResponse;
+      createdIds.pop();
+      await expect(page.locator(`mark[data-id="${second.id}"]`)).toHaveCount(0);
+      expect(errors).toEqual([]);
+    } finally {
+      for (const id of createdIds) {
+        await removeAnnotation(page, id);
+      }
+    }
+  });
+
+  test("桌面端：批注栏不覆盖正文，并在宽屏与文章同滚动范围", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "仅在桌面 Chromium 执行");
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.goto(postPath, { waitUntil: "commit" });
+    await waitForAnnotationReady(page);
+    await page.locator("#bd-annotation-sidebar-toggle").click();
+
+    const normalDesktopLayout = await page.evaluate(() => {
+      const content = document.querySelector(".bd-annotation-reading-content").getBoundingClientRect();
+      const sidebar = document.querySelector("#bd-annotation-sidebar").getBoundingClientRect();
+      return { contentRight: content.right, sidebarLeft: sidebar.left };
     });
+    // 两档布局：PC(≥769) 正文与侧栏并排，侧栏在右、不覆盖正文（容亚像素渲染）。
+    expect(normalDesktopLayout.contentRight).toBeLessThan(normalDesktopLayout.sidebarLeft + 1);
 
-    test('桌面端：拖选后显示两级菜单，并可创建和删除评论', async ({page}, testInfo) => {
-        test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
-        const errors = captureBrowserErrors(page);
-        page.on('dialog', dialog => dialog.accept());
-        await page.goto(postPath, {waitUntil: 'commit'});
-        await waitForAnnotationReady(page);
-
-        const popup = page.locator('.bd-annotation-popup');
-        await selectArticleText(page, 0, 2);
-        await expect(popup.getByRole('button', {name: '划线'})).toBeVisible();
-        await page.locator('.bd-annotation-reading-content > h1').click();
-        await expect(popup).not.toHaveClass(/bd-annotation-popup-open/);
-
-        await selectArticleText(page, 0, 2);
-        await expect(popup.getByRole('button', {name: '划线'})).toBeVisible();
-        await popup.getByRole('button', {name: '划线'}).click();
-        await expect(popup.getByRole('button', {name: '琥珀色波浪线'})).toBeVisible();
-
-        await popup.getByRole('button', {name: '返回'}).click();
-        await popup.getByRole('button', {name: '评论'}).click();
-        await expect(page.locator('#bd-annotation-sidebar')).toHaveClass(/bd-annotation-sidebar-open/);
-        const composer = page.locator('.bd-annotation-composer');
-        await composer.locator('.bd-annotation-composer-text').fill('Playwright 端到端评论');
-        await expect(composer.locator('.bd-annotation-visibility')).toHaveValue('PUBLIC');
-        const saveResponse = page.waitForResponse(response => response.url().endsWith('/annotations')
-            && response.request().method() === 'POST');
-        await composer.getByRole('button', {name: '保存'}).click();
-        const saved = await (await saveResponse).json();
-        const savedItem = page.locator(`.bd-annotation-feed-item[data-id="${saved.id}"]`);
-        try {
-            await expect(savedItem.locator('.bd-annotation-feed-text')).toHaveText('Playwright 端到端评论');
-            await page.locator('.bd-annotation-sidebar-close').click();
-            await page.locator('#bd-annotation-sidebar-toggle').click();
-            await expect(page.locator('#bd-annotation-sidebar')).toHaveClass(/bd-annotation-sidebar-open/);
-            await savedItem.getByRole('button', {name: '删除'}).click();
-            await expect(savedItem).toHaveCount(0);
-            expect(errors).toEqual([]);
-        } finally {
-            if (await savedItem.count()) {
-                await removeAnnotation(page, saved.id);
-            }
-        }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.reload({ waitUntil: "commit" });
+    await waitForAnnotationReady(page);
+    await page.locator("#bd-annotation-sidebar-toggle").click();
+    await expect(page.locator("#post-article")).toHaveClass(/bd-annotation-reading-layout-open/);
+    const wideDesktopLayout = await page.evaluate(() => {
+      const content = document.querySelector(".bd-annotation-reading-content").getBoundingClientRect();
+      const headingElement = document.querySelector(".bd-annotation-reading-content h1");
+      const heading = headingElement.getBoundingClientRect();
+      const headingLineHeight = parseFloat(getComputedStyle(headingElement).lineHeight);
+      const seriesContext = document.querySelector(".bd-annotation-reading-content .series-context");
+      const seriesContextRect = seriesContext?.getBoundingClientRect();
+      const seriesTopNav = document.querySelector(".bd-annotation-reading-content .series-top-nav");
+      const seriesTopNavRect = seriesTopNav?.getBoundingClientRect();
+      const sidebar = document.querySelector("#bd-annotation-sidebar");
+      const sidebarRect = sidebar.getBoundingClientRect();
+      const navigationRect = document.querySelector(".nav-bar").getBoundingClientRect();
+      const stagingNotice = document.querySelector(".network-staging-notice");
+      const stagingNoticeRect = stagingNotice?.getBoundingClientRect();
+      return {
+        contentWidth: content.width,
+        contentRight: content.right,
+        contentTop: content.top,
+        headingOffsetTop: heading.top - content.top,
+        headingOffsetAfterSeriesContext: heading.top - (seriesContextRect?.bottom ?? content.top),
+        headingOffsetAfterSeriesTopNav:
+          heading.top - (seriesTopNavRect?.bottom ?? seriesContextRect?.bottom ?? content.top),
+        headingHeight: heading.height,
+        headingLineCount: Math.round(heading.height / headingLineHeight),
+        sidebarLeft: sidebarRect.left,
+        sidebarTop: sidebarRect.top,
+        sidebarBottom: sidebarRect.bottom,
+        sidebarPosition: getComputedStyle(sidebar).position,
+        pageChromeBottom: Math.max(navigationRect.bottom, stagingNoticeRect?.bottom ?? 0),
+      };
     });
+    // 两档布局：content 是 grid 1fr = container(80vw) − sidebar(24vw) − gap ≈ 799
+    expect(wideDesktopLayout.contentWidth).toBeGreaterThan(780);
+    expect(wideDesktopLayout.contentRight).toBeLessThan(wideDesktopLayout.sidebarLeft + 1);
+    // 正文紧接在导航及（staging 时）预发提示条之后，保留文章自身的最大 40px 顶部间距。
+    expect(wideDesktopLayout.contentTop).toBeGreaterThanOrEqual(wideDesktopLayout.pageChromeBottom);
+    expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(wideDesktopLayout.pageChromeBottom + 40);
+    // 阅读布局在 1440px 下以 3vw（43.2px）为正文内边距；专栏上下文和文章开头导航都是标题前的刻意内容，测量导航其后的间距，避免耦合页面 chrome 与卡片高度。
+    expect(wideDesktopLayout.headingOffsetAfterSeriesTopNav).toBeGreaterThanOrEqual(25);
+    expect(wideDesktopLayout.headingOffsetAfterSeriesTopNav).toBeLessThanOrEqual(55);
+    // h1 clamp(1.8rem,3vw,2.6rem)，行高 1.2；标题长度由 staging 数据决定，允许最多两行，避免与文章排序耦合。
+    expect(wideDesktopLayout.headingLineCount).toBeLessThanOrEqual(2);
+    expect(wideDesktopLayout.sidebarTop).toBeGreaterThanOrEqual(0);
+    expect(wideDesktopLayout.sidebarTop).toBeLessThanOrEqual(100);
+    expect(wideDesktopLayout.sidebarBottom).toBeGreaterThan(0);
+    expect(wideDesktopLayout.sidebarPosition).toBe("fixed");
+  });
 
-    test('移动端：点击已有评论的划线显示基础评论内容', async ({page}, testInfo) => {
-        test.skip(testInfo.project.name !== 'mobile-chromium', '仅在移动 Chromium 执行');
-        const errors = captureBrowserErrors(page);
-        await page.goto(postPath, {waitUntil: 'commit'});
-        await waitForAnnotationReady(page);
-        const annotation = await createCommentAnnotation(page, '移动端基础评论');
-        try {
-            await page.reload({waitUntil: 'commit'});
-            await waitForAnnotationReady(page);
-            await visibleAnnotationMark(page, annotation.id).first().click();
-            await expect(page.locator('.bd-annotation-mobile-note')).toHaveText('移动端基础评论');
-            expect(errors).toEqual([]);
-        } finally {
-            await removeAnnotation(page, annotation.id);
-        }
-    });
+  test("桌面端：反复开关批注栏后评注框仍贴合正文", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "仅在桌面 Chromium 执行");
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(postPath, { waitUntil: "commit" });
+    await waitForAnnotationReady(page);
+    const annotation = await createCommentAnnotation(page, "切换布局后仍对齐", 8);
+    try {
+      await page.reload({ waitUntil: "commit" });
+      await waitForAnnotationReady(page);
+      const outline = page.locator(".bd-annotation-comment-outline").first();
+      await expect(outline).toBeVisible();
+      await page.locator("#bd-annotation-sidebar-toggle").click();
+      await page.locator(".bd-annotation-sidebar-close").click();
+      await page.waitForTimeout(50);
+      const geometry = await outline.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { outlineTop: rect.top, textTop: Number(element.dataset.textTop) };
+      });
+      expect(geometry.textTop - geometry.outlineTop).toBeCloseTo(9, 1);
+    } finally {
+      await removeAnnotation(page, annotation.id);
+    }
+  });
 
-    test('桌面端：侧栏打开时选词仍先显示操作菜单', async ({page}, testInfo) => {
-        test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
-        const errors = captureBrowserErrors(page);
-        await page.goto(postPath, {waitUntil: 'commit'});
-        await waitForAnnotationReady(page);
-
-        await page.locator('#bd-annotation-sidebar-toggle').click();
-        await expect(page.locator('#bd-annotation-sidebar')).toHaveClass(/bd-annotation-sidebar-open/);
-        await selectArticleText(page, 0, 2);
-
-        const popup = page.locator('.bd-annotation-popup');
-        await expect(popup.getByRole('button', {name: '划线'})).toBeVisible();
-        await expect(page.locator('.bd-annotation-composer')).toBeHidden();
-        expect(errors).toEqual([]);
-    });
-
-    test('桌面端：已有划线仍可再次划线，并可删除自己的划线', async ({page}, testInfo) => {
-        test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
-        const errors = captureBrowserErrors(page);
-        await page.goto(postPath, {waitUntil: 'commit'});
-        await waitForAnnotationReady(page);
-        const popup = page.locator('.bd-annotation-popup');
-        const createdIds = [];
-        try {
-            await selectArticleText(page, 0, 4);
-            await popup.getByRole('button', {name: '划线'}).click();
-            const firstResponse = page.waitForResponse(response => response.url().endsWith('/annotations')
-                && response.request().method() === 'POST');
-            await popup.getByRole('button', {name: '琥珀色波浪线'}).click();
-            const first = await (await firstResponse).json();
-            createdIds.push(first.id);
-            await expect(visibleAnnotationMark(page, first.id).first()).toBeVisible();
-
-            await selectArticleText(page, 2, 2);
-            await popup.getByRole('button', {name: '划线'}).click();
-            const secondResponse = page.waitForResponse(response => response.url().endsWith('/annotations')
-                && response.request().method() === 'POST');
-            await popup.getByRole('button', {name: '珊瑚色直线'}).click();
-            const second = await (await secondResponse).json();
-            createdIds.push(second.id);
-            await expect(page.locator(`mark[data-id="${first.id}"] mark[data-id="${second.id}"]`).first()).toBeVisible();
-
-            await page.evaluate(() => window.getSelection().removeAllRanges());
-            await visibleAnnotationMark(page, second.id).last().click();
-            await expect(popup.getByRole('button', {name: '删除划线'})).toBeVisible();
-            const deleteResponse = page.waitForResponse(response => response.url().endsWith(`/annotations/${second.id}`)
-                && response.request().method() === 'DELETE');
-            await popup.getByRole('button', {name: '删除划线'}).click();
-            await deleteResponse;
-            createdIds.pop();
-            await expect(page.locator(`mark[data-id="${second.id}"]`)).toHaveCount(0);
-            expect(errors).toEqual([]);
-        } finally {
-            for (const id of createdIds) {
-                await removeAnnotation(page, id);
-            }
-        }
-    });
-
-    test('桌面端：批注栏不覆盖正文，并在宽屏与文章同滚动范围', async ({page}, testInfo) => {
-        test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
-        await page.setViewportSize({width: 1280, height: 1000});
-        await page.goto(postPath, {waitUntil: 'commit'});
-        await waitForAnnotationReady(page);
-        await page.locator('#bd-annotation-sidebar-toggle').click();
-
-        const normalDesktopLayout = await page.evaluate(() => {
-            const content = document.querySelector('.bd-annotation-reading-content').getBoundingClientRect();
-            const sidebar = document.querySelector('#bd-annotation-sidebar').getBoundingClientRect();
-            return {contentRight: content.right, sidebarLeft: sidebar.left};
-        });
-        // 两档布局：PC(≥769) 正文与侧栏并排，侧栏在右、不覆盖正文（容亚像素渲染）。
-        expect(normalDesktopLayout.contentRight).toBeLessThan(normalDesktopLayout.sidebarLeft + 1);
-
-        await page.setViewportSize({width: 1440, height: 1000});
-        await page.reload({waitUntil: 'commit'});
-        await waitForAnnotationReady(page);
-        await page.locator('#bd-annotation-sidebar-toggle').click();
-        await expect(page.locator('#post-article')).toHaveClass(/bd-annotation-reading-layout-open/);
-        const wideDesktopLayout = await page.evaluate(() => {
-            const content = document.querySelector('.bd-annotation-reading-content').getBoundingClientRect();
-            const headingElement = document.querySelector('.bd-annotation-reading-content h1');
-            const heading = headingElement.getBoundingClientRect();
-            const headingLineHeight = parseFloat(getComputedStyle(headingElement).lineHeight);
-            const seriesContext = document.querySelector('.bd-annotation-reading-content .series-context');
-            const seriesContextRect = seriesContext?.getBoundingClientRect();
-            const seriesTopNav = document.querySelector('.bd-annotation-reading-content .series-top-nav');
-            const seriesTopNavRect = seriesTopNav?.getBoundingClientRect();
-            const sidebar = document.querySelector('#bd-annotation-sidebar');
-            const sidebarRect = sidebar.getBoundingClientRect();
-            const navigationRect = document.querySelector('.nav-bar').getBoundingClientRect();
-            const stagingNotice = document.querySelector('.network-staging-notice');
-            const stagingNoticeRect = stagingNotice?.getBoundingClientRect();
-            return {
-                contentWidth: content.width,
-                contentRight: content.right,
-                contentTop: content.top,
-                headingOffsetTop: heading.top - content.top,
-                headingOffsetAfterSeriesContext: heading.top - (seriesContextRect?.bottom ?? content.top),
-                headingOffsetAfterSeriesTopNav: heading.top - (seriesTopNavRect?.bottom ?? seriesContextRect?.bottom ?? content.top),
-                headingHeight: heading.height,
-                headingLineCount: Math.round(heading.height / headingLineHeight),
-                sidebarLeft: sidebarRect.left,
-                sidebarTop: sidebarRect.top,
-                sidebarBottom: sidebarRect.bottom,
-                sidebarPosition: getComputedStyle(sidebar).position,
-                pageChromeBottom: Math.max(navigationRect.bottom, stagingNoticeRect?.bottom ?? 0)
-            };
-        });
-        // 两档布局：content 是 grid 1fr = container(80vw) − sidebar(24vw) − gap ≈ 799
-        expect(wideDesktopLayout.contentWidth).toBeGreaterThan(780);
-        expect(wideDesktopLayout.contentRight).toBeLessThan(wideDesktopLayout.sidebarLeft + 1);
-        // 正文紧接在导航及（staging 时）预发提示条之后，保留文章自身的最大 40px 顶部间距。
-        expect(wideDesktopLayout.contentTop).toBeGreaterThanOrEqual(wideDesktopLayout.pageChromeBottom);
-        expect(wideDesktopLayout.contentTop).toBeLessThanOrEqual(wideDesktopLayout.pageChromeBottom + 40);
-        // 阅读布局在 1440px 下以 3vw（43.2px）为正文内边距；专栏上下文和文章开头导航都是标题前的刻意内容，测量导航其后的间距，避免耦合页面 chrome 与卡片高度。
-        expect(wideDesktopLayout.headingOffsetAfterSeriesTopNav).toBeGreaterThanOrEqual(25);
-        expect(wideDesktopLayout.headingOffsetAfterSeriesTopNav).toBeLessThanOrEqual(55);
-        // h1 clamp(1.8rem,3vw,2.6rem)，行高 1.2；标题长度由 staging 数据决定，允许最多两行，避免与文章排序耦合。
-        expect(wideDesktopLayout.headingLineCount).toBeLessThanOrEqual(2);
-        expect(wideDesktopLayout.sidebarTop).toBeGreaterThanOrEqual(0);
-        expect(wideDesktopLayout.sidebarTop).toBeLessThanOrEqual(100);
-        expect(wideDesktopLayout.sidebarBottom).toBeGreaterThan(0);
-        expect(wideDesktopLayout.sidebarPosition).toBe('fixed');
-    });
-
-    test('桌面端：反复开关批注栏后评注框仍贴合正文', async ({page}, testInfo) => {
-        test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
-        await page.setViewportSize({width: 1440, height: 1000});
-        await page.goto(postPath, {waitUntil: 'commit'});
-        await waitForAnnotationReady(page);
-        const annotation = await createCommentAnnotation(page, '切换布局后仍对齐', 8);
-        try {
-            await page.reload({waitUntil: 'commit'});
-            await waitForAnnotationReady(page);
-            const outline = page.locator('.bd-annotation-comment-outline').first();
-            await expect(outline).toBeVisible();
-            await page.locator('#bd-annotation-sidebar-toggle').click();
-            await page.locator('.bd-annotation-sidebar-close').click();
-            await page.waitForTimeout(50);
-            const geometry = await outline.evaluate(element => {
-                const rect = element.getBoundingClientRect();
-                return {outlineTop: rect.top, textTop: Number(element.dataset.textTop)};
-            });
-            expect(geometry.textTop - geometry.outlineTop).toBeCloseTo(9, 1);
-        } finally {
-            await removeAnnotation(page, annotation.id);
-        }
-    });
-
-    test('桌面端：评注卡片在对应划线完全滚出视口后隐藏', async ({page}, testInfo) => {
-        test.skip(testInfo.project.name !== 'chromium', '仅在桌面 Chromium 执行');
-        await page.setViewportSize({width: 1440, height: 1000});
-        await page.goto(postPath, {waitUntil: 'commit'});
-        await waitForAnnotationReady(page);
-        const annotation = await createCommentAnnotation(page, '随划线离开的评注', 8);
-        try {
-            await page.reload({waitUntil: 'commit'});
-            await waitForAnnotationReady(page);
-            const trigger = page.locator('.bd-annotation-comment-outline .bd-annotation-comment-trigger').first();
-            const outline = page.locator('.bd-annotation-comment-outline').first();
-            await expect(trigger).toBeVisible();
-            if (await page.locator('#bd-annotation-sidebar').evaluate(sidebar => sidebar.classList.contains('bd-annotation-sidebar-open'))) {
-                await page.locator('.bd-annotation-sidebar-close').click();
-            }
-            await trigger.click();
-            await expect(page.locator('#bd-annotation-sidebar')).toHaveClass(/bd-annotation-sidebar-open/);
-            const feedItem = page.locator(`.bd-annotation-feed-item[data-id="${annotation.id}"]`);
-            const mark = page.locator(`mark[data-id="${annotation.id}"]`).first();
-            await expect(feedItem).toBeVisible();
-            await expect(mark).toBeVisible();
-            // 点击正文评注标签会触发生产代码的 smooth scroll；在测量并滚出划线前
-            // 用一次即时滚动取消动画，否则 window.scrollBy 可能与未完成的动画竞争，
-            // 导致滚动位置偶发被动画写回原处。
-            await mark.evaluate(element => element.scrollIntoView({block: 'center', behavior: 'auto'}));
-            const attachedPosition = await page.evaluate(([triggerElement, outlineElement]) => {
-                const triggerRect = triggerElement.getBoundingClientRect();
-                const outlineRect = outlineElement.getBoundingClientRect();
-                return {triggerTop: triggerRect.top, triggerBottom: triggerRect.bottom, outlineTop: outlineRect.top, outlineBottom: outlineRect.bottom, textTop: Number(outlineElement.dataset.textTop)};
-            }, await Promise.all([trigger.elementHandle(), outline.elementHandle()]));
-            expect(Math.abs((attachedPosition.triggerTop + attachedPosition.triggerBottom) / 2 - attachedPosition.outlineTop)).toBeLessThanOrEqual(1);
-            expect(attachedPosition.triggerBottom).toBeLessThanOrEqual(attachedPosition.textTop);
-            await page.evaluate(() => {
-                const spacer = document.createElement('div');
-                spacer.setAttribute('aria-hidden', 'true');
-                spacer.style.height = '1600px';
-                document.querySelector('.bd-annotation-reading-content').append(spacer);
-            });
-            const scrollPastMark = await mark.evaluate(element => element.getBoundingClientRect().bottom + 1);
-            await page.evaluate(offset => window.scrollBy(0, offset), scrollPastMark);
-            await expect.poll(
-                () => mark.evaluate(element => element.getBoundingClientRect().bottom),
-                {message: '整段划线离开视口后，评注卡片应随之隐藏'}
-            ).toBeLessThan(0);
-            await expect(feedItem).toBeHidden();
-        } finally {
-            await removeAnnotation(page, annotation.id);
-        }
-    });
+  test("桌面端：评注卡片在对应划线完全滚出视口后隐藏", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "仅在桌面 Chromium 执行");
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(postPath, { waitUntil: "commit" });
+    await waitForAnnotationReady(page);
+    const annotation = await createCommentAnnotation(page, "随划线离开的评注", 8);
+    try {
+      await page.reload({ waitUntil: "commit" });
+      await waitForAnnotationReady(page);
+      const trigger = page.locator(".bd-annotation-comment-outline .bd-annotation-comment-trigger").first();
+      const outline = page.locator(".bd-annotation-comment-outline").first();
+      await expect(trigger).toBeVisible();
+      if (
+        await page
+          .locator("#bd-annotation-sidebar")
+          .evaluate((sidebar) => sidebar.classList.contains("bd-annotation-sidebar-open"))
+      ) {
+        await page.locator(".bd-annotation-sidebar-close").click();
+      }
+      await trigger.click();
+      await expect(page.locator("#bd-annotation-sidebar")).toHaveClass(/bd-annotation-sidebar-open/);
+      const feedItem = page.locator(`.bd-annotation-feed-item[data-id="${annotation.id}"]`);
+      const mark = page.locator(`mark[data-id="${annotation.id}"]`).first();
+      await expect(feedItem).toBeVisible();
+      await expect(mark).toBeVisible();
+      // 点击正文评注标签会触发生产代码的 smooth scroll；在测量并滚出划线前
+      // 用一次即时滚动取消动画，否则 window.scrollBy 可能与未完成的动画竞争，
+      // 导致滚动位置偶发被动画写回原处。
+      await mark.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "auto" }));
+      const attachedPosition = await page.evaluate(
+        ([triggerElement, outlineElement]) => {
+          const triggerRect = triggerElement.getBoundingClientRect();
+          const outlineRect = outlineElement.getBoundingClientRect();
+          return {
+            triggerTop: triggerRect.top,
+            triggerBottom: triggerRect.bottom,
+            outlineTop: outlineRect.top,
+            outlineBottom: outlineRect.bottom,
+            textTop: Number(outlineElement.dataset.textTop),
+          };
+        },
+        await Promise.all([trigger.elementHandle(), outline.elementHandle()]),
+      );
+      expect(
+        Math.abs((attachedPosition.triggerTop + attachedPosition.triggerBottom) / 2 - attachedPosition.outlineTop),
+      ).toBeLessThanOrEqual(1);
+      expect(attachedPosition.triggerBottom).toBeLessThanOrEqual(attachedPosition.textTop);
+      await page.evaluate(() => {
+        const spacer = document.createElement("div");
+        spacer.setAttribute("aria-hidden", "true");
+        spacer.style.height = "1600px";
+        document.querySelector(".bd-annotation-reading-content").append(spacer);
+      });
+      const scrollPastMark = await mark.evaluate((element) => element.getBoundingClientRect().bottom + 1);
+      await page.evaluate((offset) => window.scrollBy(0, offset), scrollPastMark);
+      await expect
+        .poll(() => mark.evaluate((element) => element.getBoundingClientRect().bottom), {
+          message: "整段划线离开视口后，评注卡片应随之隐藏",
+        })
+        .toBeLessThan(0);
+      await expect(feedItem).toBeHidden();
+    } finally {
+      await removeAnnotation(page, annotation.id);
+    }
+  });
 });

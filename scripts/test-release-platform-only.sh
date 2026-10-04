@@ -22,7 +22,7 @@ grep -Fq '不允许从项目工作区直接发布' "$ROOT/deploy/README.md"
 if rg -n \
   'deploy/(deploy-staging|deploy-production|deploy-production-remote)\.sh|scripts/(prepare-release|verify-production-release)\.sh' \
   "$ROOT/AGENTS.md" "$ROOT/deploy/README.md" "$ROOT/docs/engineering" "$ROOT/docs/releases" "$ROOT/docs/security" \
-  --glob '*.md' >/dev/null; then
+  --glob '*.md' > /dev/null; then
   printf 'active project documentation still exposes a project release entrypoint\n' >&2
   exit 1
 fi

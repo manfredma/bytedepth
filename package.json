@@ -4,6 +4,8 @@
   "private": true,
   "description": "ByteDepth 前端脚本与测试",
   "scripts": {
+    "format": "prettier",
+    "format:check": "prettier --check",
     "test": "vitest run --coverage",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -19,6 +21,7 @@
     "happy-dom": "^20.11.6",
     "jsdom": "^27.4.0",
     "prismjs": "1.29.0",
+    "prettier": "3.6.2",
     "vitest": "^4.1.11"
   }
 }

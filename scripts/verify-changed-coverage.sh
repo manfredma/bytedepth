@@ -32,7 +32,7 @@ changed_files() {
 }
 
 cd "$SOURCE_ROOT"
-git rev-parse --verify --quiet "$COVERAGE_BASE_REF^{commit}" >/dev/null
+git rev-parse --verify --quiet "$COVERAGE_BASE_REF^{commit}" > /dev/null
 
 if [[ -n "${COVERAGE_INCLUDES:-}" ]]; then
   coverage_includes="$COVERAGE_INCLUDES"

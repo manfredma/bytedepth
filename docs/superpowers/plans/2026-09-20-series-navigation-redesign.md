@@ -21,11 +21,13 @@
 ### Task 1: 建立导航计算模型（TDD）
 
 **Files:**
+
 - Create: `bytedepth-app/src/main/java/manfred/bytedepth/app/series/SeriesNavigation.java`
 - Create: `bytedepth-app/src/main/java/manfred/bytedepth/app/series/SeriesNavigationQryExe.java`
 - Create: `bytedepth-app/src/test/java/manfred/bytedepth/app/series/SeriesNavigationQryExeTest.java`
 
 **Interfaces:**
+
 - Consumes: `SeriesRepository.findPublishedPostsBySeries(Long)` 和当前文章 ID。
 - Produces: `SeriesNavigationQryExe.execute(Long seriesId, Long currentPostId)`，返回不可变导航记录，包含 `posts`、`position`、`total`、`previous`、`next` 和 `progressPercent`。
 
@@ -38,12 +40,14 @@
 ### Task 2: 接入文章详情控制器（TDD）
 
 **Files:**
+
 - Modify: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/portal/PostController.java`
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/portal/PostControllerSeriesDetailRenderingTest.java`
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/portal/PostControllerTest.java`
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/portal/PostControllerCoverageTest.java`
 
 **Interfaces:**
+
 - Consumes: `SeriesNavigationQryExe` and existing `SeriesRepository`.
 - Produces: model attributes `seriesNavigation`, `series`, and `isSeriesPost`; non-series requests still receive `prevPost`/`nextPost` from `PostRepository`.
 
@@ -56,6 +60,7 @@
 ### Task 3: 重做专栏详情页组件与桌面/移动导航样式（TDD）
 
 **Files:**
+
 - Modify: `bytedepth-start/src/main/resources/templates/public/posts/detail.html`
 - Modify: `bytedepth-start/src/main/resources/static/css/public-posts.css` (or the existing public post component stylesheet that owns these styles)
 - Delete or stop loading: `bytedepth-start/src/main/resources/static/js/series-navigation.js` if no other page uses it
@@ -63,6 +68,7 @@
 - Modify: `bytedepth-start/src/test/java/manfred/bytedepth/adapter/web/portal/PostControllerSeriesDetailRenderingTest.java`
 
 **Interfaces:**
+
 - Consumes: `seriesNavigation.posts`, `position`, `total`, `progressPercent`, `previous`, `next`, and `series.slug`.
 - Produces: accessible top selector (`aria-expanded`, current item marker), compact PC bottom nav, enlarged mobile touch targets, and boundary action labels.
 
@@ -75,11 +81,13 @@
 ### Task 4: 补齐前端交互与 E2E 覆盖（TDD）
 
 **Files:**
+
 - Create or modify: `bytedepth-start/src/main/resources/static/js/series-navigation.js` only if the selector needs behavior; keep it scoped to the component.
 - Modify: `bytedepth-frontend/tests/e2e/series-navigation.spec.js` (create if absent)
 - Modify: `bytedepth-frontend/package.json` only if an existing script needs no new dependency
 
 **Interfaces:**
+
 - Consumes: semantic selector markup rendered by the detail template.
 - Produces: keyboard/click toggle, current item focus, direct slug navigation, and responsive assertions.
 
@@ -92,6 +100,7 @@
 ### Task 5: 文档、质量门禁与 staging 验收
 
 **Files:**
+
 - Modify: `docs/releases/CHANGELOG.md` with a categorized `## Unreleased` entry.
 - Modify: `docs/engineering/frontend-patterns.md` with the series navigation rule and component ownership guidance.
 

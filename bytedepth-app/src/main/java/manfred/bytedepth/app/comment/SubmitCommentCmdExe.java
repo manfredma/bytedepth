@@ -11,17 +11,16 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SubmitCommentCmdExe {
 
-    private final CommentRepository commentRepository;
-    private final UserRepository userRepository;
+  private final CommentRepository commentRepository;
+  private final UserRepository userRepository;
 
-    /**
-     * 提交评论。username 来自 SecurityContext，内部解析为 authorId。
-     * authorName 取用户名快照，用于评论显示。
-     */
-    public void execute(Long postId, String username, String content) {
-        var user = userRepository.findByUsername(username)
+  /** 提交评论。username 来自 SecurityContext，内部解析为 authorId。 authorName 取用户名快照，用于评论显示。 */
+  public void execute(Long postId, String username, String content) {
+    var user =
+        userRepository
+            .findByUsername(username)
             .orElseThrow(() -> new DomainException("用户不存在：" + username));
-        Comment comment = Comment.create(postId, user.getId(), user.getUsername(), content);
-        commentRepository.save(comment);
-    }
+    Comment comment = Comment.create(postId, user.getId(), user.getUsername(), content);
+    commentRepository.save(comment);
+  }
 }

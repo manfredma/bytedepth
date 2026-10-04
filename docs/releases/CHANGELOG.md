@@ -6,7 +6,7 @@
 
 ### Changed
 
-- GitHub quality workflow now runs only for opened, synchronized, or reopened pull requests on Ubuntu 26.04.
+- Quality execution is consolidated into the local pre-PR gate and release-platform Host Agent; the repository no longer runs a GitHub Actions quality workflow.
 - AI Agent 修改代码后由 PR 合并，release-platform 使用完整 commit SHA 完成构建、staging 验收和 production 提升；项目仓库不再提供发布脚本。
 
 ### Removed
@@ -117,7 +117,6 @@
 ### Fixed
 
 - 回滚只停止已安装的 green systemd unit；缺少尚未安装的公网 Nginx unit 不再阻断旧 Docker 入口恢复。
-
 
 - 将生产公网 Nginx 纳入 native green 完整迁移：旧 Docker Nginx 配置保持不动，切流先停止旧入口切断流量，再停止蓝应用并重新执行最终数据导入，最后启动独立的 native 公网 Nginx；失败时停止新服务、启动旧 Docker Nginx 和蓝应用回退，避免 bind mount inode 和旧路由修改造成 502。
 

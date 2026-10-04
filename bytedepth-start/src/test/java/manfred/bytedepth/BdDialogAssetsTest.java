@@ -1,74 +1,72 @@
 package manfred.bytedepth;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 class BdDialogAssetsTest {
 
-    @Test
-    void dialogAssetsAreIsolatedAndProvideAccessibleConfirmation() throws Exception {
-        String css = classpathText("/static/css/bd-dialog.css");
-        String js = classpathText("/static/js/bd-dialog.js");
+  @Test
+  void dialogAssetsAreIsolatedAndProvideAccessibleConfirmation() throws Exception {
+    String css = classpathText("/static/css/bd-dialog.css");
+    String js = classpathText("/static/js/bd-dialog.js");
 
-        assertThat(css)
-                .contains(".bd-dialog")
-                .contains(".bd-dialog__surface")
-                .contains(".bd-dialog::backdrop")
-                .contains("font-family: var(--bd-font-sans")
-                .doesNotContain("body {")
-                .doesNotContain("\n* {");
-        assertThat(js)
-                .contains("document.createElement('dialog')")
-                .contains("dialog.showModal()")
-                .contains("textContent")
-                .contains("window.BytedepthDialog")
-                .contains("form[data-bd-confirm]")
-                .contains("requestSubmit")
-                .contains("form.requestSubmit && submitter")
-                .contains("const acceptedForms = new WeakSet()")
-                .doesNotContain("bdConfirmAccepted");
+    assertThat(css)
+        .contains(".bd-dialog")
+        .contains(".bd-dialog__surface")
+        .contains(".bd-dialog::backdrop")
+        .contains("font-family: var(--bd-font-sans")
+        .doesNotContain("body {")
+        .doesNotContain("\n* {");
+    assertThat(js)
+        .contains("document.createElement(\"dialog\")")
+        .contains("dialog.showModal()")
+        .contains("textContent")
+        .contains("window.BytedepthDialog")
+        .contains("form[data-bd-confirm]")
+        .contains("requestSubmit")
+        .contains("form.requestSubmit && submitter")
+        .contains("const acceptedForms = new WeakSet()")
+        .doesNotContain("bdConfirmAccepted");
+  }
+
+  @Test
+  void confirmationPagesUseTheSharedDialogInsteadOfNativeConfirm() throws Exception {
+    List<String> templates =
+        List.of(
+            "/templates/admin/posts/list.html",
+            "/templates/admin/comments/list.html",
+            "/templates/admin/series/list.html",
+            "/templates/admin/series/detail.html",
+            "/templates/admin/tags/list.html",
+            "/templates/admin/users/list.html");
+
+    for (String template : templates) {
+      String html = classpathText(template);
+      assertThat(html)
+          .as(template)
+          .doesNotContain("window.confirm(")
+          .doesNotContain("return confirm(");
     }
 
-    @Test
-    void confirmationPagesUseTheSharedDialogInsteadOfNativeConfirm() throws Exception {
-        List<String> templates = List.of(
-                "/templates/admin/posts/list.html",
-                "/templates/admin/comments/list.html",
-                "/templates/admin/series/list.html",
-                "/templates/admin/series/detail.html",
-                "/templates/admin/tags/list.html",
-                "/templates/admin/users/list.html"
-        );
+    String nav = classpathText("/templates/fragments/nav.html");
+    assertThat(nav).contains("@{/css/bd-dialog.css}").contains("@{/js/bd-dialog.js}");
+    assertThat(classpathText("/templates/admin/posts/list.html")).contains("data-bd-confirm");
+    assertThat(classpathText("/templates/admin/comments/list.html"))
+        .contains("@{/admin/comments/{id}/delete(id=${c.id})}")
+        .contains("data-bd-confirm")
+        .contains("data-bd-confirm-title=\"删除评论\"")
+        .contains("data-bd-confirm-tone=\"danger\"");
+  }
 
-        for (String template : templates) {
-            String html = classpathText(template);
-            assertThat(html).as(template)
-                    .doesNotContain("window.confirm(")
-                    .doesNotContain("return confirm(");
-        }
-
-        String nav = classpathText("/templates/fragments/nav.html");
-        assertThat(nav)
-                .contains("@{/css/bd-dialog.css}")
-                .contains("@{/js/bd-dialog.js}");
-        assertThat(classpathText("/templates/admin/posts/list.html")).contains("data-bd-confirm");
-        assertThat(classpathText("/templates/admin/comments/list.html"))
-                .contains("@{/admin/comments/{id}/delete(id=${c.id})}")
-                .contains("data-bd-confirm")
-                .contains("data-bd-confirm-title=\"删除评论\"")
-                .contains("data-bd-confirm-tone=\"danger\"");
+  private String classpathText(String path) throws IOException {
+    try (InputStream input = getClass().getResourceAsStream(path)) {
+      assertThat(input).as("classpath resource %s", path).isNotNull();
+      return new String(input.readAllBytes(), StandardCharsets.UTF_8);
     }
-
-    private String classpathText(String path) throws IOException {
-        try (InputStream input = getClass().getResourceAsStream(path)) {
-            assertThat(input).as("classpath resource %s", path).isNotNull();
-            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
-        }
-    }
+  }
 }

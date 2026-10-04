@@ -19,34 +19,35 @@ import org.springframework.web.server.ResponseStatusException;
 @PreAuthorize("hasAuthority('ops:monitor:view')")
 public class AdminOpsController {
 
-    private final OpsOverviewQryExe overviewQryExe;
-    private final OpsTableQryExe tableQryExe;
-    public AdminOpsController(OpsOverviewQryExe overviewQryExe, OpsTableQryExe tableQryExe) {
-        this.overviewQryExe = overviewQryExe;
-        this.tableQryExe = tableQryExe;
-    }
+  private final OpsOverviewQryExe overviewQryExe;
+  private final OpsTableQryExe tableQryExe;
 
-    @GetMapping
-    public String page() {
-        return "admin/ops/dashboard";
-    }
+  public AdminOpsController(OpsOverviewQryExe overviewQryExe, OpsTableQryExe tableQryExe) {
+    this.overviewQryExe = overviewQryExe;
+    this.tableQryExe = tableQryExe;
+  }
 
-    @GetMapping("/api/overview")
-    @ResponseBody
-    public OpsOverviewDTO overview() {
-        return overviewQryExe.execute();
-    }
+  @GetMapping
+  public String page() {
+    return "admin/ops/dashboard";
+  }
 
-    @GetMapping("/api/tables/{tableName}")
-    @ResponseBody
-    public OpsTableDataDTO table(@PathVariable String tableName) {
-        try {
-            return tableQryExe.execute(tableName);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported operations table");
-        } catch (RuntimeException e) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Operations data unavailable");
-        }
-    }
+  @GetMapping("/api/overview")
+  @ResponseBody
+  public OpsOverviewDTO overview() {
+    return overviewQryExe.execute();
+  }
 
+  @GetMapping("/api/tables/{tableName}")
+  @ResponseBody
+  public OpsTableDataDTO table(@PathVariable String tableName) {
+    try {
+      return tableQryExe.execute(tableName);
+    } catch (IllegalArgumentException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported operations table");
+    } catch (RuntimeException e) {
+      throw new ResponseStatusException(
+          HttpStatus.SERVICE_UNAVAILABLE, "Operations data unavailable");
+    }
+  }
 }

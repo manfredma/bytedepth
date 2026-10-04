@@ -21,8 +21,8 @@ grep -Fq 'Referrer-Policy "no-referrer" always' "$NGINX_TEMPLATE"
 grep -Fq 'if ($host != ${BYTEDEPTH_DOMAIN})' "$NGINX_TEMPLATE"
 grep -Fq 'staging-bytedepth.bytedepth.cn' "$E2E_RUNNER"
 if grep -Eq 'Requires=bytedepth-app\.service|127\.0\.0\.1:8080/version' "$ROOT/deploy/systemd/nginx.service"; then
-    printf 'Shared nginx.service must not be coupled to the bytedepth app.\n' >&2
-    exit 1
+  printf 'Shared nginx.service must not be coupled to the bytedepth app.\n' >&2
+  exit 1
 fi
 grep -Fq '127.0.0.1:8080' "$ROOT/deploy/nginx/staging.conf.template"
 grep -Fq 'th:if="${environment != '\''staging'\''}"' "$NAV_TEMPLATE"
@@ -30,9 +30,9 @@ grep -Fq 'th:if="${environment != '\''staging'\''}"' "$HEAD_TEMPLATE"
 grep -Fq 'name="robots"' "$HEAD_TEMPLATE"
 
 if rg -n 'staging_preview|E2E_PREVIEW|preview=true|preview=false' \
-    "$NGINX_ROOT" "$NGINX_TEMPLATE" "$E2E_RUNNER" "$PLAYWRIGHT_CONFIG"; then
-    printf 'Runtime staging routing must not retain query/Cookie preview state.\n' >&2
-    exit 1
+  "$NGINX_ROOT" "$NGINX_TEMPLATE" "$E2E_RUNNER" "$PLAYWRIGHT_CONFIG"; then
+  printf 'Runtime staging routing must not retain query/Cookie preview state.\n' >&2
+  exit 1
 fi
 
 printf 'Staging search isolation contract passed.\n'

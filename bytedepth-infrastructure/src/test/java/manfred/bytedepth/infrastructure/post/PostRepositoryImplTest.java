@@ -1,20 +1,5 @@
 package manfred.bytedepth.infrastructure.post;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.MybatisConfiguration;
-import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-import org.apache.ibatis.builder.MapperBuilderAssistant;
-
-import java.lang.reflect.Field;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -24,545 +9,567 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.lang.reflect.Field;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+
 class PostRepositoryImplTest {
 
-    private final PostMapper postMapper = Mockito.mock(PostMapper.class);
-    private final PostRepositoryImpl repository = new PostRepositoryImpl(postMapper);
+  private final PostMapper postMapper = Mockito.mock(PostMapper.class);
+  private final PostRepositoryImpl repository = new PostRepositoryImpl(postMapper);
 
-    // ---- save ----
+  // ---- save ----
 
-    @Test
-    void save_insertsNewPostWhenIdIsNull() {
-        when(postMapper.insert(any(PostDO.class))).thenAnswer(invocation -> {
-            invocation.<PostDO>getArgument(0).setId(1L);
-            return 1;
-        });
+  @Test
+  void save_insertsNewPostWhenIdIsNull() {
+    when(postMapper.insert(any(PostDO.class)))
+        .thenAnswer(
+            invocation -> {
+              invocation.<PostDO>getArgument(0).setId(1L);
+              return 1;
+            });
 
-        var post = manfred.bytedepth.domain.post.Post.create("Title", "Content", 7L, "slug");
-        var saved = repository.save(post);
+    var post = manfred.bytedepth.domain.post.Post.create("Title", "Content", 7L, "slug");
+    var saved = repository.save(post);
 
-        assertEquals(1L, saved.getId());
-        assertEquals("slug", saved.getSlug());
-        assertEquals("Title", saved.getTitle());
-        assertEquals("Content", saved.getContent());
-        assertEquals(7L, saved.getAuthorId());
-        assertEquals(1, saved.getContentVersion());
-        assertFalse(saved.getFeatured());
-        verify(postMapper).insert(any(PostDO.class));
-    }
+    assertEquals(1L, saved.getId());
+    assertEquals("slug", saved.getSlug());
+    assertEquals("Title", saved.getTitle());
+    assertEquals("Content", saved.getContent());
+    assertEquals(7L, saved.getAuthorId());
+    assertEquals(1, saved.getContentVersion());
+    assertFalse(saved.getFeatured());
+    verify(postMapper).insert(any(PostDO.class));
+  }
 
-    @Test
-    void save_updatesExistingPostWhenIdNotNull() {
-        var post = manfred.bytedepth.domain.post.Post.reconstruct(
-            5L, "slug", "Updated", "body",
+  @Test
+  void save_updatesExistingPostWhenIdNotNull() {
+    var post =
+        manfred.bytedepth.domain.post.Post.reconstruct(
+            5L,
+            "slug",
+            "Updated",
+            "body",
             manfred.bytedepth.domain.post.PostStatus.PUBLISHED,
-            LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-            2L, 7L, true);
-
-        var saved = repository.save(post);
-
-        assertEquals(5L, saved.getId());
-        assertEquals("Updated", saved.getTitle());
-        assertEquals(1, saved.getContentVersion());
-        assertTrue(saved.getFeatured());
-        verify(postMapper).updateById(any(PostDO.class));
-    }
-
-    @Test
-    void save_featuredNullDefaultsToFalse() throws Exception {
-        when(postMapper.insert(any(PostDO.class))).thenAnswer(invocation -> {
-            invocation.<PostDO>getArgument(0).setId(1L);
-            return 1;
-        });
-        // Post factories always set featured to non-null; use reflection to force null
-        // so we exercise the toDO ternary null-branch: post.getFeatured() != null ? ... : false
-        var post = manfred.bytedepth.domain.post.Post.create("T", "C", null, "slug");
-        Field featuredField = manfred.bytedepth.domain.post.Post.class.getDeclaredField("featured");
-        featuredField.setAccessible(true);
-        featuredField.set(post, null);
-
-        var saved = repository.save(post);
-
-        assertFalse(saved.getFeatured());
-    }
-
-    // ---- findById ----
-
-    @Test
-    void findById_returnsEntityWhenFound() {
-        PostDO row = postRow(1L);
-        row.setContentVersion(4);
-        when(postMapper.selectById(1L)).thenReturn(row);
-
-        Optional<manfred.bytedepth.domain.post.Post> result = repository.findById(1L);
-
-        assertTrue(result.isPresent());
-        assertEquals(1L, result.get().getId());
-        assertEquals("slug", result.get().getSlug());
-        assertEquals(4, result.get().getContentVersion());
-    }
-
-    @Test
-    void findById_returnsEmptyWhenNotFound() {
-        when(postMapper.selectById(99L)).thenReturn(null);
-
-        assertTrue(repository.findById(99L).isEmpty());
-    }
-
-    // ---- findPublished ----
-
-    @Test
-    void findPublished_mapsRecordsToEntities() {
-        Page<PostDO> page = new Page<>(1, 10);
-        page.setRecords(List.of(postRow(1L), postRow(2L)));
-        when(postMapper.selectPage(any(), any())).thenReturn(page);
-
-        var posts = repository.findPublished(1, 10);
-
-        assertEquals(2, posts.size());
-        assertEquals(1L, posts.get(0).getId());
-        assertEquals(2L, posts.get(1).getId());
-        verify(postMapper).selectPage(any(), any());
-    }
-
-    @Test
-    void findPublished_emptyPageReturnsEmptyList() {
-        Page<PostDO> page = new Page<>(1, 10);
-        page.setRecords(List.of());
-        when(postMapper.selectPage(any(), any())).thenReturn(page);
-
-        assertTrue(repository.findPublished(1, 10).isEmpty());
-    }
-
-    @Test
-    void findPublished_ordersByUpdatedAtDescendingWithStableIdTieBreaker() {
-        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), PostDO.class);
-        Page<PostDO> page = new Page<>(1, 10);
-        page.setRecords(List.of());
-        when(postMapper.selectPage(any(), any())).thenReturn(page);
+            LocalDateTime.now(),
+            LocalDateTime.now(),
+            LocalDateTime.now(),
+            2L,
+            7L,
+            true);
+
+    var saved = repository.save(post);
+
+    assertEquals(5L, saved.getId());
+    assertEquals("Updated", saved.getTitle());
+    assertEquals(1, saved.getContentVersion());
+    assertTrue(saved.getFeatured());
+    verify(postMapper).updateById(any(PostDO.class));
+  }
+
+  @Test
+  void save_featuredNullDefaultsToFalse() throws Exception {
+    when(postMapper.insert(any(PostDO.class)))
+        .thenAnswer(
+            invocation -> {
+              invocation.<PostDO>getArgument(0).setId(1L);
+              return 1;
+            });
+    // Post factories always set featured to non-null; use reflection to force null
+    // so we exercise the toDO ternary null-branch: post.getFeatured() != null ? ... : false
+    var post = manfred.bytedepth.domain.post.Post.create("T", "C", null, "slug");
+    Field featuredField = manfred.bytedepth.domain.post.Post.class.getDeclaredField("featured");
+    featuredField.setAccessible(true);
+    featuredField.set(post, null);
+
+    var saved = repository.save(post);
+
+    assertFalse(saved.getFeatured());
+  }
+
+  // ---- findById ----
+
+  @Test
+  void findById_returnsEntityWhenFound() {
+    PostDO row = postRow(1L);
+    row.setContentVersion(4);
+    when(postMapper.selectById(1L)).thenReturn(row);
+
+    Optional<manfred.bytedepth.domain.post.Post> result = repository.findById(1L);
+
+    assertTrue(result.isPresent());
+    assertEquals(1L, result.get().getId());
+    assertEquals("slug", result.get().getSlug());
+    assertEquals(4, result.get().getContentVersion());
+  }
+
+  @Test
+  void findById_returnsEmptyWhenNotFound() {
+    when(postMapper.selectById(99L)).thenReturn(null);
+
+    assertTrue(repository.findById(99L).isEmpty());
+  }
+
+  // ---- findPublished ----
+
+  @Test
+  void findPublished_mapsRecordsToEntities() {
+    Page<PostDO> page = new Page<>(1, 10);
+    page.setRecords(List.of(postRow(1L), postRow(2L)));
+    when(postMapper.selectPage(any(), any())).thenReturn(page);
+
+    var posts = repository.findPublished(1, 10);
+
+    assertEquals(2, posts.size());
+    assertEquals(1L, posts.get(0).getId());
+    assertEquals(2L, posts.get(1).getId());
+    verify(postMapper).selectPage(any(), any());
+  }
+
+  @Test
+  void findPublished_emptyPageReturnsEmptyList() {
+    Page<PostDO> page = new Page<>(1, 10);
+    page.setRecords(List.of());
+    when(postMapper.selectPage(any(), any())).thenReturn(page);
+
+    assertTrue(repository.findPublished(1, 10).isEmpty());
+  }
+
+  @Test
+  void findPublished_ordersByUpdatedAtDescendingWithStableIdTieBreaker() {
+    TableInfoHelper.initTableInfo(
+        new MapperBuilderAssistant(new MybatisConfiguration(), ""), PostDO.class);
+    Page<PostDO> page = new Page<>(1, 10);
+    page.setRecords(List.of());
+    when(postMapper.selectPage(any(), any())).thenReturn(page);
+
+    repository.findPublished(1, 10);
+
+    ArgumentCaptor<Wrapper<PostDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
+    verify(postMapper).selectPage(any(), captor.capture());
+    String sql = captor.getValue().getSqlSegment();
+    assertTrue(sql.contains("updated_at"));
+    assertTrue(sql.contains("id"));
+    assertFalse(sql.contains("published_at"));
+  }
 
-        repository.findPublished(1, 10);
-
-        ArgumentCaptor<Wrapper<PostDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
-        verify(postMapper).selectPage(any(), captor.capture());
-        String sql = captor.getValue().getSqlSegment();
-        assertTrue(sql.contains("updated_at"));
-        assertTrue(sql.contains("id"));
-        assertFalse(sql.contains("published_at"));
-    }
+  // ---- findPublishedByHotness ----
 
-    // ---- findPublishedByHotness ----
+  @Test
+  void findPublishedByHotness_mapsViewCountWhenNotNull() {
+    HotPostDO hot = hotRow(1L, 42L);
+    when(postMapper.findPublishedByHotnessExcluding(List.of(), 0, 10)).thenReturn(List.of(hot));
 
-    @Test
-    void findPublishedByHotness_mapsViewCountWhenNotNull() {
-        HotPostDO hot = hotRow(1L, 42L);
-        when(postMapper.findPublishedByHotnessExcluding(List.of(), 0, 10)).thenReturn(List.of(hot));
+    var result = repository.findPublishedByHotness(1, 10);
 
-        var result = repository.findPublishedByHotness(1, 10);
+    assertEquals(1, result.size());
+    assertEquals(1L, result.get(0).post().getId());
+    assertEquals(42L, result.get(0).viewCount());
+  }
 
-        assertEquals(1, result.size());
-        assertEquals(1L, result.get(0).post().getId());
-        assertEquals(42L, result.get(0).viewCount());
-    }
+  @Test
+  void findPublishedByHotness_viewCountNullDefaultsToZero() {
+    HotPostDO hot = hotRow(1L, null);
+    when(postMapper.findPublishedByHotnessExcluding(List.of(), 10, 5)).thenReturn(List.of(hot));
 
-    @Test
-    void findPublishedByHotness_viewCountNullDefaultsToZero() {
-        HotPostDO hot = hotRow(1L, null);
-        when(postMapper.findPublishedByHotnessExcluding(List.of(), 10, 5)).thenReturn(List.of(hot));
+    var result = repository.findPublishedByHotness(3, 5);
 
-        var result = repository.findPublishedByHotness(3, 5);
+    assertEquals(0L, result.get(0).viewCount());
+  }
 
-        assertEquals(0L, result.get(0).viewCount());
-    }
+  @Test
+  void findPublishedByHotness_emptyListReturnsEmpty() {
+    when(postMapper.findPublishedByHotnessExcluding(List.of(), 0, 10)).thenReturn(List.of());
 
-    @Test
-    void findPublishedByHotness_emptyListReturnsEmpty() {
-        when(postMapper.findPublishedByHotnessExcluding(List.of(), 0, 10)).thenReturn(List.of());
+    assertTrue(repository.findPublishedByHotness(1, 10).isEmpty());
+  }
 
-        assertTrue(repository.findPublishedByHotness(1, 10).isEmpty());
-    }
+  @Test
+  void findPublishedByHotnessExcluding_passesIdsAndMapsResults() {
+    HotPostDO hot = hotRow(2L, 17L);
+    when(postMapper.findPublishedByHotnessExcluding(List.of(9L, 10L), 10, 5))
+        .thenReturn(List.of(hot));
 
-    @Test
-    void findPublishedByHotnessExcluding_passesIdsAndMapsResults() {
-        HotPostDO hot = hotRow(2L, 17L);
-        when(postMapper.findPublishedByHotnessExcluding(List.of(9L, 10L), 10, 5)).thenReturn(List.of(hot));
+    var result = repository.findPublishedByHotnessExcluding(List.of(9L, 10L), 3, 5);
 
-        var result = repository.findPublishedByHotnessExcluding(List.of(9L, 10L), 3, 5);
+    assertEquals(1, result.size());
+    assertEquals(2L, result.getFirst().post().getId());
+    assertEquals(17L, result.getFirst().viewCount());
+    verify(postMapper).findPublishedByHotnessExcluding(List.of(9L, 10L), 10, 5);
+  }
 
-        assertEquals(1, result.size());
-        assertEquals(2L, result.getFirst().post().getId());
-        assertEquals(17L, result.getFirst().viewCount());
-        verify(postMapper).findPublishedByHotnessExcluding(List.of(9L, 10L), 10, 5);
-    }
+  // ---- findLatestPublishedExcluding ----
 
-    // ---- findLatestPublishedExcluding ----
+  @Test
+  void findLatestPublishedExcluding_mapsResults() {
+    when(postMapper.findLatestPublishedExcluding(List.of(1L, 2L), 5))
+        .thenReturn(List.of(postRow(3L)));
 
-    @Test
-    void findLatestPublishedExcluding_mapsResults() {
-        when(postMapper.findLatestPublishedExcluding(List.of(1L, 2L), 5))
-            .thenReturn(List.of(postRow(3L)));
+    var posts = repository.findLatestPublishedExcluding(List.of(1L, 2L), 5);
 
-        var posts = repository.findLatestPublishedExcluding(List.of(1L, 2L), 5);
+    assertEquals(1, posts.size());
+    assertEquals(3L, posts.get(0).getId());
+  }
 
-        assertEquals(1, posts.size());
-        assertEquals(3L, posts.get(0).getId());
-    }
+  @Test
+  void findLatestPublishedExcluding_emptyExcludedIdsReturnsResults() {
+    when(postMapper.findLatestPublishedExcluding(List.of(), 3)).thenReturn(List.of(postRow(1L)));
 
-    @Test
-    void findLatestPublishedExcluding_emptyExcludedIdsReturnsResults() {
-        when(postMapper.findLatestPublishedExcluding(List.of(), 3))
-            .thenReturn(List.of(postRow(1L)));
+    var posts = repository.findLatestPublishedExcluding(List.of(), 3);
 
-        var posts = repository.findLatestPublishedExcluding(List.of(), 3);
+    assertEquals(1, posts.size());
+    assertEquals(1L, posts.get(0).getId());
+  }
 
-        assertEquals(1, posts.size());
-        assertEquals(1L, posts.get(0).getId());
-    }
+  @Test
+  void findLatestPublishedExcluding_nullExcludedIdsReturnsResults() {
+    when(postMapper.findLatestPublishedExcluding(null, 3)).thenReturn(List.of(postRow(1L)));
 
-    @Test
-    void findLatestPublishedExcluding_nullExcludedIdsReturnsResults() {
-        when(postMapper.findLatestPublishedExcluding(null, 3))
-            .thenReturn(List.of(postRow(1L)));
+    var posts = repository.findLatestPublishedExcluding(null, 3);
 
-        var posts = repository.findLatestPublishedExcluding(null, 3);
+    assertEquals(1, posts.size());
+  }
 
-        assertEquals(1, posts.size());
-    }
+  @Test
+  void findLatestPublishedExcluding_emptyResultReturnsEmpty() {
+    when(postMapper.findLatestPublishedExcluding(any(), anyInt())).thenReturn(List.of());
 
-    @Test
-    void findLatestPublishedExcluding_emptyResultReturnsEmpty() {
-        when(postMapper.findLatestPublishedExcluding(any(), anyInt()))
-            .thenReturn(List.of());
+    assertTrue(repository.findLatestPublishedExcluding(List.of(1L), 5).isEmpty());
+  }
 
-        assertTrue(repository.findLatestPublishedExcluding(List.of(1L), 5).isEmpty());
-    }
+  // ---- countPublished ----
 
-    // ---- countPublished ----
+  @Test
+  void countPublished_delegatesToMapper() {
+    when(postMapper.selectCount(any())).thenReturn(42L);
 
-    @Test
-    void countPublished_delegatesToMapper() {
-        when(postMapper.selectCount(any())).thenReturn(42L);
+    assertEquals(42L, repository.countPublished());
+    verify(postMapper).selectCount(any());
+  }
 
-        assertEquals(42L, repository.countPublished());
-        verify(postMapper).selectCount(any());
-    }
+  // ---- findPublishedByTag ----
 
-    // ---- findPublishedByTag ----
+  @Test
+  void findPublishedByTag_mapsResults() {
+    when(postMapper.findPublishedByTagSlug("java", 0, 10)).thenReturn(List.of(postRow(1L)));
 
-    @Test
-    void findPublishedByTag_mapsResults() {
-        when(postMapper.findPublishedByTagSlug("java", 0, 10))
-            .thenReturn(List.of(postRow(1L)));
+    var posts = repository.findPublishedByTag("java", 1, 10);
 
-        var posts = repository.findPublishedByTag("java", 1, 10);
+    assertEquals(1, posts.size());
+    assertEquals(1L, posts.get(0).getId());
+  }
 
-        assertEquals(1, posts.size());
-        assertEquals(1L, posts.get(0).getId());
-    }
+  @Test
+  void findPublishedByTag_emptyResultReturnsEmpty() {
+    when(postMapper.findPublishedByTagSlug("java", 10, 10)).thenReturn(List.of());
 
-    @Test
-    void findPublishedByTag_emptyResultReturnsEmpty() {
-        when(postMapper.findPublishedByTagSlug("java", 10, 10))
-            .thenReturn(List.of());
+    assertTrue(repository.findPublishedByTag("java", 2, 10).isEmpty());
+  }
 
-        assertTrue(repository.findPublishedByTag("java", 2, 10).isEmpty());
-    }
+  // ---- countPublishedByTag ----
 
-    // ---- countPublishedByTag ----
+  @Test
+  void countPublishedByTag_delegatesToMapper() {
+    when(postMapper.countPublishedByTagSlug("java")).thenReturn(5L);
 
-    @Test
-    void countPublishedByTag_delegatesToMapper() {
-        when(postMapper.countPublishedByTagSlug("java")).thenReturn(5L);
+    assertEquals(5L, repository.countPublishedByTag("java"));
+    verify(postMapper).countPublishedByTagSlug("java");
+  }
 
-        assertEquals(5L, repository.countPublishedByTag("java"));
-        verify(postMapper).countPublishedByTagSlug("java");
-    }
+  // ---- findPublishedByCategory ----
 
-    // ---- findPublishedByCategory ----
+  @Test
+  void findPublishedByCategory_mapsResults() {
+    Page<PostDO> page = new Page<>(1, 10);
+    page.setRecords(List.of(postRow(1L)));
+    when(postMapper.selectPage(any(), any())).thenReturn(page);
 
-    @Test
-    void findPublishedByCategory_mapsResults() {
-        Page<PostDO> page = new Page<>(1, 10);
-        page.setRecords(List.of(postRow(1L)));
-        when(postMapper.selectPage(any(), any())).thenReturn(page);
+    var posts = repository.findPublishedByCategory(2L, 1, 10);
 
-        var posts = repository.findPublishedByCategory(2L, 1, 10);
+    assertEquals(1, posts.size());
+    assertEquals(1L, posts.get(0).getId());
+    verify(postMapper).selectPage(any(), any());
+  }
 
-        assertEquals(1, posts.size());
-        assertEquals(1L, posts.get(0).getId());
-        verify(postMapper).selectPage(any(), any());
-    }
+  @Test
+  void findPublishedByCategory_emptyResultReturnsEmpty() {
+    Page<PostDO> page = new Page<>(1, 10);
+    page.setRecords(List.of());
+    when(postMapper.selectPage(any(), any())).thenReturn(page);
 
-    @Test
-    void findPublishedByCategory_emptyResultReturnsEmpty() {
-        Page<PostDO> page = new Page<>(1, 10);
-        page.setRecords(List.of());
-        when(postMapper.selectPage(any(), any())).thenReturn(page);
+    assertTrue(repository.findPublishedByCategory(2L, 1, 10).isEmpty());
+  }
 
-        assertTrue(repository.findPublishedByCategory(2L, 1, 10).isEmpty());
-    }
+  // ---- countPublishedByCategory ----
 
-    // ---- countPublishedByCategory ----
+  @Test
+  void countPublishedByCategory_delegatesToMapper() {
+    when(postMapper.selectCount(any())).thenReturn(7L);
 
-    @Test
-    void countPublishedByCategory_delegatesToMapper() {
-        when(postMapper.selectCount(any())).thenReturn(7L);
+    assertEquals(7L, repository.countPublishedByCategory(2L));
+    verify(postMapper).selectCount(any());
+  }
 
-        assertEquals(7L, repository.countPublishedByCategory(2L));
-        verify(postMapper).selectCount(any());
-    }
+  // ---- findPage ----
 
-    // ---- findPage ----
+  @Test
+  void findPage_mapsRecordsToEntities() {
+    Page<PostDO> page = new Page<>(1, 20);
+    page.setRecords(List.of(postRow(1L), postRow(2L)));
+    when(postMapper.selectPage(any(), any())).thenReturn(page);
 
-    @Test
-    void findPage_mapsRecordsToEntities() {
-        Page<PostDO> page = new Page<>(1, 20);
-        page.setRecords(List.of(postRow(1L), postRow(2L)));
-        when(postMapper.selectPage(any(), any())).thenReturn(page);
+    var posts = repository.findPage(1, 20);
 
-        var posts = repository.findPage(1, 20);
+    assertEquals(2, posts.size());
+    assertEquals(1L, posts.get(0).getId());
+    assertEquals(2L, posts.get(1).getId());
+  }
 
-        assertEquals(2, posts.size());
-        assertEquals(1L, posts.get(0).getId());
-        assertEquals(2L, posts.get(1).getId());
-    }
+  @Test
+  void findPage_emptyResultReturnsEmpty() {
+    Page<PostDO> page = new Page<>(1, 20);
+    page.setRecords(List.of());
+    when(postMapper.selectPage(any(), any())).thenReturn(page);
 
-    @Test
-    void findPage_emptyResultReturnsEmpty() {
-        Page<PostDO> page = new Page<>(1, 20);
-        page.setRecords(List.of());
-        when(postMapper.selectPage(any(), any())).thenReturn(page);
+    assertTrue(repository.findPage(1, 20).isEmpty());
+  }
 
-        assertTrue(repository.findPage(1, 20).isEmpty());
-    }
+  @Test
+  void filteredPageAndCount_supportAllOptionalFiltersAndTheirAbsence() {
+    Page<PostDO> page = new Page<>(1, 20);
+    page.setRecords(List.of(postRow(8L)));
+    when(postMapper.selectPage(any(), any())).thenReturn(page);
+    when(postMapper.selectCount(any())).thenReturn(12L);
 
-    @Test
-    void filteredPageAndCount_supportAllOptionalFiltersAndTheirAbsence() {
-        Page<PostDO> page = new Page<>(1, 20);
-        page.setRecords(List.of(postRow(8L)));
-        when(postMapper.selectPage(any(), any())).thenReturn(page);
-        when(postMapper.selectCount(any())).thenReturn(12L);
+    assertEquals(8L, repository.findPage(1, 20, " title ", "PUBLISHED", 3L, 2L).getFirst().getId());
+    assertEquals(12L, repository.countFiltered(" ", "", null, null));
+    assertEquals(12L, repository.countFiltered(null, null, null, null));
+    verify(postMapper).selectPage(any(), any());
+    verify(postMapper, Mockito.times(2)).selectCount(any());
+  }
 
-        assertEquals(8L, repository.findPage(1, 20, " title ", "PUBLISHED", 3L, 2L).getFirst().getId());
-        assertEquals(12L, repository.countFiltered(" ", "", null, null));
-        assertEquals(12L, repository.countFiltered(null, null, null, null));
-        verify(postMapper).selectPage(any(), any());
-        verify(postMapper, Mockito.times(2)).selectCount(any());
-    }
+  // ---- countAll ----
 
-    // ---- countAll ----
+  @Test
+  void countAll_delegatesToMapper() {
+    when(postMapper.selectCount(any())).thenReturn(100L);
 
-    @Test
-    void countAll_delegatesToMapper() {
-        when(postMapper.selectCount(any())).thenReturn(100L);
+    assertEquals(100L, repository.countAll());
+    verify(postMapper).selectCount(any());
+  }
 
-        assertEquals(100L, repository.countAll());
-        verify(postMapper).selectCount(any());
-    }
+  // ---- findPrevPublished ----
 
-    // ---- findPrevPublished ----
+  @Test
+  void findPrevPublished_returnsEntityWhenFound() {
+    when(postMapper.findPrevPublished(5L)).thenReturn(postRow(3L));
 
-    @Test
-    void findPrevPublished_returnsEntityWhenFound() {
-        when(postMapper.findPrevPublished(5L)).thenReturn(postRow(3L));
+    var result = repository.findPrevPublished(5L);
 
-        var result = repository.findPrevPublished(5L);
+    assertTrue(result.isPresent());
+    assertEquals(3L, result.get().getId());
+  }
 
-        assertTrue(result.isPresent());
-        assertEquals(3L, result.get().getId());
-    }
+  @Test
+  void findPrevPublished_returnsEmptyWhenNotFound() {
+    when(postMapper.findPrevPublished(5L)).thenReturn(null);
 
-    @Test
-    void findPrevPublished_returnsEmptyWhenNotFound() {
-        when(postMapper.findPrevPublished(5L)).thenReturn(null);
+    assertTrue(repository.findPrevPublished(5L).isEmpty());
+  }
 
-        assertTrue(repository.findPrevPublished(5L).isEmpty());
-    }
+  // ---- findNextPublished ----
 
-    // ---- findNextPublished ----
+  @Test
+  void findNextPublished_returnsEntityWhenFound() {
+    when(postMapper.findNextPublished(5L)).thenReturn(postRow(7L));
 
-    @Test
-    void findNextPublished_returnsEntityWhenFound() {
-        when(postMapper.findNextPublished(5L)).thenReturn(postRow(7L));
+    var result = repository.findNextPublished(5L);
 
-        var result = repository.findNextPublished(5L);
+    assertTrue(result.isPresent());
+    assertEquals(7L, result.get().getId());
+  }
 
-        assertTrue(result.isPresent());
-        assertEquals(7L, result.get().getId());
-    }
+  @Test
+  void findNextPublished_returnsEmptyWhenNotFound() {
+    when(postMapper.findNextPublished(5L)).thenReturn(null);
 
-    @Test
-    void findNextPublished_returnsEmptyWhenNotFound() {
-        when(postMapper.findNextPublished(5L)).thenReturn(null);
+    assertTrue(repository.findNextPublished(5L).isEmpty());
+  }
 
-        assertTrue(repository.findNextPublished(5L).isEmpty());
-    }
+  // ---- setPostSeries ----
 
-    // ---- setPostSeries ----
+  @Test
+  void setPostSeries_updatesPostDOWithSeriesInfo() {
+    repository.setPostSeries(5L, 3L, 1);
 
-    @Test
-    void setPostSeries_updatesPostDOWithSeriesInfo() {
-        repository.setPostSeries(5L, 3L, 1);
+    var captor = org.mockito.ArgumentCaptor.forClass(PostDO.class);
+    verify(postMapper).updateById(captor.capture());
+    assertEquals(5L, captor.getValue().getId());
+    assertEquals(3L, captor.getValue().getSeriesId());
+    assertEquals(1, captor.getValue().getSeriesOrder());
+  }
 
-        var captor = org.mockito.ArgumentCaptor.forClass(PostDO.class);
-        verify(postMapper).updateById(captor.capture());
-        assertEquals(5L, captor.getValue().getId());
-        assertEquals(3L, captor.getValue().getSeriesId());
-        assertEquals(1, captor.getValue().getSeriesOrder());
-    }
+  // ---- clearPostSeries ----
 
-    // ---- clearPostSeries ----
+  @Test
+  void clearPostSeries_delegatesToMapper() {
+    repository.clearPostSeries(5L);
 
-    @Test
-    void clearPostSeries_delegatesToMapper() {
-        repository.clearPostSeries(5L);
+    verify(postMapper).clearPostSeries(5L);
+  }
 
-        verify(postMapper).clearPostSeries(5L);
-    }
+  // ---- findPublishedByAuthorId ----
 
-    // ---- findPublishedByAuthorId ----
+  @Test
+  void findPublishedByAuthorId_mapsResults() {
+    Page<PostDO> page = new Page<>(1, 10);
+    page.setRecords(List.of(postRow(1L)));
+    when(postMapper.selectPage(any(), any())).thenReturn(page);
 
-    @Test
-    void findPublishedByAuthorId_mapsResults() {
-        Page<PostDO> page = new Page<>(1, 10);
-        page.setRecords(List.of(postRow(1L)));
-        when(postMapper.selectPage(any(), any())).thenReturn(page);
+    var posts = repository.findPublishedByAuthorId(7L, 1, 10);
 
-        var posts = repository.findPublishedByAuthorId(7L, 1, 10);
+    assertEquals(1, posts.size());
+    assertEquals(1L, posts.get(0).getId());
+    verify(postMapper).selectPage(any(), any());
+  }
 
-        assertEquals(1, posts.size());
-        assertEquals(1L, posts.get(0).getId());
-        verify(postMapper).selectPage(any(), any());
-    }
+  @Test
+  void findPublishedByAuthorId_emptyResultReturnsEmpty() {
+    Page<PostDO> page = new Page<>(1, 10);
+    page.setRecords(List.of());
+    when(postMapper.selectPage(any(), any())).thenReturn(page);
 
-    @Test
-    void findPublishedByAuthorId_emptyResultReturnsEmpty() {
-        Page<PostDO> page = new Page<>(1, 10);
-        page.setRecords(List.of());
-        when(postMapper.selectPage(any(), any())).thenReturn(page);
+    assertTrue(repository.findPublishedByAuthorId(7L, 1, 10).isEmpty());
+  }
 
-        assertTrue(repository.findPublishedByAuthorId(7L, 1, 10).isEmpty());
-    }
+  // ---- countPublishedByAuthorId ----
 
-    // ---- countPublishedByAuthorId ----
+  @Test
+  void countPublishedByAuthorId_delegatesToMapper() {
+    when(postMapper.selectCount(any())).thenReturn(9L);
 
-    @Test
-    void countPublishedByAuthorId_delegatesToMapper() {
-        when(postMapper.selectCount(any())).thenReturn(9L);
+    assertEquals(9L, repository.countPublishedByAuthorId(7L));
+    verify(postMapper).selectCount(any());
+  }
 
-        assertEquals(9L, repository.countPublishedByAuthorId(7L));
-        verify(postMapper).selectCount(any());
-    }
+  // ---- findBySlug ----
 
-    // ---- findBySlug ----
+  @Test
+  void findBySlug_returnsEntityWhenFound() {
+    when(postMapper.selectOne(any())).thenReturn(postRow(1L));
 
-    @Test
-    void findBySlug_returnsEntityWhenFound() {
-        when(postMapper.selectOne(any())).thenReturn(postRow(1L));
+    var result = repository.findBySlug("slug");
 
-        var result = repository.findBySlug("slug");
+    assertTrue(result.isPresent());
+    assertEquals(1L, result.get().getId());
+    assertEquals("slug", result.get().getSlug());
+  }
 
-        assertTrue(result.isPresent());
-        assertEquals(1L, result.get().getId());
-        assertEquals("slug", result.get().getSlug());
-    }
+  @Test
+  void findBySlug_returnsEmptyWhenNotFound() {
+    when(postMapper.selectOne(any())).thenReturn(null);
 
-    @Test
-    void findBySlug_returnsEmptyWhenNotFound() {
-        when(postMapper.selectOne(any())).thenReturn(null);
+    assertTrue(repository.findBySlug("missing").isEmpty());
+  }
 
-        assertTrue(repository.findBySlug("missing").isEmpty());
-    }
+  // ---- updateSlug ----
 
-    // ---- updateSlug ----
+  @Test
+  void updateSlug_delegatesToMapper() {
+    repository.updateSlug(5L, "new-slug");
 
-    @Test
-    void updateSlug_delegatesToMapper() {
-        repository.updateSlug(5L, "new-slug");
+    verify(postMapper).updateSlug(5L, "new-slug");
+  }
 
-        verify(postMapper).updateSlug(5L, "new-slug");
-    }
+  // ---- findAllPublished ----
 
-    // ---- findAllPublished ----
+  @Test
+  void findAllPublished_mapsResults() {
+    when(postMapper.selectList(any())).thenReturn(List.of(postRow(1L), postRow(2L)));
 
-    @Test
-    void findAllPublished_mapsResults() {
-        when(postMapper.selectList(any())).thenReturn(List.of(postRow(1L), postRow(2L)));
+    var posts = repository.findAllPublished();
 
-        var posts = repository.findAllPublished();
+    assertEquals(2, posts.size());
+    assertEquals(1L, posts.get(0).getId());
+    assertEquals(2L, posts.get(1).getId());
+  }
 
-        assertEquals(2, posts.size());
-        assertEquals(1L, posts.get(0).getId());
-        assertEquals(2L, posts.get(1).getId());
-    }
+  @Test
+  void findAllPublished_emptyResultReturnsEmpty() {
+    when(postMapper.selectList(any())).thenReturn(List.of());
 
-    @Test
-    void findAllPublished_emptyResultReturnsEmpty() {
-        when(postMapper.selectList(any())).thenReturn(List.of());
+    assertTrue(repository.findAllPublished().isEmpty());
+  }
 
-        assertTrue(repository.findAllPublished().isEmpty());
-    }
+  // ---- toEntity: seriesId null vs non-null branch ----
 
-    // ---- toEntity: seriesId null vs non-null branch ----
+  @Test
+  void toEntity_assignsSeriesWhenSeriesIdNotNull() {
+    PostDO row = postRow(1L);
+    row.setSeriesId(3L);
+    row.setSeriesOrder(2);
+    when(postMapper.selectById(1L)).thenReturn(row);
 
-    @Test
-    void toEntity_assignsSeriesWhenSeriesIdNotNull() {
-        PostDO row = postRow(1L);
-        row.setSeriesId(3L);
-        row.setSeriesOrder(2);
-        when(postMapper.selectById(1L)).thenReturn(row);
+    var post = repository.findById(1L).orElseThrow();
 
-        var post = repository.findById(1L).orElseThrow();
+    assertEquals(3L, post.getSeriesId());
+    assertEquals(2, post.getSeriesOrder());
+  }
 
-        assertEquals(3L, post.getSeriesId());
-        assertEquals(2, post.getSeriesOrder());
-    }
+  @Test
+  void toEntity_doesNotAssignSeriesWhenSeriesIdNull() {
+    PostDO row = postRow(1L);
+    row.setSeriesId(null);
+    row.setSeriesOrder(null);
+    when(postMapper.selectById(1L)).thenReturn(row);
 
-    @Test
-    void toEntity_doesNotAssignSeriesWhenSeriesIdNull() {
-        PostDO row = postRow(1L);
-        row.setSeriesId(null);
-        row.setSeriesOrder(null);
-        when(postMapper.selectById(1L)).thenReturn(row);
+    var post = repository.findById(1L).orElseThrow();
 
-        var post = repository.findById(1L).orElseThrow();
+    assertNull(post.getSeriesId());
+    assertNull(post.getSeriesOrder());
+  }
 
-        assertNull(post.getSeriesId());
-        assertNull(post.getSeriesOrder());
-    }
+  // ---- helpers ----
 
-    // ---- helpers ----
+  private PostDO postRow(Long id) {
+    PostDO row = new PostDO();
+    row.setId(id);
+    row.setSlug("slug");
+    row.setAuthorId(7L);
+    row.setTitle("Title");
+    row.setContent("Content");
+    row.setStatus("PUBLISHED");
+    row.setFeatured(false);
+    row.setCreatedAt(LocalDateTime.now());
+    row.setPublishedAt(LocalDateTime.now());
+    row.setUpdatedAt(LocalDateTime.now());
+    row.setCategoryId(2L);
+    return row;
+  }
 
-    private PostDO postRow(Long id) {
-        PostDO row = new PostDO();
-        row.setId(id);
-        row.setSlug("slug");
-        row.setAuthorId(7L);
-        row.setTitle("Title");
-        row.setContent("Content");
-        row.setStatus("PUBLISHED");
-        row.setFeatured(false);
-        row.setCreatedAt(LocalDateTime.now());
-        row.setPublishedAt(LocalDateTime.now());
-        row.setUpdatedAt(LocalDateTime.now());
-        row.setCategoryId(2L);
-        return row;
-    }
-
-    private HotPostDO hotRow(Long id, Long viewCount) {
-        HotPostDO hot = new HotPostDO();
-        hot.setId(id);
-        hot.setSlug("slug");
-        hot.setAuthorId(7L);
-        hot.setTitle("Title");
-        hot.setContent("Content");
-        hot.setStatus("PUBLISHED");
-        hot.setFeatured(false);
-        hot.setCreatedAt(LocalDateTime.now());
-        hot.setPublishedAt(LocalDateTime.now());
-        hot.setUpdatedAt(LocalDateTime.now());
-        hot.setCategoryId(2L);
-        hot.setViewCount(viewCount);
-        return hot;
-    }
+  private HotPostDO hotRow(Long id, Long viewCount) {
+    HotPostDO hot = new HotPostDO();
+    hot.setId(id);
+    hot.setSlug("slug");
+    hot.setAuthorId(7L);
+    hot.setTitle("Title");
+    hot.setContent("Content");
+    hot.setStatus("PUBLISHED");
+    hot.setFeatured(false);
+    hot.setCreatedAt(LocalDateTime.now());
+    hot.setPublishedAt(LocalDateTime.now());
+    hot.setUpdatedAt(LocalDateTime.now());
+    hot.setCategoryId(2L);
+    hot.setViewCount(viewCount);
+    return hot;
+  }
 }

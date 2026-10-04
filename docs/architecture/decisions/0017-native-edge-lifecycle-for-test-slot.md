@@ -50,7 +50,7 @@ native edge 删除对正式 app 的 `Requires=` 生命周期依赖，只保留 `
 - edge 的 `ExecStartPre` 成为运行时健康边界，systemd 的 `Requires=` 不再承担应用
   生命周期编排。
 - 旧版本已安装的 unit 必须由 native stack installer 重新渲染并执行 `daemon-reload`；
- 不能只修改仓库模板后假设主机已更新。
+  不能只修改仓库模板后假设主机已更新。
 
 ## 验证
 

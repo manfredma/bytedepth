@@ -1,16 +1,5 @@
 package manfred.bytedepth.adapter.web.portal;
 
-import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
-import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
-import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.when;
@@ -20,27 +9,38 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-@WebMvcTest(value = ReleaseController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class)
+import manfred.bytedepth.adapter.web.security.ThymeleafSecurityHandlerConfig;
+import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+@WebMvcTest(
+    value = ReleaseController.class,
+    excludeAutoConfiguration = SecurityAutoConfiguration.class)
 @Import(ThymeleafSecurityHandlerConfig.class)
 class ReleaseControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-    @MockitoBean
-    private MarkdownRenderer markdownRenderer;
-    @MockitoBean
-    private VisitRequestFilter visitRequestFilter;
+  @MockitoBean private MarkdownRenderer markdownRenderer;
+  @MockitoBean private VisitRequestFilter visitRequestFilter;
 
-    @Test
-    void releases_rendersTheVersionNotesBundledWithTheApplication() throws Exception {
-        when(markdownRenderer.render(contains("v1.0.0"))).thenReturn("<h2>v1.0.0</h2>");
+  @Test
+  void releases_rendersTheVersionNotesBundledWithTheApplication() throws Exception {
+    when(markdownRenderer.render(contains("v1.0.0"))).thenReturn("<h2>v1.0.0</h2>");
 
-        mockMvc.perform(get("/releases"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("public/releases"))
-                .andExpect(model().attribute("releaseNotesHtml", "<h2>v1.0.0</h2>"))
-                .andExpect(content().string(containsString("版本更新")))
-                .andExpect(content().string(containsString("v1.0.0")));
-    }
+    mockMvc
+        .perform(get("/releases"))
+        .andExpect(status().isOk())
+        .andExpect(view().name("public/releases"))
+        .andExpect(model().attribute("releaseNotesHtml", "<h2>v1.0.0</h2>"))
+        .andExpect(content().string(containsString("版本更新")))
+        .andExpect(content().string(containsString("v1.0.0")));
+  }
 }
