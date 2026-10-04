@@ -3,6 +3,7 @@
 - **状态**: Accepted
 - **日期**: 2026-10-04
 - **决策者**: 项目所有者与维护团队
+- **取代**: [ADR-0003](0003-observable-isolated-delivery-pipeline.md)、[ADR-0006](0006-unified-release-pipeline.md)
 
 ## 上下文
 
