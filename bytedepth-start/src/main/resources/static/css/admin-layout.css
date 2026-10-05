@@ -3,6 +3,10 @@ html {
   scrollbar-gutter: stable;
 }
 
+body {
+  margin: 0;
+}
+
 .admin-shell,
 .admin-shell * {
   box-sizing: border-box;
