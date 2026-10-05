@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Shared Host Agent artifact helper for the legacy-compatible local runtime
+# helpers. It validates paths and manifests; release-platform remains the
+# caller that chooses the immutable candidate artifact.
+
 validate_release_tag() {
   [[ "${1:-}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
 }

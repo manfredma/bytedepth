@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""将 Google Fonts CSS2 引用的 woff2 自托管到 static/fonts/，生成本地 fonts.css。
+"""一次性本地资源生成器：将 Google Fonts CSS2 引用的 woff2 自托管到 static/fonts/，生成本地 fonts.css。
+
+本脚本由开发者手动运行，不是质量门禁或发布入口；生成的字体和 CSS
+必须作为普通仓库变更经过格式检查和评审。
 
 用法：先抓取 googleapis CSS 到 /tmp/google-fonts.css（带现代 Chrome UA），再运行本脚本。
 下载失败的 @font-face 规则会被剔除，避免引用不存在的本地文件。

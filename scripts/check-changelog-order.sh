@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Read-only Changelog structure/order checker used by release-readiness gates.
+# It does not freeze versions, create tags, or publish anything.
+
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly CHANGELOG_FILE="${1:-$SOURCE_ROOT/docs/releases/CHANGELOG.md}"
 

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Shared staging runtime facts used by Host Agent integration/E2E runners:
+# browser location, runtime manifests, locks, and common readiness helpers.
+
 readonly SHARED_CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
 readonly SHARED_PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 

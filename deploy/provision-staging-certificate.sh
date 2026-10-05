@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+# Legacy/runtime certificate helper retained for platform-managed staging
+# infrastructure. The project Agent must not invoke it directly.
 # 在 129 上签发/更新 staging 域名证书，并安装续期后的 Nginx reload hook。
 set -Eeuo pipefail
 

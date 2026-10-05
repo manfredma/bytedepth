@@ -178,11 +178,11 @@ rg -Fq 'expected_usage_line="GRANT USAGE ON *.* TO \`$user\`@\`localhost\`"' "$r
 rg -Fq 'MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" "$db"' "$root/deploy/provision-staging-test-slot.sh"
 rg -Fq 'MYSQL_PWD="$password" mysql -u "$user" -h 127.0.0.1 --port="$BYTEDEPTH_STAGING_MYSQL_PORT" "$db" --batch' "$root/deploy/provision-staging-test-slot.sh"
 
-grep -Fqx '    if (( state_uncertain != 0 )); then' <(sed -n '1,90p' "$root/deploy/provision-staging-test-slot.sh") || {
+rg -Fq 'if ((state_uncertain != 0)); then' "$root/deploy/provision-staging-test-slot.sh" || {
   printf 'FAIL: uncertain provision state must be preserved without destructive cleanup\n' >&2
   exit 1
 }
-grep -Fqx "        slot_die 'provision state is uncertain; preserving manifest and all resources for manual recovery'" <(sed -n '1,90p' "$root/deploy/provision-staging-test-slot.sh") || {
+rg -Fq "slot_die 'provision state is uncertain; preserving manifest and all resources for manual recovery'" "$root/deploy/provision-staging-test-slot.sh" || {
   printf 'FAIL: uncertain provision state must be preserved without destructive cleanup\n' >&2
   exit 1
 }
@@ -190,7 +190,7 @@ rg -q 'state-uncertain' "$root/deploy/teardown-staging-test-slot.sh"
 rg -q 'refusing destructive cleanup until manual recovery' "$root/deploy/teardown-staging-test-slot.sh"
 
 for runner in "$root/deploy/run-staging-integration-tests.sh" "$root/deploy/run-staging-e2e-tests.sh"; do
-  grep -Fq 'if (( app_stopped != 0 )); then' "$runner" || {
+  rg -q 'if \(\(app_stopped != 0\)\); then' "$runner" || {
     printf 'FAIL: %s must restore the native edge even when teardown already started the staging app\n' "$runner" >&2
     exit 1
   }
@@ -218,11 +218,11 @@ grep -Fq 'BYTEDEPTH_STAGING_EDGE_PORT=' "$root/deploy/lib/staging-native-target.
   exit 1
 }
 
-grep -Fqx 'if systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then' <(sed -n '35,45p' "$root/deploy/teardown-staging-test-slot.sh") || {
+rg -Fq 'if systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then' "$root/deploy/teardown-staging-test-slot.sh" || {
   printf 'FAIL: teardown must stop the optional E2E test slot only when it exists and is active\n' >&2
   exit 1
 }
-grep -Fqx '    if ! systemctl stop "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE" || systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then' <(sed -n '35,45p' "$root/deploy/teardown-staging-test-slot.sh") || {
+rg -Fq 'if ! systemctl stop "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE" || systemctl is-active --quiet "$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"; then' "$root/deploy/teardown-staging-test-slot.sh" || {
   printf 'FAIL: teardown must stop the optional E2E test slot only when it exists and is active\n' >&2
   exit 1
 }

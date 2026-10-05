@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Local candidate metadata gate. Called by the local quality entry point and
+# release-readiness contract tests; it never creates tags, deploys, or calls SSH.
+
 REPOSITORY_ROOT="$(git rev-parse --show-toplevel 2> /dev/null)" || {
   printf 'Release readiness refused: current directory is not a Git repository.\n' >&2
   exit 1

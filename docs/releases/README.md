@@ -8,7 +8,7 @@ ByteDepth 的发布生命周期完全由 release-platform 管理。本仓库不�
 
 构建、发布、日志、重试、验证和回滚都必须在 release-platform 页面完成，并以页面中的候选、制品和任务记录为准。
 
-触发候选任务只允许通过 release-platform 页面或授权平台连接器完成；仓库内的 Agent 只能准备 PR、完整 SHA 和触发参数，不能把本地脚本执行结果当成平台触发回执。
+触发候选任务只允许通过 release-platform 页面或授权平台连接器完成；仓库内的 Agent 只能准备 PR、完整 commit SHA 和触发参数，不能把本地脚本执行结果当成平台触发回执。
 
 Agent 触发顺序固定为：PR head 创建/复用候选 → `QUALITY`/`BUILD` → 创建同 artifact 的 `RELEASE(staging)` flow → staging 集成/E2E 与项目所有者验收 → 合并同一个 PR head SHA → 校验 `main` HEAD → 提升同一 artifact 到 production。API 细节和幂等要求见[平台发布说明](../engineering/release-platform-only.md)。
 

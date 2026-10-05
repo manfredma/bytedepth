@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Host Agent staging integration runner. It creates/uses an isolated test slot,
+# records evidence, and cleans up resources; the project workspace must not run
+# this as a substitute for release-platform acceptance.
+
 if [[ "${EUID}" -ne 0 ]]; then
   printf 'Run with sudo: sudo ./deploy/run-staging-integration-tests.sh\n' >&2
   exit 1

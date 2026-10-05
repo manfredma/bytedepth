@@ -2,6 +2,9 @@
 
 FORMAT_SUPPORTED_EXTENSIONS='java|js|jsx|ts|tsx|html|css|scss|json|yml|yaml|md|sh'
 
+# Shared local formatter helpers: file collection, ignore rules, formatter
+# discovery, and mode-preserving replacement. No Git or remote side effects.
+
 format_file_mode() {
   local file="$1"
   if stat -f '%Lp' "$file" > /dev/null 2>&1; then

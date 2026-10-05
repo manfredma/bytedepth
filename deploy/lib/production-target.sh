@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Production configuration normalization helper used by platform-managed
+# runtime preparation. It never selects a release or performs a promotion.
+
 normalize_production_config_file() {
   local source_file="$1" target_file="$2" owner="${3:-ubuntu:ubuntu}" temporary_file
   [[ -r "$source_file" ]] || {

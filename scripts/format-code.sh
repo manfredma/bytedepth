@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Local formatter/checker entrypoint for AI Agent worktrees. It may rewrite
+# selected files when applying format, but never performs Git or deployment IO.
+
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
 source "$SOURCE_ROOT/scripts/lib/format-common.sh"
 

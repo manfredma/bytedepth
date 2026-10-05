@@ -1,5 +1,8 @@
 root = true
 
+# Repository-wide text encoding, line endings, indentation and whitespace
+# baseline. Tool-specific formatting remains in .prettierrc.json and pom.xml.
+
 [*]
 charset = utf-8
 end_of_line = lf

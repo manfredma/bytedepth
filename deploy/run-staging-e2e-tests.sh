@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Host Agent staging E2E runner. It uses the platform-provided browser and
+# isolated test-slot resources, then emits evidence for the candidate SHA.
+# It is not a production deployment entrypoint.
+
 if [[ "${EUID}" -ne 0 ]]; then
   printf 'Run with sudo: sudo ./deploy/run-staging-e2e-tests.sh\n' >&2
   exit 1

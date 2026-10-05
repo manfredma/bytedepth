@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Read-only candidate-vs-base Changelog gate. It validates release metadata
+# before platform handoff and never performs staging or production operations.
+
 readonly REPOSITORY_ROOT="$(git rev-parse --show-toplevel 2> /dev/null)" || {
   printf 'Staging Changelog gate refused: current directory is not a Git repository.\n' >&2
   exit 1

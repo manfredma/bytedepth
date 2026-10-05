@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Evidence timing helper for staging runners. It records phase durations and
+# candidate SHA metadata; it has no deployment or cleanup authority by itself.
+
 timing_now_epoch_ms() {
   local epoch_ns
   epoch_ns="$(date -u +%s%N)"
