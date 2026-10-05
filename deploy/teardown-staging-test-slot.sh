@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+# Host Agent helper that tears down one isolated staging test slot. It must
+# preserve uncertain resources for manual recovery and never clean production.
 set -euo pipefail
 umask 077
 # shellcheck source=deploy/lib/staging-test-slot.sh

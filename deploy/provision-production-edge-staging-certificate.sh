@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+# Legacy production-edge certificate compatibility helper retained only for
+# platform/host compatibility; release-platform owns certificate execution.
 # 在 175 上为仍解析到生产边缘的旧 staging 域名签发证书，并保持上一版的
 # 生产入口跳转逻辑。certbot 的 standalone challenge 由 DNS 指向 175 完成。
 set -Eeuo pipefail

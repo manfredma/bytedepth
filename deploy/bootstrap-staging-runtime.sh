@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Host Agent staging dependency bootstrap. release-platform invokes this under
+# its staging lock to warm shared Maven/browser inputs; it does not start the
+# application and is not a manual project release command.
+
 if [[ "${EUID}" -ne 0 ]]; then
   printf 'Run with sudo: sudo ./deploy/bootstrap-staging-runtime.sh\n' >&2
   exit 1

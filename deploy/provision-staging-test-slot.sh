@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+# Host Agent helper that provisions an isolated staging integration/E2E slot.
+# It is platform-invoked test infrastructure, not a project deployment CLI.
 set -euo pipefail
 umask 077
 # shellcheck source=deploy/lib/staging-test-slot.sh
