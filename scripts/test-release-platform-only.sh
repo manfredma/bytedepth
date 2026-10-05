@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Contract test for the release-platform-only boundary. It protects against
+# reintroducing project-side deployment, Tag, SSH, or remote-host entrypoints.
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 for obsolete in \

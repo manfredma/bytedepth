@@ -3,6 +3,8 @@ set -Eeuo pipefail
 
 # Local checks for the project-to-platform boundary.  Staging deployment,
 # integration, E2E, acceptance and production promotion are platform tasks.
+# Called before a PR/platform handoff; this script is read-only and must not
+# be used as a project-side deployment entry point.
 SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 bash "$SOURCE_ROOT/scripts/test-release-platform-only.sh"

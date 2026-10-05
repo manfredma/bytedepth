@@ -65,7 +65,7 @@ if rg -q 'window\.scrollTo\(0, 500\)' "$ANNOTATION_E2E"; then
   exit 1
 fi
 rg -q 'window\.scrollBy' "$ANNOTATION_E2E"
-rg -q 'expect\.poll' "$ANNOTATION_E2E"
+rg -q 'data-bd-annotation-ready="true"' "$ANNOTATION_E2E"
 rg -q 'provision-staging-test-slot\.sh' "$RUNNER"
 rg -q 'teardown-staging-test-slot\.sh' "$RUNNER"
 rg -q 'BYTEDEPTH_STAGING_TEST_SLOT_SERVICE|SLOT_SERVICE' "$RUNNER"

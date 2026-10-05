@@ -8,6 +8,7 @@ readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$SOURCE_ROOT/scripts/lib/java-25.sh"
 
 cd "$SOURCE_ROOT"
+bash scripts/check-release-readiness.sh --target HEAD --base origin/main --mode candidate
 npm ci --ignore-scripts --no-audit --no-fund
 bash scripts/format-check.sh --all
 bash scripts/test-format-code.sh

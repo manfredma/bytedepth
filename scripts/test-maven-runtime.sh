@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Static runtime contract for Maven Wrapper/Java 25 portability. It runs
+# locally and does not bootstrap or deploy a remote environment.
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly ROOT
 readonly VERSION=3.9.11

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Static contract for the repository-side staging boundary. The platform owns
+# staging execution; this test only checks that active docs and checklist rules
+# do not expose removed project deployment entrypoints.
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CHECKLIST="$ROOT/scripts/check-staging-checklist.sh"
 

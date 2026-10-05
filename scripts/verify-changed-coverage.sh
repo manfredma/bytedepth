@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Local changed-code coverage gate. It invokes Maven tests and reads coverage;
+# it never deploys, tags, or contacts a release host.
+
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$SOURCE_ROOT/scripts/lib/java-25.sh"
 readonly JAVA_HOME="$(resolve_java_25)"

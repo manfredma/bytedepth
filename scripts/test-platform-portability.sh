@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Static portability contract for local and Host Agent shell entrypoints.
+# It rejects host-specific command assumptions; it does not execute deployment.
+
 # Guards local and release-platform entry points against unguarded macOS-only shell commands.
 readonly SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly JAVA_RUNTIME="$SOURCE_ROOT/scripts/lib/java-25.sh"

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Static documentation contract for the Host Agent runtime boundary. It checks
+# the handoff rules only; it does not inspect or mutate a remote host.
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly ROOT
 readonly DEPLOY_GUIDE="$ROOT/deploy/README.md"

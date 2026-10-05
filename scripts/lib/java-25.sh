@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Cross-platform Java 25 resolver for local quality and Host Agent-compatible
+# checks. It only resolves an existing runtime and does not install Java.
+
 # Resolves the repository's required Java 25 on macOS and release-platform build hosts.
 resolve_java_25() {
   if [[ -x /usr/libexec/java_home ]]; then
