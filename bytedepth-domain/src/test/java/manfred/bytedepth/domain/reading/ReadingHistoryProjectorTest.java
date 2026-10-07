@@ -64,7 +64,14 @@ class ReadingHistoryProjectorTest {
             ReadingHistoryProjector.apply(
                 current, eventFor(9L, 12L, ReadingEventType.READ_OPEN, FIRST)));
     assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            ReadingHistoryProjector.apply(
+                current, eventFor(7L, 99L, ReadingEventType.READ_OPEN, FIRST)));
+    assertThrows(
         IllegalArgumentException.class, () -> new ReadingSummary(7L, 12L, -1, 0, FIRST, FIRST));
+    assertThrows(
+        IllegalArgumentException.class, () -> new ReadingSummary(7L, 12L, 0, -1, FIRST, FIRST));
     assertThrows(
         IllegalArgumentException.class,
         () ->
@@ -76,6 +83,45 @@ class ReadingHistoryProjectorTest {
                 ReadingEventType.READ_OPEN,
                 0,
                 0,
+                FIRST,
+                FIRST));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new ReadingEvent(
+                UUID.randomUUID(),
+                7L,
+                0L,
+                UUID.randomUUID(),
+                ReadingEventType.READ_OPEN,
+                0,
+                0,
+                FIRST,
+                FIRST));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new ReadingEvent(
+                UUID.randomUUID(),
+                7L,
+                12L,
+                UUID.randomUUID(),
+                ReadingEventType.READ_OPEN,
+                -1,
+                0,
+                FIRST,
+                FIRST));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new ReadingEvent(
+                UUID.randomUUID(),
+                7L,
+                12L,
+                UUID.randomUUID(),
+                ReadingEventType.READ_OPEN,
+                0,
+                -1,
                 FIRST,
                 FIRST));
     assertThrows(
