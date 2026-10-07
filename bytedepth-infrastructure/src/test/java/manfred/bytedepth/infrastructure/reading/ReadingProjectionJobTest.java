@@ -48,7 +48,7 @@ class ReadingProjectionJobTest {
   @Test
   void stillDeletesExpiredEventsWhenThereIsNothingToProject() {
     when(eventPort.findUnprojected(100)).thenReturn(List.of());
-    when(eventPort.deleteProjectedBefore(any())).thenReturn(0);
+    when(eventPort.deleteProjectedBefore(any())).thenReturn(1);
 
     job.run();
 

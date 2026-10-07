@@ -41,6 +41,14 @@ class MyBatisReadingHistoryAdapterTest {
   }
 
   @Test
+  void returnsFalseWhenInsertIsDuplicateAndAcceptsEventsWithoutOccurredAt() {
+    ReadingEvent event = event(ReadingEventType.READ_HEARTBEAT, null, RECEIVED_AT);
+    when(mapper.insertIfAbsent(any())).thenReturn(0);
+
+    assertThat(adapter.insertIfAbsent(event)).isFalse();
+  }
+
+  @Test
   void mapsNullableOccurredAtAndSummaryRows() {
     ReadingEvent event = event(ReadingEventType.READ_HEARTBEAT, null, RECEIVED_AT);
     var row = eventRow(event, 42L, null);
