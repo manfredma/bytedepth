@@ -55,6 +55,16 @@ class ReadingProjectionJobTest {
     verify(eventPort).deleteProjectedBefore(eq(NOW.minusSeconds(7 * 24 * 60 * 60)));
   }
 
+  @Test
+  void doesNotLogWhenThereIsNothingToProjectOrDelete() {
+    when(eventPort.findUnprojected(100)).thenReturn(List.of());
+    when(eventPort.deleteProjectedBefore(any())).thenReturn(0);
+
+    job.run();
+
+    verify(eventPort).deleteProjectedBefore(eq(NOW.minusSeconds(7 * 24 * 60 * 60)));
+  }
+
   private static ReadingEvent event() {
     return new ReadingEvent(
         java.util.UUID.randomUUID(),
