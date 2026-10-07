@@ -5,10 +5,10 @@
 <mapper namespace="manfred.bytedepth.infrastructure.reading.ReadingHistoryMapper">
     <resultMap id="eventMap" type="manfred.bytedepth.infrastructure.reading.ReadingEventDO">
         <id property="id" column="id" />
-        <result property="eventId" column="event_id" javaType="java.util.UUID" />
+        <result property="eventId" column="event_id" javaType="java.util.UUID" jdbcType="CHAR" typeHandler="manfred.bytedepth.infrastructure.reading.UuidStringTypeHandler" />
         <result property="userId" column="user_id" />
         <result property="postId" column="post_id" />
-        <result property="sessionId" column="session_id" javaType="java.util.UUID" />
+        <result property="sessionId" column="session_id" javaType="java.util.UUID" jdbcType="CHAR" typeHandler="manfred.bytedepth.infrastructure.reading.UuidStringTypeHandler" />
         <result property="eventType" column="event_type" />
         <result property="activeSecondsDelta" column="active_seconds_delta" />
         <result property="maxScrollDepth" column="max_scroll_depth" />
@@ -32,7 +32,7 @@
         INSERT INTO post_reading_event
         (event_id, user_id, post_id, session_id, event_type, active_seconds_delta,
          max_scroll_depth, occurred_at, received_at)
-        VALUES (#{eventId}, #{userId}, #{postId}, #{sessionId}, #{eventType},
+        VALUES (#{eventId, jdbcType=CHAR, typeHandler=manfred.bytedepth.infrastructure.reading.UuidStringTypeHandler}, #{userId}, #{postId}, #{sessionId, jdbcType=CHAR, typeHandler=manfred.bytedepth.infrastructure.reading.UuidStringTypeHandler}, #{eventType},
                 #{activeSecondsDelta}, #{maxScrollDepth}, #{occurredAt}, #{receivedAt})
         ON DUPLICATE KEY UPDATE event_id = event_id
     </insert>
