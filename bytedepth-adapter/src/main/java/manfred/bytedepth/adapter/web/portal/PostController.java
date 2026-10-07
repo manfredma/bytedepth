@@ -71,7 +71,7 @@ public class PostController {
   private final GetSeriesPostsQryExe getSeriesPostsQryExe;
   private final SeriesNavigationQryExe seriesNavigationQryExe;
   private final GetPostRatingQryExe getPostRatingQryExe;
-  @Autowired private GetReadingSummaryQryExe getReadingSummaryQryExe;
+  @Autowired(required = false) private GetReadingSummaryQryExe getReadingSummaryQryExe;
   private final VisitRequestFilter visitRequestFilter;
   private final ApplicationEventPublisher eventPublisher;
 
