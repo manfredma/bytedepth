@@ -1,5 +1,7 @@
 package manfred.bytedepth.app.reading;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
@@ -10,6 +12,8 @@ import java.util.UUID;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
 import manfred.bytedepth.domain.reading.ReadingEventType;
+import manfred.bytedepth.domain.reading.ReadingHistoryEntry;
+import manfred.bytedepth.domain.reading.ReadingSummary;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -50,6 +54,64 @@ class RecordReadingEventCmdExeTest {
         IllegalArgumentException.class,
         () ->
             new RecordReadingEventCmdExe(getPostQryExe, eventPort).execute(7L, "java", request()));
+  }
+
+  @Test
+  void rejectsInvalidPayloadAndExcessiveHeartbeatDelta() {
+    PostDTO post = new PostDTO();
+    post.setId(12L);
+    post.setStatus("PUBLISHED");
+    when(getPostQryExe.executeBySlug("java")).thenReturn(post);
+    var command = new RecordReadingEventCmdExe(getPostQryExe, eventPort);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            command.execute(
+                7L,
+                "java",
+                new RecordReadingEventCmdExe.ReadingEventRequest(null, null, null, -1, 101, null)));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            command.execute(
+                7L,
+                "java",
+                new RecordReadingEventCmdExe.ReadingEventRequest(
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    ReadingEventType.READ_HEARTBEAT,
+                    61,
+                    0,
+                    Instant.now())));
+    assertFalse(
+        new RecordReadingEventCmdExe.ReadingEventRequest(
+                null, UUID.randomUUID(), ReadingEventType.READ_OPEN, 0, 0, null)
+            .valid());
+  }
+
+  @Test
+  void queryExecutorsAndPendingEventExposeTheirPortValues() {
+    ReadingSummary summary = new ReadingSummary(7L, 12L, 1, 15, Instant.now(), Instant.now());
+    var history = org.mockito.Mockito.mock(ReadingHistoryPort.class);
+    when(history.findByUserAndPost(7L, 12L)).thenReturn(summary);
+    assertEquals(summary, new GetReadingSummaryQryExe(history).execute(7L, 12L));
+    var entry = new ReadingHistoryEntry(12L, "java", "Java", 1, 15, Instant.now());
+    when(history.findPageByUser(7L, "cursor", 20)).thenReturn(java.util.List.of(entry));
+    assertEquals(
+        java.util.List.of(entry), new ListReadingHistoryQryExe(history).execute(7L, "cursor"));
+    var event =
+        new manfred.bytedepth.domain.reading.ReadingEvent(
+            UUID.randomUUID(),
+            7L,
+            12L,
+            UUID.randomUUID(),
+            ReadingEventType.READ_OPEN,
+            0,
+            0,
+            null,
+            Instant.now());
+    assertEquals(9L, new PendingReadingEvent(9L, event).rowId());
   }
 
   private static RecordReadingEventCmdExe.ReadingEventRequest request() {
