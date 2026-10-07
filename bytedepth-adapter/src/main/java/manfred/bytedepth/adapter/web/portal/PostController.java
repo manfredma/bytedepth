@@ -152,9 +152,7 @@ public class PostController {
     Long currentUserId = SecurityUtils.extractUserId(currentUser);
     model.addAttribute(
         "readingSummary",
-        currentUserId == null || getReadingSummaryQryExe == null
-            ? null
-            : getReadingSummaryQryExe.execute(currentUserId, id));
+        currentUserId == null ? null : getReadingSummaryQryExe.execute(currentUserId, id));
     String annotationOwnerTokenHash = annotationVisitorIdentity.existingHash(request);
     model.addAttribute(
         "annotations",
