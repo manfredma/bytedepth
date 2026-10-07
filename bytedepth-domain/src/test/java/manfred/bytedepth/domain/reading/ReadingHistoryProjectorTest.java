@@ -148,6 +148,14 @@ class ReadingHistoryProjectorTest {
     assertEquals(SECOND, summary.lastReadAt());
   }
 
+  @Test
+  void createsSummaryWithoutIncrementingCountWhenFirstEventIsNotOpen() {
+    ReadingSummary summary =
+        ReadingHistoryProjector.apply(null, event(ReadingEventType.READ_HEARTBEAT, 2, FIRST));
+    assertEquals(0, summary.readCount());
+    assertEquals(2, summary.totalActiveSeconds());
+  }
+
   private static ReadingEvent event(ReadingEventType type, int delta, Instant receivedAt) {
     return new ReadingEvent(
         UUID.randomUUID(), 7L, 12L, UUID.randomUUID(), type, delta, 80, receivedAt, receivedAt);
