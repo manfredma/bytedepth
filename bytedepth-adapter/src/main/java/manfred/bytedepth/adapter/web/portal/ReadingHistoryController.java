@@ -25,9 +25,13 @@ public class ReadingHistoryController {
   public String page(
       Model model, @RequestParam(required = false) String cursor) {
     Long userId = SecurityUtils.extractUserId(SecurityUtils.currentUser());
-    model.addAttribute(
-        "readingHistory", userId == null ? List.of() : listReadingHistoryQryExe.execute(userId, cursor));
+    var entries =
+        userId == null ? List.<manfred.bytedepth.domain.reading.ReadingHistoryEntry>of() : listReadingHistoryQryExe.execute(userId, cursor);
+    model.addAttribute("readingHistory", entries);
     model.addAttribute("readingHistoryCursor", cursor);
+    model.addAttribute(
+        "nextReadingHistoryCursor",
+        entries.size() < 20 ? null : entries.get(entries.size() - 1).lastReadAt() + "|" + entries.get(entries.size() - 1).postId());
     return "public/reading-history";
   }
 

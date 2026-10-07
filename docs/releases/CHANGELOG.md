@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Added
+
+- 新增文章阅读历史与个人阅读摘要：登录读者通过服务端事件投影长期保存，未登录读者仅在当前浏览器本地保留最近 1,000 篇文章记录。
+
 ### Changed
 
 - Quality execution is consolidated into the local pre-PR gate and release-platform Host Agent; the repository no longer runs a GitHub Actions quality workflow.

@@ -16,6 +16,8 @@ erDiagram
     user ||--o{ series : "创建者"
     user ||--o{ post_view_log : "访问者"
     user ||--o{ post_annotation : "批注者"
+    user ||--o{ post_reading_event : "个人阅读事件"
+    user ||--o{ user_post_reading_history : "个人阅读历史"
 
     category ||--o{ category : "父分类"
     category ||--o{ post : "分类"
@@ -27,6 +29,8 @@ erDiagram
     post ||--o{ post_view_log : "访问日志"
     post ||--o{ post_rating : "评分"
     post ||--o{ post_annotation : "批注"
+    post ||--o{ post_reading_event : "阅读事件"
+    post ||--o{ user_post_reading_history : "阅读历史"
 ```
 
 ## 内容表
@@ -224,6 +228,38 @@ erDiagram
 | city       | VARCHAR(64)  |                    |                       |
 | visited_at | DATETIME     | NOT NULL           |                       |
 
+## 个人阅读历史表
+
+个人阅读表与访问日志分离。`post_reading_event` 只保存登录读者的原始事件 7 天；`user_post_reading_history` 保存长期的用户-文章投影。匿名读者的同构数据只存在浏览器 localStorage，不在数据库中。
+
+### post_reading_event — 登录读者阅读事件
+
+| 列                   | 类型        | 约束                                  | 说明                                |
+| -------------------- | ----------- | ------------------------------------- | ----------------------------------- |
+| id                   | BIGINT      | PK, AUTO_INCREMENT                    | 内部事件行号                        |
+| event_id             | CHAR(36)    | NOT NULL, UNIQUE                      | 客户端事件 UUID，幂等键             |
+| user_id              | BIGINT      | NOT NULL → user.id, ON DELETE CASCADE | 认证上下文中的用户                  |
+| post_id              | BIGINT      | NOT NULL → post.id, ON DELETE CASCADE | 文章                                |
+| session_id           | CHAR(36)    | NOT NULL                              | 页面阅读会话                        |
+| event_type           | VARCHAR(32) | NOT NULL                              | OPEN / HEARTBEAT / COMPLETE / CLOSE |
+| active_seconds_delta | INT         | NOT NULL, DEFAULT 0                   | 本事件新增有效秒数                  |
+| max_scroll_depth     | TINYINT     | NOT NULL, DEFAULT 0                   | 0-100                               |
+| occurred_at          | DATETIME    | NULL                                  | 客户端诊断时间                      |
+| received_at          | DATETIME    | NOT NULL                              | 服务端接收时间                      |
+| projected_at         | DATETIME    | NULL                                  | 异步投影完成时间                    |
+
+### user_post_reading_history — 用户文章阅读历史投影
+
+| 列                   | 类型     | 约束                | 说明             |
+| -------------------- | -------- | ------------------- | ---------------- |
+| user_id              | BIGINT   | PK, FK              | 用户             |
+| post_id              | BIGINT   | PK, FK              | 文章             |
+| read_count           | BIGINT   | NOT NULL, DEFAULT 0 | 打开次数         |
+| total_active_seconds | BIGINT   | NOT NULL, DEFAULT 0 | 累计有效阅读秒数 |
+| first_read_at        | DATETIME | NOT NULL            | 首次打开时间     |
+| last_read_at         | DATETIME | NOT NULL            | 最近事件时间     |
+| updated_at           | DATETIME | NOT NULL            | 投影更新时间     |
+
 ## 访问统计聚合表
 
 原始访问日志只作为近 7 天访问明细和归档输入源；以下表只保存 PV 聚合，不保存 IP、User-Agent、Referer、城市、访问令牌或阅读进度等明细字段。V25 由 Spring 定时任务按小时归档写入。
@@ -344,5 +380,6 @@ V10 引入统一 `user` 表后，`admin_user` 的数据已迁移到 `user`，该
 | V22  | add_annotation_deleted_flag             | post_annotation.deleted                                                                              |
 | V23  | drop_persistent_logins                  | 删除 persistent_logins                                                                               |
 | V25  | add_view_log_archive_stats              | 访问日志小时/国家聚合、归档状态、表空间维护状态                                                      |
+| V27  | add_reading_history                     | 登录阅读事件与用户-文章长期阅读历史投影                                                              |
 
 V5、V7、V8、V9、V16、V17 为种子数据迁移（分类、权限），不涉及表结构变更。

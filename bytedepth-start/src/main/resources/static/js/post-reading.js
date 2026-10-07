@@ -10,6 +10,7 @@
   let reportedSeconds = 0;
   let maxScrollDepth = 0;
   let completed = false;
+  let completionReported = false;
   let lastActivityAt = Date.now();
   const store = window.ReadingHistoryStore.create({
     authenticated: tracker.dataset.authenticated === "true",
@@ -40,6 +41,7 @@
     reportedSeconds = activeSeconds;
     if (finalType === "complete") {
       store.recordComplete(delta, maxScrollDepth);
+      completionReported = true;
     } else if (finalType === "close") {
       store.recordClose(delta, maxScrollDepth);
     } else {
@@ -63,7 +65,7 @@
       updateDepth();
     }
   }, 1000);
-  setInterval(() => report(completed ? "complete" : null), reportIntervalMs);
+  setInterval(() => report(completed && !completionReported ? "complete" : null), reportIntervalMs);
   window.addEventListener("scroll", updateDepth, { passive: true });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {

@@ -59,7 +59,7 @@ public class MyBatisReadingHistoryAdapter implements ReadingEventPort, ReadingHi
     LocalDateTime cursorTime = null;
     Long cursorPostId = null;
     if (cursor != null && !cursor.isBlank()) {
-      String[] parts = cursor.split(":", -1);
+      String[] parts = cursor.split("\\|", -1);
       if (parts.length != 2) {
         throw new IllegalArgumentException("invalid reading history cursor");
       }

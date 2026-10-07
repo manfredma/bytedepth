@@ -13,7 +13,7 @@
 
 ## 阅读进度
 
-阅读进度由 `POST /posts/{slug}/reading-progress` 上报，`PostReadingController` 处理。
+站点访问分析仍由 `post_view_log` 和 `POST /posts/{slug}/reading-progress` 维护；个人阅读历史不再以访问日志作为事实来源，而由独立的 `POST /posts/{slug}/reading-events`（仅登录读者）和浏览器本地事件存储维护。详细设计见 [个人阅读历史规格](../superpowers/specs/2026-10-07-reading-history-design.md)。
 
 - 一次页面打开对应一条 `post_view_log` 记录，不合并多次打开。
 - PV 口径不变：服务端在文章访问请求时立即记录一条 PV，JS 禁用不影响 PV 统计。
@@ -22,6 +22,8 @@
 - 访问令牌（`visit_token`）校验实际走 Redis（`RedisReadingProgressTokenAdapter`，24 小时 TTL），非数据库列；token 不匹配文章或已失效时返回 204，不泄露状态。
 - `reading-progress` 端点显式豁免 CSRF（`SecurityConfig` 中 `ignoringRequestMatchers`）。
 - 完成判定：滚动深度 ≥ 80，或短文（正文不超一屏）且有效阅读 ≥ 15 秒。
+
+个人阅读事件不写入本节访问分析表，也不包含 IP、User-Agent、Referer 或设备标识。登录事件原始明细保留 7 天后删除，投影长期保存用户-文章摘要；匿名事件和摘要只存在当前浏览器。
 
 ## 访问日志保留与归档
 

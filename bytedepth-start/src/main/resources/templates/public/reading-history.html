@@ -19,6 +19,8 @@
             <span class="reading-history-meta" th:text="${entry.readCount + ' 次 · ' + entry.totalActiveSeconds + ' 秒'}">1 次 · 15 秒</span>
         </a>
     </div>
+    <a class="reading-history-next" th:if="${nextReadingHistoryCursor != null}"
+       th:href="@{/reading-history(cursor=${nextReadingHistoryCursor})}">下一页</a>
 </main>
 <script th:src="@{/js/reading-history-store.js}"></script>
 <script th:src="@{/js/reading-history-page.js}"></script>
