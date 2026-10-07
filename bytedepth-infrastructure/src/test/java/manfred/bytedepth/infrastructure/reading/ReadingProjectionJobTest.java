@@ -36,7 +36,7 @@ class ReadingProjectionJobTest {
     var event = event();
     when(eventPort.findUnprojected(100)).thenReturn(List.of(new PendingReadingEvent(41L, event)));
     when(historyPort.findByUserAndPost(7L, 12L)).thenReturn(null);
-    when(eventPort.deleteProjectedBefore(any())).thenReturn(2);
+    when(eventPort.deleteProjectedBefore(any())).thenReturn(0);
 
     job.run();
 
