@@ -10,7 +10,8 @@ import org.junit.jupiter.api.Test;
 class PostReadingAssetsTest {
 
   @Test
-  void articlePageLoadsTheReadingTrackerAndUsesLocalOrAuthenticatedReadingEvents() throws IOException {
+  void articlePageLoadsTheReadingTrackerAndUsesLocalOrAuthenticatedReadingEvents()
+      throws IOException {
     String template = classpathText("/templates/public/posts/detail.html");
     String script = classpathText("/static/js/post-reading.js");
 

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.adapter.web.util.SecurityUtils;
-import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.reading.ListReadingHistoryQryExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import org.springframework.stereotype.Controller;
@@ -22,16 +21,21 @@ public class ReadingHistoryController {
   private final PostRepository postRepository;
 
   @GetMapping
-  public String page(
-      Model model, @RequestParam(required = false) String cursor) {
+  public String page(Model model, @RequestParam(required = false) String cursor) {
     Long userId = SecurityUtils.extractUserId(SecurityUtils.currentUser());
     var entries =
-        userId == null ? List.<manfred.bytedepth.domain.reading.ReadingHistoryEntry>of() : listReadingHistoryQryExe.execute(userId, cursor);
+        userId == null
+            ? List.<manfred.bytedepth.domain.reading.ReadingHistoryEntry>of()
+            : listReadingHistoryQryExe.execute(userId, cursor);
     model.addAttribute("readingHistory", entries);
     model.addAttribute("readingHistoryCursor", cursor);
     model.addAttribute(
         "nextReadingHistoryCursor",
-        entries.size() < 20 ? null : entries.get(entries.size() - 1).lastReadAt() + "|" + entries.get(entries.size() - 1).postId());
+        entries.size() < 20
+            ? null
+            : entries.get(entries.size() - 1).lastReadAt()
+                + "|"
+                + entries.get(entries.size() - 1).postId());
     return "public/reading-history";
   }
 
@@ -46,7 +50,11 @@ public class ReadingHistoryController {
       postRepository
           .findBySlug(slug)
           .filter(post -> post.getStatus().name().equals("PUBLISHED"))
-          .ifPresent(post -> result.add(new AvailablePost(post.getSlug(), post.getTitle(), "/posts/" + post.getSlug())));
+          .ifPresent(
+              post ->
+                  result.add(
+                      new AvailablePost(
+                          post.getSlug(), post.getTitle(), "/posts/" + post.getSlug())));
     }
     return result;
   }

@@ -32,8 +32,8 @@ import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import manfred.bytedepth.domain.stats.PostViewCounter;
 import manfred.bytedepth.domain.stats.PostViewedEvent;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -71,7 +71,10 @@ public class PostController {
   private final GetSeriesPostsQryExe getSeriesPostsQryExe;
   private final SeriesNavigationQryExe seriesNavigationQryExe;
   private final GetPostRatingQryExe getPostRatingQryExe;
-  @Autowired(required = false) private GetReadingSummaryQryExe getReadingSummaryQryExe;
+
+  @Autowired(required = false)
+  private GetReadingSummaryQryExe getReadingSummaryQryExe;
+
   private final VisitRequestFilter visitRequestFilter;
   private final ApplicationEventPublisher eventPublisher;
 

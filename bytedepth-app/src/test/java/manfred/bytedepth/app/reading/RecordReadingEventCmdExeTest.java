@@ -29,10 +29,14 @@ class RecordReadingEventCmdExeTest {
     when(getPostQryExe.executeBySlug("java")).thenReturn(post);
     when(eventPort.insertIfAbsent(org.mockito.ArgumentMatchers.any())).thenReturn(true);
 
-    boolean inserted = new RecordReadingEventCmdExe(getPostQryExe, eventPort).execute(7L, "java", request());
+    boolean inserted =
+        new RecordReadingEventCmdExe(getPostQryExe, eventPort).execute(7L, "java", request());
 
     assertTrue(inserted);
-    verify(eventPort).insertIfAbsent(org.mockito.ArgumentMatchers.argThat(event -> event.userId().equals(7L) && event.postId().equals(12L)));
+    verify(eventPort)
+        .insertIfAbsent(
+            org.mockito.ArgumentMatchers.argThat(
+                event -> event.userId().equals(7L) && event.postId().equals(12L)));
   }
 
   @Test
@@ -42,10 +46,14 @@ class RecordReadingEventCmdExeTest {
     post.setStatus("DRAFT");
     when(getPostQryExe.executeBySlug("java")).thenReturn(post);
 
-    assertThrows(IllegalArgumentException.class, () -> new RecordReadingEventCmdExe(getPostQryExe, eventPort).execute(7L, "java", request()));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new RecordReadingEventCmdExe(getPostQryExe, eventPort).execute(7L, "java", request()));
   }
 
   private static RecordReadingEventCmdExe.ReadingEventRequest request() {
-    return new RecordReadingEventCmdExe.ReadingEventRequest(UUID.randomUUID(), UUID.randomUUID(), ReadingEventType.READ_OPEN, 0, 0, Instant.now());
+    return new RecordReadingEventCmdExe.ReadingEventRequest(
+        UUID.randomUUID(), UUID.randomUUID(), ReadingEventType.READ_OPEN, 0, 0, Instant.now());
   }
 }

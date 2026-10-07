@@ -19,9 +19,10 @@ public final class ReadingHistoryProjector {
     if (!current.userId().equals(event.userId()) || !current.postId().equals(event.postId())) {
       throw new IllegalArgumentException("event does not belong to the current reading summary");
     }
-    Instant lastReadAt = current.lastReadAt().isAfter(event.receivedAt())
-        ? current.lastReadAt()
-        : event.receivedAt();
+    Instant lastReadAt =
+        current.lastReadAt().isAfter(event.receivedAt())
+            ? current.lastReadAt()
+            : event.receivedAt();
     return new ReadingSummary(
         current.userId(),
         current.postId(),

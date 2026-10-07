@@ -25,11 +25,11 @@ class ReadingHistoryProjectorTest {
 
   @Test
   void heartbeatAddsOnlyItsDeltaAndMovesLastReadTime() {
-    ReadingSummary current = ReadingHistoryProjector.apply(null, event(ReadingEventType.READ_OPEN, 0, FIRST));
+    ReadingSummary current =
+        ReadingHistoryProjector.apply(null, event(ReadingEventType.READ_OPEN, 0, FIRST));
 
     ReadingSummary summary =
-        ReadingHistoryProjector.apply(
-            current, event(ReadingEventType.READ_HEARTBEAT, 15, SECOND));
+        ReadingHistoryProjector.apply(current, event(ReadingEventType.READ_HEARTBEAT, 15, SECOND));
 
     assertEquals(1, summary.readCount());
     assertEquals(15, summary.totalActiveSeconds());
@@ -39,18 +39,14 @@ class ReadingHistoryProjectorTest {
 
   @Test
   void completionAndCloseAlsoAccumulateTheirNonNegativeDeltas() {
-    ReadingSummary current = ReadingHistoryProjector.apply(null, event(ReadingEventType.READ_OPEN, 0, FIRST));
+    ReadingSummary current =
+        ReadingHistoryProjector.apply(null, event(ReadingEventType.READ_OPEN, 0, FIRST));
 
     current =
-        ReadingHistoryProjector.apply(
-            current, event(ReadingEventType.READ_COMPLETE, 12, SECOND));
+        ReadingHistoryProjector.apply(current, event(ReadingEventType.READ_COMPLETE, 12, SECOND));
     ReadingSummary summary =
         ReadingHistoryProjector.apply(
-            current,
-            event(
-                ReadingEventType.READ_CLOSE,
-                3,
-                SECOND.plusSeconds(1)));
+            current, event(ReadingEventType.READ_CLOSE, 3, SECOND.plusSeconds(1)));
 
     assertEquals(1, summary.readCount());
     assertEquals(15, summary.totalActiveSeconds());

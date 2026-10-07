@@ -28,7 +28,8 @@ public class ReadingProjectionJob {
     for (var pending : events) {
       transactionTemplate.executeWithoutResult(
           status -> {
-            var current = historyPort.findByUserAndPost(pending.event().userId(), pending.event().postId());
+            var current =
+                historyPort.findByUserAndPost(pending.event().userId(), pending.event().postId());
             historyPort.upsert(pending.event());
             ReadingHistoryProjector.apply(current, pending.event());
             eventPort.markProjected(pending.rowId(), Instant.now(clock));
@@ -36,7 +37,8 @@ public class ReadingProjectionJob {
     }
     int deleted = eventPort.deleteProjectedBefore(Instant.now(clock).minus(Duration.ofDays(7)));
     if (!events.isEmpty() || deleted > 0) {
-      log.info("Reading history projection completed: events={}, deleted={}", events.size(), deleted);
+      log.info(
+          "Reading history projection completed: events={}, deleted={}", events.size(), deleted);
     }
   }
 }

@@ -22,7 +22,11 @@ public record ReadingEvent(
     Objects.requireNonNull(sessionId, "sessionId");
     Objects.requireNonNull(type, "type");
     Objects.requireNonNull(receivedAt, "receivedAt");
-    if (userId <= 0 || postId <= 0 || activeSecondsDelta < 0 || maxScrollDepth < 0 || maxScrollDepth > 100) {
+    if (userId <= 0
+        || postId <= 0
+        || activeSecondsDelta < 0
+        || maxScrollDepth < 0
+        || maxScrollDepth > 100) {
       throw new IllegalArgumentException("reading event values are out of range");
     }
   }

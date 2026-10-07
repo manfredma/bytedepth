@@ -1,6 +1,8 @@
 (function () {
   const page = document.getElementById("reading-history-page");
-  if (!page || page.dataset.authenticated === "true") {return;}
+  if (!page || page.dataset.authenticated === "true") {
+    return;
+  }
   let items;
   try {
     items = JSON.parse(localStorage.getItem("bytedepth.reading-history.v1") || "{}");
@@ -12,7 +14,9 @@
     .slice(0, 1000);
   const list = page.querySelector(".reading-history-list");
   const empty = page.querySelector(".reading-history-empty");
-  if (!list) {return;}
+  if (!list) {
+    return;
+  }
   const slugs = entries.map((entry) => entry.postSlug).filter(Boolean);
   const query = new URLSearchParams();
   slugs.slice(0, 20).forEach((slug) => query.append("slugs", slug));
@@ -34,10 +38,14 @@
             `${entry.readCount} 次 · ${entry.totalActiveSeconds} 秒`;
           list.appendChild(link);
         });
-      if (empty) {empty.hidden = list.children.length > 0;}
+      if (empty) {
+        empty.hidden = list.children.length > 0;
+      }
     })
     .catch(() => {
       list.innerHTML = "";
-      if (empty) {empty.hidden = false;}
+      if (empty) {
+        empty.hidden = false;
+      }
     });
 })();
