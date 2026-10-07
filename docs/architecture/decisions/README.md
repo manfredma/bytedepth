@@ -39,3 +39,4 @@
 | [ADR-0020](0020-single-native-production-runtime.md)           | 单一宿主机原生生产发布与回退                      | Accepted   | 2026-09-26 |
 | [ADR-0021](0021-local-quality-release-platform-agent.md)       | 本地质量门禁与 release-platform Host Agent 分工   | Superseded | 2026-10-04 |
 | [ADR-0022](0022-pr-candidate-staging-before-merge.md)          | PR 候选先 staging 验收再合并并提升同一制品        | Accepted   | 2026-10-04 |
+| [ADR-0023](0023-reading-history-event-projections.md)          | 以阅读事件驱动个人阅读历史投影                    | Accepted   | 2026-10-07 |
