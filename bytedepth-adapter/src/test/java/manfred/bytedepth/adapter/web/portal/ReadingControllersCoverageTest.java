@@ -61,7 +61,8 @@ class ReadingControllersCoverageTest {
     authenticate();
     var entry =
         new ReadingHistoryEntry(12L, "java", "Java", 2, 30, Instant.parse("2026-10-07T10:00:00Z"));
-    when(list.execute(7L, null)).thenReturn(List.of(entry));
+    when(list.execute(7L, null))
+        .thenReturn(java.util.stream.Stream.generate(() -> entry).limit(20).toList());
     controller.page(model, null);
 
     Post published = mock(Post.class);
