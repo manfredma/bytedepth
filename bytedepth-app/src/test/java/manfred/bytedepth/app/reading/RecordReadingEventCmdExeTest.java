@@ -88,6 +88,27 @@ class RecordReadingEventCmdExeTest {
         new RecordReadingEventCmdExe.ReadingEventRequest(
                 null, UUID.randomUUID(), ReadingEventType.READ_OPEN, 0, 0, null)
             .valid());
+    UUID eventId = UUID.randomUUID();
+    UUID sessionId = UUID.randomUUID();
+    assertFalse(
+        new RecordReadingEventCmdExe.ReadingEventRequest(
+                eventId, null, ReadingEventType.READ_OPEN, 0, 0, null)
+            .valid());
+    assertFalse(
+        new RecordReadingEventCmdExe.ReadingEventRequest(eventId, sessionId, null, 0, 0, null)
+            .valid());
+    assertFalse(
+        new RecordReadingEventCmdExe.ReadingEventRequest(
+                eventId, sessionId, ReadingEventType.READ_OPEN, -1, 0, null)
+            .valid());
+    assertFalse(
+        new RecordReadingEventCmdExe.ReadingEventRequest(
+                eventId, sessionId, ReadingEventType.READ_OPEN, 0, -1, null)
+            .valid());
+    assertFalse(
+        new RecordReadingEventCmdExe.ReadingEventRequest(
+                eventId, sessionId, ReadingEventType.READ_OPEN, 0, 101, null)
+            .valid());
   }
 
   @Test
