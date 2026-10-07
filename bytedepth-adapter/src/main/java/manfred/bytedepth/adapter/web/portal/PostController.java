@@ -150,9 +150,7 @@ public class PostController {
     model.addAttribute("tags", listTagsQryExe.findByPostId(id));
     model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
     Long currentUserId = SecurityUtils.extractUserId(currentUser);
-    model.addAttribute(
-        "readingSummary",
-        currentUserId == null ? null : getReadingSummaryQryExe.execute(currentUserId, id));
+    model.addAttribute("readingSummary", readingSummary(currentUserId, id));
     String annotationOwnerTokenHash = annotationVisitorIdentity.existingHash(request);
     model.addAttribute(
         "annotations",
@@ -241,6 +239,13 @@ public class PostController {
           annotation.createdAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
           ownedByCurrentVisitor);
     }
+  }
+
+  private manfred.bytedepth.domain.reading.ReadingSummary readingSummary(Long userId, Long postId) {
+    if (userId == null || getReadingSummaryQryExe == null) {
+      return null;
+    }
+    return getReadingSummaryQryExe.execute(userId, postId);
   }
 
   @GetMapping("/new")
