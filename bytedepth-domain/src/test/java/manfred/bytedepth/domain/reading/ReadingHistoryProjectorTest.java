@@ -55,6 +55,18 @@ class ReadingHistoryProjectorTest {
   }
 
   @Test
+  void openEventIncrementsAnExistingSummaryAgain() {
+    ReadingSummary current =
+        ReadingHistoryProjector.apply(null, event(ReadingEventType.READ_OPEN, 0, FIRST));
+
+    ReadingSummary summary =
+        ReadingHistoryProjector.apply(current, event(ReadingEventType.READ_OPEN, 0, SECOND));
+
+    assertEquals(2, summary.readCount());
+    assertEquals(SECOND, summary.lastReadAt());
+  }
+
+  @Test
   void rejectsMismatchedSummaryAndInvalidValues() {
     ReadingSummary current =
         ReadingHistoryProjector.apply(null, event(ReadingEventType.READ_OPEN, 0, FIRST));
