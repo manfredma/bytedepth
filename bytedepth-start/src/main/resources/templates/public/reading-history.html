@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>阅读历史 - bytedepth</title>
+    <link rel="stylesheet" th:href="@{/css/reading-history.css}">
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
+<main class="reading-history-page" id="reading-history-page"
+      th:data-authenticated="${#authorization.expression('isAuthenticated()')}">
+    <h1>阅读历史</h1>
+    <p class="reading-history-empty" th:if="${#lists.isEmpty(readingHistory)}">还没有阅读记录。</p>
+    <div class="reading-history-list" th:unless="${#lists.isEmpty(readingHistory)}">
+        <a class="reading-history-item" th:each="entry : ${readingHistory}"
+           th:href="@{/posts/{slug}(slug=${entry.postSlug})}">
+            <span class="reading-history-title" th:text="${entry.title}">文章标题</span>
+            <span class="reading-history-meta" th:text="${entry.readCount + ' 次 · ' + entry.totalActiveSeconds + ' 秒'}">1 次 · 15 秒</span>
+        </a>
+    </div>
+</main>
+<script th:src="@{/js/reading-history-store.js}"></script>
+<script th:src="@{/js/reading-history-page.js}"></script>
+</body>
+</html>

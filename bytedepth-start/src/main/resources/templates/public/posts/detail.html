@@ -1103,6 +1103,11 @@
         <span th:text="'字数 ' + ${#numbers.formatInteger(wordCount, 1, 'COMMA')}">字数 0</span>
         <span class="meta-sep">·</span>
         <span th:text="'预计阅读 ' + ${estimatedReadingMinutes} + ' 分钟'">预计阅读 1 分钟</span>
+        <span class="reading-summary" th:if="${readingSummary != null}"
+              th:data-read-count="${readingSummary.readCount}"
+              th:data-total-active-seconds="${readingSummary.totalActiveSeconds}"
+              th:data-last-read-at="${readingSummary.lastReadAt}"
+              th:text="'已读 ' + ${readingSummary.readCount} + ' 次 · 累计 ' + ${readingSummary.totalActiveSeconds} + ' 秒 · 最近阅读于 ' + ${readingSummary.lastReadAt}"></span>
         <span style="margin-left:12px;color:var(--ink-3);">👁 <span th:text="${pvCount}">0</span> 次阅读</span>
     </div>
     <div th:if="${not #lists.isEmpty(tags)}" class="tags">
@@ -1158,10 +1163,14 @@
     </div>
     <div th:replace="~{fragments/post-rating :: rating(${post}, ${rating}, 'post-rating')}"></div>
 
-    <div th:if="${visitToken != null}" id="post-reading-tracker" hidden
+    <div id="post-reading-tracker" hidden
+         th:data-authenticated="${currentUserId != null}"
+         th:data-post-slug="${post.slug}"
          th:data-visit-token="${visitToken}"
-         th:data-progress-url="@{/posts/{slug}/reading-progress(slug=${post.slug})}"></div>
-    <script th:if="${visitToken != null}" th:src="@{/js/post-reading.js}"></script>
+         th:data-progress-url="@{/posts/{slug}/reading-progress(slug=${post.slug})}"
+         th:data-reading-events-url="@{/posts/{slug}/reading-events(slug=${post.slug})}"></div>
+    <script th:src="@{/js/reading-history-store.js}"></script>
+    <script th:src="@{/js/post-reading.js}"></script>
 
     <!-- 评论区 -->
     <div class="comment-section">

@@ -7,7 +7,7 @@ import manfred.bytedepth.domain.reading.ReadingEvent;
 public interface ReadingEventPort {
   boolean insertIfAbsent(ReadingEvent event);
 
-  List<ReadingEvent> findUnprojected(int limit);
+  List<PendingReadingEvent> findUnprojected(int limit);
 
   void markProjected(long eventRowId, Instant projectedAt);
 

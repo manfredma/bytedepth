@@ -10,20 +10,22 @@ import org.junit.jupiter.api.Test;
 class PostReadingAssetsTest {
 
   @Test
-  void articlePageLoadsTheReadingTrackerAndUsesBeaconLifecycleEvents() throws IOException {
+  void articlePageLoadsTheReadingTrackerAndUsesLocalOrAuthenticatedReadingEvents() throws IOException {
     String template = classpathText("/templates/public/posts/detail.html");
     String script = classpathText("/static/js/post-reading.js");
 
     assertThat(template)
         .contains("post-reading-tracker")
-        .contains("/reading-progress")
+        .contains("reading-history-store.js")
+        .contains("/reading-events")
         .contains("post-reading.js");
     assertThat(script)
-        .contains("navigator.sendBeacon")
+        .contains("ReadingHistoryStore")
         .contains("visibilitychange")
         .contains("pagehide")
-        .contains("activeReadSeconds")
-        .contains("maxScrollDepth");
+        .contains("recordHeartbeat")
+        .contains("recordComplete")
+        .contains("recordClose");
   }
 
   @Test

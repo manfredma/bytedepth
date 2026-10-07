@@ -90,7 +90,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     if (path.matches("/posts/[^/]+/(comments|rating)")) {
       return List.of(new Attempt("comment-rating-ip", properties.getCommentRatingIp(), ip));
     }
-    if (path.matches("/posts/[^/]+/reading-progress")) {
+    if (path.matches("/posts/[^/]+/(reading-progress|reading-events)")) {
       return List.of(new Attempt("reading-progress-ip", READING_PROGRESS_RULE, ip));
     }
     if ("/admin/images/upload".equals(path)) {

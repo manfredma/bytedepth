@@ -22,6 +22,7 @@ import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.rating.GetPostRatingQryExe;
+import manfred.bytedepth.app.reading.GetReadingSummaryQryExe;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
 import manfred.bytedepth.app.series.SeriesNavigationQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
@@ -32,6 +33,7 @@ import manfred.bytedepth.domain.series.SeriesRepository;
 import manfred.bytedepth.domain.stats.PostViewCounter;
 import manfred.bytedepth.domain.stats.PostViewedEvent;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -69,6 +71,7 @@ public class PostController {
   private final GetSeriesPostsQryExe getSeriesPostsQryExe;
   private final SeriesNavigationQryExe seriesNavigationQryExe;
   private final GetPostRatingQryExe getPostRatingQryExe;
+  @Autowired private GetReadingSummaryQryExe getReadingSummaryQryExe;
   private final VisitRequestFilter visitRequestFilter;
   private final ApplicationEventPublisher eventPublisher;
 
@@ -144,6 +147,11 @@ public class PostController {
     model.addAttribute("tags", listTagsQryExe.findByPostId(id));
     model.addAttribute("comments", listCommentsQryExe.findApprovedByPostId(id));
     Long currentUserId = SecurityUtils.extractUserId(currentUser);
+    model.addAttribute(
+        "readingSummary",
+        currentUserId == null || getReadingSummaryQryExe == null
+            ? null
+            : getReadingSummaryQryExe.execute(currentUserId, id));
     String annotationOwnerTokenHash = annotationVisitorIdentity.existingHash(request);
     model.addAttribute(
         "annotations",
