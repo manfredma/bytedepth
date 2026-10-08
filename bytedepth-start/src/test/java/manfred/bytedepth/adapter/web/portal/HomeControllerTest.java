@@ -85,7 +85,10 @@ class HomeControllerTest {
         .perform(get("/"))
         .andExpect(status().isOk())
         .andExpect(model().attribute("featuredPost", featured))
-        .andExpect(model().attribute("recommendedPosts", List.of(recommendedOne, recommendedTwo)));
+        .andExpect(model().attribute("recommendedPosts", List.of(recommendedOne, recommendedTwo)))
+        .andExpect(content().string(containsString("主推文章")))
+        .andExpect(content().string(containsString("适合作为首页入口")))
+        .andExpect(content().string(containsString("推荐一")));
 
     verify(listPostsQryExe).executeFeatured();
   }
