@@ -1104,10 +1104,10 @@
         <span class="meta-sep">·</span>
         <span th:text="'预计阅读 ' + ${estimatedReadingMinutes} + ' 分钟'">预计阅读 1 分钟</span>
         <span class="reading-summary"
-              th:data-read-count="${readingSummary.readCount}"
-              th:data-total-active-seconds="${readingSummary.totalActiveSeconds}"
-              th:data-last-read-at="${readingSummary.lastReadAt}"
-              th:text="'已读 ' + ${readingSummary.readCount} + ' 次 · 累计 ' + ${readingSummary.totalActiveSeconds} + ' 秒 · 最近阅读于 ' + ${readingSummary.lastReadAt}"></span>
+              th:data-read-count="${readingSummary == null ? null : readingSummary.readCount}"
+              th:data-total-active-seconds="${readingSummary == null ? null : readingSummary.totalActiveSeconds}"
+              th:data-last-read-at="${readingSummary == null ? null : readingSummary.lastReadAt}"
+              th:text="${readingSummary == null ? '' : '已读 ' + readingSummary.readCount + ' 次 · 累计 ' + readingSummary.totalActiveSeconds + ' 秒 · 最近阅读于 ' + readingSummary.lastReadAt}"></span>
         <span style="margin-left:12px;color:var(--ink-3);">👁 <span th:text="${pvCount}">0</span> 次阅读</span>
     </div>
     <div th:if="${not #lists.isEmpty(tags)}" class="tags">
