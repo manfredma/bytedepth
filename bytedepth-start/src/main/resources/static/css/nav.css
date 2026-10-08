@@ -75,11 +75,27 @@
   height: 36px;
 }
 
-.nav-brand span {
+.nav-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   color: var(--bd-accent, #d93652);
-  font-weight: 800;
-  font-size: 1.34rem;
   letter-spacing: 0.01em;
+}
+
+.nav-brand-copy strong {
+  font-size: 1.16rem;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.nav-brand-subtitle {
+  color: var(--bd-nav-accent, #f05268);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .nav-primary {

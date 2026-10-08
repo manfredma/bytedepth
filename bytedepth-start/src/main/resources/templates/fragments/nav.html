@@ -11,7 +11,7 @@
         <div class="nav-left">
             <a th:href="@{/}" class="nav-brand">
                 <img th:src="@{/icons/logo.svg}" alt="bd" width="28" height="28">
-                <span>bytedepth</span>
+                <span class="nav-brand-copy"><strong>bytedepth</strong><small class="nav-brand-subtitle" th:if="${showThemeSwitcher}">深入字节，理解系统</small></span>
             </a>
             <div class="nav-primary">
                 <a th:href="@{/posts}">文章</a>

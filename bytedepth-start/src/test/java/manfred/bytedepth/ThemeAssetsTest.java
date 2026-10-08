@@ -96,6 +96,21 @@ class ThemeAssetsTest {
   }
 
   @Test
+  void sharedHeaderCarriesSmallBrandSloganAndLegacyNavigation() throws Exception {
+    String nav = classpathText("/templates/fragments/nav.html");
+    String css = classpathText("/static/css/nav.css");
+
+    assertThat(nav)
+        .contains("nav-brand-copy")
+        .contains("nav-brand-subtitle")
+        .contains("深入字节，理解系统")
+        .contains("/login")
+        .contains("/register")
+        .contains("/network");
+    assertThat(css).contains(".nav-brand-subtitle").contains("font-size: 0.68rem");
+  }
+
+  @Test
   void adminLayoutDefinesMobileFloatingSidebarContract() throws Exception {
     String css = classpathText("/static/css/admin-layout.css");
     String sidebar = classpathText("/templates/fragments/admin-sidebar.html");
