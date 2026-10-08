@@ -12,7 +12,7 @@
       th:data-authenticated="${#authorization.expression('isAuthenticated()')}">
     <h1>阅读历史</h1>
     <p class="reading-history-empty" th:if="${#lists.isEmpty(readingHistory)}">还没有阅读记录。</p>
-    <div class="reading-history-list" th:unless="${#lists.isEmpty(readingHistory)}">
+    <div class="reading-history-list">
         <a class="reading-history-item" th:each="entry : ${readingHistory}"
            th:href="@{/posts/{slug}(slug=${entry.postSlug})}">
             <span class="reading-history-title" th:text="${entry.title}">文章标题</span>

@@ -30,6 +30,16 @@ class PostReadingAssetsTest {
   }
 
   @Test
+  void anonymousHistoryKeepsTheClientRenderedListContainer() throws IOException {
+    String template = classpathText("/templates/public/reading-history.html");
+
+    assertThat(template)
+        .contains("id=\"reading-history-page\"")
+        .contains("class=\"reading-history-list\"")
+        .doesNotContain("class=\"reading-history-list\" th:unless=");
+  }
+
+  @Test
   void articlePageLoadsOptInCodeBlockEnhancementAssets() throws IOException {
     String template = classpathText("/templates/public/posts/detail.html");
     String css = classpathText("/static/css/code-blocks.css");
