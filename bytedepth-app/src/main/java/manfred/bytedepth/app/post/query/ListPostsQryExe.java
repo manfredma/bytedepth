@@ -54,6 +54,12 @@ public class ListPostsQryExe {
         .collect(Collectors.toList());
   }
 
+  public List<PostDTO> executeFeatured() {
+    return postRepository.findFeaturedPublished().stream()
+        .map(this::toDTO)
+        .collect(Collectors.toList());
+  }
+
   public List<PostDTO> executeByTag(String tagSlug, int page, int size) {
     return postRepository.findPublishedByTag(tagSlug, page, size).stream()
         .map(this::toDTO)
@@ -80,6 +86,8 @@ public class ListPostsQryExe {
     dto.setStatus(post.getStatus().name());
     dto.setPublishedAt(post.getPublishedAt());
     dto.setCreatedAt(post.getCreatedAt());
+    dto.setFeaturedAt(post.getFeaturedAt());
+    dto.setFeaturedReason(post.getFeaturedReason());
     dto.setCategoryId(post.getCategoryId());
     if (post.getCategoryId() != null) {
       categoryRepository

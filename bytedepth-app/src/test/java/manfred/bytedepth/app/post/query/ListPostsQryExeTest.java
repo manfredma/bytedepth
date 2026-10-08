@@ -149,6 +149,20 @@ class ListPostsQryExeTest {
     assertTrue(exe.executeLatestExcluding(List.of(), 3).isEmpty());
   }
 
+  @Test
+  void executeFeatured_mapsEditorialMetadata() {
+    Post post = postWithoutCategory(11L, "featured", "Featured");
+    post.feature("适合作为首页入口");
+    when(postRepository.findFeaturedPublished()).thenReturn(List.of(post));
+
+    List<PostDTO> result = exe.executeFeatured();
+
+    assertEquals(1, result.size());
+    assertEquals("Featured", result.getFirst().getTitle());
+    assertNotNull(result.getFirst().getFeaturedAt());
+    assertEquals("适合作为首页入口", result.getFirst().getFeaturedReason());
+  }
+
   // --- executeByTag ---
 
   @Test
