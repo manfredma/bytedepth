@@ -78,6 +78,15 @@ class PostTest {
   }
 
   @Test
+  void feature_blankReason_normalizesToNull() {
+    Post post = Post.create("T", "C", 1L);
+
+    post.feature("   ");
+
+    assertNull(post.getFeaturedReason());
+  }
+
+  @Test
   void unfeature_setsFeaturedFalse() {
     Post post = Post.create("T", "C", 1L);
     post.feature("推荐理由");
