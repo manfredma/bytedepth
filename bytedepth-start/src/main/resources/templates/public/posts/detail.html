@@ -90,6 +90,15 @@
             border-bottom: 1px solid var(--border);
         }
         .meta-sep { color: var(--border); }
+        .reading-summary {
+            color: var(--ink-2);
+            padding-left: 16px;
+            border-left: 1px solid var(--border);
+        }
+        .post-view-count {
+            margin-left: auto;
+            white-space: nowrap;
+        }
         .status-badge {
             display: inline-flex;
             align-items: center;
@@ -672,6 +681,13 @@
                 border-top: none;
             }
             h1 { font-size: 1.5rem; }
+            .meta { gap: 10px 12px; }
+            .reading-summary,
+            .post-view-count {
+                flex-basis: 100%;
+                margin-left: 0;
+            }
+            .reading-summary { padding-left: 0; border-left: 0; }
             .content { font-size: 0.97rem; line-height: 1.75; }
             .content pre { padding: 14px 14px; font-size: 0.82em; }
             .content table { font-size: 0.82rem; }
@@ -1107,8 +1123,8 @@
               th:data-read-count="${readingSummary == null ? null : readingSummary.readCount}"
               th:data-total-active-seconds="${readingSummary == null ? null : readingSummary.totalActiveSeconds}"
               th:data-last-read-at="${readingSummary == null ? null : readingSummary.lastReadAt}"
-              th:text="${readingSummary == null ? '' : '已读 ' + readingSummary.readCount + ' 次 · 累计 ' + readingSummary.totalActiveSeconds + ' 秒 · 最近阅读于 ' + readingSummary.lastReadAt}"></span>
-        <span style="margin-left:12px;color:var(--ink-3);">👁 <span th:text="${pvCount}">0</span> 次阅读</span>
+              th:text="${readingSummary == null ? '' : '已读 ' + readingSummary.readCount + ' 次'}"></span>
+        <span class="post-view-count">👁 <span th:text="${pvCount}">0</span> 次阅读</span>
     </div>
     <div th:if="${not #lists.isEmpty(tags)}" class="tags">
         <a th:each="tag : ${tags}" th:href="@{/posts(tag=${tag.slug})}"

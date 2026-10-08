@@ -49,11 +49,40 @@
     }
     renderSummary();
   }
+  function formatDuration(seconds) {
+    const total = Math.max(0, Number(seconds) || 0);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const remainingSeconds = total % 60;
+    if (hours > 0) {
+      return `${hours} 小时 ${minutes} 分`;
+    }
+    if (minutes > 0) {
+      return `${minutes} 分 ${remainingSeconds} 秒`;
+    }
+    return `${remainingSeconds} 秒`;
+  }
+  function formatReadAt(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "时间未知";
+    }
+    return new Intl.DateTimeFormat("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+      .format(date)
+      .replace(/\//g, "-");
+  }
   function renderSummary() {
     const target = document.querySelector(".reading-summary");
     const summary = store.getSummary();
     if (target && summary) {
-      target.textContent = `已读 ${summary.readCount} 次 · 累计 ${summary.totalActiveSeconds} 秒 · 最近阅读于 ${summary.lastReadAt}`;
+      target.textContent = `已读 ${summary.readCount} 次 · 累计 ${formatDuration(summary.totalActiveSeconds)} · 最近阅读 ${formatReadAt(summary.lastReadAt)}`;
     }
   }
   ["scroll", "touchstart", "click", "keydown"].forEach((type) =>

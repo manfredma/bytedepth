@@ -22,6 +22,9 @@ class PostReadingAssetsTest {
         .contains("post-reading.js");
     assertThat(script)
         .contains("ReadingHistoryStore")
+        .contains("formatDuration")
+        .contains("formatReadAt")
+        .contains("Intl.DateTimeFormat")
         .contains("visibilitychange")
         .contains("pagehide")
         .contains("recordHeartbeat")
@@ -45,6 +48,7 @@ class PostReadingAssetsTest {
 
     assertThat(template)
         .contains("class=\"reading-summary\"")
+        .contains("class=\"post-view-count\"")
         .doesNotContain("class=\"reading-summary\" th:if=");
   }
 
