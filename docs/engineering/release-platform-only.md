@@ -13,6 +13,47 @@ AI Agent 接手 bytedepth 发布任务时，先按下面顺序开场；不要从
 5. **确认候选**：优先复用相同 project、sourceRef 和 commit SHA 的已有 candidate；没有时才创建 candidate。网络超时后先查询结果，不要重复创建。
 6. **进入构建/发布闭环**：按“QUALITY → BUILD → artifact → staging → integration/E2E → 人工验收 → production”的顺序推进，并持续轮询服务端状态。
 
+注意：macOS 的 `launchctl setenv` 只影响之后启动的进程，不会自动修改已经打开的终端或 Agent 进程。因此必须同时完成“机器持久化”和“当前进程导入”。
+
+### 鉴权初始化的完整闭环（只需每台机器做一次）
+
+1. 打开 [Agent 鉴权页面](https://devops.bytedepth.cn/manual/agent/auth)，完成 Hearth 登录。
+2. 点击“生成一次性 Agent Token”，复制页面中**唯一一次显示**的明文 Token。Token 不要写入仓库、聊天记录或命令历史。
+3. macOS 将 Token 写入 launchd，并立即导入当前终端：
+
+   ```bash
+   /bin/launchctl setenv RELEASE_PLATFORM_AGENT_TOKEN '<粘贴 Token；不要把这行提交到仓库>'
+   export RELEASE_PLATFORM_AGENT_TOKEN="$(/bin/launchctl getenv RELEASE_PLATFORM_AGENT_TOKEN)"
+   ```
+
+   Linux、容器或其他运行环境则把 Token 注入启动 Agent 的进程环境，并确保子进程继承 `RELEASE_PLATFORM_AGENT_TOKEN`。
+
+4. 在同一个 Agent 进程中验证，不要只验证 `launchctl`：
+
+   ```bash
+   test -n "${RELEASE_PLATFORM_AGENT_TOKEN:-}" || exit 1
+   export RELEASE_PLATFORM_API="https://devops.bytedepth.cn/api/v1"
+   curl --fail-with-body "$RELEASE_PLATFORM_API/projects" \
+     -H "Authorization: Bearer $RELEASE_PLATFORM_AGENT_TOKEN" \
+     -H "X-Request-Id: $(uuidgen | tr '[:upper:]' '[:lower:]')"
+   ```
+
+   只有 HTTP 200 且返回项目列表，才算 Agent 登录完成。`launchctl getenv` 有值但当前 `test -n` 失败，说明当前 Agent 尚未导入 Token；重新执行第 3 步或重启 Agent 进程。
+
+5. 后续每次 Agent 开始发布前，先执行下面的导入兼容片段；它不会重新生成 Token：
+
+   ```bash
+   if [ -z "${RELEASE_PLATFORM_AGENT_TOKEN:-}" ] && command -v launchctl >/dev/null 2>&1; then
+     export RELEASE_PLATFORM_AGENT_TOKEN="$(launchctl getenv RELEASE_PLATFORM_AGENT_TOKEN 2>/dev/null || true)"
+   fi
+   test -n "${RELEASE_PLATFORM_AGENT_TOKEN:-}" || {
+     echo "请先打开 release-platform Agent 鉴权页面完成一次性初始化" >&2
+     exit 1
+   }
+   ```
+
+Token 被服务端 revoke 后，API 会返回 401；此时重新执行第 1～4 步。不要因为 401 重复创建 candidate 或重新构建 artifact。
+
 Agent 可以用下面这段作为每次发布任务的开场自检：
 
 ```text
