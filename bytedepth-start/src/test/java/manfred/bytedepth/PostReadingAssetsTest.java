@@ -40,6 +40,15 @@ class PostReadingAssetsTest {
   }
 
   @Test
+  void anonymousArticleKeepsTheClientRenderedReadingSummaryContainer() throws IOException {
+    String template = classpathText("/templates/public/posts/detail.html");
+
+    assertThat(template)
+        .contains("class=\"reading-summary\"")
+        .doesNotContain("class=\"reading-summary\" th:if=");
+  }
+
+  @Test
   void articlePageLoadsOptInCodeBlockEnhancementAssets() throws IOException {
     String template = classpathText("/templates/public/posts/detail.html");
     String css = classpathText("/static/css/code-blocks.css");

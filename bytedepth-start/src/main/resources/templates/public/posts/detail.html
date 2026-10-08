@@ -1103,7 +1103,7 @@
         <span th:text="'字数 ' + ${#numbers.formatInteger(wordCount, 1, 'COMMA')}">字数 0</span>
         <span class="meta-sep">·</span>
         <span th:text="'预计阅读 ' + ${estimatedReadingMinutes} + ' 分钟'">预计阅读 1 分钟</span>
-        <span class="reading-summary" th:if="${readingSummary != null}"
+        <span class="reading-summary"
               th:data-read-count="${readingSummary.readCount}"
               th:data-total-active-seconds="${readingSummary.totalActiveSeconds}"
               th:data-last-read-at="${readingSummary.lastReadAt}"
