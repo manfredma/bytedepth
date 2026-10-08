@@ -86,6 +86,7 @@ public class ListPostsQryExe {
     dto.setStatus(post.getStatus().name());
     dto.setPublishedAt(post.getPublishedAt());
     dto.setCreatedAt(post.getCreatedAt());
+    dto.setFeatured(post.getFeatured());
     dto.setFeaturedAt(post.getFeaturedAt());
     dto.setFeaturedReason(post.getFeaturedReason());
     dto.setCategoryId(post.getCategoryId());

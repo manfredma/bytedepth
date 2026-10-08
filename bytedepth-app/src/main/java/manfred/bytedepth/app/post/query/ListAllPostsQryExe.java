@@ -76,6 +76,9 @@ public class ListAllPostsQryExe {
     dto.setPublishedAt(post.getPublishedAt());
     dto.setCreatedAt(post.getCreatedAt());
     dto.setCategoryId(post.getCategoryId());
+    dto.setFeatured(post.getFeatured());
+    dto.setFeaturedAt(post.getFeaturedAt());
+    dto.setFeaturedReason(post.getFeaturedReason());
     dto.setSeriesId(post.getSeriesId());
     if (post.getSeriesId() != null) {
       seriesRepository

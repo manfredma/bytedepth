@@ -92,6 +92,14 @@
             </div>
         </div>
         <div class="actions">
+            <span th:if="${p.featured}" class="badge badge-featured">首页推荐</span>
+            <form th:if="${p.featured != true}" th:action="@{/admin/posts/{id}/feature(id=${p.id})}" method="post" class="feature-form">
+                <input type="text" name="featuredReason" placeholder="推荐理由" maxlength="500" aria-label="推荐理由">
+                <button type="submit" class="btn-feature">推荐</button>
+            </form>
+            <form th:if="${p.featured}" th:action="@{/admin/posts/{id}/unfeature(id=${p.id})}" method="post">
+                <button type="submit" class="btn-edit">取消推荐</button>
+            </form>
             <!-- 已绑定专栏：移出按钮 -->
             <form th:if="${p.seriesId != null}"
                   th:action="@{/admin/posts/{id}/series/remove(id=${p.id})}" method="post"

@@ -10,6 +10,7 @@ import manfred.bytedepth.app.category.CategoryDTO;
 import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.DeletePostCmdExe;
+import manfred.bytedepth.app.post.command.FeaturePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
@@ -38,6 +39,7 @@ class AdminPostControllerCoverageTest {
           mock(UpdatePostCmdExe.class),
           mock(PublishPostCmdExe.class),
           mock(DeletePostCmdExe.class),
+          mock(FeaturePostCmdExe.class),
           categories,
           mock(SetPostTagsCmdExe.class),
           seriesRepository,

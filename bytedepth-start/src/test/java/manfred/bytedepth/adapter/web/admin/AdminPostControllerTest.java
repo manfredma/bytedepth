@@ -25,6 +25,7 @@ import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.DeletePostCmdExe;
+import manfred.bytedepth.app.post.command.FeaturePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
@@ -82,6 +83,8 @@ class AdminPostControllerTest {
   @MockitoBean private PublishPostCmdExe publishPostCmdExe;
 
   @MockitoBean private DeletePostCmdExe deletePostCmdExe;
+
+  @MockitoBean private FeaturePostCmdExe featurePostCmdExe;
 
   @MockitoBean private ListCategoriesQryExe listCategoriesQryExe;
 
@@ -291,6 +294,28 @@ class AdminPostControllerTest {
   }
 
   @Test
+  @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
+  void adminFeature_withReason_redirectsToList() throws Exception {
+    mockMvc
+        .perform(post("/admin/posts/1/feature").with(csrf()).param("featuredReason", "适合作为首页入口"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/admin/posts"));
+
+    verify(featurePostCmdExe).feature(1L, "适合作为首页入口");
+  }
+
+  @Test
+  @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
+  void adminUnfeature_redirectsToList() throws Exception {
+    mockMvc
+        .perform(post("/admin/posts/1/unfeature").with(csrf()))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/admin/posts"));
+
+    verify(featurePostCmdExe).unfeature(1L);
+  }
+
+  @Test
   @WithMockUser(authorities = "blog:post:create")
   void regularAuthor_listContainsOnlyOwnPostsAndSeries() throws Exception {
     when(contentOwnershipGuard.canManagePosts(any())).thenReturn(false);
@@ -430,6 +455,7 @@ class AdminPostControllerTest {
         updatePostCmdExe,
         publishPostCmdExe,
         deletePostCmdExe,
+        featurePostCmdExe,
         listCategoriesQryExe,
         setPostTagsCmdExe,
         seriesRepository,

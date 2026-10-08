@@ -24,6 +24,7 @@ public class PostDTO {
   private String seriesName;
   private String seriesSlug;
   private Long viewCount;
+  private Boolean featured;
   private LocalDateTime featuredAt;
   private String featuredReason;
 }

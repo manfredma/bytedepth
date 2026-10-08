@@ -12,9 +12,13 @@ public class FeaturePostCmdExe {
   private final PostRepository postRepository;
 
   public void feature(Long postId) {
+    feature(postId, null);
+  }
+
+  public void feature(Long postId, String reason) {
     var post =
         postRepository.findById(postId).orElseThrow(() -> new DomainException("文章不存在：" + postId));
-    post.feature();
+    post.feature(reason);
     postRepository.save(post);
   }
 

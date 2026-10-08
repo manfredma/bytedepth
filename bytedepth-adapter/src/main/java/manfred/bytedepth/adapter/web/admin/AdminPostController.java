@@ -12,6 +12,7 @@ import manfred.bytedepth.app.category.ListCategoriesQryExe;
 import manfred.bytedepth.app.post.command.CreatePostCmd;
 import manfred.bytedepth.app.post.command.CreatePostCmdExe;
 import manfred.bytedepth.app.post.command.DeletePostCmdExe;
+import manfred.bytedepth.app.post.command.FeaturePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
@@ -49,6 +50,7 @@ public class AdminPostController {
   private final UpdatePostCmdExe updatePostCmdExe;
   private final PublishPostCmdExe publishPostCmdExe;
   private final DeletePostCmdExe deletePostCmdExe;
+  private final FeaturePostCmdExe featurePostCmdExe;
   private final ListCategoriesQryExe listCategoriesQryExe;
   private final SetPostTagsCmdExe setPostTagsCmdExe;
   private final SeriesRepository seriesRepository;
@@ -64,6 +66,7 @@ public class AdminPostController {
       UpdatePostCmdExe updatePostCmdExe,
       PublishPostCmdExe publishPostCmdExe,
       DeletePostCmdExe deletePostCmdExe,
+      FeaturePostCmdExe featurePostCmdExe,
       ListCategoriesQryExe listCategoriesQryExe,
       SetPostTagsCmdExe setPostTagsCmdExe,
       SeriesRepository seriesRepository,
@@ -77,6 +80,7 @@ public class AdminPostController {
     this.updatePostCmdExe = updatePostCmdExe;
     this.publishPostCmdExe = publishPostCmdExe;
     this.deletePostCmdExe = deletePostCmdExe;
+    this.featurePostCmdExe = featurePostCmdExe;
     this.listCategoriesQryExe = listCategoriesQryExe;
     this.setPostTagsCmdExe = setPostTagsCmdExe;
     this.seriesRepository = seriesRepository;
@@ -232,6 +236,23 @@ public class AdminPostController {
   public String delete(Authentication authentication, @PathVariable Long id) {
     contentOwnershipGuard.requirePostOwner(authentication, id);
     deletePostCmdExe.execute(id);
+    return "redirect:/admin/posts";
+  }
+
+  @PostMapping("/{id}/feature")
+  public String feature(
+      Authentication authentication,
+      @PathVariable Long id,
+      @RequestParam(required = false) String featuredReason) {
+    contentOwnershipGuard.requirePostOwner(authentication, id);
+    featurePostCmdExe.feature(id, featuredReason);
+    return "redirect:/admin/posts";
+  }
+
+  @PostMapping("/{id}/unfeature")
+  public String unfeature(Authentication authentication, @PathVariable Long id) {
+    contentOwnershipGuard.requirePostOwner(authentication, id);
+    featurePostCmdExe.unfeature(id);
     return "redirect:/admin/posts";
   }
 

@@ -48,6 +48,27 @@ class FeaturePostCmdExeTest {
   }
 
   @Test
+  void feature_withReason_persistsEditorialReason() {
+    Post post =
+        Post.reconstruct(
+            1L,
+            "T",
+            "C",
+            PostStatus.PUBLISHED,
+            LocalDateTime.now(),
+            LocalDateTime.now(),
+            LocalDateTime.now(),
+            null,
+            1L,
+            false);
+    when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+
+    exe.feature(1L, "适合作为首页入口");
+
+    verify(postRepository).save(argThat(p -> "适合作为首页入口".equals(p.getFeaturedReason())));
+  }
+
+  @Test
   void unfeature_setsFeaturedFalse() {
     Post post =
         Post.reconstruct(
