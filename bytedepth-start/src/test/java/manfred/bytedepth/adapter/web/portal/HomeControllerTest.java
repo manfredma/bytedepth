@@ -70,6 +70,27 @@ class HomeControllerTest {
   }
 
   @Test
+  void home_projectsFeaturedAndRecommendedPosts() throws Exception {
+    PostDTO featured = post(7L, "主推文章");
+    featured.setFeaturedReason("适合作为首页入口");
+    PostDTO recommendedOne = post(8L, "推荐一");
+    PostDTO recommendedTwo = post(9L, "推荐二");
+    when(listPostsQryExe.executeFeatured())
+        .thenReturn(List.of(featured, recommendedOne, recommendedTwo));
+    stubEmptyDiscoveryFeed();
+    when(listPostsQryExe.countPublished()).thenReturn(2L);
+    when(listProjectsQryExe.execute()).thenReturn(List.of());
+
+    mockMvc
+        .perform(get("/"))
+        .andExpect(status().isOk())
+        .andExpect(model().attribute("featuredPost", featured))
+        .andExpect(model().attribute("recommendedPosts", List.of(recommendedOne, recommendedTwo)));
+
+    verify(listPostsQryExe).executeFeatured();
+  }
+
+  @Test
   void home_modelContainsProjectsAttribute() throws Exception {
     stubEmptyDiscoveryFeed();
     when(listPostsQryExe.countPublished()).thenReturn(0L);

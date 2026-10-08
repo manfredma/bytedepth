@@ -30,6 +30,13 @@ public class HomeController {
       @RequestParam(required = false) String sort,
       Model model) {
     String normalizedSort = normalizeSort(sort);
+    var featuredPosts = listPostsQryExe.executeFeatured();
+    model.addAttribute("featuredPost", featuredPosts.isEmpty() ? null : featuredPosts.getFirst());
+    model.addAttribute(
+        "recommendedPosts",
+        featuredPosts.size() <= 1
+            ? List.of()
+            : featuredPosts.subList(1, Math.min(featuredPosts.size(), 5)));
     List<PostDTO> posts;
     int discoveryRecentCount = 0;
     if ("latest".equals(normalizedSort)) {
