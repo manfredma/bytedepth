@@ -54,6 +54,11 @@ public interface PostMapper extends BaseMapper<PostDO> {
       @Param("excludedIds") List<Long> excludedIds, @Param("limit") int limit);
 
   @Select(
+      "SELECT * FROM post WHERE status = 'PUBLISHED' AND featured = TRUE "
+          + "ORDER BY featured_at DESC, published_at DESC, id DESC")
+  List<PostDO> findFeaturedPublished();
+
+  @Select(
       "SELECT p.* FROM post p "
           + "INNER JOIN post_tag pt ON p.id = pt.post_id "
           + "INNER JOIN tag t ON pt.tag_id = t.id "

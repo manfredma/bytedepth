@@ -18,6 +18,8 @@ public class PostDO {
   private String content;
   private String status;
   private Boolean featured; // 是否首页推荐
+  private LocalDateTime featuredAt;
+  private String featuredReason;
   private LocalDateTime createdAt;
   private LocalDateTime publishedAt;
   private LocalDateTime updatedAt;

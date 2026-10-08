@@ -246,6 +246,23 @@ class PostRepositoryImplTest {
     assertTrue(repository.findLatestPublishedExcluding(List.of(1L), 5).isEmpty());
   }
 
+  @Test
+  void findFeaturedPublished_mapsEditorialMetadata() {
+    PostDO row = postRow(7L);
+    row.setFeatured(true);
+    row.setFeaturedAt(LocalDateTime.of(2026, 10, 8, 9, 0));
+    row.setFeaturedReason("适合作为入门文章");
+    when(postMapper.findFeaturedPublished()).thenReturn(List.of(row));
+
+    var posts = repository.findFeaturedPublished();
+
+    assertEquals(1, posts.size());
+    assertTrue(posts.get(0).getFeatured());
+    assertEquals(row.getFeaturedAt(), posts.get(0).getFeaturedAt());
+    assertEquals("适合作为入门文章", posts.get(0).getFeaturedReason());
+    verify(postMapper).findFeaturedPublished();
+  }
+
   // ---- countPublished ----
 
   @Test

@@ -15,6 +15,8 @@ public class Post {
   private String content;
   private PostStatus status;
   private Boolean featured = false;
+  private LocalDateTime featuredAt;
+  private String featuredReason;
   private LocalDateTime createdAt;
   private LocalDateTime publishedAt;
   private LocalDateTime updatedAt;
@@ -145,6 +147,38 @@ public class Post {
       Long authorId,
       Boolean featured,
       Integer contentVersion) {
+    return reconstruct(
+        id,
+        slug,
+        title,
+        content,
+        status,
+        createdAt,
+        publishedAt,
+        updatedAt,
+        categoryId,
+        authorId,
+        featured,
+        null,
+        null,
+        contentVersion);
+  }
+
+  public static Post reconstruct(
+      Long id,
+      String slug,
+      String title,
+      String content,
+      PostStatus status,
+      LocalDateTime createdAt,
+      LocalDateTime publishedAt,
+      LocalDateTime updatedAt,
+      Long categoryId,
+      Long authorId,
+      Boolean featured,
+      LocalDateTime featuredAt,
+      String featuredReason,
+      Integer contentVersion) {
     Post post = new Post();
     post.id = id;
     post.slug = slug;
@@ -153,6 +187,8 @@ public class Post {
     post.status = status;
     post.authorId = authorId;
     post.featured = Boolean.TRUE.equals(featured);
+    post.featuredAt = featuredAt;
+    post.featuredReason = featuredReason;
     post.createdAt = createdAt;
     post.publishedAt = publishedAt;
     post.updatedAt = updatedAt;
@@ -200,10 +236,18 @@ public class Post {
   }
 
   public void feature() {
+    feature(null);
+  }
+
+  public void feature(String reason) {
     this.featured = true;
+    this.featuredAt = LocalDateTime.now();
+    this.featuredReason = reason == null || reason.isBlank() ? null : reason.trim();
   }
 
   public void unfeature() {
     this.featured = false;
+    this.featuredAt = null;
+    this.featuredReason = null;
   }
 }

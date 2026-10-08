@@ -67,11 +67,24 @@ class PostTest {
   }
 
   @Test
+  void feature_recordsFeaturedAtAndReason() {
+    Post post = Post.create("T", "C", 1L);
+
+    post.feature("解释系统边界的基础文章");
+
+    assertTrue(post.getFeatured());
+    assertNotNull(post.getFeaturedAt());
+    assertEquals("解释系统边界的基础文章", post.getFeaturedReason());
+  }
+
+  @Test
   void unfeature_setsFeaturedFalse() {
     Post post = Post.create("T", "C", 1L);
-    post.feature();
+    post.feature("推荐理由");
     post.unfeature();
     assertFalse(post.getFeatured());
+    assertNull(post.getFeaturedAt());
+    assertNull(post.getFeaturedReason());
   }
 
   @Test

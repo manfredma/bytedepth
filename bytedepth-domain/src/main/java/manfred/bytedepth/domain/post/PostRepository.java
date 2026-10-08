@@ -16,6 +16,8 @@ public interface PostRepository {
 
   List<Post> findLatestPublishedExcluding(List<Long> excludedIds, int limit);
 
+  List<Post> findFeaturedPublished();
+
   long countPublished();
 
   List<Post> findPublishedByTag(String tagSlug, int page, int size);

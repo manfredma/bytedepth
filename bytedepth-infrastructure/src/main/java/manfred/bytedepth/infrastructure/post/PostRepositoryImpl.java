@@ -69,6 +69,13 @@ public class PostRepositoryImpl implements PostRepository {
   }
 
   @Override
+  public List<Post> findFeaturedPublished() {
+    return postMapper.findFeaturedPublished().stream()
+        .map(this::toEntity)
+        .collect(Collectors.toList());
+  }
+
+  @Override
   public long countPublished() {
     return postMapper.selectCount(
         new LambdaQueryWrapper<PostDO>().eq(PostDO::getStatus, PostStatus.PUBLISHED.name()));
@@ -248,6 +255,8 @@ public class PostRepositoryImpl implements PostRepository {
     d.setContent(post.getContent());
     d.setStatus(post.getStatus().name());
     d.setFeatured(Boolean.TRUE.equals(post.getFeatured()));
+    d.setFeaturedAt(post.getFeaturedAt());
+    d.setFeaturedReason(post.getFeaturedReason());
     d.setCreatedAt(post.getCreatedAt());
     d.setPublishedAt(post.getPublishedAt());
     d.setUpdatedAt(post.getUpdatedAt());
@@ -272,6 +281,8 @@ public class PostRepositoryImpl implements PostRepository {
             d.getCategoryId(),
             d.getAuthorId(),
             d.getFeatured(),
+            d.getFeaturedAt(),
+            d.getFeaturedReason(),
             d.getContentVersion());
     if (d.getSeriesId() != null) {
       post.assignSeries(d.getSeriesId(), d.getSeriesOrder());
