@@ -22,6 +22,7 @@
 ### Task 1: Persist editorial recommendation metadata
 
 **Files:**
+
 - Create: `bytedepth-start/src/main/resources/db/migration/V27__post_featured_metadata.sql`
 - Modify: `bytedepth-domain/src/main/java/manfred/bytedepth/domain/post/Post.java`
 - Modify: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/post/PostDO.java`
@@ -29,6 +30,7 @@
 - Test: existing domain and infrastructure post tests
 
 **Interfaces:**
+
 - `Post.featuredAt(): LocalDateTime?`, `Post.featuredReason(): String?`
 - `PostRepository.findFeaturedPublished(): List<Post>`
 - Existing `feature()` sets `featured=true` and `featuredAt=now`; `unfeature()` clears both and clears reason.
@@ -43,12 +45,14 @@
 ### Task 2: Expose dynamic featured/recommended query data
 
 **Files:**
+
 - Modify: `bytedepth-app/src/main/java/manfred/bytedepth/app/post/query/PostDTO.java`
 - Modify: `bytedepth-app/src/main/java/manfred/bytedepth/app/post/query/ListPostsQryExe.java`
 - Modify: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/portal/HomeController.java`
 - Test: `HomeControllerTest.java`, `ListPostsQryExeTest.java`
 
 **Interfaces:**
+
 - `PostDTO.featuredAt`, `PostDTO.featuredReason`.
 - `ListPostsQryExe.executeFeatured()` returns published featured posts in repository order.
 - Home model attributes: `featuredPost` nullable and `recommendedPosts` max four.
@@ -62,6 +66,7 @@
 ### Task 3: Connect admin recommendation reason without changing non-home page content
 
 **Files:**
+
 - Modify: `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/admin/AdminPostController.java`
 - Modify: `bytedepth-start/src/main/resources/templates/admin/posts/list.html`
 - Modify: `bytedepth-start/src/main/resources/static/css/admin-layout.css` only for the new recommendation form styling if needed
@@ -69,6 +74,7 @@
 - Test: `bytedepth-app/src/test/java/manfred/bytedepth/app/post/command/FeaturePostCmdExeTest.java`
 
 **Interfaces:**
+
 - Add `FeaturePostCmdExe` to `AdminPostController` and expose `POST /admin/posts/{id}/feature` with optional `featuredReason`.
 - Add `POST /admin/posts/{id}/unfeature` and show the current recommendation state in `admin/posts/list.html`.
 - Empty reason is normalized to `null`; unfeature clears metadata.
@@ -83,11 +89,13 @@
 ### Task 4: Rebuild homepage from real data
 
 **Files:**
+
 - Replace: `bytedepth-start/src/main/resources/templates/public/index.html`
 - Create: `bytedepth-start/src/main/resources/static/css/home.css`
 - Modify: homepage/template tests
 
 **Interfaces:**
+
 - Consume `featuredPost`, `recommendedPosts`, `posts`, `sort`, `total`, `allCategories`, `projects`, and existing pagination attributes.
 - Preserve existing article URLs, sort query parameters, category links, project links, RSS, login/register and about/version navigation.
 
@@ -101,12 +109,14 @@
 ### Task 5: Unify public header and palette without changing non-home content
 
 **Files:**
+
 - Modify: `bytedepth-start/src/main/resources/templates/fragments/nav.html`
 - Modify: `bytedepth-start/src/main/resources/static/css/nav.css`
 - Modify: `bytedepth-start/src/main/resources/static/css/theme.css` only if new tokens are required
 - Test: `ThemeAssetsTest.java`
 
 **Interfaces:**
+
 - One shared public header fragment remains the source for all non-admin public pages.
 - Admin calls keep their existing `navbar(false)` behavior; public calls keep auth/search/theme/RSS/about/version behavior.
 
@@ -119,6 +129,7 @@
 ### Task 6: Format, quality, and scope verification
 
 **Files:**
+
 - Modify: `docs/releases/CHANGELOG.md`
 
 - [ ] Add a categorized `## Unreleased` entry describing the homepage and public header change.

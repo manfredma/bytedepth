@@ -6,6 +6,7 @@
 
 ### Changed
 
+- 首页改为真实数据驱动的编辑部入口，支持后台主推文章、推荐理由、推荐阅读和动态空状态；公共页头统一品牌 slogan 与视觉样式。
 - Quality execution is consolidated into the local pre-PR gate and release-platform Host Agent; the repository no longer runs a GitHub Actions quality workflow.
 - AI Agent 修改代码后由 PR 合并，release-platform 使用完整 commit SHA 完成构建、staging 验收和 production 提升；项目仓库不再提供发布脚本。
 
