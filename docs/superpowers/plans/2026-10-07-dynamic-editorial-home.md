@@ -23,7 +23,7 @@
 
 **Files:**
 
-- Create: `bytedepth-start/src/main/resources/db/migration/V27__post_featured_metadata.sql`
+- Create: `bytedepth-start/src/main/resources/db/migration/V28__post_featured_metadata.sql`
 - Modify: `bytedepth-domain/src/main/java/manfred/bytedepth/domain/post/Post.java`
 - Modify: `bytedepth-infrastructure/src/main/java/manfred/bytedepth/infrastructure/post/PostDO.java`
 - Modify: `bytedepth-domain/src/main/java/manfred/bytedepth/domain/post/PostRepository.java`

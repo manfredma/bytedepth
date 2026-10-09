@@ -109,3 +109,7 @@
 - `--remote` 是全局参数，必须放在子命令前：`--remote sync`。
 - 导入后必须执行 `update-links`，避免 wiki 链接在首次上传时降级或错误关联。
 - 同步状态冲突、锚点和笔记格式以 [同步指南](../agent-guides/obsidian-sync.md) 及笔记库的 `TEMPLATE.md` 为准。
+
+## 合并分支后的 Flyway 版本
+
+- 并行分支新增 Flyway 迁移时，合并前必须检查 `ls bytedepth-start/src/main/resources/db/migration | sort -V`，确保每个版本号唯一。若主线已占用版本号，应在候选合并前递增新迁移版本，并运行 migration contract 测试。
