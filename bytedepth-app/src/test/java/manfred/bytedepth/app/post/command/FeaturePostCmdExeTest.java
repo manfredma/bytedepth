@@ -18,94 +18,93 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class FeaturePostCmdExeTest {
 
-  @Mock private PostRepository postRepository;
-  private FeaturePostCmdExe exe;
+    @Mock
+    private PostRepository postRepository;
 
-  @BeforeEach
-  void setUp() {
-    exe = new FeaturePostCmdExe(postRepository);
-  }
+    private FeaturePostCmdExe exe;
 
-  @Test
-  void feature_setsFeatureTrue() {
-    Post post =
-        Post.reconstruct(
-            1L,
-            "T",
-            "C",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            1L,
-            false);
-    when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+    @BeforeEach
+    void setUp() {
+        exe = new FeaturePostCmdExe(postRepository);
+    }
 
-    exe.feature(1L);
+    @Test
+    void feature_setsFeatureTrue() {
+        Post post = Post.reconstruct(
+                1L,
+                "T",
+                "C",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                1L,
+                false);
+        when(postRepository.findById(1L)).thenReturn(Optional.of(post));
 
-    verify(postRepository).save(argThat(p -> Boolean.TRUE.equals(p.getFeatured())));
-  }
+        exe.feature(1L);
 
-  @Test
-  void feature_withReason_persistsEditorialReason() {
-    Post post =
-        Post.reconstruct(
-            1L,
-            "T",
-            "C",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            1L,
-            false);
-    when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+        verify(postRepository).save(argThat(p -> Boolean.TRUE.equals(p.getFeatured())));
+    }
 
-    exe.feature(1L, "适合作为首页入口");
+    @Test
+    void feature_withReason_persistsEditorialReason() {
+        Post post = Post.reconstruct(
+                1L,
+                "T",
+                "C",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                1L,
+                false);
+        when(postRepository.findById(1L)).thenReturn(Optional.of(post));
 
-    verify(postRepository).save(argThat(p -> "适合作为首页入口".equals(p.getFeaturedReason())));
-  }
+        exe.feature(1L, "适合作为首页入口");
 
-  @Test
-  void unfeature_setsFeaturedFalse() {
-    Post post =
-        Post.reconstruct(
-            1L,
-            "T",
-            "C",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            1L,
-            true);
-    when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+        verify(postRepository).save(argThat(p -> "适合作为首页入口".equals(p.getFeaturedReason())));
+    }
 
-    exe.unfeature(1L);
+    @Test
+    void unfeature_setsFeaturedFalse() {
+        Post post = Post.reconstruct(
+                1L,
+                "T",
+                "C",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                1L,
+                true);
+        when(postRepository.findById(1L)).thenReturn(Optional.of(post));
 
-    verify(postRepository).save(argThat(p -> !Boolean.TRUE.equals(p.getFeatured())));
-  }
+        exe.unfeature(1L);
 
-  @Test
-  void feature_throws_whenPostNotFound() {
-    when(postRepository.findById(404L)).thenReturn(Optional.empty());
+        verify(postRepository).save(argThat(p -> !Boolean.TRUE.equals(p.getFeatured())));
+    }
 
-    DomainException ex = assertThrows(DomainException.class, () -> exe.feature(404L));
+    @Test
+    void feature_throws_whenPostNotFound() {
+        when(postRepository.findById(404L)).thenReturn(Optional.empty());
 
-    assertTrue(ex.getMessage().contains("404"));
-    verify(postRepository, never()).save(any());
-  }
+        DomainException ex = assertThrows(DomainException.class, () -> exe.feature(404L));
 
-  @Test
-  void unfeature_throws_whenPostNotFound() {
-    when(postRepository.findById(404L)).thenReturn(Optional.empty());
+        assertTrue(ex.getMessage().contains("404"));
+        verify(postRepository, never()).save(any());
+    }
 
-    DomainException ex = assertThrows(DomainException.class, () -> exe.unfeature(404L));
+    @Test
+    void unfeature_throws_whenPostNotFound() {
+        when(postRepository.findById(404L)).thenReturn(Optional.empty());
 
-    assertTrue(ex.getMessage().contains("404"));
-    verify(postRepository, never()).save(any());
-  }
+        DomainException ex = assertThrows(DomainException.class, () -> exe.unfeature(404L));
+
+        assertTrue(ex.getMessage().contains("404"));
+        verify(postRepository, never()).save(any());
+    }
 }

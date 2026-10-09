@@ -21,276 +21,280 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ListPostsQryExeTest {
 
-  @Mock private PostRepository postRepository;
-  @Mock private CategoryRepository categoryRepository;
-  private ListPostsQryExe exe;
+    @Mock
+    private PostRepository postRepository;
 
-  @BeforeEach
-  void setUp() {
-    exe = new ListPostsQryExe(postRepository, categoryRepository);
-  }
+    @Mock
+    private CategoryRepository categoryRepository;
 
-  // --- countPublished ---
+    private ListPostsQryExe exe;
 
-  @Test
-  void countPublished_delegatesToRepository() {
-    when(postRepository.countPublished()).thenReturn(42L);
-    assertEquals(42L, exe.countPublished());
-  }
+    @BeforeEach
+    void setUp() {
+        exe = new ListPostsQryExe(postRepository, categoryRepository);
+    }
 
-  // --- countByTag ---
+    // --- countPublished ---
 
-  @Test
-  void countByTag_delegatesToRepository() {
-    when(postRepository.countPublishedByTag("java")).thenReturn(7L);
-    assertEquals(7L, exe.countByTag("java"));
-  }
+    @Test
+    void countPublished_delegatesToRepository() {
+        when(postRepository.countPublished()).thenReturn(42L);
+        assertEquals(42L, exe.countPublished());
+    }
 
-  // --- countByCategory ---
+    // --- countByTag ---
 
-  @Test
-  void countByCategory_categoryFound_returnsCount() {
-    Category cat = Category.reconstruct(3L, "Tech", "tech", null);
-    when(categoryRepository.findBySlug("tech")).thenReturn(Optional.of(cat));
-    when(postRepository.countPublishedByCategory(3L)).thenReturn(9L);
+    @Test
+    void countByTag_delegatesToRepository() {
+        when(postRepository.countPublishedByTag("java")).thenReturn(7L);
+        assertEquals(7L, exe.countByTag("java"));
+    }
 
-    assertEquals(9L, exe.countByCategory("tech"));
-  }
+    // --- countByCategory ---
 
-  @Test
-  void countByCategory_categoryNotFound_returnsZero() {
-    when(categoryRepository.findBySlug("missing")).thenReturn(Optional.empty());
+    @Test
+    void countByCategory_categoryFound_returnsCount() {
+        Category cat = Category.reconstruct(3L, "Tech", "tech", null);
+        when(categoryRepository.findBySlug("tech")).thenReturn(Optional.of(cat));
+        when(postRepository.countPublishedByCategory(3L)).thenReturn(9L);
 
-    assertEquals(0L, exe.countByCategory("missing"));
-    verify(postRepository, never()).countPublishedByCategory(any());
-  }
+        assertEquals(9L, exe.countByCategory("tech"));
+    }
 
-  // --- execute(page, size) ---
+    @Test
+    void countByCategory_categoryNotFound_returnsZero() {
+        when(categoryRepository.findBySlug("missing")).thenReturn(Optional.empty());
 
-  @Test
-  void execute_mapsPublishedPostsToDTOs() {
-    Post post = postWithoutCategory(1L, "slug-1", "Title 1");
-    when(postRepository.findPublished(0, 10)).thenReturn(List.of(post));
+        assertEquals(0L, exe.countByCategory("missing"));
+        verify(postRepository, never()).countPublishedByCategory(any());
+    }
 
-    List<PostDTO> result = exe.execute(0, 10);
+    // --- execute(page, size) ---
 
-    assertEquals(1, result.size());
-    PostDTO dto = result.get(0);
-    assertEquals(1L, dto.getId());
-    assertEquals("slug-1", dto.getSlug());
-    assertEquals("Title 1", dto.getTitle());
-    assertEquals("PUBLISHED", dto.getStatus());
-    assertNull(dto.getCategoryId());
-    assertNull(dto.getCategoryName());
-  }
+    @Test
+    void execute_mapsPublishedPostsToDTOs() {
+        Post post = postWithoutCategory(1L, "slug-1", "Title 1");
+        when(postRepository.findPublished(0, 10)).thenReturn(List.of(post));
 
-  @Test
-  void execute_emptyPage_returnsEmptyList() {
-    when(postRepository.findPublished(0, 10)).thenReturn(List.of());
+        List<PostDTO> result = exe.execute(0, 10);
 
-    assertTrue(exe.execute(0, 10).isEmpty());
-  }
+        assertEquals(1, result.size());
+        PostDTO dto = result.get(0);
+        assertEquals(1L, dto.getId());
+        assertEquals("slug-1", dto.getSlug());
+        assertEquals("Title 1", dto.getTitle());
+        assertEquals("PUBLISHED", dto.getStatus());
+        assertNull(dto.getCategoryId());
+        assertNull(dto.getCategoryName());
+    }
 
-  // --- executeByHotness ---
+    @Test
+    void execute_emptyPage_returnsEmptyList() {
+        when(postRepository.findPublished(0, 10)).thenReturn(List.of());
 
-  @Test
-  void executeByHotness_mapsHotPostsToDTOsWithViewCount() {
-    Post post = postWithoutCategory(1L, "slug-1", "Hot Title");
-    HotPost hotPost = new HotPost(post, 999L);
-    when(postRepository.findPublishedByHotness(0, 5)).thenReturn(List.of(hotPost));
+        assertTrue(exe.execute(0, 10).isEmpty());
+    }
 
-    List<PostDTO> result = exe.executeByHotness(0, 5);
+    // --- executeByHotness ---
 
-    assertEquals(1, result.size());
-    PostDTO dto = result.get(0);
-    assertEquals(1L, dto.getId());
-    assertEquals("Hot Title", dto.getTitle());
-    assertEquals(999L, dto.getViewCount());
-  }
+    @Test
+    void executeByHotness_mapsHotPostsToDTOsWithViewCount() {
+        Post post = postWithoutCategory(1L, "slug-1", "Hot Title");
+        HotPost hotPost = new HotPost(post, 999L);
+        when(postRepository.findPublishedByHotness(0, 5)).thenReturn(List.of(hotPost));
 
-  @Test
-  void executeByHotness_emptyResult_returnsEmptyList() {
-    when(postRepository.findPublishedByHotness(0, 5)).thenReturn(List.of());
+        List<PostDTO> result = exe.executeByHotness(0, 5);
 
-    assertTrue(exe.executeByHotness(0, 5).isEmpty());
-  }
+        assertEquals(1, result.size());
+        PostDTO dto = result.get(0);
+        assertEquals(1L, dto.getId());
+        assertEquals("Hot Title", dto.getTitle());
+        assertEquals(999L, dto.getViewCount());
+    }
 
-  @Test
-  void executeByHotnessExcluding_omitsDiscoveryPostsFromTheHotPage() {
-    Post post = postWithoutCategory(1L, "slug-1", "Hot Title");
-    when(postRepository.findPublishedByHotnessExcluding(List.of(9L, 10L), 2, 5))
-        .thenReturn(List.of(new HotPost(post, 999L)));
+    @Test
+    void executeByHotness_emptyResult_returnsEmptyList() {
+        when(postRepository.findPublishedByHotness(0, 5)).thenReturn(List.of());
 
-    List<PostDTO> result = exe.executeByHotnessExcluding(List.of(9L, 10L), 2, 5);
+        assertTrue(exe.executeByHotness(0, 5).isEmpty());
+    }
 
-    assertEquals(1, result.size());
-    assertEquals(1L, result.getFirst().getId());
-    assertEquals(999L, result.getFirst().getViewCount());
-  }
+    @Test
+    void executeByHotnessExcluding_omitsDiscoveryPostsFromTheHotPage() {
+        Post post = postWithoutCategory(1L, "slug-1", "Hot Title");
+        when(postRepository.findPublishedByHotnessExcluding(List.of(9L, 10L), 2, 5))
+                .thenReturn(List.of(new HotPost(post, 999L)));
 
-  // --- executeLatestExcluding ---
+        List<PostDTO> result = exe.executeByHotnessExcluding(List.of(9L, 10L), 2, 5);
 
-  @Test
-  void executeLatestExcluding_mapsPostsToDTOs() {
-    Post post = postWithoutCategory(5L, "slug-5", "Latest");
-    when(postRepository.findLatestPublishedExcluding(List.of(1L, 2L), 3)).thenReturn(List.of(post));
+        assertEquals(1, result.size());
+        assertEquals(1L, result.getFirst().getId());
+        assertEquals(999L, result.getFirst().getViewCount());
+    }
 
-    List<PostDTO> result = exe.executeLatestExcluding(List.of(1L, 2L), 3);
+    // --- executeLatestExcluding ---
 
-    assertEquals(1, result.size());
-    assertEquals(5L, result.get(0).getId());
-    assertEquals("Latest", result.get(0).getTitle());
-  }
+    @Test
+    void executeLatestExcluding_mapsPostsToDTOs() {
+        Post post = postWithoutCategory(5L, "slug-5", "Latest");
+        when(postRepository.findLatestPublishedExcluding(List.of(1L, 2L), 3)).thenReturn(List.of(post));
 
-  @Test
-  void executeLatestExcluding_emptyResult_returnsEmptyList() {
-    when(postRepository.findLatestPublishedExcluding(List.of(), 3)).thenReturn(List.of());
+        List<PostDTO> result = exe.executeLatestExcluding(List.of(1L, 2L), 3);
 
-    assertTrue(exe.executeLatestExcluding(List.of(), 3).isEmpty());
-  }
+        assertEquals(1, result.size());
+        assertEquals(5L, result.get(0).getId());
+        assertEquals("Latest", result.get(0).getTitle());
+    }
 
-  @Test
-  void executeFeatured_mapsEditorialMetadata() {
-    Post post = postWithoutCategory(11L, "featured", "Featured");
-    post.feature("适合作为首页入口");
-    when(postRepository.findFeaturedPublished()).thenReturn(List.of(post));
+    @Test
+    void executeLatestExcluding_emptyResult_returnsEmptyList() {
+        when(postRepository.findLatestPublishedExcluding(List.of(), 3)).thenReturn(List.of());
 
-    List<PostDTO> result = exe.executeFeatured();
+        assertTrue(exe.executeLatestExcluding(List.of(), 3).isEmpty());
+    }
 
-    assertEquals(1, result.size());
-    assertEquals("Featured", result.getFirst().getTitle());
-    assertNotNull(result.getFirst().getFeaturedAt());
-    assertEquals("适合作为首页入口", result.getFirst().getFeaturedReason());
-  }
+    @Test
+    void executeFeatured_mapsEditorialMetadata() {
+        Post post = postWithoutCategory(11L, "featured", "Featured");
+        post.feature("适合作为首页入口");
+        when(postRepository.findFeaturedPublished()).thenReturn(List.of(post));
 
-  // --- executeByTag ---
+        List<PostDTO> result = exe.executeFeatured();
 
-  @Test
-  void executeByTag_mapsPostsToDTOs() {
-    Post post = postWithoutCategory(7L, "slug-7", "Tagged");
-    when(postRepository.findPublishedByTag("java", 0, 10)).thenReturn(List.of(post));
+        assertEquals(1, result.size());
+        assertEquals("Featured", result.getFirst().getTitle());
+        assertNotNull(result.getFirst().getFeaturedAt());
+        assertEquals("适合作为首页入口", result.getFirst().getFeaturedReason());
+    }
 
-    List<PostDTO> result = exe.executeByTag("java", 0, 10);
+    // --- executeByTag ---
 
-    assertEquals(1, result.size());
-    assertEquals(7L, result.get(0).getId());
-    assertEquals("Tagged", result.get(0).getTitle());
-  }
+    @Test
+    void executeByTag_mapsPostsToDTOs() {
+        Post post = postWithoutCategory(7L, "slug-7", "Tagged");
+        when(postRepository.findPublishedByTag("java", 0, 10)).thenReturn(List.of(post));
 
-  @Test
-  void executeByTag_emptyResult_returnsEmptyList() {
-    when(postRepository.findPublishedByTag("java", 0, 10)).thenReturn(List.of());
+        List<PostDTO> result = exe.executeByTag("java", 0, 10);
 
-    assertTrue(exe.executeByTag("java", 0, 10).isEmpty());
-  }
+        assertEquals(1, result.size());
+        assertEquals(7L, result.get(0).getId());
+        assertEquals("Tagged", result.get(0).getTitle());
+    }
 
-  // --- executeByCategory ---
+    @Test
+    void executeByTag_emptyResult_returnsEmptyList() {
+        when(postRepository.findPublishedByTag("java", 0, 10)).thenReturn(List.of());
 
-  @Test
-  void executeByCategory_categoryFound_mapsPostsToDTOs() {
-    Category cat = Category.reconstruct(3L, "Tech", "tech", null);
-    when(categoryRepository.findBySlug("tech")).thenReturn(Optional.of(cat));
-    Post post = postWithCategory(8L, "slug-8", "Categorized", 3L);
-    when(postRepository.findPublishedByCategory(3L, 0, 10)).thenReturn(List.of(post));
-    when(categoryRepository.findById(3L)).thenReturn(Optional.of(cat));
+        assertTrue(exe.executeByTag("java", 0, 10).isEmpty());
+    }
 
-    List<PostDTO> result = exe.executeByCategory("tech", 0, 10);
+    // --- executeByCategory ---
 
-    assertEquals(1, result.size());
-    PostDTO dto = result.get(0);
-    assertEquals(8L, dto.getId());
-    assertEquals(3L, dto.getCategoryId());
-    assertEquals("Tech", dto.getCategoryName());
-    assertEquals("tech", dto.getCategorySlug());
-  }
+    @Test
+    void executeByCategory_categoryFound_mapsPostsToDTOs() {
+        Category cat = Category.reconstruct(3L, "Tech", "tech", null);
+        when(categoryRepository.findBySlug("tech")).thenReturn(Optional.of(cat));
+        Post post = postWithCategory(8L, "slug-8", "Categorized", 3L);
+        when(postRepository.findPublishedByCategory(3L, 0, 10)).thenReturn(List.of(post));
+        when(categoryRepository.findById(3L)).thenReturn(Optional.of(cat));
 
-  @Test
-  void executeByCategory_categoryNotFound_returnsEmptyList() {
-    when(categoryRepository.findBySlug("missing")).thenReturn(Optional.empty());
+        List<PostDTO> result = exe.executeByCategory("tech", 0, 10);
 
-    assertTrue(exe.executeByCategory("missing", 0, 10).isEmpty());
-    verify(postRepository, never()).findPublishedByCategory(any(), anyInt(), anyInt());
-  }
+        assertEquals(1, result.size());
+        PostDTO dto = result.get(0);
+        assertEquals(8L, dto.getId());
+        assertEquals(3L, dto.getCategoryId());
+        assertEquals("Tech", dto.getCategoryName());
+        assertEquals("tech", dto.getCategorySlug());
+    }
 
-  @Test
-  void executeByCategory_categoryFoundButNoPosts_returnsEmptyList() {
-    Category cat = Category.reconstruct(3L, "Tech", "tech", null);
-    when(categoryRepository.findBySlug("tech")).thenReturn(Optional.of(cat));
-    when(postRepository.findPublishedByCategory(3L, 0, 10)).thenReturn(List.of());
+    @Test
+    void executeByCategory_categoryNotFound_returnsEmptyList() {
+        when(categoryRepository.findBySlug("missing")).thenReturn(Optional.empty());
 
-    assertTrue(exe.executeByCategory("tech", 0, 10).isEmpty());
-  }
+        assertTrue(exe.executeByCategory("missing", 0, 10).isEmpty());
+        verify(postRepository, never()).findPublishedByCategory(any(), anyInt(), anyInt());
+    }
 
-  // --- toDTO(Post) with categoryId ---
+    @Test
+    void executeByCategory_categoryFoundButNoPosts_returnsEmptyList() {
+        Category cat = Category.reconstruct(3L, "Tech", "tech", null);
+        when(categoryRepository.findBySlug("tech")).thenReturn(Optional.of(cat));
+        when(postRepository.findPublishedByCategory(3L, 0, 10)).thenReturn(List.of());
 
-  @Test
-  void toDTO_postWithCategoryId_fillsCategoryNameAndSlug() {
-    Post post = postWithCategory(1L, "slug-1", "Title", 5L);
-    Category cat = Category.reconstruct(5L, "DevOps", "devops", null);
-    when(postRepository.findPublished(0, 10)).thenReturn(List.of(post));
-    when(categoryRepository.findById(5L)).thenReturn(Optional.of(cat));
+        assertTrue(exe.executeByCategory("tech", 0, 10).isEmpty());
+    }
 
-    List<PostDTO> result = exe.execute(0, 10);
+    // --- toDTO(Post) with categoryId ---
 
-    PostDTO dto = result.get(0);
-    assertEquals(5L, dto.getCategoryId());
-    assertEquals("DevOps", dto.getCategoryName());
-    assertEquals("devops", dto.getCategorySlug());
-  }
+    @Test
+    void toDTO_postWithCategoryId_fillsCategoryNameAndSlug() {
+        Post post = postWithCategory(1L, "slug-1", "Title", 5L);
+        Category cat = Category.reconstruct(5L, "DevOps", "devops", null);
+        when(postRepository.findPublished(0, 10)).thenReturn(List.of(post));
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(cat));
 
-  @Test
-  void toDTO_postWithCategoryIdButCategoryNotFound_leavesCategoryFieldsNull() {
-    Post post = postWithCategory(1L, "slug-1", "Title", 5L);
-    when(postRepository.findPublished(0, 10)).thenReturn(List.of(post));
-    when(categoryRepository.findById(5L)).thenReturn(Optional.empty());
+        List<PostDTO> result = exe.execute(0, 10);
 
-    List<PostDTO> result = exe.execute(0, 10);
+        PostDTO dto = result.get(0);
+        assertEquals(5L, dto.getCategoryId());
+        assertEquals("DevOps", dto.getCategoryName());
+        assertEquals("devops", dto.getCategorySlug());
+    }
 
-    PostDTO dto = result.get(0);
-    assertEquals(5L, dto.getCategoryId());
-    assertNull(dto.getCategoryName());
-    assertNull(dto.getCategorySlug());
-  }
+    @Test
+    void toDTO_postWithCategoryIdButCategoryNotFound_leavesCategoryFieldsNull() {
+        Post post = postWithCategory(1L, "slug-1", "Title", 5L);
+        when(postRepository.findPublished(0, 10)).thenReturn(List.of(post));
+        when(categoryRepository.findById(5L)).thenReturn(Optional.empty());
 
-  @Test
-  void toDTO_postWithoutCategoryId_skipsCategoryLookup() {
-    Post post = postWithoutCategory(1L, "slug-1", "Title");
-    when(postRepository.findPublished(0, 10)).thenReturn(List.of(post));
+        List<PostDTO> result = exe.execute(0, 10);
 
-    exe.execute(0, 10);
+        PostDTO dto = result.get(0);
+        assertEquals(5L, dto.getCategoryId());
+        assertNull(dto.getCategoryName());
+        assertNull(dto.getCategorySlug());
+    }
 
-    verify(categoryRepository, never()).findById(any());
-  }
+    @Test
+    void toDTO_postWithoutCategoryId_skipsCategoryLookup() {
+        Post post = postWithoutCategory(1L, "slug-1", "Title");
+        when(postRepository.findPublished(0, 10)).thenReturn(List.of(post));
 
-  // --- helper methods ---
+        exe.execute(0, 10);
 
-  private Post postWithoutCategory(Long id, String slug, String title) {
-    return Post.reconstruct(
-        id,
-        slug,
-        title,
-        "content",
-        PostStatus.PUBLISHED,
-        LocalDateTime.now(),
-        LocalDateTime.now(),
-        LocalDateTime.now(),
-        null,
-        null,
-        false);
-  }
+        verify(categoryRepository, never()).findById(any());
+    }
 
-  private Post postWithCategory(Long id, String slug, String title, Long categoryId) {
-    return Post.reconstruct(
-        id,
-        slug,
-        title,
-        "content",
-        PostStatus.PUBLISHED,
-        LocalDateTime.now(),
-        LocalDateTime.now(),
-        LocalDateTime.now(),
-        categoryId,
-        null,
-        false);
-  }
+    // --- helper methods ---
+
+    private Post postWithoutCategory(Long id, String slug, String title) {
+        return Post.reconstruct(
+                id,
+                slug,
+                title,
+                "content",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                null,
+                false);
+    }
+
+    private Post postWithCategory(Long id, String slug, String title, Long categoryId) {
+        return Post.reconstruct(
+                id,
+                slug,
+                title,
+                "content",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                categoryId,
+                null,
+                false);
+    }
 }
