@@ -33,3 +33,28 @@ target=staging（默认先人工验收）
 ```
 
 发布完成的依据是 release-platform 返回的 candidate、完整 commit SHA、artifact digest、task/evidence 和 request ID；本仓库的本地命令输出不能替代平台发布回执。
+
+## Agent 验收授权与 production 晋级
+
+staging 完成 integration/E2E 后，release-platform 会将 candidate 置为 `PENDING_ACCEPTANCE`。这里的“人工验收”是业务授权边界，不要求项目所有者打开页面点击按钮。
+
+项目所有者在 Agent 对话中明确回复“验收通过”后，AI Agent 才能调用 canonical API：
+
+```http
+POST https://devops.bytedepth.cn/api/v1/candidates/{candidateId}/acceptance
+Authorization: Bearer $RELEASE_PLATFORM_AGENT_TOKEN
+X-Request-Id: <uuid>
+Idempotency-Key: acceptance-<candidateId>-<releaseTag>
+Content-Type: application/json
+
+{"decision":"ACCEPTED","releaseTag":"v1.2.3"}
+```
+
+`releaseTag` 必须是 SemVer。Agent Token 是控制面管理员 API Token，不是 Host Agent Token；网络超时重试时复用相同的 `Idempotency-Key`。成功后的状态链为：
+
+```text
+PENDING_ACCEPTANCE → ACCEPTED → FAST_FORWARD_MERGING → TAGGED
+→ PRODUCTION_DEPLOYING → PRODUCTION_VERIFIED → SUCCEEDED
+```
+
+acceptance 成功后由平台 Worker 自动执行 fast-forward、annotated tag、production task 和 verification。AI Agent 不打开页面、不 SSH、不执行 bytedepth 部署脚本，也不直接调用 production promotion import 接口；只轮询 canonical `release-view`、`release-tasks` 和 `release-operations` API，并记录 candidateId、commitSha、artifact digest、taskId、requestId、releaseTag 和最终状态。
