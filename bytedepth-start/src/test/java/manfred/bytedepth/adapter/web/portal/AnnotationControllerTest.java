@@ -46,162 +46,154 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(
-    value = AnnotationController.class,
-    excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@WebMvcTest(value = AnnotationController.class, excludeAutoConfiguration = DataSourceAutoConfiguration.class)
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 @Import({SecurityConfig.class, ThymeleafSecurityHandlerConfig.class, SecurityMockMvcConfig.class})
 class AnnotationControllerTest {
-  @Autowired private MockMvc mockMvc;
-  @MockitoBean private UserDetailsService userDetailsService;
-  @MockitoBean private PasswordEncoder passwordEncoder;
-  @MockitoBean private RateLimitPort rateLimitPort;
-  @MockitoBean private RateLimitProperties rateLimitProperties;
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
-  @MockitoBean private PostRepository postRepository;
-  @MockitoBean private ListAnnotationsQryExe listAnnotationsQryExe;
-  @MockitoBean private CreateAnnotationCmdExe createAnnotationCmdExe;
-  @MockitoBean private DeleteAnnotationCmdExe deleteAnnotationCmdExe;
-  @MockitoBean private UpdateAnnotationCmdExe updateAnnotationCmdExe;
-  @MockitoBean private AnnotationVisitorIdentity visitorIdentity;
-  @MockitoBean private MarkdownRenderer markdownRenderer;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @BeforeEach
-  void setUp() {
-    when(postRepository.findBySlug("test-post"))
-        .thenReturn(
-            Optional.of(
-                manfred.bytedepth.domain.post.Post.reconstruct(
-                    1L,
-                    "test-post",
-                    "标题",
-                    "内容",
-                    manfred.bytedepth.domain.post.PostStatus.PUBLISHED,
-                    LocalDateTime.now(),
-                    LocalDateTime.now(),
-                    LocalDateTime.now(),
-                    null,
-                    null,
-                    false)));
-  }
+    @MockitoBean
+    private UserDetailsService userDetailsService;
 
-  @Test
-  void listReturnsOnlySafeDtoFields() throws Exception {
-    when(visitorIdentity.existingHash(any())).thenReturn("hash");
-    when(listAnnotationsQryExe.execute(1L, null, "hash")).thenReturn(List.of(annotation()));
-    when(markdownRenderer.render("评论")).thenReturn("<p><strong>评论</strong></p>");
-    mockMvc
-        .perform(get("/posts/test-post/annotations"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].visibility").value("PUBLIC"))
-        .andExpect(jsonPath("$[0].annotationHtml").value("<p><strong>评论</strong></p>"))
-        .andExpect(jsonPath("$[0].createdAt").value("2026-08-22 07:42"))
-        .andExpect(jsonPath("$[0].ownedByCurrentVisitor").value(false))
-        .andExpect(jsonPath("$[0].userId").doesNotExist());
-  }
+    @MockitoBean
+    private PasswordEncoder passwordEncoder;
 
-  @Test
-  void anonymousCreateGetsCookieIdentityAndReturnsOwnership() throws Exception {
-    when(visitorIdentity.getOrCreateHash(any(), any())).thenReturn("hash");
-    when(createAnnotationCmdExe.execute(
-            eq(1L), eq(null), eq("hash"), any(), any(), any(), any(), anyInt(), anyInt()))
-        .thenReturn(anonymousAnnotation());
-    when(markdownRenderer.render(null)).thenReturn("");
-    mockMvc
-        .perform(
-            post("/posts/test-post/annotations")
-                .with(csrf())
-                .contentType("application/json")
-                .content(
-                    "{\"selectedText\":\"文本\",\"annotationText\":null,\"color\":\"yellow\",\"visibility\":\"PRIVATE\",\"startOffset\":0,\"endOffset\":2}"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.ownedByCurrentVisitor").value(true))
-        .andExpect(jsonPath("$.createdAt").value("2026-08-22 07:42"))
-        .andExpect(jsonPath("$.annotationHtml").value(""));
-    verify(createAnnotationCmdExe)
-        .execute(
-            eq(1L),
-            eq(null),
-            eq("hash"),
-            eq("文本"),
-            eq(null),
-            eq("yellow"),
-            eq(AnnotationVisibility.PRIVATE),
-            eq(0),
-            eq(2));
-  }
+    @MockitoBean
+    private RateLimitPort rateLimitPort;
 
-  @Test
-  void invalidCreateReturnsBadRequest() throws Exception {
-    when(visitorIdentity.getOrCreateHash(any(), any())).thenReturn("hash");
-    doThrow(new DomainException("批注偏移越界"))
-        .when(createAnnotationCmdExe)
-        .execute(any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt());
-    mockMvc
-        .perform(
-            post("/posts/test-post/annotations")
-                .with(csrf())
-                .contentType("application/json")
-                .content(
-                    "{\"selectedText\":\"文本\",\"color\":\"yellow\",\"visibility\":\"PRIVATE\",\"startOffset\":2,\"endOffset\":1}"))
-        .andExpect(status().isBadRequest());
-  }
+    @MockitoBean
+    private RateLimitProperties rateLimitProperties;
 
-  @Test
-  void anonymousDeleteAndPatchUseExistingIdentity() throws Exception {
-    when(visitorIdentity.existingHash(any())).thenReturn("hash");
-    when(updateAnnotationCmdExe.execute(10L, 1L, null, "hash", "新评论", AnnotationVisibility.PRIVATE))
-        .thenReturn(anonymousAnnotation());
-    when(markdownRenderer.render(null)).thenReturn("");
-    mockMvc
-        .perform(delete("/posts/test-post/annotations/10").with(csrf()))
-        .andExpect(status().isNoContent());
-    verify(deleteAnnotationCmdExe).execute(10L, 1L, null, "hash");
-    mockMvc
-        .perform(
-            patch("/posts/test-post/annotations/10")
-                .with(csrf())
-                .contentType("application/json")
-                .content("{\"annotationText\":\"新评论\",\"visibility\":\"PRIVATE\"}"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.visibility").value("PRIVATE"))
-        .andExpect(jsonPath("$.createdAt").value("2026-08-22 07:42"))
-        .andExpect(jsonPath("$.annotationHtml").value(""));
-  }
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-  private static PostAnnotation annotation() {
-    return new PostAnnotation(
-        10L,
-        1L,
-        42L,
-        null,
-        "文本",
-        "评论",
-        "yellow",
-        AnnotationVisibility.PUBLIC,
-        0,
-        2,
-        createdAt(),
-        false);
-  }
+    @MockitoBean
+    private PostRepository postRepository;
 
-  private static PostAnnotation anonymousAnnotation() {
-    return new PostAnnotation(
-        10L,
-        1L,
-        null,
-        "hash",
-        "文本",
-        null,
-        "yellow",
-        AnnotationVisibility.PRIVATE,
-        0,
-        2,
-        createdAt(),
-        false);
-  }
+    @MockitoBean
+    private ListAnnotationsQryExe listAnnotationsQryExe;
 
-  private static LocalDateTime createdAt() {
-    return LocalDateTime.of(2026, 8, 22, 7, 42, 11, 762_920_262);
-  }
+    @MockitoBean
+    private CreateAnnotationCmdExe createAnnotationCmdExe;
+
+    @MockitoBean
+    private DeleteAnnotationCmdExe deleteAnnotationCmdExe;
+
+    @MockitoBean
+    private UpdateAnnotationCmdExe updateAnnotationCmdExe;
+
+    @MockitoBean
+    private AnnotationVisitorIdentity visitorIdentity;
+
+    @MockitoBean
+    private MarkdownRenderer markdownRenderer;
+
+    @BeforeEach
+    void setUp() {
+        when(postRepository.findBySlug("test-post"))
+                .thenReturn(Optional.of(manfred.bytedepth.domain.post.Post.reconstruct(
+                        1L,
+                        "test-post",
+                        "标题",
+                        "内容",
+                        manfred.bytedepth.domain.post.PostStatus.PUBLISHED,
+                        LocalDateTime.now(),
+                        LocalDateTime.now(),
+                        LocalDateTime.now(),
+                        null,
+                        null,
+                        false)));
+    }
+
+    @Test
+    void listReturnsOnlySafeDtoFields() throws Exception {
+        when(visitorIdentity.existingHash(any())).thenReturn("hash");
+        when(listAnnotationsQryExe.execute(1L, null, "hash")).thenReturn(List.of(annotation()));
+        when(markdownRenderer.render("评论")).thenReturn("<p><strong>评论</strong></p>");
+        mockMvc.perform(get("/posts/test-post/annotations"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].visibility").value("PUBLIC"))
+                .andExpect(jsonPath("$[0].annotationHtml").value("<p><strong>评论</strong></p>"))
+                .andExpect(jsonPath("$[0].createdAt").value("2026-08-22 07:42"))
+                .andExpect(jsonPath("$[0].ownedByCurrentVisitor").value(false))
+                .andExpect(jsonPath("$[0].userId").doesNotExist());
+    }
+
+    @Test
+    void anonymousCreateGetsCookieIdentityAndReturnsOwnership() throws Exception {
+        when(visitorIdentity.getOrCreateHash(any(), any())).thenReturn("hash");
+        when(createAnnotationCmdExe.execute(
+                        eq(1L), eq(null), eq("hash"), any(), any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(anonymousAnnotation());
+        when(markdownRenderer.render(null)).thenReturn("");
+        mockMvc.perform(
+                        post("/posts/test-post/annotations")
+                                .with(csrf())
+                                .contentType("application/json")
+                                .content(
+                                        "{\"selectedText\":\"文本\",\"annotationText\":null,\"color\":\"yellow\",\"visibility\":\"PRIVATE\",\"startOffset\":0,\"endOffset\":2}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ownedByCurrentVisitor").value(true))
+                .andExpect(jsonPath("$.createdAt").value("2026-08-22 07:42"))
+                .andExpect(jsonPath("$.annotationHtml").value(""));
+        verify(createAnnotationCmdExe)
+                .execute(
+                        eq(1L),
+                        eq(null),
+                        eq("hash"),
+                        eq("文本"),
+                        eq(null),
+                        eq("yellow"),
+                        eq(AnnotationVisibility.PRIVATE),
+                        eq(0),
+                        eq(2));
+    }
+
+    @Test
+    void invalidCreateReturnsBadRequest() throws Exception {
+        when(visitorIdentity.getOrCreateHash(any(), any())).thenReturn("hash");
+        doThrow(new DomainException("批注偏移越界"))
+                .when(createAnnotationCmdExe)
+                .execute(any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt());
+        mockMvc.perform(
+                        post("/posts/test-post/annotations")
+                                .with(csrf())
+                                .contentType("application/json")
+                                .content(
+                                        "{\"selectedText\":\"文本\",\"color\":\"yellow\",\"visibility\":\"PRIVATE\",\"startOffset\":2,\"endOffset\":1}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void anonymousDeleteAndPatchUseExistingIdentity() throws Exception {
+        when(visitorIdentity.existingHash(any())).thenReturn("hash");
+        when(updateAnnotationCmdExe.execute(10L, 1L, null, "hash", "新评论", AnnotationVisibility.PRIVATE))
+                .thenReturn(anonymousAnnotation());
+        when(markdownRenderer.render(null)).thenReturn("");
+        mockMvc.perform(delete("/posts/test-post/annotations/10").with(csrf())).andExpect(status().isNoContent());
+        verify(deleteAnnotationCmdExe).execute(10L, 1L, null, "hash");
+        mockMvc.perform(patch("/posts/test-post/annotations/10")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{\"annotationText\":\"新评论\",\"visibility\":\"PRIVATE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.visibility").value("PRIVATE"))
+                .andExpect(jsonPath("$.createdAt").value("2026-08-22 07:42"))
+                .andExpect(jsonPath("$.annotationHtml").value(""));
+    }
+
+    private static PostAnnotation annotation() {
+        return new PostAnnotation(
+                10L, 1L, 42L, null, "文本", "评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, createdAt(), false);
+    }
+
+    private static PostAnnotation anonymousAnnotation() {
+        return new PostAnnotation(
+                10L, 1L, null, "hash", "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 2, createdAt(), false);
+    }
+
+    private static LocalDateTime createdAt() {
+        return LocalDateTime.of(2026, 8, 22, 7, 42, 11, 762_920_262);
+    }
 }

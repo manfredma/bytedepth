@@ -14,46 +14,43 @@ import org.mockito.Mockito;
 
 class SetPostSeriesCmdExeTest {
 
-  private final PostRepository postRepository = Mockito.mock(PostRepository.class);
-  private final SeriesRepository seriesRepository = Mockito.mock(SeriesRepository.class);
-  private final SetPostSeriesCmdExe command =
-      new SetPostSeriesCmdExe(postRepository, seriesRepository);
+    private final PostRepository postRepository = Mockito.mock(PostRepository.class);
+    private final SeriesRepository seriesRepository = Mockito.mock(SeriesRepository.class);
+    private final SetPostSeriesCmdExe command = new SetPostSeriesCmdExe(postRepository, seriesRepository);
 
-  @Test
-  void missingSeries_isCreatedForTheRequestingAdministrator() {
-    when(seriesRepository.findBySlug("java")).thenReturn(Optional.empty());
-    when(seriesRepository.save(Mockito.any()))
-        .thenReturn(Series.reconstruct(3L, "Java", "java", null, 1L));
+    @Test
+    void missingSeries_isCreatedForTheRequestingAdministrator() {
+        when(seriesRepository.findBySlug("java")).thenReturn(Optional.empty());
+        when(seriesRepository.save(Mockito.any())).thenReturn(Series.reconstruct(3L, "Java", "java", null, 1L));
 
-    command.execute(9L, "java", "Java", 2, 1L);
+        command.execute(9L, "java", "Java", 2, 1L);
 
-    ArgumentCaptor<Series> created = ArgumentCaptor.forClass(Series.class);
-    verify(seriesRepository).save(created.capture());
-    assertEquals(1L, created.getValue().getAuthorId());
-    verify(postRepository).setPostSeries(9L, 3L, 2);
-  }
+        ArgumentCaptor<Series> created = ArgumentCaptor.forClass(Series.class);
+        verify(seriesRepository).save(created.capture());
+        assertEquals(1L, created.getValue().getAuthorId());
+        verify(postRepository).setPostSeries(9L, 3L, 2);
+    }
 
-  @Test
-  void existingSeries_isReusedWithoutCreatingAnotherOne() {
-    when(seriesRepository.findBySlug("java"))
-        .thenReturn(Optional.of(Series.reconstruct(3L, "Java", "java", null, 1L)));
+    @Test
+    void existingSeries_isReusedWithoutCreatingAnotherOne() {
+        when(seriesRepository.findBySlug("java"))
+                .thenReturn(Optional.of(Series.reconstruct(3L, "Java", "java", null, 1L)));
 
-    command.execute(9L, "java", null, 2, 1L);
+        command.execute(9L, "java", null, 2, 1L);
 
-    Mockito.verify(seriesRepository, Mockito.never()).save(Mockito.any());
-    verify(postRepository).setPostSeries(9L, 3L, 2);
-  }
+        Mockito.verify(seriesRepository, Mockito.never()).save(Mockito.any());
+        verify(postRepository).setPostSeries(9L, 3L, 2);
+    }
 
-  @Test
-  void missingSeries_usesSlugWhenNoNameIsProvided() {
-    when(seriesRepository.findBySlug("java")).thenReturn(Optional.empty());
-    when(seriesRepository.save(Mockito.any()))
-        .thenReturn(Series.reconstruct(3L, "java", "java", null, 1L));
+    @Test
+    void missingSeries_usesSlugWhenNoNameIsProvided() {
+        when(seriesRepository.findBySlug("java")).thenReturn(Optional.empty());
+        when(seriesRepository.save(Mockito.any())).thenReturn(Series.reconstruct(3L, "java", "java", null, 1L));
 
-    command.execute(9L, "java", null, 2, 1L);
+        command.execute(9L, "java", null, 2, 1L);
 
-    ArgumentCaptor<Series> created = ArgumentCaptor.forClass(Series.class);
-    verify(seriesRepository).save(created.capture());
-    assertEquals("java", created.getValue().getName());
-  }
+        ArgumentCaptor<Series> created = ArgumentCaptor.forClass(Series.class);
+        verify(seriesRepository).save(created.capture());
+        assertEquals("java", created.getValue().getName());
+    }
 }

@@ -11,23 +11,23 @@ import lombok.Data;
 @TableName("post_view_log")
 public class PostViewLogDO {
 
-  @TableId(type = IdType.AUTO)
-  private Long id;
+    @TableId(type = IdType.AUTO)
+    private Long id;
 
-  private Long postId;
-  private Long userId; // 匿名为 null
-  private String ip;
-  private String userAgent;
-  private String referer;
-  private String country;
-  private String city;
-  private LocalDateTime visitedAt;
-  private String visitToken;
-  private Integer activeReadSeconds;
-  private Integer maxScrollDepth;
-  private LocalDateTime lastActivityAt;
-  private LocalDateTime completedAt;
+    private Long postId;
+    private Long userId; // 匿名为 null
+    private String ip;
+    private String userAgent;
+    private String referer;
+    private String country;
+    private String city;
+    private LocalDateTime visitedAt;
+    private String visitToken;
+    private Integer activeReadSeconds;
+    private Integer maxScrollDepth;
+    private LocalDateTime lastActivityAt;
+    private LocalDateTime completedAt;
 
-  @TableField(exist = false)
-  private String postTitle;
+    @TableField(exist = false)
+    private String postTitle;
 }

@@ -23,88 +23,73 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class GetUserProfileQryExeTest {
 
-  @Mock private UserRepository userRepository;
-  @Mock private PostRepository postRepository;
-  private GetUserProfileQryExe exe;
+    @Mock
+    private UserRepository userRepository;
 
-  @BeforeEach
-  void setUp() {
-    exe = new GetUserProfileQryExe(userRepository, postRepository);
-  }
+    @Mock
+    private PostRepository postRepository;
 
-  @Test
-  void execute_existingUser_returnsProfile() {
-    User user =
-        User.reconstruct(
-            1L,
-            "alice",
-            "hash",
-            null,
-            null,
-            "My bio",
-            UserStatus.ACTIVE,
-            LocalDateTime.now(),
-            LocalDateTime.now());
-    when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
-    when(postRepository.findPublishedByAuthorId(1L, 1, 10)).thenReturn(List.of());
-    when(postRepository.countPublishedByAuthorId(1L)).thenReturn(0L);
+    private GetUserProfileQryExe exe;
 
-    UserProfileDTO profile = exe.execute("alice");
+    @BeforeEach
+    void setUp() {
+        exe = new GetUserProfileQryExe(userRepository, postRepository);
+    }
 
-    assertEquals("alice", profile.getUsername());
-    assertEquals("My bio", profile.getBio());
-    assertEquals(0, profile.getPostCount());
-    assertTrue(profile.getRecentPosts().isEmpty());
-  }
+    @Test
+    void execute_existingUser_returnsProfile() {
+        User user = User.reconstruct(
+                1L, "alice", "hash", null, null, "My bio", UserStatus.ACTIVE, LocalDateTime.now(), LocalDateTime.now());
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(postRepository.findPublishedByAuthorId(1L, 1, 10)).thenReturn(List.of());
+        when(postRepository.countPublishedByAuthorId(1L)).thenReturn(0L);
 
-  @Test
-  void execute_unknownUser_throwsDomainException() {
-    when(userRepository.findByUsername("nobody")).thenReturn(Optional.empty());
-    assertThrows(DomainException.class, () -> exe.execute("nobody"));
-  }
+        UserProfileDTO profile = exe.execute("alice");
 
-  @Test
-  void execute_userWithPublishedPosts_mapsRecentPostsAndCount() {
-    User user =
-        User.reconstruct(
-            2L,
-            "bob",
-            "hash",
-            null,
-            null,
-            "bio",
-            UserStatus.ACTIVE,
-            LocalDateTime.now(),
-            LocalDateTime.now());
-    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user));
-    Post post =
-        Post.reconstruct(
-            5L,
-            "slug",
-            "标题",
-            "内容",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            2L,
-            false);
-    when(postRepository.findPublishedByAuthorId(2L, 1, 10)).thenReturn(List.of(post));
-    when(postRepository.countPublishedByAuthorId(2L)).thenReturn(3L);
+        assertEquals("alice", profile.getUsername());
+        assertEquals("My bio", profile.getBio());
+        assertEquals(0, profile.getPostCount());
+        assertTrue(profile.getRecentPosts().isEmpty());
+    }
 
-    UserProfileDTO profile = exe.execute("bob");
+    @Test
+    void execute_unknownUser_throwsDomainException() {
+        when(userRepository.findByUsername("nobody")).thenReturn(Optional.empty());
+        assertThrows(DomainException.class, () -> exe.execute("nobody"));
+    }
 
-    assertEquals(2L, profile.getId());
-    assertEquals("bob", profile.getUsername());
-    assertEquals("bio", profile.getBio());
-    assertEquals(3, profile.getPostCount());
-    assertEquals(1, profile.getRecentPosts().size());
-    PostDTO recent = profile.getRecentPosts().get(0);
-    assertEquals(5L, recent.getId());
-    assertEquals("slug", recent.getSlug());
-    assertEquals(2L, recent.getAuthorId());
-    assertEquals("标题", recent.getTitle());
-    assertEquals("PUBLISHED", recent.getStatus());
-  }
+    @Test
+    void execute_userWithPublishedPosts_mapsRecentPostsAndCount() {
+        User user = User.reconstruct(
+                2L, "bob", "hash", null, null, "bio", UserStatus.ACTIVE, LocalDateTime.now(), LocalDateTime.now());
+        when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user));
+        Post post = Post.reconstruct(
+                5L,
+                "slug",
+                "标题",
+                "内容",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                2L,
+                false);
+        when(postRepository.findPublishedByAuthorId(2L, 1, 10)).thenReturn(List.of(post));
+        when(postRepository.countPublishedByAuthorId(2L)).thenReturn(3L);
+
+        UserProfileDTO profile = exe.execute("bob");
+
+        assertEquals(2L, profile.getId());
+        assertEquals("bob", profile.getUsername());
+        assertEquals("bio", profile.getBio());
+        assertEquals(3, profile.getPostCount());
+        assertEquals(1, profile.getRecentPosts().size());
+        PostDTO recent = profile.getRecentPosts().get(0);
+        assertEquals(5L, recent.getId());
+        assertEquals("slug", recent.getSlug());
+        assertEquals(2L, recent.getAuthorId());
+        assertEquals("标题", recent.getTitle());
+        assertEquals("PUBLISHED", recent.getStatus());
+    }
 }

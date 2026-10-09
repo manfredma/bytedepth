@@ -10,65 +10,64 @@ import org.junit.jupiter.api.Test;
 
 class ArchitectureTest {
 
-  private static final String DOMAIN = "..domain..";
-  private static final String APP = "..app..";
-  private static final String INFRASTRUCTURE = "..infrastructure..";
-  private static final String ADAPTER = "..adapter..";
+    private static final String DOMAIN = "..domain..";
+    private static final String APP = "..app..";
+    private static final String INFRASTRUCTURE = "..infrastructure..";
+    private static final String ADAPTER = "..adapter..";
 
-  private final JavaClasses classes =
-      new ClassFileImporter()
-          .withImportOption(new ImportOption.DoNotIncludeTests())
-          .importPackages("manfred.bytedepth");
+    private final JavaClasses classes = new ClassFileImporter()
+            .withImportOption(new ImportOption.DoNotIncludeTests())
+            .importPackages("manfred.bytedepth");
 
-  @Test
-  void dependenciesFlowOnlyInward() {
-    rule(DOMAIN, APP, INFRASTRUCTURE, ADAPTER).check(classes);
-    rule(APP, INFRASTRUCTURE, ADAPTER).check(classes);
-    rule(INFRASTRUCTURE, ADAPTER).check(classes);
-    rule(ADAPTER, INFRASTRUCTURE).check(classes);
-  }
+    @Test
+    void dependenciesFlowOnlyInward() {
+        rule(DOMAIN, APP, INFRASTRUCTURE, ADAPTER).check(classes);
+        rule(APP, INFRASTRUCTURE, ADAPTER).check(classes);
+        rule(INFRASTRUCTURE, ADAPTER).check(classes);
+        rule(ADAPTER, INFRASTRUCTURE).check(classes);
+    }
 
-  @Test
-  void domainRemainsFrameworkFree() {
-    noClasses()
-        .that()
-        .resideInAPackage(DOMAIN)
-        .should()
-        .dependOnClassesThat()
-        .resideInAnyPackage(
-            "org.springframework..",
-            "org.apache.ibatis..",
-            "com.baomidou..",
-            "jakarta..",
-            "javax.persistence..",
-            "javax.servlet..")
-        .check(classes);
-  }
+    @Test
+    void domainRemainsFrameworkFree() {
+        noClasses()
+                .that()
+                .resideInAPackage(DOMAIN)
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(
+                        "org.springframework..",
+                        "org.apache.ibatis..",
+                        "com.baomidou..",
+                        "jakarta..",
+                        "javax.persistence..",
+                        "javax.servlet..")
+                .check(classes);
+    }
 
-  @Test
-  void webAdapterDoesNotAccessPersistenceOrRedisApis() {
-    noClasses()
-        .that()
-        .resideInAPackage(ADAPTER)
-        .should()
-        .dependOnClassesThat()
-        .resideInAnyPackage(
-            "org.apache.ibatis..",
-            "com.baomidou..",
-            "org.springframework.data.redis..",
-            "org.springframework.jdbc..",
-            "javax.sql..",
-            "io.lettuce..",
-            "io.github.bucket4j..")
-        .check(classes);
-  }
+    @Test
+    void webAdapterDoesNotAccessPersistenceOrRedisApis() {
+        noClasses()
+                .that()
+                .resideInAPackage(ADAPTER)
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(
+                        "org.apache.ibatis..",
+                        "com.baomidou..",
+                        "org.springframework.data.redis..",
+                        "org.springframework.jdbc..",
+                        "javax.sql..",
+                        "io.lettuce..",
+                        "io.github.bucket4j..")
+                .check(classes);
+    }
 
-  private ArchRule rule(String sourceLayer, String... forbiddenLayers) {
-    return noClasses()
-        .that()
-        .resideInAPackage(sourceLayer)
-        .should()
-        .dependOnClassesThat()
-        .resideInAnyPackage(forbiddenLayers);
-  }
+    private ArchRule rule(String sourceLayer, String... forbiddenLayers) {
+        return noClasses()
+                .that()
+                .resideInAPackage(sourceLayer)
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(forbiddenLayers);
+    }
 }

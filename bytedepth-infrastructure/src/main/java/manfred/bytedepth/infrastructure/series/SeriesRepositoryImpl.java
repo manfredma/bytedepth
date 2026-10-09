@@ -16,169 +16,159 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class SeriesRepositoryImpl implements SeriesRepository {
 
-  private static final String CHINESE_NAME_ORDER = "name COLLATE utf8mb4_zh_0900_as_cs";
+    private static final String CHINESE_NAME_ORDER = "name COLLATE utf8mb4_zh_0900_as_cs";
 
-  private final SeriesMapper seriesMapper;
+    private final SeriesMapper seriesMapper;
 
-  @Override
-  public Series save(Series series) {
-    SeriesDO seriesDO = toDO(series);
-    if (series.getId() == null) {
-      seriesMapper.insert(seriesDO);
-    } else {
-      seriesMapper.updateById(seriesDO);
+    @Override
+    public Series save(Series series) {
+        SeriesDO seriesDO = toDO(series);
+        if (series.getId() == null) {
+            seriesMapper.insert(seriesDO);
+        } else {
+            seriesMapper.updateById(seriesDO);
+        }
+        return toEntity(seriesDO);
     }
-    return toEntity(seriesDO);
-  }
 
-  @Override
-  public Optional<Series> findBySlug(String slug) {
-    return Optional.ofNullable(
-            seriesMapper.selectOne(new LambdaQueryWrapper<SeriesDO>().eq(SeriesDO::getSlug, slug)))
-        .map(this::toEntity);
-  }
+    @Override
+    public Optional<Series> findBySlug(String slug) {
+        return Optional.ofNullable(
+                        seriesMapper.selectOne(new LambdaQueryWrapper<SeriesDO>().eq(SeriesDO::getSlug, slug)))
+                .map(this::toEntity);
+    }
 
-  @Override
-  public Optional<Series> findById(Long id) {
-    return Optional.ofNullable(seriesMapper.selectById(id)).map(this::toEntity);
-  }
+    @Override
+    public Optional<Series> findById(Long id) {
+        return Optional.ofNullable(seriesMapper.selectById(id)).map(this::toEntity);
+    }
 
-  @Override
-  public List<SeriesPostItem> findPublishedPostsBySeries(Long seriesId) {
-    return seriesMapper.findPublishedPostsBySeries(seriesId).stream()
-        .map(this::toSeriesPostItem)
-        .collect(Collectors.toList());
-  }
+    @Override
+    public List<SeriesPostItem> findPublishedPostsBySeries(Long seriesId) {
+        return seriesMapper.findPublishedPostsBySeries(seriesId).stream()
+                .map(this::toSeriesPostItem)
+                .collect(Collectors.toList());
+    }
 
-  @Override
-  public List<SeriesPostItem> findAllPostsBySeries(Long seriesId) {
-    return seriesMapper.findAllPostsBySeries(seriesId).stream()
-        .map(this::toSeriesPostItem)
-        .collect(Collectors.toList());
-  }
+    @Override
+    public List<SeriesPostItem> findAllPostsBySeries(Long seriesId) {
+        return seriesMapper.findAllPostsBySeries(seriesId).stream()
+                .map(this::toSeriesPostItem)
+                .collect(Collectors.toList());
+    }
 
-  @Override
-  public List<SeriesPostItem> findCandidatesForSeries(
-      Long seriesId, String keyword, int page, int size) {
-    int offset = (page - 1) * size;
-    return seriesMapper.findCandidatesForSeries(seriesId, keyword, offset, size).stream()
-        .map(this::toSeriesPostItem)
-        .collect(Collectors.toList());
-  }
+    @Override
+    public List<SeriesPostItem> findCandidatesForSeries(Long seriesId, String keyword, int page, int size) {
+        int offset = (page - 1) * size;
+        return seriesMapper.findCandidatesForSeries(seriesId, keyword, offset, size).stream()
+                .map(this::toSeriesPostItem)
+                .collect(Collectors.toList());
+    }
 
-  private SeriesPostItem toSeriesPostItem(SeriesPostItemDO d) {
-    return new SeriesPostItem(
-        d.getId(),
-        d.getSlug(),
-        d.getTitle(),
-        d.getSeriesOrder(),
-        d.getContent(),
-        d.getStatus(),
-        d.getPublishedAt());
-  }
+    private SeriesPostItem toSeriesPostItem(SeriesPostItemDO d) {
+        return new SeriesPostItem(
+                d.getId(),
+                d.getSlug(),
+                d.getTitle(),
+                d.getSeriesOrder(),
+                d.getContent(),
+                d.getStatus(),
+                d.getPublishedAt());
+    }
 
-  @Override
-  public long countCandidatesForSeries(Long seriesId, String keyword) {
-    return seriesMapper.countCandidatesForSeries(seriesId, keyword);
-  }
+    @Override
+    public long countCandidatesForSeries(Long seriesId, String keyword) {
+        return seriesMapper.countCandidatesForSeries(seriesId, keyword);
+    }
 
-  @Override
-  public List<SeriesPostItem> findCandidatesForSeriesByAuthor(
-      Long seriesId, Long authorId, String keyword, int page, int size) {
-    return seriesMapper
-        .findCandidatesForSeriesByAuthor(seriesId, authorId, keyword, (page - 1) * size, size)
-        .stream()
-        .map(this::toSeriesPostItem)
-        .collect(Collectors.toList());
-  }
+    @Override
+    public List<SeriesPostItem> findCandidatesForSeriesByAuthor(
+            Long seriesId, Long authorId, String keyword, int page, int size) {
+        return seriesMapper
+                .findCandidatesForSeriesByAuthor(seriesId, authorId, keyword, (page - 1) * size, size)
+                .stream()
+                .map(this::toSeriesPostItem)
+                .collect(Collectors.toList());
+    }
 
-  @Override
-  public long countCandidatesForSeriesByAuthor(Long seriesId, Long authorId, String keyword) {
-    return seriesMapper.countCandidatesForSeriesByAuthor(seriesId, authorId, keyword);
-  }
+    @Override
+    public long countCandidatesForSeriesByAuthor(Long seriesId, Long authorId, String keyword) {
+        return seriesMapper.countCandidatesForSeriesByAuthor(seriesId, authorId, keyword);
+    }
 
-  @Override
-  public int findMaxOrderInSeries(Long seriesId) {
-    return seriesMapper.findMaxOrderInSeries(seriesId);
-  }
+    @Override
+    public int findMaxOrderInSeries(Long seriesId) {
+        return seriesMapper.findMaxOrderInSeries(seriesId);
+    }
 
-  @Override
-  public void deleteWithPosts(Long seriesId) {
-    // 先清除所有关联文章的 series_id/series_order，再删除专栏
-    seriesMapper.clearAllPostsInSeries(seriesId);
-    seriesMapper.deleteById(seriesId);
-  }
+    @Override
+    public void deleteWithPosts(Long seriesId) {
+        // 先清除所有关联文章的 series_id/series_order，再删除专栏
+        seriesMapper.clearAllPostsInSeries(seriesId);
+        seriesMapper.deleteById(seriesId);
+    }
 
-  @Override
-  public List<Series> findAll() {
-    return seriesMapper.selectList(orderedByName(new QueryWrapper<>())).stream()
-        .map(this::toEntity)
-        .collect(Collectors.toList());
-  }
+    @Override
+    public List<Series> findAll() {
+        return seriesMapper.selectList(orderedByName(new QueryWrapper<>())).stream()
+                .map(this::toEntity)
+                .collect(Collectors.toList());
+    }
 
-  @Override
-  public List<Series> findByAuthorId(Long authorId) {
-    return seriesMapper
-        .selectList(orderedByName(new QueryWrapper<SeriesDO>().eq("author_id", authorId)))
-        .stream()
-        .map(this::toEntity)
-        .collect(Collectors.toList());
-  }
+    @Override
+    public List<Series> findByAuthorId(Long authorId) {
+        return seriesMapper.selectList(orderedByName(new QueryWrapper<SeriesDO>().eq("author_id", authorId))).stream()
+                .map(this::toEntity)
+                .collect(Collectors.toList());
+    }
 
-  @Override
-  public List<Series> findPage(String name, int page, int size) {
-    return seriesMapper
-        .selectPage(new Page<SeriesDO>(page, size), filtered(name, null))
-        .getRecords()
-        .stream()
-        .map(this::toEntity)
-        .toList();
-  }
+    @Override
+    public List<Series> findPage(String name, int page, int size) {
+        return seriesMapper.selectPage(new Page<SeriesDO>(page, size), filtered(name, null)).getRecords().stream()
+                .map(this::toEntity)
+                .toList();
+    }
 
-  @Override
-  public long count(String name) {
-    return seriesMapper.selectCount(filtered(name, null));
-  }
+    @Override
+    public long count(String name) {
+        return seriesMapper.selectCount(filtered(name, null));
+    }
 
-  @Override
-  public List<Series> findPageByAuthorId(Long authorId, String name, int page, int size) {
-    return seriesMapper
-        .selectPage(new Page<SeriesDO>(page, size), filtered(name, authorId))
-        .getRecords()
-        .stream()
-        .map(this::toEntity)
-        .toList();
-  }
+    @Override
+    public List<Series> findPageByAuthorId(Long authorId, String name, int page, int size) {
+        return seriesMapper.selectPage(new Page<SeriesDO>(page, size), filtered(name, authorId)).getRecords().stream()
+                .map(this::toEntity)
+                .toList();
+    }
 
-  @Override
-  public long countByAuthorId(Long authorId, String name) {
-    return seriesMapper.selectCount(filtered(name, authorId));
-  }
+    @Override
+    public long countByAuthorId(Long authorId, String name) {
+        return seriesMapper.selectCount(filtered(name, authorId));
+    }
 
-  private QueryWrapper<SeriesDO> filtered(String name, Long authorId) {
-    QueryWrapper<SeriesDO> wrapper = orderedByName(new QueryWrapper<>());
-    if (name != null && !name.isBlank()) wrapper.like("name", name);
-    if (authorId != null) wrapper.eq("author_id", authorId);
-    return wrapper;
-  }
+    private QueryWrapper<SeriesDO> filtered(String name, Long authorId) {
+        QueryWrapper<SeriesDO> wrapper = orderedByName(new QueryWrapper<>());
+        if (name != null && !name.isBlank()) wrapper.like("name", name);
+        if (authorId != null) wrapper.eq("author_id", authorId);
+        return wrapper;
+    }
 
-  private QueryWrapper<SeriesDO> orderedByName(QueryWrapper<SeriesDO> wrapper) {
-    // LambdaQueryWrapper 只能表达物理列名，中文语言排序需要在 ORDER BY 中附加 COLLATE。
-    return wrapper.orderByAsc(CHINESE_NAME_ORDER).orderByAsc("id");
-  }
+    private QueryWrapper<SeriesDO> orderedByName(QueryWrapper<SeriesDO> wrapper) {
+        // LambdaQueryWrapper 只能表达物理列名，中文语言排序需要在 ORDER BY 中附加 COLLATE。
+        return wrapper.orderByAsc(CHINESE_NAME_ORDER).orderByAsc("id");
+    }
 
-  private SeriesDO toDO(Series series) {
-    SeriesDO d = new SeriesDO();
-    d.setId(series.getId());
-    d.setName(series.getName());
-    d.setSlug(series.getSlug());
-    d.setDescription(series.getDescription());
-    d.setAuthorId(series.getAuthorId());
-    return d;
-  }
+    private SeriesDO toDO(Series series) {
+        SeriesDO d = new SeriesDO();
+        d.setId(series.getId());
+        d.setName(series.getName());
+        d.setSlug(series.getSlug());
+        d.setDescription(series.getDescription());
+        d.setAuthorId(series.getAuthorId());
+        return d;
+    }
 
-  private Series toEntity(SeriesDO d) {
-    return Series.reconstruct(
-        d.getId(), d.getName(), d.getSlug(), d.getDescription(), d.getAuthorId());
-  }
+    private Series toEntity(SeriesDO d) {
+        return Series.reconstruct(d.getId(), d.getName(), d.getSlug(), d.getDescription(), d.getAuthorId());
+    }
 }

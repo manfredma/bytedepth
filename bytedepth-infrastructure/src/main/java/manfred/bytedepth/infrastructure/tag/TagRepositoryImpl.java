@@ -15,84 +15,83 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TagRepositoryImpl implements TagRepository {
 
-  private final TagMapper tagMapper;
+    private final TagMapper tagMapper;
 
-  @Override
-  public Tag save(Tag tag) {
-    TagDO tagDO = toDO(tag);
-    if (tag.getId() == null) {
-      tagMapper.insert(tagDO);
-    } else {
-      tagMapper.updateById(tagDO);
+    @Override
+    public Tag save(Tag tag) {
+        TagDO tagDO = toDO(tag);
+        if (tag.getId() == null) {
+            tagMapper.insert(tagDO);
+        } else {
+            tagMapper.updateById(tagDO);
+        }
+        return toEntity(tagDO);
     }
-    return toEntity(tagDO);
-  }
 
-  @Override
-  public Optional<Tag> findBySlug(String slug) {
-    return Optional.ofNullable(
-            tagMapper.selectOne(new LambdaQueryWrapper<TagDO>().eq(TagDO::getSlug, slug)))
-        .map(this::toEntity);
-  }
-
-  @Override
-  public Optional<Tag> findById(Long id) {
-    return Optional.ofNullable(tagMapper.selectById(id)).map(this::toEntity);
-  }
-
-  @Override
-  public List<Tag> findAll() {
-    return tagMapper.selectList(null).stream().map(this::toEntity).collect(Collectors.toList());
-  }
-
-  @Override
-  public List<Tag> findByPostId(Long postId) {
-    return tagMapper.findByPostId(postId).stream().map(this::toEntity).collect(Collectors.toList());
-  }
-
-  @Override
-  public void savePostTags(Long postId, List<Long> tagIds) {
-    tagMapper.deletePostTags(postId);
-    if (tagIds != null && !tagIds.isEmpty()) {
-      tagMapper.insertPostTags(postId, tagIds);
+    @Override
+    public Optional<Tag> findBySlug(String slug) {
+        return Optional.ofNullable(tagMapper.selectOne(new LambdaQueryWrapper<TagDO>().eq(TagDO::getSlug, slug)))
+                .map(this::toEntity);
     }
-  }
 
-  @Override
-  @Transactional
-  public void deleteWithPostAssociations(Long tagId) {
-    tagMapper.deletePostTagAssociations(tagId);
-    tagMapper.deleteById(tagId);
-  }
+    @Override
+    public Optional<Tag> findById(Long id) {
+        return Optional.ofNullable(tagMapper.selectById(id)).map(this::toEntity);
+    }
 
-  @Override
-  public List<TagWithCount> findAllWithCount() {
-    return tagMapper.findAllWithCount().stream()
-        .map(d -> new TagWithCount(d.getId(), d.getName(), d.getSlug(), d.getPostCount()))
-        .collect(Collectors.toList());
-  }
+    @Override
+    public List<Tag> findAll() {
+        return tagMapper.selectList(null).stream().map(this::toEntity).collect(Collectors.toList());
+    }
 
-  @Override
-  public List<TagWithCount> findPageWithCount(String name, int page, int size) {
-    return tagMapper.findPageWithCount(name, (page - 1) * size, size).stream()
-        .map(d -> new TagWithCount(d.getId(), d.getName(), d.getSlug(), d.getPostCount()))
-        .collect(Collectors.toList());
-  }
+    @Override
+    public List<Tag> findByPostId(Long postId) {
+        return tagMapper.findByPostId(postId).stream().map(this::toEntity).collect(Collectors.toList());
+    }
 
-  @Override
-  public long countWithName(String name) {
-    return tagMapper.countWithName(name);
-  }
+    @Override
+    public void savePostTags(Long postId, List<Long> tagIds) {
+        tagMapper.deletePostTags(postId);
+        if (tagIds != null && !tagIds.isEmpty()) {
+            tagMapper.insertPostTags(postId, tagIds);
+        }
+    }
 
-  private TagDO toDO(Tag tag) {
-    TagDO tagDO = new TagDO();
-    tagDO.setId(tag.getId());
-    tagDO.setName(tag.getName());
-    tagDO.setSlug(tag.getSlug());
-    return tagDO;
-  }
+    @Override
+    @Transactional
+    public void deleteWithPostAssociations(Long tagId) {
+        tagMapper.deletePostTagAssociations(tagId);
+        tagMapper.deleteById(tagId);
+    }
 
-  private Tag toEntity(TagDO tagDO) {
-    return Tag.reconstruct(tagDO.getId(), tagDO.getName(), tagDO.getSlug());
-  }
+    @Override
+    public List<TagWithCount> findAllWithCount() {
+        return tagMapper.findAllWithCount().stream()
+                .map(d -> new TagWithCount(d.getId(), d.getName(), d.getSlug(), d.getPostCount()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TagWithCount> findPageWithCount(String name, int page, int size) {
+        return tagMapper.findPageWithCount(name, (page - 1) * size, size).stream()
+                .map(d -> new TagWithCount(d.getId(), d.getName(), d.getSlug(), d.getPostCount()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long countWithName(String name) {
+        return tagMapper.countWithName(name);
+    }
+
+    private TagDO toDO(Tag tag) {
+        TagDO tagDO = new TagDO();
+        tagDO.setId(tag.getId());
+        tagDO.setName(tag.getName());
+        tagDO.setSlug(tag.getSlug());
+        return tagDO;
+    }
+
+    private Tag toEntity(TagDO tagDO) {
+        return Tag.reconstruct(tagDO.getId(), tagDO.getName(), tagDO.getSlug());
+    }
 }

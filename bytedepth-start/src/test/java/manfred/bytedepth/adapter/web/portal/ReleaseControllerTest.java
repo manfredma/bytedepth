@@ -20,27 +20,28 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(
-    value = ReleaseController.class,
-    excludeAutoConfiguration = SecurityAutoConfiguration.class)
+@WebMvcTest(value = ReleaseController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class)
 @Import(ThymeleafSecurityHandlerConfig.class)
 class ReleaseControllerTest {
 
-  @Autowired private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @MockitoBean private MarkdownRenderer markdownRenderer;
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
+    @MockitoBean
+    private MarkdownRenderer markdownRenderer;
 
-  @Test
-  void releases_rendersTheVersionNotesBundledWithTheApplication() throws Exception {
-    when(markdownRenderer.render(contains("v1.0.0"))).thenReturn("<h2>v1.0.0</h2>");
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-    mockMvc
-        .perform(get("/releases"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("public/releases"))
-        .andExpect(model().attribute("releaseNotesHtml", "<h2>v1.0.0</h2>"))
-        .andExpect(content().string(containsString("版本更新")))
-        .andExpect(content().string(containsString("v1.0.0")));
-  }
+    @Test
+    void releases_rendersTheVersionNotesBundledWithTheApplication() throws Exception {
+        when(markdownRenderer.render(contains("v1.0.0"))).thenReturn("<h2>v1.0.0</h2>");
+
+        mockMvc.perform(get("/releases"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("public/releases"))
+                .andExpect(model().attribute("releaseNotesHtml", "<h2>v1.0.0</h2>"))
+                .andExpect(content().string(containsString("版本更新")))
+                .andExpect(content().string(containsString("v1.0.0")));
+    }
 }

@@ -10,14 +10,13 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PublishPostCmdExe {
 
-  private final PostRepository postRepository;
-  private final IndexPostCmdExe indexPostCmdExe;
+    private final PostRepository postRepository;
+    private final IndexPostCmdExe indexPostCmdExe;
 
-  public void execute(Long postId) {
-    Post post =
-        postRepository.findById(postId).orElseThrow(() -> new RuntimeException("博文不存在：" + postId));
-    post.publish();
-    postRepository.save(post);
-    indexPostCmdExe.execute(postId);
-  }
+    public void execute(Long postId) {
+        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("博文不存在：" + postId));
+        post.publish();
+        postRepository.save(post);
+        indexPostCmdExe.execute(postId);
+    }
 }

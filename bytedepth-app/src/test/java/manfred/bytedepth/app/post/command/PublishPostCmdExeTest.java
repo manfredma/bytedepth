@@ -19,41 +19,41 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class PublishPostCmdExeTest {
 
-  @Mock private PostRepository postRepository;
-  @Mock private IndexPostCmdExe indexPostCmdExe;
+    @Mock
+    private PostRepository postRepository;
 
-  private PublishPostCmdExe publishPostCmdExe;
+    @Mock
+    private IndexPostCmdExe indexPostCmdExe;
 
-  @BeforeEach
-  void setUp() {
-    publishPostCmdExe = new PublishPostCmdExe(postRepository, indexPostCmdExe);
-  }
+    private PublishPostCmdExe publishPostCmdExe;
 
-  @Test
-  void execute_shouldPublishSaveAndIndex() {
-    Post draft =
-        Post.reconstruct(
-            1L, "标题", "内容", PostStatus.DRAFT, LocalDateTime.now(), null, LocalDateTime.now());
-    when(postRepository.findById(1L)).thenReturn(Optional.of(draft));
-    when(postRepository.save(any(Post.class))).thenReturn(draft);
+    @BeforeEach
+    void setUp() {
+        publishPostCmdExe = new PublishPostCmdExe(postRepository, indexPostCmdExe);
+    }
 
-    publishPostCmdExe.execute(1L);
+    @Test
+    void execute_shouldPublishSaveAndIndex() {
+        Post draft = Post.reconstruct(1L, "标题", "内容", PostStatus.DRAFT, LocalDateTime.now(), null, LocalDateTime.now());
+        when(postRepository.findById(1L)).thenReturn(Optional.of(draft));
+        when(postRepository.save(any(Post.class))).thenReturn(draft);
 
-    assertEquals(PostStatus.PUBLISHED, draft.getStatus());
-    assertNotNull(draft.getPublishedAt());
-    verify(postRepository).save(draft);
-    verify(indexPostCmdExe).execute(1L);
-  }
+        publishPostCmdExe.execute(1L);
 
-  @Test
-  void execute_shouldThrow_whenPostNotFound() {
-    when(postRepository.findById(99L)).thenReturn(Optional.empty());
+        assertEquals(PostStatus.PUBLISHED, draft.getStatus());
+        assertNotNull(draft.getPublishedAt());
+        verify(postRepository).save(draft);
+        verify(indexPostCmdExe).execute(1L);
+    }
 
-    RuntimeException ex =
-        assertThrows(RuntimeException.class, () -> publishPostCmdExe.execute(99L));
+    @Test
+    void execute_shouldThrow_whenPostNotFound() {
+        when(postRepository.findById(99L)).thenReturn(Optional.empty());
 
-    assertTrue(ex.getMessage().contains("99"));
-    verify(postRepository, never()).save(any());
-    verify(indexPostCmdExe, never()).execute(any());
-  }
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> publishPostCmdExe.execute(99L));
+
+        assertTrue(ex.getMessage().contains("99"));
+        verify(postRepository, never()).save(any());
+        verify(indexPostCmdExe, never()).execute(any());
+    }
 }

@@ -26,57 +26,55 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 class PostControllerCoverageTest {
 
-  @Test
-  void constructor_acceptsTheAnnotationIdentityDependency() {
-    PostController controller =
-        new PostController(
-            mock(ListPostsQryExe.class),
-            mock(GetPostQryExe.class),
-            mock(CreatePostCmdExe.class),
-            mock(PublishPostCmdExe.class),
-            mock(MarkdownRenderer.class),
-            mock(ListCommentsQryExe.class),
-            mock(ListAnnotationsQryExe.class),
-            mock(AnnotationVisitorIdentity.class),
-            mock(ListTagsQryExe.class),
-            mock(ListCategoriesQryExe.class),
-            mock(PostViewCounter.class),
-            mock(PostRepository.class),
-            mock(SeriesRepository.class),
-            mock(GetSeriesPostsQryExe.class),
-            mock(SeriesNavigationQryExe.class),
-            mock(GetPostRatingQryExe.class),
-            mock(VisitRequestFilter.class),
-            mock(ApplicationEventPublisher.class));
+    @Test
+    void constructor_acceptsTheAnnotationIdentityDependency() {
+        PostController controller = new PostController(
+                mock(ListPostsQryExe.class),
+                mock(GetPostQryExe.class),
+                mock(CreatePostCmdExe.class),
+                mock(PublishPostCmdExe.class),
+                mock(MarkdownRenderer.class),
+                mock(ListCommentsQryExe.class),
+                mock(ListAnnotationsQryExe.class),
+                mock(AnnotationVisitorIdentity.class),
+                mock(ListTagsQryExe.class),
+                mock(ListCategoriesQryExe.class),
+                mock(PostViewCounter.class),
+                mock(PostRepository.class),
+                mock(SeriesRepository.class),
+                mock(GetSeriesPostsQryExe.class),
+                mock(SeriesNavigationQryExe.class),
+                mock(GetPostRatingQryExe.class),
+                mock(VisitRequestFilter.class),
+                mock(ApplicationEventPublisher.class));
 
-    assertThat(controller).isNotNull();
-  }
+        assertThat(controller).isNotNull();
+    }
 
-  @Test
-  void readingSummaryHelperUsesTheAuthenticatedSummaryQuery() {
-    PostController controller =
-        new PostController(
-            mock(ListPostsQryExe.class),
-            mock(GetPostQryExe.class),
-            mock(CreatePostCmdExe.class),
-            mock(PublishPostCmdExe.class),
-            mock(MarkdownRenderer.class),
-            mock(ListCommentsQryExe.class),
-            mock(ListAnnotationsQryExe.class),
-            mock(AnnotationVisitorIdentity.class),
-            mock(ListTagsQryExe.class),
-            mock(ListCategoriesQryExe.class),
-            mock(PostViewCounter.class),
-            mock(PostRepository.class),
-            mock(SeriesRepository.class),
-            mock(GetSeriesPostsQryExe.class),
-            mock(SeriesNavigationQryExe.class),
-            mock(GetPostRatingQryExe.class),
-            mock(VisitRequestFilter.class),
-            mock(ApplicationEventPublisher.class));
-    var query = mock(GetReadingSummaryQryExe.class);
-    ReflectionTestUtils.setField(controller, "getReadingSummaryQryExe", query);
-    ReflectionTestUtils.invokeMethod(controller, "readingSummary", 7L, 12L);
-    org.mockito.Mockito.verify(query).execute(7L, 12L);
-  }
+    @Test
+    void readingSummaryHelperUsesTheAuthenticatedSummaryQuery() {
+        PostController controller = new PostController(
+                mock(ListPostsQryExe.class),
+                mock(GetPostQryExe.class),
+                mock(CreatePostCmdExe.class),
+                mock(PublishPostCmdExe.class),
+                mock(MarkdownRenderer.class),
+                mock(ListCommentsQryExe.class),
+                mock(ListAnnotationsQryExe.class),
+                mock(AnnotationVisitorIdentity.class),
+                mock(ListTagsQryExe.class),
+                mock(ListCategoriesQryExe.class),
+                mock(PostViewCounter.class),
+                mock(PostRepository.class),
+                mock(SeriesRepository.class),
+                mock(GetSeriesPostsQryExe.class),
+                mock(SeriesNavigationQryExe.class),
+                mock(GetPostRatingQryExe.class),
+                mock(VisitRequestFilter.class),
+                mock(ApplicationEventPublisher.class));
+        var query = mock(GetReadingSummaryQryExe.class);
+        ReflectionTestUtils.setField(controller, "getReadingSummaryQryExe", query);
+        ReflectionTestUtils.invokeMethod(controller, "readingSummary", 7L, 12L);
+        org.mockito.Mockito.verify(query).execute(7L, 12L);
+    }
 }

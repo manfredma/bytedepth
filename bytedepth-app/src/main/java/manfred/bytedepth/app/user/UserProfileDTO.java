@@ -6,10 +6,10 @@ import manfred.bytedepth.app.post.query.PostDTO;
 
 @Data
 public class UserProfileDTO {
-  private Long id;
-  private String username;
-  private String bio;
-  private String avatar;
-  private int postCount;
-  private List<PostDTO> recentPosts;
+    private Long id;
+    private String username;
+    private String bio;
+    private String avatar;
+    private int postCount;
+    private List<PostDTO> recentPosts;
 }

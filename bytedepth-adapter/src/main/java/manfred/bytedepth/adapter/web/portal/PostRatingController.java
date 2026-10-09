@@ -21,38 +21,37 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/posts/{slug}/rating")
 @RequiredArgsConstructor
 public class PostRatingController {
-  public static final String VISITOR_COOKIE = "bytedepth-rating-visitor";
+    public static final String VISITOR_COOKIE = "bytedepth-rating-visitor";
 
-  private final GetPostQryExe getPostQryExe;
-  private final RatePostCmdExe ratePostCmdExe;
+    private final GetPostQryExe getPostQryExe;
+    private final RatePostCmdExe ratePostCmdExe;
 
-  @PostMapping
-  public String rate(
-      @PathVariable String slug,
-      @RequestParam int score,
-      HttpServletRequest request,
-      HttpServletResponse response) {
-    if (score < 1 || score > 5)
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "评分必须是 1 到 5 星");
-    String token = visitorToken(request);
-    if (token == null) {
-      token = UUID.randomUUID().toString();
-      response.addHeader(
-          "Set-Cookie",
-          ResponseCookie.from(VISITOR_COOKIE, token)
-              .httpOnly(true)
-              .sameSite("Lax")
-              .path("/")
-              .maxAge(Duration.ofDays(365))
-              .secure(request.isSecure())
-              .build()
-              .toString());
+    @PostMapping
+    public String rate(
+            @PathVariable String slug,
+            @RequestParam int score,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        if (score < 1 || score > 5) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "评分必须是 1 到 5 星");
+        String token = visitorToken(request);
+        if (token == null) {
+            token = UUID.randomUUID().toString();
+            response.addHeader(
+                    "Set-Cookie",
+                    ResponseCookie.from(VISITOR_COOKIE, token)
+                            .httpOnly(true)
+                            .sameSite("Lax")
+                            .path("/")
+                            .maxAge(Duration.ofDays(365))
+                            .secure(request.isSecure())
+                            .build()
+                            .toString());
+        }
+        ratePostCmdExe.execute(getPostQryExe.executeBySlug(slug).getId(), token, score);
+        return "redirect:/posts/" + slug + "#post-rating-end";
     }
-    ratePostCmdExe.execute(getPostQryExe.executeBySlug(slug).getId(), token, score);
-    return "redirect:/posts/" + slug + "#post-rating-end";
-  }
 
-  private String visitorToken(HttpServletRequest request) {
-    return WebUtils.readCookie(request, VISITOR_COOKIE);
-  }
+    private String visitorToken(HttpServletRequest request) {
+        return WebUtils.readCookie(request, VISITOR_COOKIE);
+    }
 }

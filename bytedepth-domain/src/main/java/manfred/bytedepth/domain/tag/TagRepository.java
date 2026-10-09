@@ -4,23 +4,23 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TagRepository {
-  Tag save(Tag tag);
+    Tag save(Tag tag);
 
-  Optional<Tag> findBySlug(String slug);
+    Optional<Tag> findBySlug(String slug);
 
-  Optional<Tag> findById(Long id);
+    Optional<Tag> findById(Long id);
 
-  List<Tag> findAll();
+    List<Tag> findAll();
 
-  List<Tag> findByPostId(Long postId);
+    List<Tag> findByPostId(Long postId);
 
-  void savePostTags(Long postId, List<Long> tagIds);
+    void savePostTags(Long postId, List<Long> tagIds);
 
-  void deleteWithPostAssociations(Long tagId);
+    void deleteWithPostAssociations(Long tagId);
 
-  List<TagWithCount> findAllWithCount();
+    List<TagWithCount> findAllWithCount();
 
-  List<TagWithCount> findPageWithCount(String name, int page, int size);
+    List<TagWithCount> findPageWithCount(String name, int page, int size);
 
-  long countWithName(String name);
+    long countWithName(String name);
 }

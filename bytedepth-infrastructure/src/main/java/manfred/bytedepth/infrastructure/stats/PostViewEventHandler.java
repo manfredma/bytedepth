@@ -13,27 +13,27 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PostViewEventHandler {
 
-  private final GeoIpService geoIpService;
-  private final PostViewLogMapper postViewLogMapper;
+    private final GeoIpService geoIpService;
+    private final PostViewLogMapper postViewLogMapper;
 
-  @Async
-  @EventListener
-  public void onPostViewed(PostViewedEvent event) {
-    try {
-      GeoInfo geo = geoIpService.resolve(event.ip());
-      PostViewLogDO log = new PostViewLogDO();
-      log.setPostId(event.postId());
-      log.setUserId(event.userId());
-      log.setIp(event.ip());
-      log.setUserAgent(event.userAgent());
-      log.setReferer(event.referer());
-      log.setCountry(geo.country());
-      log.setCity(geo.city());
-      log.setVisitedAt(event.occurredAt());
-      log.setVisitToken(event.visitToken());
-      postViewLogMapper.upsertVisit(log);
-    } catch (Exception e) {
-      log.error("访问日志写入失败 postId={} ip={}", event.postId(), event.ip(), e);
+    @Async
+    @EventListener
+    public void onPostViewed(PostViewedEvent event) {
+        try {
+            GeoInfo geo = geoIpService.resolve(event.ip());
+            PostViewLogDO log = new PostViewLogDO();
+            log.setPostId(event.postId());
+            log.setUserId(event.userId());
+            log.setIp(event.ip());
+            log.setUserAgent(event.userAgent());
+            log.setReferer(event.referer());
+            log.setCountry(geo.country());
+            log.setCity(geo.city());
+            log.setVisitedAt(event.occurredAt());
+            log.setVisitToken(event.visitToken());
+            postViewLogMapper.upsertVisit(log);
+        } catch (Exception e) {
+            log.error("访问日志写入失败 postId={} ip={}", event.postId(), event.ip(), e);
+        }
     }
-  }
 }

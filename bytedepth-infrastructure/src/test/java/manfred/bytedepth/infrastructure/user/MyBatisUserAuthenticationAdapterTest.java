@@ -14,38 +14,37 @@ import org.junit.jupiter.api.Test;
 
 class MyBatisUserAuthenticationAdapterTest {
 
-  private final UserMapper userMapper = mock(UserMapper.class);
-  private final MyBatisUserAuthenticationAdapter adapter =
-      new MyBatisUserAuthenticationAdapter(userMapper);
+    private final UserMapper userMapper = mock(UserMapper.class);
+    private final MyBatisUserAuthenticationAdapter adapter = new MyBatisUserAuthenticationAdapter(userMapper);
 
-  @Test
-  void returnsAuthenticationDataAndPermissionsForExistingUser() {
-    UserDO user = new UserDO();
-    user.setId(7L);
-    user.setUsername("alice");
-    user.setPassword("hash");
-    user.setStatus("ACTIVE");
-    when(userMapper.selectOne(any())).thenReturn(user);
-    when(userMapper.selectPermissionCodesByUserId(7L)).thenReturn(List.of("blog:post:create"));
+    @Test
+    void returnsAuthenticationDataAndPermissionsForExistingUser() {
+        UserDO user = new UserDO();
+        user.setId(7L);
+        user.setUsername("alice");
+        user.setPassword("hash");
+        user.setStatus("ACTIVE");
+        when(userMapper.selectOne(any())).thenReturn(user);
+        when(userMapper.selectPermissionCodesByUserId(7L)).thenReturn(List.of("blog:post:create"));
 
-    var result = adapter.findByUsername("alice");
+        var result = adapter.findByUsername("alice");
 
-    assertTrue(result.isPresent());
-    var authentication = result.orElseThrow();
-    assertEquals(7L, authentication.id());
-    assertEquals("alice", authentication.username());
-    assertEquals("hash", authentication.passwordHash());
-    assertEquals("ACTIVE", authentication.status());
-    assertEquals(List.of("blog:post:create"), authentication.permissionCodes());
-    verify(userMapper).selectPermissionCodesByUserId(7L);
-  }
+        assertTrue(result.isPresent());
+        var authentication = result.orElseThrow();
+        assertEquals(7L, authentication.id());
+        assertEquals("alice", authentication.username());
+        assertEquals("hash", authentication.passwordHash());
+        assertEquals("ACTIVE", authentication.status());
+        assertEquals(List.of("blog:post:create"), authentication.permissionCodes());
+        verify(userMapper).selectPermissionCodesByUserId(7L);
+    }
 
-  @Test
-  void returnsEmptyWithoutLoadingPermissionsWhenUserIsMissing() {
-    when(userMapper.selectOne(any())).thenReturn(null);
+    @Test
+    void returnsEmptyWithoutLoadingPermissionsWhenUserIsMissing() {
+        when(userMapper.selectOne(any())).thenReturn(null);
 
-    assertFalse(adapter.findByUsername("missing").isPresent());
+        assertFalse(adapter.findByUsername("missing").isPresent());
 
-    verify(userMapper, never()).selectPermissionCodesByUserId(any());
-  }
+        verify(userMapper, never()).selectPermissionCodesByUserId(any());
+    }
 }

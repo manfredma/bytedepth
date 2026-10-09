@@ -19,38 +19,37 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ReadingEventController {
 
-  private final RecordReadingEventCmdExe recordReadingEventCmdExe;
+    private final RecordReadingEventCmdExe recordReadingEventCmdExe;
 
-  @PostMapping("/{slug}/reading-events")
-  @PreAuthorize("isAuthenticated()")
-  public ResponseEntity<Void> record(
-      @PathVariable String slug, @RequestBody RecordReadingEventRequest request) {
-    Long userId = SecurityUtils.extractUserId(SecurityUtils.currentUser());
-    if (userId == null) {
-      return ResponseEntity.status(401).build();
+    @PostMapping("/{slug}/reading-events")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> record(@PathVariable String slug, @RequestBody RecordReadingEventRequest request) {
+        Long userId = SecurityUtils.extractUserId(SecurityUtils.currentUser());
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            recordReadingEventCmdExe.execute(
+                    userId,
+                    slug,
+                    new RecordReadingEventCmdExe.ReadingEventRequest(
+                            request.eventId(),
+                            request.sessionId(),
+                            request.type(),
+                            request.activeSecondsDelta(),
+                            request.maxScrollDepth(),
+                            request.occurredAt()));
+            return ResponseEntity.accepted().build();
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().build();
+        }
     }
-    try {
-      recordReadingEventCmdExe.execute(
-          userId,
-          slug,
-          new RecordReadingEventCmdExe.ReadingEventRequest(
-              request.eventId(),
-              request.sessionId(),
-              request.type(),
-              request.activeSecondsDelta(),
-              request.maxScrollDepth(),
-              request.occurredAt()));
-      return ResponseEntity.accepted().build();
-    } catch (IllegalArgumentException exception) {
-      return ResponseEntity.badRequest().build();
-    }
-  }
 
-  public record RecordReadingEventRequest(
-      UUID eventId,
-      UUID sessionId,
-      ReadingEventType type,
-      int activeSecondsDelta,
-      int maxScrollDepth,
-      Instant occurredAt) {}
+    public record RecordReadingEventRequest(
+            UUID eventId,
+            UUID sessionId,
+            ReadingEventType type,
+            int activeSecondsDelta,
+            int maxScrollDepth,
+            Instant occurredAt) {}
 }

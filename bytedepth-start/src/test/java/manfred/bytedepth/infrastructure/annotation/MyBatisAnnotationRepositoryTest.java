@@ -20,155 +20,149 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class MyBatisAnnotationRepositoryTest {
 
-  @Mock private PostAnnotationMapper mapper;
+    @Mock
+    private PostAnnotationMapper mapper;
 
-  private MyBatisAnnotationRepository repository;
+    private MyBatisAnnotationRepository repository;
 
-  @BeforeEach
-  void setUp() {
-    repository = new MyBatisAnnotationRepository(mapper);
-  }
+    @BeforeEach
+    void setUp() {
+        repository = new MyBatisAnnotationRepository(mapper);
+    }
 
-  @Test
-  void save_mapsAndInserts() {
-    PostAnnotation annotation =
-        new PostAnnotation(
-            null,
-            1L,
-            2L,
-            null,
-            "文本",
-            "批注",
-            "yellow",
-            AnnotationVisibility.PUBLIC,
-            0,
-            5,
-            LocalDateTime.of(2026, 8, 10, 12, 0),
-            false);
-    when(mapper.insert(any(PostAnnotationDO.class)))
-        .thenAnswer(
-            inv -> {
-              PostAnnotationDO data = inv.getArgument(0);
-              data.setId(10L);
-              return 1;
-            });
+    @Test
+    void save_mapsAndInserts() {
+        PostAnnotation annotation = new PostAnnotation(
+                null,
+                1L,
+                2L,
+                null,
+                "文本",
+                "批注",
+                "yellow",
+                AnnotationVisibility.PUBLIC,
+                0,
+                5,
+                LocalDateTime.of(2026, 8, 10, 12, 0),
+                false);
+        when(mapper.insert(any(PostAnnotationDO.class))).thenAnswer(inv -> {
+            PostAnnotationDO data = inv.getArgument(0);
+            data.setId(10L);
+            return 1;
+        });
 
-    PostAnnotation saved = repository.save(annotation);
+        PostAnnotation saved = repository.save(annotation);
 
-    assertThat(saved.id()).isEqualTo(10L);
-    ArgumentCaptor<PostAnnotationDO> captor = ArgumentCaptor.forClass(PostAnnotationDO.class);
-    verify(mapper).insert(captor.capture());
-    PostAnnotationDO data = captor.getValue();
-    assertThat(data.getPostId()).isEqualTo(1L);
-    assertThat(data.getSelectedText()).isEqualTo("文本");
-    assertThat(data.getStartOffset()).isEqualTo(0);
-  }
+        assertThat(saved.id()).isEqualTo(10L);
+        ArgumentCaptor<PostAnnotationDO> captor = ArgumentCaptor.forClass(PostAnnotationDO.class);
+        verify(mapper).insert(captor.capture());
+        PostAnnotationDO data = captor.getValue();
+        assertThat(data.getPostId()).isEqualTo(1L);
+        assertThat(data.getSelectedText()).isEqualTo("文本");
+        assertThat(data.getStartOffset()).isEqualTo(0);
+    }
 
-  @Test
-  void findVisibleByPostId_mapsDoListToDomain() {
-    PostAnnotationDO data = new PostAnnotationDO();
-    data.setId(5L);
-    data.setPostId(1L);
-    data.setUserId(2L);
-    data.setSelectedText("文本");
-    data.setAnnotationText("批注");
-    data.setColor("green");
-    data.setVisibility("PUBLIC");
-    data.setStartOffset(3);
-    data.setEndOffset(6);
-    data.setCreatedAt(LocalDateTime.of(2026, 8, 10, 12, 0));
-    when(mapper.findVisibleByPostId(1L, 2L, null)).thenReturn(List.of(data));
+    @Test
+    void findVisibleByPostId_mapsDoListToDomain() {
+        PostAnnotationDO data = new PostAnnotationDO();
+        data.setId(5L);
+        data.setPostId(1L);
+        data.setUserId(2L);
+        data.setSelectedText("文本");
+        data.setAnnotationText("批注");
+        data.setColor("green");
+        data.setVisibility("PUBLIC");
+        data.setStartOffset(3);
+        data.setEndOffset(6);
+        data.setCreatedAt(LocalDateTime.of(2026, 8, 10, 12, 0));
+        when(mapper.findVisibleByPostId(1L, 2L, null)).thenReturn(List.of(data));
 
-    List<PostAnnotation> result = repository.findVisibleByPostId(1L, 2L, null);
+        List<PostAnnotation> result = repository.findVisibleByPostId(1L, 2L, null);
 
-    assertThat(result).hasSize(1);
-    PostAnnotation ann = result.get(0);
-    assertThat(ann.id()).isEqualTo(5L);
-    assertThat(ann.selectedText()).isEqualTo("文本");
-    assertThat(ann.color()).isEqualTo("green");
-  }
+        assertThat(result).hasSize(1);
+        PostAnnotation ann = result.get(0);
+        assertThat(ann.id()).isEqualTo(5L);
+        assertThat(ann.selectedText()).isEqualTo("文本");
+        assertThat(ann.color()).isEqualTo("green");
+    }
 
-  @Test
-  void findById_existing_returnsDomain() {
-    PostAnnotationDO data = new PostAnnotationDO();
-    data.setId(5L);
-    data.setPostId(1L);
-    data.setUserId(2L);
-    data.setSelectedText("文本");
-    data.setAnnotationText("批注");
-    data.setColor("blue");
-    data.setVisibility("PUBLIC");
-    data.setStartOffset(0);
-    data.setEndOffset(5);
-    data.setCreatedAt(LocalDateTime.of(2026, 8, 10, 12, 0));
-    when(mapper.selectById(5L)).thenReturn(data);
+    @Test
+    void findById_existing_returnsDomain() {
+        PostAnnotationDO data = new PostAnnotationDO();
+        data.setId(5L);
+        data.setPostId(1L);
+        data.setUserId(2L);
+        data.setSelectedText("文本");
+        data.setAnnotationText("批注");
+        data.setColor("blue");
+        data.setVisibility("PUBLIC");
+        data.setStartOffset(0);
+        data.setEndOffset(5);
+        data.setCreatedAt(LocalDateTime.of(2026, 8, 10, 12, 0));
+        when(mapper.selectById(5L)).thenReturn(data);
 
-    Optional<PostAnnotation> result = repository.findById(5L);
+        Optional<PostAnnotation> result = repository.findById(5L);
 
-    assertThat(result).isPresent();
-    assertThat(result.get().id()).isEqualTo(5L);
-    assertThat(result.get().startOffset()).isEqualTo(0);
-    assertThat(result.get().endOffset()).isEqualTo(5);
-  }
+        assertThat(result).isPresent();
+        assertThat(result.get().id()).isEqualTo(5L);
+        assertThat(result.get().startOffset()).isEqualTo(0);
+        assertThat(result.get().endOffset()).isEqualTo(5);
+    }
 
-  @Test
-  void findById_missing_returnsEmpty() {
-    when(mapper.selectById(99L)).thenReturn(null);
+    @Test
+    void findById_missing_returnsEmpty() {
+        when(mapper.selectById(99L)).thenReturn(null);
 
-    assertThat(repository.findById(99L)).isEmpty();
-  }
+        assertThat(repository.findById(99L)).isEmpty();
+    }
 
-  @Test
-  void findByPostId_mapsDeletedAnnotationAndDelegates() {
-    PostAnnotationDO data = new PostAnnotationDO();
-    data.setId(7L);
-    data.setPostId(1L);
-    data.setSelectedText("已删除文本");
-    data.setAnnotationText("历史批注");
-    data.setColor("red");
-    data.setVisibility("PRIVATE");
-    data.setStartOffset(8);
-    data.setEndOffset(12);
-    data.setCreatedAt(LocalDateTime.of(2026, 8, 10, 12, 0));
-    data.setDeleted(true);
-    when(mapper.selectList(any())).thenReturn(List.of(data));
+    @Test
+    void findByPostId_mapsDeletedAnnotationAndDelegates() {
+        PostAnnotationDO data = new PostAnnotationDO();
+        data.setId(7L);
+        data.setPostId(1L);
+        data.setSelectedText("已删除文本");
+        data.setAnnotationText("历史批注");
+        data.setColor("red");
+        data.setVisibility("PRIVATE");
+        data.setStartOffset(8);
+        data.setEndOffset(12);
+        data.setCreatedAt(LocalDateTime.of(2026, 8, 10, 12, 0));
+        data.setDeleted(true);
+        when(mapper.selectList(any())).thenReturn(List.of(data));
 
-    List<PostAnnotation> result = repository.findByPostId(1L);
+        List<PostAnnotation> result = repository.findByPostId(1L);
 
-    assertThat(result)
-        .singleElement()
-        .satisfies(
-            annotation -> {
-              assertThat(annotation.id()).isEqualTo(7L);
-              assertThat(annotation.visibility()).isEqualTo(AnnotationVisibility.PRIVATE);
-              assertThat(annotation.deleted()).isTrue();
-            });
-    verify(mapper).selectList(any());
-  }
+        assertThat(result).singleElement().satisfies(annotation -> {
+            assertThat(annotation.id()).isEqualTo(7L);
+            assertThat(annotation.visibility()).isEqualTo(AnnotationVisibility.PRIVATE);
+            assertThat(annotation.deleted()).isTrue();
+        });
+        verify(mapper).selectList(any());
+    }
 
-  @Test
-  void delete_delegates() {
-    repository.delete(5L);
-    verify(mapper).deleteById(5L);
-  }
+    @Test
+    void delete_delegates() {
+        repository.delete(5L);
+        verify(mapper).deleteById(5L);
+    }
 
-  @Test
-  void update_mapsAndDelegates() {
-    PostAnnotation annotation =
-        new PostAnnotation(
-            5L,
-            1L,
-            null,
-            "hash",
-            "文本",
-            "修改",
-            "yellow",
-            AnnotationVisibility.PRIVATE,
-            0,
-            5,
-            LocalDateTime.now(),
-            false);
-    assertThat(repository.update(annotation).visibility()).isEqualTo(AnnotationVisibility.PRIVATE);
-    verify(mapper).updateById(any(PostAnnotationDO.class));
-  }
+    @Test
+    void update_mapsAndDelegates() {
+        PostAnnotation annotation = new PostAnnotation(
+                5L,
+                1L,
+                null,
+                "hash",
+                "文本",
+                "修改",
+                "yellow",
+                AnnotationVisibility.PRIVATE,
+                0,
+                5,
+                LocalDateTime.now(),
+                false);
+        assertThat(repository.update(annotation).visibility()).isEqualTo(AnnotationVisibility.PRIVATE);
+        verify(mapper).updateById(any(PostAnnotationDO.class));
+    }
 }

@@ -10,28 +10,28 @@ import org.apache.ibatis.type.JdbcType;
 
 public final class UuidStringTypeHandler extends BaseTypeHandler<UUID> {
 
-  @Override
-  public void setNonNullParameter(PreparedStatement ps, int i, UUID parameter, JdbcType jdbcType)
-      throws SQLException {
-    ps.setString(i, parameter.toString());
-  }
+    @Override
+    public void setNonNullParameter(PreparedStatement ps, int i, UUID parameter, JdbcType jdbcType)
+            throws SQLException {
+        ps.setString(i, parameter.toString());
+    }
 
-  @Override
-  public UUID getNullableResult(ResultSet rs, String columnName) throws SQLException {
-    return parse(rs.getString(columnName));
-  }
+    @Override
+    public UUID getNullableResult(ResultSet rs, String columnName) throws SQLException {
+        return parse(rs.getString(columnName));
+    }
 
-  @Override
-  public UUID getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
-    return parse(rs.getString(columnIndex));
-  }
+    @Override
+    public UUID getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
+        return parse(rs.getString(columnIndex));
+    }
 
-  @Override
-  public UUID getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
-    return parse(cs.getString(columnIndex));
-  }
+    @Override
+    public UUID getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
+        return parse(cs.getString(columnIndex));
+    }
 
-  private static UUID parse(String value) {
-    return value == null ? null : UUID.fromString(value);
-  }
+    private static UUID parse(String value) {
+        return value == null ? null : UUID.fromString(value);
+    }
 }

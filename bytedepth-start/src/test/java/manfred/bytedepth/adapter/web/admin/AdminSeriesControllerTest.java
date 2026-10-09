@@ -30,57 +30,65 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(
-    value = AdminSeriesController.class,
-    excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@WebMvcTest(value = AdminSeriesController.class, excludeAutoConfiguration = DataSourceAutoConfiguration.class)
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 @Import({SecurityConfig.class, SecurityMockMvcConfig.class})
 class AdminSeriesControllerTest {
 
-  @Autowired private MockMvc mockMvc;
-  @MockitoBean private UserDetailsService userDetailsService;
-  @MockitoBean private PasswordEncoder passwordEncoder;
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
-  @MockitoBean private SetPostSeriesCmdExe setPostSeriesCmdExe;
-  @MockitoBean private ContentOwnershipGuard contentOwnershipGuard;
-  @MockitoBean private RateLimitPort rateLimitPort;
-  @MockitoBean private RateLimitProperties rateLimitProperties;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @org.junit.jupiter.api.BeforeEach
-  void allowRateLimitedRequests() {
-    when(rateLimitProperties.getCommentRatingIp()).thenReturn(new RateLimitProperties.Rule());
-    when(rateLimitPort.tryConsume(any(), anyLong(), any(), any()))
-        .thenReturn(RateLimitDecision.permit());
-    when(contentOwnershipGuard.currentUserId(any())).thenReturn(1L);
-  }
+    @MockitoBean
+    private UserDetailsService userDetailsService;
 
-  @Test
-  void regularAuthor_cannotUseLegacyAutoCreateSeriesEndpoint() throws Exception {
-    mockMvc
-        .perform(
-            post("/admin/posts/1/series")
-                .with(csrf())
-                .param("seriesSlug", "java")
-                .param("seriesOrder", "1")
-                .with(
-                    org.springframework.security.test.web.servlet.request
-                        .SecurityMockMvcRequestPostProcessors.user("author")
-                        .authorities(() -> "blog:post:create")))
-        .andExpect(status().isForbidden());
-  }
+    @MockitoBean
+    private PasswordEncoder passwordEncoder;
 
-  @Test
-  @WithMockUser(authorities = "admin:dashboard:view")
-  void administrator_canUseLegacyAutoCreateSeriesEndpoint() throws Exception {
-    mockMvc
-        .perform(
-            post("/admin/posts/1/series")
-                .with(csrf())
-                .param("seriesSlug", "java")
-                .param("seriesName", "Java")
-                .param("seriesOrder", "1"))
-        .andExpect(status().isOk());
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-    verify(setPostSeriesCmdExe).execute(1L, "java", "Java", 1, 1L);
-  }
+    @MockitoBean
+    private SetPostSeriesCmdExe setPostSeriesCmdExe;
+
+    @MockitoBean
+    private ContentOwnershipGuard contentOwnershipGuard;
+
+    @MockitoBean
+    private RateLimitPort rateLimitPort;
+
+    @MockitoBean
+    private RateLimitProperties rateLimitProperties;
+
+    @org.junit.jupiter.api.BeforeEach
+    void allowRateLimitedRequests() {
+        when(rateLimitProperties.getCommentRatingIp()).thenReturn(new RateLimitProperties.Rule());
+        when(rateLimitPort.tryConsume(any(), anyLong(), any(), any())).thenReturn(RateLimitDecision.permit());
+        when(contentOwnershipGuard.currentUserId(any())).thenReturn(1L);
+    }
+
+    @Test
+    void regularAuthor_cannotUseLegacyAutoCreateSeriesEndpoint() throws Exception {
+        mockMvc.perform(
+                        post("/admin/posts/1/series")
+                                .with(csrf())
+                                .param("seriesSlug", "java")
+                                .param("seriesOrder", "1")
+                                .with(org.springframework.security.test.web.servlet.request
+                                        .SecurityMockMvcRequestPostProcessors.user("author")
+                                        .authorities(() -> "blog:post:create")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "admin:dashboard:view")
+    void administrator_canUseLegacyAutoCreateSeriesEndpoint() throws Exception {
+        mockMvc.perform(post("/admin/posts/1/series")
+                        .with(csrf())
+                        .param("seriesSlug", "java")
+                        .param("seriesName", "Java")
+                        .param("seriesOrder", "1"))
+                .andExpect(status().isOk());
+
+        verify(setPostSeriesCmdExe).execute(1L, "java", "Java", 1, 1L);
+    }
 }

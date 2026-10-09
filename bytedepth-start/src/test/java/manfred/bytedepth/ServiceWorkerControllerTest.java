@@ -16,16 +16,17 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(ServiceWorkerController.class)
 class ServiceWorkerControllerTest {
 
-  @Autowired private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-  @Test
-  void servesServiceWorkerWithoutHttpCaching() throws Exception {
-    mockMvc
-        .perform(get("/sw.js"))
-        .andExpect(status().isOk())
-        .andExpect(header().string("Cache-Control", containsString("no-store")))
-        .andExpect(content().contentTypeCompatibleWith("application/javascript"));
-  }
+    @Test
+    void servesServiceWorkerWithoutHttpCaching() throws Exception {
+        mockMvc.perform(get("/sw.js"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", containsString("no-store")))
+                .andExpect(content().contentTypeCompatibleWith("application/javascript"));
+    }
 }

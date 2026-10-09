@@ -11,10 +11,10 @@ import org.springframework.context.annotation.Configuration;
 @MapperScan("manfred.bytedepth.infrastructure")
 public class MybatisPlusConfig {
 
-  @Bean
-  public MybatisPlusInterceptor mybatisPlusInterceptor() {
-    MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-    interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
-    return interceptor;
-  }
+    @Bean
+    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+        return interceptor;
+    }
 }

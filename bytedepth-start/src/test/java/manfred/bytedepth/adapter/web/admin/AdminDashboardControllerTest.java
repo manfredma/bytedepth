@@ -31,54 +31,58 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(
-    value = AdminDashboardController.class,
-    excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@WebMvcTest(value = AdminDashboardController.class, excludeAutoConfiguration = DataSourceAutoConfiguration.class)
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 @Import({SecurityConfig.class, ThymeleafSecurityHandlerConfig.class, SecurityMockMvcConfig.class})
 class AdminDashboardControllerTest {
 
-  @Autowired private MockMvc mockMvc;
-  @MockitoBean private UserDetailsService userDetailsService;
-  @MockitoBean private PasswordEncoder passwordEncoder;
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
-  @MockitoBean private RateLimitPort rateLimitPort;
-  @MockitoBean private RateLimitProperties rateLimitProperties;
-  @MockitoBean private DashboardStatsQryExe dashboardStatsQryExe;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @Test
-  void anonymousUser_cannotAccessAdminEntry() throws Exception {
-    mockMvc
-        .perform(get("/admin"))
-        .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrl("/login"));
+    @MockitoBean
+    private UserDetailsService userDetailsService;
 
-    verifyNoInteractions(dashboardStatsQryExe);
-  }
+    @MockitoBean
+    private PasswordEncoder passwordEncoder;
 
-  @Test
-  @WithMockUser(authorities = "blog:post:create")
-  void regularAuthor_isRedirectedToPersonalPostsWorkspace() throws Exception {
-    mockMvc
-        .perform(get("/admin"))
-        .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrl("/admin/posts"));
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-    verifyNoInteractions(dashboardStatsQryExe);
-  }
+    @MockitoBean
+    private RateLimitPort rateLimitPort;
 
-  @Test
-  @WithMockUser(authorities = "admin:dashboard:view")
-  void administrator_seesDashboardStatistics() throws Exception {
-    DashboardStatsDTO stats = new DashboardStatsDTO();
-    when(dashboardStatsQryExe.execute()).thenReturn(stats);
+    @MockitoBean
+    private RateLimitProperties rateLimitProperties;
 
-    mockMvc
-        .perform(get("/admin"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("admin/dashboard"))
-        .andExpect(model().attribute("stats", stats));
+    @MockitoBean
+    private DashboardStatsQryExe dashboardStatsQryExe;
 
-    verify(dashboardStatsQryExe).execute();
-  }
+    @Test
+    void anonymousUser_cannotAccessAdminEntry() throws Exception {
+        mockMvc.perform(get("/admin")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/login"));
+
+        verifyNoInteractions(dashboardStatsQryExe);
+    }
+
+    @Test
+    @WithMockUser(authorities = "blog:post:create")
+    void regularAuthor_isRedirectedToPersonalPostsWorkspace() throws Exception {
+        mockMvc.perform(get("/admin")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/admin/posts"));
+
+        verifyNoInteractions(dashboardStatsQryExe);
+    }
+
+    @Test
+    @WithMockUser(authorities = "admin:dashboard:view")
+    void administrator_seesDashboardStatistics() throws Exception {
+        DashboardStatsDTO stats = new DashboardStatsDTO();
+        when(dashboardStatsQryExe.execute()).thenReturn(stats);
+
+        mockMvc.perform(get("/admin"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/dashboard"))
+                .andExpect(model().attribute("stats", stats));
+
+        verify(dashboardStatsQryExe).execute();
+    }
 }

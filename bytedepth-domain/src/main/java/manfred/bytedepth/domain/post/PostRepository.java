@@ -4,57 +4,56 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PostRepository {
-  Post save(Post post);
+    Post save(Post post);
 
-  Optional<Post> findById(Long id);
+    Optional<Post> findById(Long id);
 
-  List<Post> findPublished(int page, int size);
+    List<Post> findPublished(int page, int size);
 
-  List<HotPost> findPublishedByHotness(int page, int size);
+    List<HotPost> findPublishedByHotness(int page, int size);
 
-  List<HotPost> findPublishedByHotnessExcluding(List<Long> excludedIds, int page, int size);
+    List<HotPost> findPublishedByHotnessExcluding(List<Long> excludedIds, int page, int size);
 
-  List<Post> findLatestPublishedExcluding(List<Long> excludedIds, int limit);
+    List<Post> findLatestPublishedExcluding(List<Long> excludedIds, int limit);
 
-  long countPublished();
+    long countPublished();
 
-  List<Post> findPublishedByTag(String tagSlug, int page, int size);
+    List<Post> findPublishedByTag(String tagSlug, int page, int size);
 
-  long countPublishedByTag(String tagSlug);
+    long countPublishedByTag(String tagSlug);
 
-  List<Post> findPublishedByCategory(Long categoryId, int page, int size);
+    List<Post> findPublishedByCategory(Long categoryId, int page, int size);
 
-  long countPublishedByCategory(Long categoryId);
+    long countPublishedByCategory(Long categoryId);
 
-  List<Post> findPage(int page, int size);
+    List<Post> findPage(int page, int size);
 
-  long countAll();
+    long countAll();
 
-  Optional<Post> findPrevPublished(Long id);
+    Optional<Post> findPrevPublished(Long id);
 
-  Optional<Post> findNextPublished(Long id);
+    Optional<Post> findNextPublished(Long id);
 
-  void setPostSeries(Long postId, Long seriesId, Integer seriesOrder);
+    void setPostSeries(Long postId, Long seriesId, Integer seriesOrder);
 
-  /** 清除文章的专栏绑定（series_id、series_order 置 null） */
-  void clearPostSeries(Long postId);
+    /** 清除文章的专栏绑定（series_id、series_order 置 null） */
+    void clearPostSeries(Long postId);
 
-  List<Post> findPublishedByAuthorId(Long authorId, int page, int size);
+    List<Post> findPublishedByAuthorId(Long authorId, int page, int size);
 
-  long countPublishedByAuthorId(Long authorId);
+    long countPublishedByAuthorId(Long authorId);
 
-  Optional<Post> findBySlug(String slug);
+    Optional<Post> findBySlug(String slug);
 
-  /** 直接更新 slug 字段（不触及其他字段）。调用方需保证格式合法且无冲突。 */
-  void updateSlug(Long id, String slug);
+    /** 直接更新 slug 字段（不触及其他字段）。调用方需保证格式合法且无冲突。 */
+    void updateSlug(Long id, String slug);
 
-  /** 查询所有已发布文章（不分页），用于生成 sitemap。 */
-  List<Post> findAllPublished();
+    /** 查询所有已发布文章（不分页），用于生成 sitemap。 */
+    List<Post> findAllPublished();
 
-  /** 后台管理用：按过滤条件分页查询文章（排除已删除）。title 为模糊匹配；status 用枚举名匹配。 */
-  List<Post> findPage(
-      int page, int size, String title, String status, Long seriesId, Long categoryId);
+    /** 后台管理用：按过滤条件分页查询文章（排除已删除）。title 为模糊匹配；status 用枚举名匹配。 */
+    List<Post> findPage(int page, int size, String title, String status, Long seriesId, Long categoryId);
 
-  /** 后台管理用：按过滤条件统计文章总数（排除已删除）。 */
-  long countFiltered(String title, String status, Long seriesId, Long categoryId);
+    /** 后台管理用：按过滤条件统计文章总数（排除已删除）。 */
+    long countFiltered(String title, String status, Long seriesId, Long categoryId);
 }

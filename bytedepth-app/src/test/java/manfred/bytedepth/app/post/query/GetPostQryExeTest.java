@@ -21,67 +21,68 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class GetPostQryExeTest {
 
-  @Mock private PostRepository postRepository;
-  @Mock private TagRepository tagRepository;
-  private GetPostQryExe exe;
+    @Mock
+    private PostRepository postRepository;
 
-  @BeforeEach
-  void setUp() {
-    exe = new GetPostQryExe(postRepository, tagRepository);
-  }
+    @Mock
+    private TagRepository tagRepository;
 
-  @Test
-  void executeById_found_returnsDtoWithTags() {
-    LocalDateTime now = LocalDateTime.now();
-    Post post =
-        Post.reconstruct(
-            1L, "java-guide", "Java 指南", "内容", PostStatus.PUBLISHED, now, now, now, 7L, 9L, false);
-    when(postRepository.findById(1L)).thenReturn(Optional.of(post));
-    when(tagRepository.findByPostId(1L)).thenReturn(List.of(Tag.reconstruct(2L, "Java", "java")));
+    private GetPostQryExe exe;
 
-    PostDTO dto = exe.execute(1L);
+    @BeforeEach
+    void setUp() {
+        exe = new GetPostQryExe(postRepository, tagRepository);
+    }
 
-    assertEquals(1L, dto.getId());
-    assertEquals("java-guide", dto.getSlug());
-    assertEquals("Java 指南", dto.getTitle());
-    assertEquals("内容", dto.getContent());
-    assertEquals(1, dto.getContentVersion());
-    assertEquals("PUBLISHED", dto.getStatus());
-    assertEquals(7L, dto.getCategoryId());
-    assertEquals(9L, dto.getAuthorId());
-    assertEquals(List.of("java"), dto.getTagSlugs());
-    verify(tagRepository).findByPostId(1L);
-  }
+    @Test
+    void executeById_found_returnsDtoWithTags() {
+        LocalDateTime now = LocalDateTime.now();
+        Post post =
+                Post.reconstruct(1L, "java-guide", "Java 指南", "内容", PostStatus.PUBLISHED, now, now, now, 7L, 9L, false);
+        when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+        when(tagRepository.findByPostId(1L)).thenReturn(List.of(Tag.reconstruct(2L, "Java", "java")));
 
-  @Test
-  void executeById_missing_throwsNoSuchElement() {
-    when(postRepository.findById(99L)).thenReturn(Optional.empty());
-    assertThrows(NoSuchElementException.class, () -> exe.execute(99L));
-  }
+        PostDTO dto = exe.execute(1L);
 
-  @Test
-  void executeBySlug_found_returnsDtoWithoutTags() {
-    LocalDateTime now = LocalDateTime.now();
-    Post post =
-        Post.reconstruct(
-            5L, "spring", "Spring", "body", PostStatus.DRAFT, now, null, now, null, 2L, false);
-    when(postRepository.findBySlug("spring")).thenReturn(Optional.of(post));
-    when(tagRepository.findByPostId(5L)).thenReturn(List.of());
+        assertEquals(1L, dto.getId());
+        assertEquals("java-guide", dto.getSlug());
+        assertEquals("Java 指南", dto.getTitle());
+        assertEquals("内容", dto.getContent());
+        assertEquals(1, dto.getContentVersion());
+        assertEquals("PUBLISHED", dto.getStatus());
+        assertEquals(7L, dto.getCategoryId());
+        assertEquals(9L, dto.getAuthorId());
+        assertEquals(List.of("java"), dto.getTagSlugs());
+        verify(tagRepository).findByPostId(1L);
+    }
 
-    PostDTO dto = exe.executeBySlug("spring");
+    @Test
+    void executeById_missing_throwsNoSuchElement() {
+        when(postRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(NoSuchElementException.class, () -> exe.execute(99L));
+    }
 
-    assertEquals(5L, dto.getId());
-    assertEquals("spring", dto.getSlug());
-    assertEquals("Spring", dto.getTitle());
-    assertEquals("DRAFT", dto.getStatus());
-    assertNull(dto.getCategoryId());
-    assertNull(dto.getPublishedAt());
-    assertTrue(dto.getTagSlugs().isEmpty());
-  }
+    @Test
+    void executeBySlug_found_returnsDtoWithoutTags() {
+        LocalDateTime now = LocalDateTime.now();
+        Post post = Post.reconstruct(5L, "spring", "Spring", "body", PostStatus.DRAFT, now, null, now, null, 2L, false);
+        when(postRepository.findBySlug("spring")).thenReturn(Optional.of(post));
+        when(tagRepository.findByPostId(5L)).thenReturn(List.of());
 
-  @Test
-  void executeBySlug_missing_throwsNoSuchElement() {
-    when(postRepository.findBySlug("nope")).thenReturn(Optional.empty());
-    assertThrows(NoSuchElementException.class, () -> exe.executeBySlug("nope"));
-  }
+        PostDTO dto = exe.executeBySlug("spring");
+
+        assertEquals(5L, dto.getId());
+        assertEquals("spring", dto.getSlug());
+        assertEquals("Spring", dto.getTitle());
+        assertEquals("DRAFT", dto.getStatus());
+        assertNull(dto.getCategoryId());
+        assertNull(dto.getPublishedAt());
+        assertTrue(dto.getTagSlugs().isEmpty());
+    }
+
+    @Test
+    void executeBySlug_missing_throwsNoSuchElement() {
+        when(postRepository.findBySlug("nope")).thenReturn(Optional.empty());
+        assertThrows(NoSuchElementException.class, () -> exe.executeBySlug("nope"));
+    }
 }

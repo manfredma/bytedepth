@@ -9,15 +9,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CreateTagCmdExe {
 
-  private final TagRepository tagRepository;
+    private final TagRepository tagRepository;
 
-  public TagDTO execute(String name, String slug) {
-    Tag tag =
-        tagRepository.findBySlug(slug).orElseGet(() -> tagRepository.save(Tag.create(name, slug)));
-    TagDTO dto = new TagDTO();
-    dto.setId(tag.getId());
-    dto.setName(tag.getName());
-    dto.setSlug(tag.getSlug());
-    return dto;
-  }
+    public TagDTO execute(String name, String slug) {
+        Tag tag = tagRepository.findBySlug(slug).orElseGet(() -> tagRepository.save(Tag.create(name, slug)));
+        TagDTO dto = new TagDTO();
+        dto.setId(tag.getId());
+        dto.setName(tag.getName());
+        dto.setSlug(tag.getSlug());
+        return dto;
+    }
 }

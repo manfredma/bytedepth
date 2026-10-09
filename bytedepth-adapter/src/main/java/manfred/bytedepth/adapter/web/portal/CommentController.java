@@ -15,21 +15,20 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class CommentController {
 
-  private final SubmitCommentCmdExe submitCommentCmdExe;
-  private final PostRepository postRepository;
+    private final SubmitCommentCmdExe submitCommentCmdExe;
+    private final PostRepository postRepository;
 
-  @PostMapping
-  @PreAuthorize("hasAuthority('blog:comment:create')")
-  public String submit(
-      @PathVariable("postSlug") String postSlug,
-      @RequestParam("content") String content,
-      @AuthenticationPrincipal UserDetails currentUser) {
-    Long postId =
-        postRepository
-            .findBySlug(postSlug)
-            .orElseThrow(() -> new NoSuchElementException("文章不存在：" + postSlug))
-            .getId();
-    submitCommentCmdExe.execute(postId, currentUser.getUsername(), content);
-    return "redirect:/posts/" + postSlug + "#comments";
-  }
+    @PostMapping
+    @PreAuthorize("hasAuthority('blog:comment:create')")
+    public String submit(
+            @PathVariable("postSlug") String postSlug,
+            @RequestParam("content") String content,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        Long postId = postRepository
+                .findBySlug(postSlug)
+                .orElseThrow(() -> new NoSuchElementException("文章不存在：" + postSlug))
+                .getId();
+        submitCommentCmdExe.execute(postId, currentUser.getUsername(), content);
+        return "redirect:/posts/" + postSlug + "#comments";
+    }
 }

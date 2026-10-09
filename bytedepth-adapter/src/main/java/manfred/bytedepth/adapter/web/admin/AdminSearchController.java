@@ -13,11 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AdminSearchController {
 
-  private final ReindexAllPostsCmdExe reindexAllPostsCmdExe;
+    private final ReindexAllPostsCmdExe reindexAllPostsCmdExe;
 
-  @PostMapping("/reindex")
-  public ResponseEntity<Map<String, Object>> reindex() {
-    int count = reindexAllPostsCmdExe.execute();
-    return ResponseEntity.ok(Map.of("indexed", count, "status", "ok"));
-  }
+    @PostMapping("/reindex")
+    public ResponseEntity<Map<String, Object>> reindex() {
+        int count = reindexAllPostsCmdExe.execute();
+        return ResponseEntity.ok(Map.of("indexed", count, "status", "ok"));
+    }
 }

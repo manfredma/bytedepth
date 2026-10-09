@@ -17,60 +17,51 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ListPendingUsersQryExeTest {
 
-  @Mock private UserRepository userRepository;
-  private ListPendingUsersQryExe exe;
+    @Mock
+    private UserRepository userRepository;
 
-  @BeforeEach
-  void setUp() {
-    exe = new ListPendingUsersQryExe(userRepository);
-  }
+    private ListPendingUsersQryExe exe;
 
-  @Test
-  void execute_returnsPendingUsers() {
-    User pending =
-        User.reconstruct(
-            1L,
-            "dave",
-            "hash",
-            null,
-            null,
-            null,
-            UserStatus.PENDING,
-            LocalDateTime.now(),
-            LocalDateTime.now());
-    when(userRepository.findByStatus(UserStatus.PENDING)).thenReturn(List.of(pending));
+    @BeforeEach
+    void setUp() {
+        exe = new ListPendingUsersQryExe(userRepository);
+    }
 
-    List<UserDTO> result = exe.execute();
+    @Test
+    void execute_returnsPendingUsers() {
+        User pending = User.reconstruct(
+                1L, "dave", "hash", null, null, null, UserStatus.PENDING, LocalDateTime.now(), LocalDateTime.now());
+        when(userRepository.findByStatus(UserStatus.PENDING)).thenReturn(List.of(pending));
 
-    assertEquals(1, result.size());
-    assertEquals("dave", result.get(0).getUsername());
-    assertEquals("PENDING", result.get(0).getStatus());
-  }
+        List<UserDTO> result = exe.execute();
 
-  @Test
-  void execute_noUsers_returnsEmptyList() {
-    when(userRepository.findByStatus(UserStatus.PENDING)).thenReturn(List.of());
-    assertTrue(exe.execute().isEmpty());
-  }
+        assertEquals(1, result.size());
+        assertEquals("dave", result.get(0).getUsername());
+        assertEquals("PENDING", result.get(0).getStatus());
+    }
 
-  @Test
-  void findPage_returnsMappedUsersAndFilteredTotal() {
-    LocalDateTime createdAt = LocalDateTime.of(2026, 8, 11, 10, 0);
-    User active =
-        User.reconstruct(
-            2L, "alice", "hash", null, null, null, UserStatus.ACTIVE, createdAt, createdAt);
-    when(userRepository.findPage("ali", "ACTIVE", 2, 10)).thenReturn(List.of(active));
-    when(userRepository.countFiltered("ali", "ACTIVE")).thenReturn(11L);
+    @Test
+    void execute_noUsers_returnsEmptyList() {
+        when(userRepository.findByStatus(UserStatus.PENDING)).thenReturn(List.of());
+        assertTrue(exe.execute().isEmpty());
+    }
 
-    ListPendingUsersQryExe.UserPageResult result = exe.findPage("ali", "ACTIVE", 2, 10);
+    @Test
+    void findPage_returnsMappedUsersAndFilteredTotal() {
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 11, 10, 0);
+        User active = User.reconstruct(2L, "alice", "hash", null, null, null, UserStatus.ACTIVE, createdAt, createdAt);
+        when(userRepository.findPage("ali", "ACTIVE", 2, 10)).thenReturn(List.of(active));
+        when(userRepository.countFiltered("ali", "ACTIVE")).thenReturn(11L);
 
-    assertEquals(11L, result.total());
-    assertEquals(1, result.users().size());
-    assertEquals(2L, result.users().getFirst().getId());
-    assertEquals("alice", result.users().getFirst().getUsername());
-    assertEquals("ACTIVE", result.users().getFirst().getStatus());
-    assertEquals(createdAt, result.users().getFirst().getCreatedAt());
-    verify(userRepository).findPage("ali", "ACTIVE", 2, 10);
-    verify(userRepository).countFiltered("ali", "ACTIVE");
-  }
+        ListPendingUsersQryExe.UserPageResult result = exe.findPage("ali", "ACTIVE", 2, 10);
+
+        assertEquals(11L, result.total());
+        assertEquals(1, result.users().size());
+        assertEquals(2L, result.users().getFirst().getId());
+        assertEquals("alice", result.users().getFirst().getUsername());
+        assertEquals("ACTIVE", result.users().getFirst().getStatus());
+        assertEquals(createdAt, result.users().getFirst().getCreatedAt());
+        verify(userRepository).findPage("ali", "ACTIVE", 2, 10);
+        verify(userRepository).countFiltered("ali", "ACTIVE");
+    }
 }

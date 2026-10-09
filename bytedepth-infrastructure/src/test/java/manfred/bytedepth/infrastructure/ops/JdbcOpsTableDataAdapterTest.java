@@ -13,32 +13,31 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 class JdbcOpsTableDataAdapterTest {
 
-  @Test
-  void list_usesTheFixedWhitelistedPostQuery() {
-    JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
-    String query =
-        "SELECT id, title, status, author_id, created_at, updated_at FROM `post` ORDER BY id DESC"
-            + " LIMIT 50";
-    when(jdbcTemplate.queryForList(query)).thenReturn(List.of(Map.of("id", 1L, "title", "Post")));
+    @Test
+    void list_usesTheFixedWhitelistedPostQuery() {
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        String query = "SELECT id, title, status, author_id, created_at, updated_at FROM `post` ORDER BY id DESC"
+                + " LIMIT 50";
+        when(jdbcTemplate.queryForList(query)).thenReturn(List.of(Map.of("id", 1L, "title", "Post")));
 
-    var result = new JdbcOpsTableDataAdapter(jdbcTemplate).list(OpsTable.POST);
+        var result = new JdbcOpsTableDataAdapter(jdbcTemplate).list(OpsTable.POST);
 
-    assertEquals("post", result.tableName());
-    assertEquals(6, result.columns().size());
-    assertEquals(1, result.rows().size());
-  }
+        assertEquals("post", result.tableName());
+        assertEquals(6, result.columns().size());
+        assertEquals(1, result.rows().size());
+    }
 
-  @Test
-  void list_rejectsNullOrUnsupportedTable() {
-    JdbcOpsTableDataAdapter adapter = new JdbcOpsTableDataAdapter(mock(JdbcTemplate.class));
-    assertThrows(IllegalArgumentException.class, () -> adapter.list(null));
-  }
+    @Test
+    void list_rejectsNullOrUnsupportedTable() {
+        JdbcOpsTableDataAdapter adapter = new JdbcOpsTableDataAdapter(mock(JdbcTemplate.class));
+        assertThrows(IllegalArgumentException.class, () -> adapter.list(null));
+    }
 
-  @Test
-  void list_rejectsAnUnknownTableValueDefensively() {
-    OpsTable unknown = mock(OpsTable.class);
-    JdbcOpsTableDataAdapter adapter = new JdbcOpsTableDataAdapter(mock(JdbcTemplate.class));
+    @Test
+    void list_rejectsAnUnknownTableValueDefensively() {
+        OpsTable unknown = mock(OpsTable.class);
+        JdbcOpsTableDataAdapter adapter = new JdbcOpsTableDataAdapter(mock(JdbcTemplate.class));
 
-    assertThrows(IllegalArgumentException.class, () -> adapter.list(unknown));
-  }
+        assertThrows(IllegalArgumentException.class, () -> adapter.list(unknown));
+    }
 }

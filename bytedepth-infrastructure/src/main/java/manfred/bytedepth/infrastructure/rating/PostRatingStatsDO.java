@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class PostRatingStatsDO {
-  private Double averageRating;
-  private Long ratingCount;
+    private Double averageRating;
+    private Long ratingCount;
 }

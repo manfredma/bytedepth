@@ -7,9 +7,9 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface ViewLogTablespaceMaintenanceMapper {
 
-  ViewLogTablespaceState findState(@Param("source") ViewLogArchiveSource source);
+    ViewLogTablespaceState findState(@Param("source") ViewLogArchiveSource source);
 
-  ViewLogTablespaceMetrics findMetrics(@Param("source") ViewLogArchiveSource source);
+    ViewLogTablespaceMetrics findMetrics(@Param("source") ViewLogArchiveSource source);
 
-  int resetDeletedRows(@Param("source") ViewLogArchiveSource source);
+    int resetDeletedRows(@Param("source") ViewLogArchiveSource source);
 }

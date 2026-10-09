@@ -9,8 +9,7 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface PostAnnotationMapper extends BaseMapper<PostAnnotationDO> {
 
-  @Select(
-      """
+    @Select("""
       <script>
       SELECT * FROM post_annotation
       WHERE post_id = #{postId}
@@ -21,8 +20,6 @@ public interface PostAnnotationMapper extends BaseMapper<PostAnnotationDO> {
       ORDER BY start_offset ASC, id ASC
       </script>
       """)
-  List<PostAnnotationDO> findVisibleByPostId(
-      @Param("postId") Long postId,
-      @Param("userId") Long userId,
-      @Param("ownerTokenHash") String ownerTokenHash);
+    List<PostAnnotationDO> findVisibleByPostId(
+            @Param("postId") Long postId, @Param("userId") Long userId, @Param("ownerTokenHash") String ownerTokenHash);
 }

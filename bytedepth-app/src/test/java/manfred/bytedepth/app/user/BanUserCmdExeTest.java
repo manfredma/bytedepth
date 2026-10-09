@@ -17,28 +17,30 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class BanUserCmdExeTest {
 
-  @Mock private UserRepository userRepository;
-  private BanUserCmdExe exe;
+    @Mock
+    private UserRepository userRepository;
 
-  @BeforeEach
-  void setUp() {
-    exe = new BanUserCmdExe(userRepository);
-  }
+    private BanUserCmdExe exe;
 
-  @Test
-  void execute_activeUser_savesBanned() {
-    User user = User.register("carol", "hash");
-    user.activate();
-    when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+    @BeforeEach
+    void setUp() {
+        exe = new BanUserCmdExe(userRepository);
+    }
 
-    exe.execute(2L);
+    @Test
+    void execute_activeUser_savesBanned() {
+        User user = User.register("carol", "hash");
+        user.activate();
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
 
-    verify(userRepository).save(argThat(u -> u.getStatus() == UserStatus.BANNED));
-  }
+        exe.execute(2L);
 
-  @Test
-  void execute_userNotFound_throwsDomainException() {
-    when(userRepository.findById(99L)).thenReturn(Optional.empty());
-    assertThrows(DomainException.class, () -> exe.execute(99L));
-  }
+        verify(userRepository).save(argThat(u -> u.getStatus() == UserStatus.BANNED));
+    }
+
+    @Test
+    void execute_userNotFound_throwsDomainException() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(DomainException.class, () -> exe.execute(99L));
+    }
 }

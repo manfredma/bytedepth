@@ -5,11 +5,11 @@ import java.util.List;
 import manfred.bytedepth.domain.reading.ReadingEvent;
 
 public interface ReadingEventPort {
-  boolean insertIfAbsent(ReadingEvent event);
+    boolean insertIfAbsent(ReadingEvent event);
 
-  List<PendingReadingEvent> findUnprojected(int limit);
+    List<PendingReadingEvent> findUnprojected(int limit);
 
-  void markProjected(long eventRowId, Instant projectedAt);
+    void markProjected(long eventRowId, Instant projectedAt);
 
-  int deleteProjectedBefore(Instant cutoff);
+    int deleteProjectedBefore(Instant cutoff);
 }

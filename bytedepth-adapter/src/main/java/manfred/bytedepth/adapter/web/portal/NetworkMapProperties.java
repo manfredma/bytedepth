@@ -14,21 +14,24 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public record NetworkMapProperties(@NotEmpty List<@Valid Group> groups) {
 
-  public List<Group> getGroups() {
-    return groups;
-  }
-
-  public record Group(
-      @NotBlank String id,
-      @NotBlank String title,
-      @NotBlank String description,
-      @NotEmpty List<@Valid Site> sites) {}
-
-  public record Site(@NotBlank String name, @NotNull URI url, @NotBlank String description) {
-
-    @AssertTrue(message = "url must use https")
-    public boolean hasHttpsUrl() {
-      return url != null && "https".equalsIgnoreCase(url.getScheme());
+    public List<Group> getGroups() {
+        return groups;
     }
-  }
+
+    public record Group(
+            @NotBlank String id,
+            @NotBlank String title,
+            @NotBlank String description,
+            @NotEmpty List<@Valid Site> sites) {}
+
+    public record Site(
+            @NotBlank String name,
+            @NotNull URI url,
+            @NotBlank String description) {
+
+        @AssertTrue(message = "url must use https")
+        public boolean hasHttpsUrl() {
+            return url != null && "https".equalsIgnoreCase(url.getScheme());
+        }
+    }
 }

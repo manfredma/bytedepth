@@ -17,63 +17,62 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class GetSeriesPostsQryExeTest {
 
-  @Mock private SeriesRepository seriesRepository;
+    @Mock
+    private SeriesRepository seriesRepository;
 
-  private GetSeriesPostsQryExe qryExe;
+    private GetSeriesPostsQryExe qryExe;
 
-  @BeforeEach
-  void setUp() {
-    qryExe = new GetSeriesPostsQryExe(seriesRepository);
-  }
+    @BeforeEach
+    void setUp() {
+        qryExe = new GetSeriesPostsQryExe(seriesRepository);
+    }
 
-  @Test
-  void execute_withPosts_mapsToDTO() {
-    when(seriesRepository.findPublishedPostsBySeries(1L))
-        .thenReturn(
-            List.of(
-                new SeriesPostItem(10L, "slug-1", "文章1", 1, "content", "PUBLISHED", null),
-                new SeriesPostItem(20L, "slug-2", "文章2", 2, "content", "PUBLISHED", null)));
+    @Test
+    void execute_withPosts_mapsToDTO() {
+        when(seriesRepository.findPublishedPostsBySeries(1L))
+                .thenReturn(List.of(
+                        new SeriesPostItem(10L, "slug-1", "文章1", 1, "content", "PUBLISHED", null),
+                        new SeriesPostItem(20L, "slug-2", "文章2", 2, "content", "PUBLISHED", null)));
 
-    List<SeriesPostItemDTO> result = qryExe.execute(1L);
+        List<SeriesPostItemDTO> result = qryExe.execute(1L);
 
-    assertEquals(2, result.size());
+        assertEquals(2, result.size());
 
-    SeriesPostItemDTO first = result.get(0);
-    assertEquals(10L, first.getId());
-    assertEquals("slug-1", first.getSlug());
-    assertEquals("文章1", first.getTitle());
-    assertEquals(1, first.getSeriesOrder());
-    assertEquals(1, first.getEstimatedReadingMinutes());
+        SeriesPostItemDTO first = result.get(0);
+        assertEquals(10L, first.getId());
+        assertEquals("slug-1", first.getSlug());
+        assertEquals("文章1", first.getTitle());
+        assertEquals(1, first.getSeriesOrder());
+        assertEquals(1, first.getEstimatedReadingMinutes());
 
-    SeriesPostItemDTO second = result.get(1);
-    assertEquals(20L, second.getId());
-    assertEquals("slug-2", second.getSlug());
-    assertEquals("文章2", second.getTitle());
-    assertEquals(2, second.getSeriesOrder());
-    assertEquals(1, second.getEstimatedReadingMinutes());
-  }
+        SeriesPostItemDTO second = result.get(1);
+        assertEquals(20L, second.getId());
+        assertEquals("slug-2", second.getSlug());
+        assertEquals("文章2", second.getTitle());
+        assertEquals(2, second.getSeriesOrder());
+        assertEquals(1, second.getEstimatedReadingMinutes());
+    }
 
-  @Test
-  void execute_noPosts_returnsEmptyList() {
-    when(seriesRepository.findPublishedPostsBySeries(1L)).thenReturn(List.of());
+    @Test
+    void execute_noPosts_returnsEmptyList() {
+        when(seriesRepository.findPublishedPostsBySeries(1L)).thenReturn(List.of());
 
-    List<SeriesPostItemDTO> result = qryExe.execute(1L);
+        List<SeriesPostItemDTO> result = qryExe.execute(1L);
 
-    assertTrue(result.isEmpty());
-  }
+        assertTrue(result.isEmpty());
+    }
 
-  @Test
-  void execute_nullSlugAndContent_handledByCompactConstructor() {
-    // SeriesPostItem compact constructor sets slug/content/status/publishedAt to null
-    when(seriesRepository.findPublishedPostsBySeries(1L))
-        .thenReturn(List.of(new SeriesPostItem(10L, "文章1", 1)));
+    @Test
+    void execute_nullSlugAndContent_handledByCompactConstructor() {
+        // SeriesPostItem compact constructor sets slug/content/status/publishedAt to null
+        when(seriesRepository.findPublishedPostsBySeries(1L)).thenReturn(List.of(new SeriesPostItem(10L, "文章1", 1)));
 
-    List<SeriesPostItemDTO> result = qryExe.execute(1L);
+        List<SeriesPostItemDTO> result = qryExe.execute(1L);
 
-    assertEquals(1, result.size());
-    assertEquals(10L, result.get(0).getId());
-    assertNull(result.get(0).getSlug());
-    assertEquals("文章1", result.get(0).getTitle());
-    assertEquals(1, result.get(0).getSeriesOrder());
-  }
+        assertEquals(1, result.size());
+        assertEquals(10L, result.get(0).getId());
+        assertNull(result.get(0).getSlug());
+        assertEquals("文章1", result.get(0).getTitle());
+        assertEquals(1, result.get(0).getSeriesOrder());
+    }
 }

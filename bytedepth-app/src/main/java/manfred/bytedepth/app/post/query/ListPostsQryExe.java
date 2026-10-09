@@ -13,89 +13,84 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ListPostsQryExe {
 
-  private final PostRepository postRepository;
-  private final CategoryRepository categoryRepository;
+    private final PostRepository postRepository;
+    private final CategoryRepository categoryRepository;
 
-  public long countPublished() {
-    return postRepository.countPublished();
-  }
+    public long countPublished() {
+        return postRepository.countPublished();
+    }
 
-  public long countByTag(String tagSlug) {
-    return postRepository.countPublishedByTag(tagSlug);
-  }
+    public long countByTag(String tagSlug) {
+        return postRepository.countPublishedByTag(tagSlug);
+    }
 
-  public long countByCategory(String categorySlug) {
-    return categoryRepository
-        .findBySlug(categorySlug)
-        .map(cat -> postRepository.countPublishedByCategory(cat.getId()))
-        .orElse(0L);
-  }
+    public long countByCategory(String categorySlug) {
+        return categoryRepository
+                .findBySlug(categorySlug)
+                .map(cat -> postRepository.countPublishedByCategory(cat.getId()))
+                .orElse(0L);
+    }
 
-  public List<PostDTO> execute(int page, int size) {
-    List<Post> posts = postRepository.findPublished(page, size);
-    return posts.stream().map(this::toDTO).collect(Collectors.toList());
-  }
+    public List<PostDTO> execute(int page, int size) {
+        List<Post> posts = postRepository.findPublished(page, size);
+        return posts.stream().map(this::toDTO).collect(Collectors.toList());
+    }
 
-  public List<PostDTO> executeByHotness(int page, int size) {
-    return postRepository.findPublishedByHotness(page, size).stream()
-        .map(this::toDTO)
-        .collect(Collectors.toList());
-  }
+    public List<PostDTO> executeByHotness(int page, int size) {
+        return postRepository.findPublishedByHotness(page, size).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
 
-  public List<PostDTO> executeByHotnessExcluding(List<Long> excludedIds, int page, int size) {
-    return postRepository.findPublishedByHotnessExcluding(excludedIds, page, size).stream()
-        .map(this::toDTO)
-        .collect(Collectors.toList());
-  }
+    public List<PostDTO> executeByHotnessExcluding(List<Long> excludedIds, int page, int size) {
+        return postRepository.findPublishedByHotnessExcluding(excludedIds, page, size).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
 
-  public List<PostDTO> executeLatestExcluding(List<Long> excludedIds, int limit) {
-    return postRepository.findLatestPublishedExcluding(excludedIds, limit).stream()
-        .map(this::toDTO)
-        .collect(Collectors.toList());
-  }
+    public List<PostDTO> executeLatestExcluding(List<Long> excludedIds, int limit) {
+        return postRepository.findLatestPublishedExcluding(excludedIds, limit).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
 
-  public List<PostDTO> executeByTag(String tagSlug, int page, int size) {
-    return postRepository.findPublishedByTag(tagSlug, page, size).stream()
-        .map(this::toDTO)
-        .collect(Collectors.toList());
-  }
+    public List<PostDTO> executeByTag(String tagSlug, int page, int size) {
+        return postRepository.findPublishedByTag(tagSlug, page, size).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
 
-  public List<PostDTO> executeByCategory(String categorySlug, int page, int size) {
-    return categoryRepository
-        .findBySlug(categorySlug)
-        .map(
-            cat ->
-                postRepository.findPublishedByCategory(cat.getId(), page, size).stream()
-                    .map(this::toDTO)
-                    .collect(Collectors.toList()))
-        .orElseGet(List::of);
-  }
+    public List<PostDTO> executeByCategory(String categorySlug, int page, int size) {
+        return categoryRepository
+                .findBySlug(categorySlug)
+                .map(cat -> postRepository.findPublishedByCategory(cat.getId(), page, size).stream()
+                        .map(this::toDTO)
+                        .collect(Collectors.toList()))
+                .orElseGet(List::of);
+    }
 
-  private PostDTO toDTO(Post post) {
-    PostDTO dto = new PostDTO();
-    dto.setId(post.getId());
-    dto.setSlug(post.getSlug());
-    dto.setTitle(post.getTitle());
-    dto.setContent(post.getContent());
-    dto.setStatus(post.getStatus().name());
-    dto.setPublishedAt(post.getPublishedAt());
-    dto.setCreatedAt(post.getCreatedAt());
-    dto.setCategoryId(post.getCategoryId());
-    if (post.getCategoryId() != null) {
-      categoryRepository
-          .findById(post.getCategoryId())
-          .ifPresent(
-              cat -> {
+    private PostDTO toDTO(Post post) {
+        PostDTO dto = new PostDTO();
+        dto.setId(post.getId());
+        dto.setSlug(post.getSlug());
+        dto.setTitle(post.getTitle());
+        dto.setContent(post.getContent());
+        dto.setStatus(post.getStatus().name());
+        dto.setPublishedAt(post.getPublishedAt());
+        dto.setCreatedAt(post.getCreatedAt());
+        dto.setCategoryId(post.getCategoryId());
+        if (post.getCategoryId() != null) {
+            categoryRepository.findById(post.getCategoryId()).ifPresent(cat -> {
                 dto.setCategoryName(cat.getName());
                 dto.setCategorySlug(cat.getSlug());
-              });
+            });
+        }
+        return dto;
     }
-    return dto;
-  }
 
-  private PostDTO toDTO(HotPost hotPost) {
-    PostDTO dto = toDTO(hotPost.post());
-    dto.setViewCount(hotPost.viewCount());
-    return dto;
-  }
+    private PostDTO toDTO(HotPost hotPost) {
+        PostDTO dto = toDTO(hotPost.post());
+        dto.setViewCount(hotPost.viewCount());
+        return dto;
+    }
 }

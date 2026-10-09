@@ -15,8 +15,8 @@ import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfig
 @TestConfiguration
 public class SecurityMockMvcConfig {
 
-  @Bean
-  public MockMvcBuilderCustomizer securityMockMvcBuilderCustomizer() {
-    return builder -> builder.apply(SecurityMockMvcConfigurers.springSecurity());
-  }
+    @Bean
+    public MockMvcBuilderCustomizer securityMockMvcBuilderCustomizer() {
+        return builder -> builder.apply(SecurityMockMvcConfigurers.springSecurity());
+    }
 }

@@ -4,15 +4,15 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CategoryRepository {
-  Category save(Category category);
+    Category save(Category category);
 
-  Optional<Category> findById(Long id);
+    Optional<Category> findById(Long id);
 
-  Optional<Category> findBySlug(String slug);
+    Optional<Category> findBySlug(String slug);
 
-  List<Category> findAll();
+    List<Category> findAll();
 
-  List<Category> findByNameOrSlugLike(String keyword);
+    List<Category> findByNameOrSlugLike(String keyword);
 
-  List<Category> findByParentId(Long parentId);
+    List<Category> findByParentId(Long parentId);
 }

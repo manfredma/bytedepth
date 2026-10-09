@@ -5,5 +5,5 @@ package manfred.bytedepth.app.ops;
  */
 public interface OpsDatabasePort {
 
-  OpsDatabaseStatusDTO inspect();
+    OpsDatabaseStatusDTO inspect();
 }

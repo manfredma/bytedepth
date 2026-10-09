@@ -11,21 +11,19 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class GetSeriesPostsQryExe {
 
-  private final SeriesRepository seriesRepository;
+    private final SeriesRepository seriesRepository;
 
-  public List<SeriesPostItemDTO> execute(Long seriesId) {
-    return seriesRepository.findPublishedPostsBySeries(seriesId).stream()
-        .map(
-            item -> {
-              SeriesPostItemDTO dto = new SeriesPostItemDTO();
-              dto.setId(item.id());
-              dto.setSlug(item.slug());
-              dto.setTitle(item.title());
-              dto.setSeriesOrder(item.seriesOrder());
-              dto.setEstimatedReadingMinutes(
-                  MarkdownTextExtractor.estimatedReadingMinutes(item.content()));
-              return dto;
-            })
-        .collect(Collectors.toList());
-  }
+    public List<SeriesPostItemDTO> execute(Long seriesId) {
+        return seriesRepository.findPublishedPostsBySeries(seriesId).stream()
+                .map(item -> {
+                    SeriesPostItemDTO dto = new SeriesPostItemDTO();
+                    dto.setId(item.id());
+                    dto.setSlug(item.slug());
+                    dto.setTitle(item.title());
+                    dto.setSeriesOrder(item.seriesOrder());
+                    dto.setEstimatedReadingMinutes(MarkdownTextExtractor.estimatedReadingMinutes(item.content()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
 }

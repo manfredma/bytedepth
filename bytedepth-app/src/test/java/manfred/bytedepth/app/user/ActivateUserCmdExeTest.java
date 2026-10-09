@@ -17,28 +17,30 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ActivateUserCmdExeTest {
 
-  @Mock private UserRepository userRepository;
-  private ActivateUserCmdExe exe;
+    @Mock
+    private UserRepository userRepository;
 
-  @BeforeEach
-  void setUp() {
-    exe = new ActivateUserCmdExe(userRepository);
-  }
+    private ActivateUserCmdExe exe;
 
-  @Test
-  void execute_pendingUser_savesActiveAndAssignsRole() {
-    User user = User.register("bob", "hash");
-    when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    @BeforeEach
+    void setUp() {
+        exe = new ActivateUserCmdExe(userRepository);
+    }
 
-    exe.execute(1L);
+    @Test
+    void execute_pendingUser_savesActiveAndAssignsRole() {
+        User user = User.register("bob", "hash");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-    verify(userRepository).save(argThat(u -> u.getStatus() == UserStatus.ACTIVE));
-    verify(userRepository).assignRole(1L, "USER");
-  }
+        exe.execute(1L);
 
-  @Test
-  void execute_userNotFound_throwsDomainException() {
-    when(userRepository.findById(99L)).thenReturn(Optional.empty());
-    assertThrows(DomainException.class, () -> exe.execute(99L));
-  }
+        verify(userRepository).save(argThat(u -> u.getStatus() == UserStatus.ACTIVE));
+        verify(userRepository).assignRole(1L, "USER");
+    }
+
+    @Test
+    void execute_userNotFound_throwsDomainException() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(DomainException.class, () -> exe.execute(99L));
+    }
 }

@@ -17,46 +17,47 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ListAnnotationsQryExeTest {
 
-  @Mock private AnnotationRepositoryPort annotationRepository;
+    @Mock
+    private AnnotationRepositoryPort annotationRepository;
 
-  private ListAnnotationsQryExe qry;
+    private ListAnnotationsQryExe qry;
 
-  @BeforeEach
-  void setUp() {
-    qry = new ListAnnotationsQryExe(annotationRepository);
-  }
+    @BeforeEach
+    void setUp() {
+        qry = new ListAnnotationsQryExe(annotationRepository);
+    }
 
-  private static PostAnnotation annotation(long id, int start) {
-    return new PostAnnotation(
-        id,
-        1L,
-        2L,
-        null,
-        "文本",
-        "批注",
-        "yellow",
-        AnnotationVisibility.PUBLIC,
-        start,
-        start + 5,
-        LocalDateTime.now(),
-        false);
-  }
+    private static PostAnnotation annotation(long id, int start) {
+        return new PostAnnotation(
+                id,
+                1L,
+                2L,
+                null,
+                "文本",
+                "批注",
+                "yellow",
+                AnnotationVisibility.PUBLIC,
+                start,
+                start + 5,
+                LocalDateTime.now(),
+                false);
+    }
 
-  @Test
-  void execute_sortsByStartOffsetAscending() {
-    when(annotationRepository.findVisibleByPostId(1L, 2L, null))
-        .thenReturn(List.of(annotation(3L, 30), annotation(1L, 10), annotation(2L, 20)));
+    @Test
+    void execute_sortsByStartOffsetAscending() {
+        when(annotationRepository.findVisibleByPostId(1L, 2L, null))
+                .thenReturn(List.of(annotation(3L, 30), annotation(1L, 10), annotation(2L, 20)));
 
-    List<PostAnnotation> result = qry.execute(1L, 2L, null);
+        List<PostAnnotation> result = qry.execute(1L, 2L, null);
 
-    assertThat(result).extracting(PostAnnotation::id).containsExactly(1L, 2L, 3L);
-    verify(annotationRepository).findVisibleByPostId(1L, 2L, null);
-  }
+        assertThat(result).extracting(PostAnnotation::id).containsExactly(1L, 2L, 3L);
+        verify(annotationRepository).findVisibleByPostId(1L, 2L, null);
+    }
 
-  @Test
-  void execute_empty_returnsEmpty() {
-    when(annotationRepository.findVisibleByPostId(1L, null, null)).thenReturn(List.of());
+    @Test
+    void execute_empty_returnsEmpty() {
+        when(annotationRepository.findVisibleByPostId(1L, null, null)).thenReturn(List.of());
 
-    assertThat(qry.execute(1L, null, null)).isEmpty();
-  }
+        assertThat(qry.execute(1L, null, null)).isEmpty();
+    }
 }

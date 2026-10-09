@@ -21,48 +21,40 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class SubmitCommentCmdExeTest {
 
-  @Mock private CommentRepository commentRepository;
-  @Mock private UserRepository userRepository;
-  private SubmitCommentCmdExe exe;
+    @Mock
+    private CommentRepository commentRepository;
 
-  @BeforeEach
-  void setUp() {
-    exe = new SubmitCommentCmdExe(commentRepository, userRepository);
-  }
+    @Mock
+    private UserRepository userRepository;
 
-  @Test
-  void execute_savesCommentWithAuthorIdAndNameSnapshot() {
-    User user =
-        User.reconstruct(
-            42L,
-            "alice",
-            "hash",
-            null,
-            null,
-            null,
-            UserStatus.ACTIVE,
-            LocalDateTime.now(),
-            LocalDateTime.now());
-    when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+    private SubmitCommentCmdExe exe;
 
-    exe.execute(10L, "alice", "Great post!");
+    @BeforeEach
+    void setUp() {
+        exe = new SubmitCommentCmdExe(commentRepository, userRepository);
+    }
 
-    verify(commentRepository)
-        .save(
-            argThat(
-                c ->
-                    Long.valueOf(42L).equals(c.getAuthorId())
+    @Test
+    void execute_savesCommentWithAuthorIdAndNameSnapshot() {
+        User user = User.reconstruct(
+                42L, "alice", "hash", null, null, null, UserStatus.ACTIVE, LocalDateTime.now(), LocalDateTime.now());
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+
+        exe.execute(10L, "alice", "Great post!");
+
+        verify(commentRepository)
+                .save(argThat(c -> Long.valueOf(42L).equals(c.getAuthorId())
                         && "alice".equals(c.getAuthorName())
                         && "Great post!".equals(c.getContent())));
-  }
+    }
 
-  @Test
-  void execute_userNotFound_throwsDomainException() {
-    when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+    @Test
+    void execute_userNotFound_throwsDomainException() {
+        when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
-    var ex = assertThrows(DomainException.class, () -> exe.execute(10L, "ghost", "hi"));
-    assertTrue(ex.getMessage().contains("用户不存在"));
-    assertTrue(ex.getMessage().contains("ghost"));
-    verifyNoInteractions(commentRepository);
-  }
+        var ex = assertThrows(DomainException.class, () -> exe.execute(10L, "ghost", "hi"));
+        assertTrue(ex.getMessage().contains("用户不存在"));
+        assertTrue(ex.getMessage().contains("ghost"));
+        verifyNoInteractions(commentRepository);
+    }
 }

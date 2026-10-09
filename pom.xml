@@ -37,7 +37,7 @@
         <release.commit-id>unknown</release.commit-id>
         <release.built-at>unknown</release.built-at>
         <spotless.version>3.10.2</spotless.version>
-        <google-java-format.version>1.36.1</google-java-format.version>
+        <palantir-java-format.version>2.99.0</palantir-java-format.version>
     </properties>
 
     <dependencyManagement>
@@ -126,10 +126,9 @@
                     <version>${spotless.version}</version>
                     <configuration>
                         <java>
-                            <googleJavaFormat>
-                                <version>${google-java-format.version}</version>
-                                <reflowLongStrings>true</reflowLongStrings>
-                            </googleJavaFormat>
+                            <palantirJavaFormat>
+                                <version>${palantir-java-format.version}</version>
+                            </palantirJavaFormat>
                         </java>
                     </configuration>
                 </plugin>

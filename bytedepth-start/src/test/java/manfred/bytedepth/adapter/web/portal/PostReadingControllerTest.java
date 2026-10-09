@@ -21,90 +21,91 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(
-    value = PostReadingController.class,
-    excludeAutoConfiguration = SecurityAutoConfiguration.class)
+@WebMvcTest(value = PostReadingController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class)
 @Import(ThymeleafSecurityHandlerConfig.class)
 class PostReadingControllerTest {
 
-  @Autowired private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @MockitoBean private GetPostQryExe getPostQryExe;
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
-  @MockitoBean private PostViewLogPort postViewLogPort;
-  @MockitoBean private ReadingProgressTokenPort readingProgressTokenPort;
+    @MockitoBean
+    private GetPostQryExe getPostQryExe;
 
-  @Test
-  void recordsCumulativeReadingProgressForTheMatchingPost() throws Exception {
-    PostDTO post = new PostDTO();
-    post.setId(12L);
-    when(getPostQryExe.executeBySlug("java")).thenReturn(post);
-    when(readingProgressTokenPort.belongsToPost("visit-token", 12L)).thenReturn(true);
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-    mockMvc
-        .perform(
-            post("/posts/java/reading-progress")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    "{\"visitToken\":\"visit-token\",\"activeReadSeconds\":86,\"maxScrollDepth\":83,\"completed\":true}"))
-        .andExpect(status().isNoContent());
+    @MockitoBean
+    private PostViewLogPort postViewLogPort;
 
-    verify(postViewLogPort).upsertReadingProgress(12L, "visit-token", 86, 83, true);
-  }
+    @MockitoBean
+    private ReadingProgressTokenPort readingProgressTokenPort;
 
-  @Test
-  void rejectsOutOfRangeProgressBeforeWriting() throws Exception {
-    mockMvc
-        .perform(
-            post("/posts/java/reading-progress")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    "{\"visitToken\":\"visit-token\",\"activeReadSeconds\":-1,\"maxScrollDepth\":101,\"completed\":false}"))
-        .andExpect(status().isBadRequest());
+    @Test
+    void recordsCumulativeReadingProgressForTheMatchingPost() throws Exception {
+        PostDTO post = new PostDTO();
+        post.setId(12L);
+        when(getPostQryExe.executeBySlug("java")).thenReturn(post);
+        when(readingProgressTokenPort.belongsToPost("visit-token", 12L)).thenReturn(true);
 
-    verifyNoInteractions(postViewLogPort);
-  }
+        mockMvc.perform(
+                        post("/posts/java/reading-progress")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        "{\"visitToken\":\"visit-token\",\"activeReadSeconds\":86,\"maxScrollDepth\":83,\"completed\":true}"))
+                .andExpect(status().isNoContent());
 
-  @Test
-  void rejectsEveryOtherInvalidProgressFieldBeforeWriting() throws Exception {
-    String tooLongToken = "x".repeat(65);
-    String[] invalidRequests = {
-      "{\"visitToken\":null,\"activeReadSeconds\":1,\"maxScrollDepth\":1,\"completed\":false}",
-      "{\"visitToken\":\""
-          + tooLongToken
-          + "\",\"activeReadSeconds\":1,\"maxScrollDepth\":1,\"completed\":false}",
-      "{\"visitToken\":\"visit-token\",\"activeReadSeconds\":86401,\"maxScrollDepth\":1,\"completed\":false}",
-      "{\"visitToken\":\"visit-token\",\"activeReadSeconds\":1,\"maxScrollDepth\":-1,\"completed\":false}",
-      "{\"visitToken\":\"visit-token\",\"activeReadSeconds\":1,\"maxScrollDepth\":101,\"completed\":false}"
-    };
-
-    for (String invalidRequest : invalidRequests) {
-      mockMvc
-          .perform(
-              post("/posts/java/reading-progress")
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(invalidRequest))
-          .andExpect(status().isBadRequest());
+        verify(postViewLogPort).upsertReadingProgress(12L, "visit-token", 86, 83, true);
     }
 
-    verifyNoInteractions(postViewLogPort, readingProgressTokenPort);
-  }
+    @Test
+    void rejectsOutOfRangeProgressBeforeWriting() throws Exception {
+        mockMvc.perform(
+                        post("/posts/java/reading-progress")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        "{\"visitToken\":\"visit-token\",\"activeReadSeconds\":-1,\"maxScrollDepth\":101,\"completed\":false}"))
+                .andExpect(status().isBadRequest());
 
-  @Test
-  void ignoresUnknownTokenWithoutWritingProgress() throws Exception {
-    PostDTO post = new PostDTO();
-    post.setId(12L);
-    when(getPostQryExe.executeBySlug("java")).thenReturn(post);
-    when(readingProgressTokenPort.belongsToPost("forged-token", 12L)).thenReturn(false);
+        verifyNoInteractions(postViewLogPort);
+    }
 
-    mockMvc
-        .perform(
-            post("/posts/java/reading-progress")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    "{\"visitToken\":\"forged-token\",\"activeReadSeconds\":1,\"maxScrollDepth\":1,\"completed\":false}"))
-        .andExpect(status().isNoContent());
+    @Test
+    void rejectsEveryOtherInvalidProgressFieldBeforeWriting() throws Exception {
+        String tooLongToken = "x".repeat(65);
+        String[] invalidRequests = {
+            "{\"visitToken\":null,\"activeReadSeconds\":1,\"maxScrollDepth\":1,\"completed\":false}",
+            "{\"visitToken\":\""
+                    + tooLongToken
+                    + "\",\"activeReadSeconds\":1,\"maxScrollDepth\":1,\"completed\":false}",
+            "{\"visitToken\":\"visit-token\",\"activeReadSeconds\":86401,\"maxScrollDepth\":1,\"completed\":false}",
+            "{\"visitToken\":\"visit-token\",\"activeReadSeconds\":1,\"maxScrollDepth\":-1,\"completed\":false}",
+            "{\"visitToken\":\"visit-token\",\"activeReadSeconds\":1,\"maxScrollDepth\":101,\"completed\":false}"
+        };
 
-    verifyNoInteractions(postViewLogPort);
-  }
+        for (String invalidRequest : invalidRequests) {
+            mockMvc.perform(post("/posts/java/reading-progress")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(invalidRequest))
+                    .andExpect(status().isBadRequest());
+        }
+
+        verifyNoInteractions(postViewLogPort, readingProgressTokenPort);
+    }
+
+    @Test
+    void ignoresUnknownTokenWithoutWritingProgress() throws Exception {
+        PostDTO post = new PostDTO();
+        post.setId(12L);
+        when(getPostQryExe.executeBySlug("java")).thenReturn(post);
+        when(readingProgressTokenPort.belongsToPost("forged-token", 12L)).thenReturn(false);
+
+        mockMvc.perform(
+                        post("/posts/java/reading-progress")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        "{\"visitToken\":\"forged-token\",\"activeReadSeconds\":1,\"maxScrollDepth\":1,\"completed\":false}"))
+                .andExpect(status().isNoContent());
+
+        verifyNoInteractions(postViewLogPort);
+    }
 }

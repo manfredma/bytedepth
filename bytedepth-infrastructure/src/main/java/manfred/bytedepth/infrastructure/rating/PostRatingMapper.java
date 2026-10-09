@@ -10,26 +10,19 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface PostRatingMapper extends BaseMapper<PostRatingDO> {
 
-  @Insert(
-      """
+    @Insert("""
       INSERT INTO post_rating (post_id, visitor_token, score, created_at, updated_at)
       VALUES (#{postId}, #{visitorToken}, #{score}, NOW(), NOW())
       ON DUPLICATE KEY UPDATE score = VALUES(score), updated_at = NOW()
       """)
-  void upsert(
-      @Param("postId") Long postId,
-      @Param("visitorToken") String visitorToken,
-      @Param("score") int score);
+    void upsert(@Param("postId") Long postId, @Param("visitorToken") String visitorToken, @Param("score") int score);
 
-  @Select(
-      """
+    @Select("""
       SELECT COALESCE(AVG(score), 0) AS average_rating, COUNT(*) AS rating_count
       FROM post_rating WHERE post_id = #{postId}
       """)
-  PostRatingStatsDO findStats(@Param("postId") Long postId);
+    PostRatingStatsDO findStats(@Param("postId") Long postId);
 
-  @Select(
-      "SELECT score FROM post_rating WHERE post_id = #{postId} AND visitor_token = #{visitorToken}")
-  Optional<Integer> findScore(
-      @Param("postId") Long postId, @Param("visitorToken") String visitorToken);
+    @Select("SELECT score FROM post_rating WHERE post_id = #{postId} AND visitor_token = #{visitorToken}")
+    Optional<Integer> findScore(@Param("postId") Long postId, @Param("visitorToken") String visitorToken);
 }

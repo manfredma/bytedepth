@@ -7,21 +7,20 @@ import org.junit.jupiter.api.Test;
 
 class OpsOverviewQryExeTest {
 
-  @Test
-  void execute_isolatesAFailedDependencyAndReturnsOtherServiceStates() {
-    OpsDatabasePort database = () -> new OpsDatabaseStatusDTO(true, "bytedepth");
-    OpsRedisPort redis =
-        () -> {
-          throw new IllegalStateException("Redis unavailable");
+    @Test
+    void execute_isolatesAFailedDependencyAndReturnsOtherServiceStates() {
+        OpsDatabasePort database = () -> new OpsDatabaseStatusDTO(true, "bytedepth");
+        OpsRedisPort redis = () -> {
+            throw new IllegalStateException("Redis unavailable");
         };
-    OpsMeiliSearchPort meiliSearch = () -> new OpsMeiliSearchStatusDTO(true, true);
+        OpsMeiliSearchPort meiliSearch = () -> new OpsMeiliSearchStatusDTO(true, true);
 
-    OpsOverviewDTO overview = new OpsOverviewQryExe(database, redis, meiliSearch).execute();
+        OpsOverviewDTO overview = new OpsOverviewQryExe(database, redis, meiliSearch).execute();
 
-    assertTrue(overview.database().available());
-    assertFalse(overview.redis().available());
-    assertTrue(overview.meiliSearch().healthAvailable());
-    assertTrue(overview.meiliSearch().statsAvailable());
-    assertTrue(overview.uptimeMillis() >= 0);
-  }
+        assertTrue(overview.database().available());
+        assertFalse(overview.redis().available());
+        assertTrue(overview.meiliSearch().healthAvailable());
+        assertTrue(overview.meiliSearch().statsAvailable());
+        assertTrue(overview.uptimeMillis() >= 0);
+    }
 }

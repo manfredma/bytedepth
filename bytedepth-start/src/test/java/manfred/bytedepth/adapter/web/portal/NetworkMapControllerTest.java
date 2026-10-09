@@ -25,81 +25,75 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(
-    value = NetworkMapController.class,
-    excludeAutoConfiguration = SecurityAutoConfiguration.class,
-    properties = "bytedepth.environment=staging")
+        value = NetworkMapController.class,
+        excludeAutoConfiguration = SecurityAutoConfiguration.class,
+        properties = "bytedepth.environment=staging")
 @EnableConfigurationProperties(NetworkMapProperties.class)
 @Import({ThymeleafSecurityHandlerConfig.class, EnvironmentAttributeAdvice.class})
 class NetworkMapControllerTest {
 
-  @Autowired private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @Autowired private NetworkMapProperties properties;
+    @Autowired
+    private NetworkMapProperties properties;
 
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-  @Test
-  void networkMapRendersCatalogGroups() throws Exception {
-    mockMvc
-        .perform(get("/network"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("public/network"))
-        .andExpect(model().attribute("groups", properties.getGroups()))
-        .andExpect(content().string(containsString("Career")))
-        .andExpect(content().string(containsString("常用技术站点")));
-  }
+    @Test
+    void networkMapRendersCatalogGroups() throws Exception {
+        mockMvc.perform(get("/network"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("public/network"))
+                .andExpect(model().attribute("groups", properties.getGroups()))
+                .andExpect(content().string(containsString("Career")))
+                .andExpect(content().string(containsString("常用技术站点")));
+    }
 
-  @Test
-  void networkMapRendersEightSafeExternalCards() throws Exception {
-    mockMvc
-        .perform(get("/network"))
-        .andExpect(status().isOk())
-        .andExpect(
-            result -> {
-              String body = result.getResponse().getContentAsString();
-              var cards =
-                  Pattern.compile("(?s)<a\\s+class=\"network-card\"(?:\\s|>).*?</a>")
-                      .matcher(body)
-                      .results()
-                      .toList();
-              assertEquals(8, cards.size());
-              assertTrue(
-                  Pattern.compile(
-                          "<a\\s+class=\"network-card\"\\s+href=\"https://bytedepth\\.cn\""
-                              + "\\s+target=\"_blank\"\\s+rel=\"noopener noreferrer\"")
-                      .matcher(body)
-                      .find());
-              for (var card : cards) {
+    @Test
+    void networkMapRendersEightSafeExternalCards() throws Exception {
+        mockMvc.perform(get("/network")).andExpect(status().isOk()).andExpect(result -> {
+            String body = result.getResponse().getContentAsString();
+            var cards = Pattern.compile("(?s)<a\\s+class=\"network-card\"(?:\\s|>).*?</a>")
+                    .matcher(body)
+                    .results()
+                    .toList();
+            assertEquals(8, cards.size());
+            assertTrue(Pattern.compile("<a\\s+class=\"network-card\"\\s+href=\"https://bytedepth\\.cn\""
+                            + "\\s+target=\"_blank\"\\s+rel=\"noopener noreferrer\"")
+                    .matcher(body)
+                    .find());
+            for (var card : cards) {
                 assertTrue(card.group().contains("<svg class=\"network-card-external-icon\""));
                 assertTrue(card.group().contains("aria-hidden=\"true\""));
                 assertTrue(card.group().contains("focusable=\"false\""));
-              }
-            });
-  }
-
-  @Test
-  void networkMapRendersStagingNoticeWithSafeProductionLink() throws Exception {
-    mockMvc
-        .perform(get("/network"))
-        .andExpect(status().isOk())
-        .andExpect(content().string(containsString("预发环境 · 正式网站：")))
-        .andExpect(content().string(containsString("href=\"https://bytedepth.cn\"")))
-        .andExpect(
-            content().string(containsString("target=\"_blank\" rel=\"noopener noreferrer\"")));
-  }
-
-  @Nested
-  @TestPropertySource(properties = "bytedepth.environment=production")
-  class ProductionEnvironment {
-
-    @Autowired private MockMvc productionMockMvc;
+            }
+        });
+    }
 
     @Test
-    void networkMapDoesNotRenderStagingNotice() throws Exception {
-      productionMockMvc
-          .perform(get("/network"))
-          .andExpect(status().isOk())
-          .andExpect(content().string(org.hamcrest.Matchers.not(containsString("预发环境 · 正式网站："))));
+    void networkMapRendersStagingNoticeWithSafeProductionLink() throws Exception {
+        mockMvc.perform(get("/network"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("预发环境 · 正式网站：")))
+                .andExpect(content().string(containsString("href=\"https://bytedepth.cn\"")))
+                .andExpect(content().string(containsString("target=\"_blank\" rel=\"noopener noreferrer\"")));
     }
-  }
+
+    @Nested
+    @TestPropertySource(properties = "bytedepth.environment=production")
+    class ProductionEnvironment {
+
+        @Autowired
+        private MockMvc productionMockMvc;
+
+        @Test
+        void networkMapDoesNotRenderStagingNotice() throws Exception {
+            productionMockMvc
+                    .perform(get("/network"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.not(containsString("预发环境 · 正式网站："))));
+        }
+    }
 }

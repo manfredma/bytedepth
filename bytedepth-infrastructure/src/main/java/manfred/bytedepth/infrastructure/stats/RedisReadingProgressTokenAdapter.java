@@ -16,35 +16,35 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class RedisReadingProgressTokenAdapter implements ReadingProgressTokenPort {
 
-  private static final String KEY_PREFIX = "bytedepth:reading-progress:";
-  private static final Duration TOKEN_TTL = Duration.ofHours(24);
+    private static final String KEY_PREFIX = "bytedepth:reading-progress:";
+    private static final Duration TOKEN_TTL = Duration.ofHours(24);
 
-  private final StringRedisTemplate redisTemplate;
-  private final RedisKeyNamespace namespace;
+    private final StringRedisTemplate redisTemplate;
+    private final RedisKeyNamespace namespace;
 
-  @Override
-  @EventListener
-  public void issue(PostViewedEvent event) {
-    try {
-      redisTemplate
-          .opsForValue()
-          .set(key(event.visitToken()), event.postId().toString(), TOKEN_TTL);
-    } catch (RuntimeException e) {
-      log.info("阅读进度令牌签发暂不可用 postId={}: {}", event.postId(), e.getMessage());
+    @Override
+    @EventListener
+    public void issue(PostViewedEvent event) {
+        try {
+            redisTemplate
+                    .opsForValue()
+                    .set(key(event.visitToken()), event.postId().toString(), TOKEN_TTL);
+        } catch (RuntimeException e) {
+            log.info("阅读进度令牌签发暂不可用 postId={}: {}", event.postId(), e.getMessage());
+        }
     }
-  }
 
-  @Override
-  public boolean belongsToPost(String token, Long postId) {
-    try {
-      return postId.toString().equals(redisTemplate.opsForValue().get(key(token)));
-    } catch (RuntimeException e) {
-      log.info("阅读进度令牌校验暂不可用 postId={}: {}", postId, e.getMessage());
-      return false;
+    @Override
+    public boolean belongsToPost(String token, Long postId) {
+        try {
+            return postId.toString().equals(redisTemplate.opsForValue().get(key(token)));
+        } catch (RuntimeException e) {
+            log.info("阅读进度令牌校验暂不可用 postId={}: {}", postId, e.getMessage());
+            return false;
+        }
     }
-  }
 
-  private String key(String token) {
-    return namespace.key(KEY_PREFIX, token);
-  }
+    private String key(String token) {
+        return namespace.key(KEY_PREFIX, token);
+    }
 }

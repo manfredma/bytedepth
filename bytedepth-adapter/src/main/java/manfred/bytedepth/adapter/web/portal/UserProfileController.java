@@ -16,15 +16,15 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class UserProfileController {
 
-  private final GetUserProfileQryExe getUserProfileQryExe;
+    private final GetUserProfileQryExe getUserProfileQryExe;
 
-  @GetMapping("/{username}")
-  public String profile(@PathVariable String username, Model model) {
-    try {
-      model.addAttribute("profile", getUserProfileQryExe.execute(username));
-      return "public/profile";
-    } catch (DomainException e) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+    @GetMapping("/{username}")
+    public String profile(@PathVariable String username, Model model) {
+        try {
+            model.addAttribute("profile", getUserProfileQryExe.execute(username));
+            return "public/profile";
+        } catch (DomainException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
     }
-  }
 }

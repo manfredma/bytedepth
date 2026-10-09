@@ -17,33 +17,30 @@ import org.springframework.web.servlet.HandlerInterceptor;
  */
 public class PageViewInterceptor implements HandlerInterceptor {
 
-  private final VisitRequestFilter visitRequestFilter;
-  private final ApplicationEventPublisher eventPublisher;
+    private final VisitRequestFilter visitRequestFilter;
+    private final ApplicationEventPublisher eventPublisher;
 
-  public PageViewInterceptor(
-      VisitRequestFilter visitRequestFilter, ApplicationEventPublisher eventPublisher) {
-    this.visitRequestFilter = visitRequestFilter;
-    this.eventPublisher = eventPublisher;
-  }
+    public PageViewInterceptor(VisitRequestFilter visitRequestFilter, ApplicationEventPublisher eventPublisher) {
+        this.visitRequestFilter = visitRequestFilter;
+        this.eventPublisher = eventPublisher;
+    }
 
-  @Override
-  public boolean preHandle(
-      HttpServletRequest request, HttpServletResponse response, Object handler) {
-    if (!(handler instanceof HandlerMethod)) {
-      return true;
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if (!(handler instanceof HandlerMethod)) {
+            return true;
+        }
+        String userAgent = WebUtils.truncate(request.getHeader("User-Agent"), 512);
+        if (!visitRequestFilter.shouldRecord(new VisitRequestFilter.Request(userAgent))) {
+            return true;
+        }
+        eventPublisher.publishEvent(new PageViewedEvent(
+                request.getRequestURI(),
+                null, // 页面访问统一匿名
+                WebUtils.getClientIp(request),
+                userAgent,
+                WebUtils.truncate(request.getHeader("Referer"), 512),
+                LocalDateTime.now()));
+        return true;
     }
-    String userAgent = WebUtils.truncate(request.getHeader("User-Agent"), 512);
-    if (!visitRequestFilter.shouldRecord(new VisitRequestFilter.Request(userAgent))) {
-      return true;
-    }
-    eventPublisher.publishEvent(
-        new PageViewedEvent(
-            request.getRequestURI(),
-            null, // 页面访问统一匿名
-            WebUtils.getClientIp(request),
-            userAgent,
-            WebUtils.truncate(request.getHeader("Referer"), 512),
-            LocalDateTime.now()));
-    return true;
-  }
 }
