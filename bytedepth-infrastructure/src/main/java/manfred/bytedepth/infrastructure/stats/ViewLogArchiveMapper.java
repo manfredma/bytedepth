@@ -9,67 +9,64 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface ViewLogArchiveMapper {
 
-  List<LocalDateTime> findCandidateBuckets(
-      @Param("source") ViewLogArchiveSource source,
-      @Param("cutoff") LocalDateTime cutoff,
-      @Param("maxBuckets") int maxBuckets);
+    List<LocalDateTime> findCandidateBuckets(
+            @Param("source") ViewLogArchiveSource source,
+            @Param("cutoff") LocalDateTime cutoff,
+            @Param("maxBuckets") int maxBuckets);
 
-  ViewLogArchiveBucket findBucketState(
-      @Param("source") ViewLogArchiveSource source,
-      @Param("bucketStart") LocalDateTime bucketStart);
+    ViewLogArchiveBucket findBucketState(
+            @Param("source") ViewLogArchiveSource source, @Param("bucketStart") LocalDateTime bucketStart);
 
-  long countRows(
-      @Param("source") ViewLogArchiveSource source,
-      @Param("bucketStart") LocalDateTime bucketStart,
-      @Param("bucketEnd") LocalDateTime bucketEnd);
+    long countRows(
+            @Param("source") ViewLogArchiveSource source,
+            @Param("bucketStart") LocalDateTime bucketStart,
+            @Param("bucketEnd") LocalDateTime bucketEnd);
 
-  int insertExactHourlyAggregates(
-      @Param("source") ViewLogArchiveSource source,
-      @Param("bucketStart") LocalDateTime bucketStart,
-      @Param("bucketEnd") LocalDateTime bucketEnd);
+    int insertExactHourlyAggregates(
+            @Param("source") ViewLogArchiveSource source,
+            @Param("bucketStart") LocalDateTime bucketStart,
+            @Param("bucketEnd") LocalDateTime bucketEnd);
 
-  int insertExactCountryAggregates(
-      @Param("source") ViewLogArchiveSource source,
-      @Param("bucketStart") LocalDateTime bucketStart,
-      @Param("bucketEnd") LocalDateTime bucketEnd);
+    int insertExactCountryAggregates(
+            @Param("source") ViewLogArchiveSource source,
+            @Param("bucketStart") LocalDateTime bucketStart,
+            @Param("bucketEnd") LocalDateTime bucketEnd);
 
-  default int insertExactAggregates(
-      ViewLogArchiveSource source, LocalDateTime bucketStart, LocalDateTime bucketEnd) {
-    return insertExactHourlyAggregates(source, bucketStart, bucketEnd)
-        + insertExactCountryAggregates(source, bucketStart, bucketEnd);
-  }
+    default int insertExactAggregates(ViewLogArchiveSource source, LocalDateTime bucketStart, LocalDateTime bucketEnd) {
+        return insertExactHourlyAggregates(source, bucketStart, bucketEnd)
+                + insertExactCountryAggregates(source, bucketStart, bucketEnd);
+    }
 
-  int incrementHourlyAggregates(
-      @Param("source") ViewLogArchiveSource source,
-      @Param("bucketStart") LocalDateTime bucketStart,
-      @Param("bucketEnd") LocalDateTime bucketEnd);
+    int incrementHourlyAggregates(
+            @Param("source") ViewLogArchiveSource source,
+            @Param("bucketStart") LocalDateTime bucketStart,
+            @Param("bucketEnd") LocalDateTime bucketEnd);
 
-  int incrementCountryAggregates(
-      @Param("source") ViewLogArchiveSource source,
-      @Param("bucketStart") LocalDateTime bucketStart,
-      @Param("bucketEnd") LocalDateTime bucketEnd);
+    int incrementCountryAggregates(
+            @Param("source") ViewLogArchiveSource source,
+            @Param("bucketStart") LocalDateTime bucketStart,
+            @Param("bucketEnd") LocalDateTime bucketEnd);
 
-  default int incrementAggregates(
-      ViewLogArchiveSource source, LocalDateTime bucketStart, LocalDateTime bucketEnd) {
-    return incrementHourlyAggregates(source, bucketStart, bucketEnd)
-        + incrementCountryAggregates(source, bucketStart, bucketEnd);
-  }
+    default int incrementAggregates(ViewLogArchiveSource source, LocalDateTime bucketStart, LocalDateTime bucketEnd) {
+        return incrementHourlyAggregates(source, bucketStart, bucketEnd)
+                + incrementCountryAggregates(source, bucketStart, bucketEnd);
+    }
 
-  int deleteBucket(
-      @Param("source") ViewLogArchiveSource source,
-      @Param("bucketStart") LocalDateTime bucketStart,
-      @Param("bucketEnd") LocalDateTime bucketEnd);
+    int deleteBucket(
+            @Param("source") ViewLogArchiveSource source,
+            @Param("bucketStart") LocalDateTime bucketStart,
+            @Param("bucketEnd") LocalDateTime bucketEnd);
 
-  int insertBucketState(
-      @Param("source") ViewLogArchiveSource source,
-      @Param("bucketStart") LocalDateTime bucketStart,
-      @Param("deletedRows") long deletedRows);
+    int insertBucketState(
+            @Param("source") ViewLogArchiveSource source,
+            @Param("bucketStart") LocalDateTime bucketStart,
+            @Param("deletedRows") long deletedRows);
 
-  int updateBucketState(
-      @Param("source") ViewLogArchiveSource source,
-      @Param("bucketStart") LocalDateTime bucketStart,
-      @Param("deletedRows") long deletedRows);
+    int updateBucketState(
+            @Param("source") ViewLogArchiveSource source,
+            @Param("bucketStart") LocalDateTime bucketStart,
+            @Param("deletedRows") long deletedRows);
 
-  int incrementTablespaceDeletedRows(
-      @Param("source") ViewLogArchiveSource source, @Param("deletedRows") long deletedRows);
+    int incrementTablespaceDeletedRows(
+            @Param("source") ViewLogArchiveSource source, @Param("deletedRows") long deletedRows);
 }

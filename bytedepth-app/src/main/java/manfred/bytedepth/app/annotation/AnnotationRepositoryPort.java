@@ -7,15 +7,15 @@ import manfred.bytedepth.domain.annotation.PostAnnotation;
 /** 批注存储端口。 */
 public interface AnnotationRepositoryPort {
 
-  PostAnnotation save(PostAnnotation annotation);
+    PostAnnotation save(PostAnnotation annotation);
 
-  PostAnnotation update(PostAnnotation annotation);
+    PostAnnotation update(PostAnnotation annotation);
 
-  List<PostAnnotation> findVisibleByPostId(Long postId, Long userId, String ownerTokenHash);
+    List<PostAnnotation> findVisibleByPostId(Long postId, Long userId, String ownerTokenHash);
 
-  Optional<PostAnnotation> findById(Long id);
+    Optional<PostAnnotation> findById(Long id);
 
-  void delete(Long id);
+    void delete(Long id);
 
-  List<PostAnnotation> findByPostId(Long postId);
+    List<PostAnnotation> findByPostId(Long postId);
 }

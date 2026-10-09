@@ -15,28 +15,28 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface ViewLogStatsMapper {
 
-  List<PostViewRankDTO> topPosts(
-      @Param("startTime") LocalDateTime startTime,
-      @Param("endTime") LocalDateTime endTime,
-      @Param("limit") int limit);
+    List<PostViewRankDTO> topPosts(
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("limit") int limit);
 
-  List<CountryViewStatDTO> countryStats(
-      @Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
+    List<CountryViewStatDTO> countryStats(
+            @Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
 
-  List<PostViewRankDTO> countryTopPosts(
-      @Param("country") String country,
-      @Param("startTime") LocalDateTime startTime,
-      @Param("endTime") LocalDateTime endTime,
-      @Param("limit") int limit);
+    List<PostViewRankDTO> countryTopPosts(
+            @Param("country") String country,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("limit") int limit);
 
-  List<TrendPointDTO> postTrend(
-      @Param("postId") Long postId,
-      @Param("startTime") LocalDateTime startTime,
-      @Param("endTime") LocalDateTime endTime,
-      @Param("format") String format);
+    List<TrendPointDTO> postTrend(
+            @Param("postId") Long postId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("format") String format);
 
-  List<TrendPointDTO> overviewTrend(
-      @Param("startTime") LocalDateTime startTime,
-      @Param("endTime") LocalDateTime endTime,
-      @Param("format") String format);
+    List<TrendPointDTO> overviewTrend(
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("format") String format);
 }

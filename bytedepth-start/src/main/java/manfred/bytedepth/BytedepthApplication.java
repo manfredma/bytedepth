@@ -20,51 +20,50 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 @org.springframework.scheduling.annotation.EnableScheduling
 @EnableAsync
 public class BytedepthApplication {
-  public static void main(String[] args) {
-    SpringApplication.run(BytedepthApplication.class, args);
-  }
+    public static void main(String[] args) {
+        SpringApplication.run(BytedepthApplication.class, args);
+    }
 
-  @Bean
-  Clock analyticsClock() {
-    return Clock.system(ZoneId.of("Asia/Shanghai"));
-  }
+    @Bean
+    Clock analyticsClock() {
+        return Clock.system(ZoneId.of("Asia/Shanghai"));
+    }
 
-  @Bean
-  ViewLogRetentionPolicy viewLogRetentionPolicy(
-      @Value("${bytedepth.analytics.retention-days:7}") int retentionDays) {
-    return new ViewLogRetentionPolicy(retentionDays, ZoneId.of("Asia/Shanghai"));
-  }
+    @Bean
+    ViewLogRetentionPolicy viewLogRetentionPolicy(@Value("${bytedepth.analytics.retention-days:7}") int retentionDays) {
+        return new ViewLogRetentionPolicy(retentionDays, ZoneId.of("Asia/Shanghai"));
+    }
 
-  @Bean
-  @ConditionalOnBean(ViewLogArchivePort.class)
-  ArchiveViewLogsCmdExe archiveViewLogsCmdExe(
-      ViewLogArchivePort archivePort, ViewLogRetentionPolicy retentionPolicy) {
-    return new ArchiveViewLogsCmdExe(archivePort, retentionPolicy);
-  }
+    @Bean
+    @ConditionalOnBean(ViewLogArchivePort.class)
+    ArchiveViewLogsCmdExe archiveViewLogsCmdExe(
+            ViewLogArchivePort archivePort, ViewLogRetentionPolicy retentionPolicy) {
+        return new ArchiveViewLogsCmdExe(archivePort, retentionPolicy);
+    }
 
-  @Bean(name = "taskExecutor")
-  ThreadPoolTaskExecutor taskExecutor() {
-    var executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(2);
-    executor.setMaxPoolSize(4);
-    executor.setQueueCapacity(100);
-    executor.setThreadNamePrefix("bytedepth-async-");
-    return executor;
-  }
+    @Bean(name = "taskExecutor")
+    ThreadPoolTaskExecutor taskExecutor() {
+        var executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("bytedepth-async-");
+        return executor;
+    }
 
-  @Bean(name = "viewLogArchiveScheduler")
-  ThreadPoolTaskScheduler viewLogArchiveScheduler() {
-    var scheduler = new ThreadPoolTaskScheduler();
-    scheduler.setPoolSize(1);
-    scheduler.setThreadNamePrefix("view-log-archive-");
-    return scheduler;
-  }
+    @Bean(name = "viewLogArchiveScheduler")
+    ThreadPoolTaskScheduler viewLogArchiveScheduler() {
+        var scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("view-log-archive-");
+        return scheduler;
+    }
 
-  @Bean(name = "viewLogTablespaceScheduler")
-  ThreadPoolTaskScheduler viewLogTablespaceScheduler() {
-    var scheduler = new ThreadPoolTaskScheduler();
-    scheduler.setPoolSize(1);
-    scheduler.setThreadNamePrefix("view-log-tablespace-");
-    return scheduler;
-  }
+    @Bean(name = "viewLogTablespaceScheduler")
+    ThreadPoolTaskScheduler viewLogTablespaceScheduler() {
+        var scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("view-log-tablespace-");
+        return scheduler;
+    }
 }

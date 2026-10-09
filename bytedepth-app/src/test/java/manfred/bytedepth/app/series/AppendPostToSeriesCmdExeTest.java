@@ -14,31 +14,34 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class AppendPostToSeriesCmdExeTest {
 
-  @Mock private PostRepository postRepository;
-  @Mock private SeriesRepository seriesRepository;
+    @Mock
+    private PostRepository postRepository;
 
-  private AppendPostToSeriesCmdExe cmdExe;
+    @Mock
+    private SeriesRepository seriesRepository;
 
-  @BeforeEach
-  void setUp() {
-    cmdExe = new AppendPostToSeriesCmdExe(postRepository, seriesRepository);
-  }
+    private AppendPostToSeriesCmdExe cmdExe;
 
-  @Test
-  void execute_shouldAppendAfterLastPost() {
-    when(seriesRepository.findMaxOrderInSeries(10L)).thenReturn(3);
+    @BeforeEach
+    void setUp() {
+        cmdExe = new AppendPostToSeriesCmdExe(postRepository, seriesRepository);
+    }
 
-    cmdExe.execute(99L, 10L);
+    @Test
+    void execute_shouldAppendAfterLastPost() {
+        when(seriesRepository.findMaxOrderInSeries(10L)).thenReturn(3);
 
-    verify(postRepository).setPostSeries(99L, 10L, 4);
-  }
+        cmdExe.execute(99L, 10L);
 
-  @Test
-  void execute_whenSeriesEmpty_shouldSetOrderTo1() {
-    when(seriesRepository.findMaxOrderInSeries(10L)).thenReturn(0);
+        verify(postRepository).setPostSeries(99L, 10L, 4);
+    }
 
-    cmdExe.execute(99L, 10L);
+    @Test
+    void execute_whenSeriesEmpty_shouldSetOrderTo1() {
+        when(seriesRepository.findMaxOrderInSeries(10L)).thenReturn(0);
 
-    verify(postRepository).setPostSeries(99L, 10L, 1);
-  }
+        cmdExe.execute(99L, 10L);
+
+        verify(postRepository).setPostSeries(99L, 10L, 1);
+    }
 }

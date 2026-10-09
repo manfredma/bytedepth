@@ -14,32 +14,29 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 class BytedepthApplicationTest {
 
-  @Test
-  void mainStartsTheSpringApplicationWithItsArguments() {
-    try (MockedStatic<SpringApplication> springApplication = mockStatic(SpringApplication.class)) {
-      BytedepthApplication.main(new String[] {"--spring.main.web-application-type=none"});
+    @Test
+    void mainStartsTheSpringApplicationWithItsArguments() {
+        try (MockedStatic<SpringApplication> springApplication = mockStatic(SpringApplication.class)) {
+            BytedepthApplication.main(new String[] {"--spring.main.web-application-type=none"});
 
-      springApplication.verify(
-          () ->
-              SpringApplication.run(
-                  BytedepthApplication.class,
-                  new String[] {"--spring.main.web-application-type=none"}));
+            springApplication.verify(() -> SpringApplication.run(
+                    BytedepthApplication.class, new String[] {"--spring.main.web-application-type=none"}));
+        }
     }
-  }
 
-  @Test
-  void archiveUseCaseBeanIsBuiltFromItsPortAndRetentionPolicy() {
-    var port = mock(ViewLogArchivePort.class);
-    var policy = new ViewLogRetentionPolicy(7, ZoneId.of("Asia/Shanghai"));
+    @Test
+    void archiveUseCaseBeanIsBuiltFromItsPortAndRetentionPolicy() {
+        var port = mock(ViewLogArchivePort.class);
+        var policy = new ViewLogRetentionPolicy(7, ZoneId.of("Asia/Shanghai"));
 
-    assertNotNull(new BytedepthApplication().archiveViewLogsCmdExe(port, policy));
-  }
+        assertNotNull(new BytedepthApplication().archiveViewLogsCmdExe(port, policy));
+    }
 
-  @Test
-  void providesAQualifiedAsyncTaskExecutor() {
-    ThreadPoolTaskExecutor executor = new BytedepthApplication().taskExecutor();
+    @Test
+    void providesAQualifiedAsyncTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new BytedepthApplication().taskExecutor();
 
-    assertNotNull(executor);
-    assertNotNull(executor.getThreadNamePrefix());
-  }
+        assertNotNull(executor);
+        assertNotNull(executor.getThreadNamePrefix());
+    }
 }

@@ -32,70 +32,82 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(
-    value = AdminTagListController.class,
-    excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@WebMvcTest(value = AdminTagListController.class, excludeAutoConfiguration = DataSourceAutoConfiguration.class)
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 @Import({SecurityConfig.class, ThymeleafSecurityHandlerConfig.class, SecurityMockMvcConfig.class})
 class AdminTagListControllerTest {
 
-  @Autowired private MockMvc mockMvc;
-  @MockitoBean private UserDetailsService userDetailsService;
-  @MockitoBean private PasswordEncoder passwordEncoder;
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
-  @MockitoBean private RateLimitPort rateLimitPort;
-  @MockitoBean private RateLimitProperties rateLimitProperties;
-  @MockitoBean private ListTagsQryExe listTagsQryExe;
-  @MockitoBean private DeleteTagCmdExe deleteTagCmdExe;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @Test
-  @WithMockUser(authorities = "admin:dashboard:view")
-  void list_populatesTagsModel() throws Exception {
-    when(listTagsQryExe.findPageWithCount(null, 1, 20))
-        .thenReturn(new ListTagsQryExe.TagPageResult(java.util.List.of(), 0));
+    @MockitoBean
+    private UserDetailsService userDetailsService;
 
-    mockMvc
-        .perform(get("/admin/tags"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("admin/tags/list"))
-        .andExpect(model().attribute("tags", java.util.List.of()));
-  }
+    @MockitoBean
+    private PasswordEncoder passwordEncoder;
 
-  @Test
-  @WithMockUser(authorities = "admin:dashboard:view")
-  void list_forwardsFilterAndPagination() throws Exception {
-    when(listTagsQryExe.findPageWithCount("Java", 2, 10))
-        .thenReturn(new ListTagsQryExe.TagPageResult(java.util.List.of(), 11));
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-    mockMvc
-        .perform(get("/admin/tags").param("name", "Java").param("page", "2").param("size", "10"))
-        .andExpect(status().isOk())
-        .andExpect(model().attribute("filterBaseUrl", "/admin/tags?name=Java&"))
-        .andExpect(model().attribute("totalPages", 2));
+    @MockitoBean
+    private RateLimitPort rateLimitPort;
 
-    verify(listTagsQryExe).findPageWithCount("Java", 2, 10);
-  }
+    @MockitoBean
+    private RateLimitProperties rateLimitProperties;
 
-  @Test
-  @WithMockUser(authorities = "admin:dashboard:view")
-  void list_blankNameDoesNotAddItToPaginationUrl() throws Exception {
-    when(listTagsQryExe.findPageWithCount(" ", 1, 20))
-        .thenReturn(new ListTagsQryExe.TagPageResult(java.util.List.of(), 0));
+    @MockitoBean
+    private ListTagsQryExe listTagsQryExe;
 
-    mockMvc
-        .perform(get("/admin/tags").param("name", " "))
-        .andExpect(status().isOk())
-        .andExpect(model().attribute("filterBaseUrl", "/admin/tags?"));
-  }
+    @MockitoBean
+    private DeleteTagCmdExe deleteTagCmdExe;
 
-  @Test
-  @WithMockUser(authorities = "admin:dashboard:view")
-  void delete_delegatesAndReturnsToTagList() throws Exception {
-    mockMvc
-        .perform(post("/admin/tags/3/delete").with(csrf()))
-        .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrl("/admin/tags"));
+    @Test
+    @WithMockUser(authorities = "admin:dashboard:view")
+    void list_populatesTagsModel() throws Exception {
+        when(listTagsQryExe.findPageWithCount(null, 1, 20))
+                .thenReturn(new ListTagsQryExe.TagPageResult(java.util.List.of(), 0));
 
-    verify(deleteTagCmdExe).execute(3L);
-  }
+        mockMvc.perform(get("/admin/tags"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/tags/list"))
+                .andExpect(model().attribute("tags", java.util.List.of()));
+    }
+
+    @Test
+    @WithMockUser(authorities = "admin:dashboard:view")
+    void list_forwardsFilterAndPagination() throws Exception {
+        when(listTagsQryExe.findPageWithCount("Java", 2, 10))
+                .thenReturn(new ListTagsQryExe.TagPageResult(java.util.List.of(), 11));
+
+        mockMvc.perform(get("/admin/tags")
+                        .param("name", "Java")
+                        .param("page", "2")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("filterBaseUrl", "/admin/tags?name=Java&"))
+                .andExpect(model().attribute("totalPages", 2));
+
+        verify(listTagsQryExe).findPageWithCount("Java", 2, 10);
+    }
+
+    @Test
+    @WithMockUser(authorities = "admin:dashboard:view")
+    void list_blankNameDoesNotAddItToPaginationUrl() throws Exception {
+        when(listTagsQryExe.findPageWithCount(" ", 1, 20))
+                .thenReturn(new ListTagsQryExe.TagPageResult(java.util.List.of(), 0));
+
+        mockMvc.perform(get("/admin/tags").param("name", " "))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("filterBaseUrl", "/admin/tags?"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "admin:dashboard:view")
+    void delete_delegatesAndReturnsToTagList() throws Exception {
+        mockMvc.perform(post("/admin/tags/3/delete").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tags"));
+
+        verify(deleteTagCmdExe).execute(3L);
+    }
 }

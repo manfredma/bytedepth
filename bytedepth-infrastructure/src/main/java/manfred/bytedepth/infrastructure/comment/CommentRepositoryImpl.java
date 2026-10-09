@@ -16,102 +16,96 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class CommentRepositoryImpl implements CommentRepository {
 
-  private final CommentMapper commentMapper;
+    private final CommentMapper commentMapper;
 
-  @Override
-  public Comment save(Comment comment) {
-    CommentDO d = toDO(comment);
-    if (comment.getId() == null) {
-      commentMapper.insert(d);
-    } else {
-      commentMapper.updateById(d);
+    @Override
+    public Comment save(Comment comment) {
+        CommentDO d = toDO(comment);
+        if (comment.getId() == null) {
+            commentMapper.insert(d);
+        } else {
+            commentMapper.updateById(d);
+        }
+        return toEntity(d);
     }
-    return toEntity(d);
-  }
 
-  @Override
-  public Optional<Comment> findById(Long id) {
-    return Optional.ofNullable(commentMapper.selectById(id)).map(this::toEntity);
-  }
-
-  @Override
-  public void deleteById(Long id) {
-    commentMapper.deleteById(id);
-  }
-
-  @Override
-  public List<Comment> findApprovedByPostId(Long postId) {
-    return commentMapper
-        .selectList(
-            new LambdaQueryWrapper<CommentDO>()
-                .eq(CommentDO::getPostId, postId)
-                .eq(CommentDO::getStatus, CommentStatus.APPROVED.name())
-                .orderByAsc(CommentDO::getCreatedAt))
-        .stream()
-        .map(this::toEntity)
-        .collect(Collectors.toList());
-  }
-
-  @Override
-  public List<Comment> findAll(int page, int size) {
-    Page<CommentDO> pageParam = new Page<>(page, size);
-    return commentMapper
-        .selectPage(
-            pageParam, new LambdaQueryWrapper<CommentDO>().orderByDesc(CommentDO::getCreatedAt))
-        .getRecords()
-        .stream()
-        .map(this::toEntity)
-        .collect(Collectors.toList());
-  }
-
-  @Override
-  public List<Comment> findAll(int page, int size, String authorName, Long postId) {
-    Page<CommentDO> pageParam = new Page<>(page, size);
-    return commentMapper
-        .selectPage(pageParam, filteredWrapper(authorName, postId))
-        .getRecords()
-        .stream()
-        .map(this::toEntity)
-        .collect(Collectors.toList());
-  }
-
-  @Override
-  public long countFiltered(String authorName, Long postId) {
-    return commentMapper.selectCount(filteredWrapper(authorName, postId));
-  }
-
-  private LambdaQueryWrapper<CommentDO> filteredWrapper(String authorName, Long postId) {
-    LambdaQueryWrapper<CommentDO> w =
-        new LambdaQueryWrapper<CommentDO>().orderByDesc(CommentDO::getCreatedAt);
-    if (authorName != null && !authorName.isBlank()) {
-      w.like(CommentDO::getAuthorName, authorName.trim());
+    @Override
+    public Optional<Comment> findById(Long id) {
+        return Optional.ofNullable(commentMapper.selectById(id)).map(this::toEntity);
     }
-    if (postId != null) {
-      w.eq(CommentDO::getPostId, postId);
+
+    @Override
+    public void deleteById(Long id) {
+        commentMapper.deleteById(id);
     }
-    return w;
-  }
 
-  private CommentDO toDO(Comment c) {
-    CommentDO d = new CommentDO();
-    d.setId(c.getId());
-    d.setPostId(c.getPostId());
-    d.setAuthorId(c.getAuthorId());
-    d.setAuthorName(c.getAuthorName());
-    d.setContent(c.getContent());
-    d.setStatus(c.getStatus().name());
-    d.setCreatedAt(c.getCreatedAt() != null ? c.getCreatedAt() : LocalDateTime.now());
-    return d;
-  }
+    @Override
+    public List<Comment> findApprovedByPostId(Long postId) {
+        return commentMapper
+                .selectList(new LambdaQueryWrapper<CommentDO>()
+                        .eq(CommentDO::getPostId, postId)
+                        .eq(CommentDO::getStatus, CommentStatus.APPROVED.name())
+                        .orderByAsc(CommentDO::getCreatedAt))
+                .stream()
+                .map(this::toEntity)
+                .collect(Collectors.toList());
+    }
 
-  private Comment toEntity(CommentDO d) {
-    return Comment.reconstruct(
-        d.getId(),
-        d.getPostId(),
-        d.getAuthorId(), // 可为 null（旧评论）
-        d.getAuthorName(),
-        d.getContent(),
-        CommentStatus.valueOf(d.getStatus()),
-        d.getCreatedAt());
-  }
+    @Override
+    public List<Comment> findAll(int page, int size) {
+        Page<CommentDO> pageParam = new Page<>(page, size);
+        return commentMapper
+                .selectPage(pageParam, new LambdaQueryWrapper<CommentDO>().orderByDesc(CommentDO::getCreatedAt))
+                .getRecords()
+                .stream()
+                .map(this::toEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Comment> findAll(int page, int size, String authorName, Long postId) {
+        Page<CommentDO> pageParam = new Page<>(page, size);
+        return commentMapper.selectPage(pageParam, filteredWrapper(authorName, postId)).getRecords().stream()
+                .map(this::toEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long countFiltered(String authorName, Long postId) {
+        return commentMapper.selectCount(filteredWrapper(authorName, postId));
+    }
+
+    private LambdaQueryWrapper<CommentDO> filteredWrapper(String authorName, Long postId) {
+        LambdaQueryWrapper<CommentDO> w = new LambdaQueryWrapper<CommentDO>().orderByDesc(CommentDO::getCreatedAt);
+        if (authorName != null && !authorName.isBlank()) {
+            w.like(CommentDO::getAuthorName, authorName.trim());
+        }
+        if (postId != null) {
+            w.eq(CommentDO::getPostId, postId);
+        }
+        return w;
+    }
+
+    private CommentDO toDO(Comment c) {
+        CommentDO d = new CommentDO();
+        d.setId(c.getId());
+        d.setPostId(c.getPostId());
+        d.setAuthorId(c.getAuthorId());
+        d.setAuthorName(c.getAuthorName());
+        d.setContent(c.getContent());
+        d.setStatus(c.getStatus().name());
+        d.setCreatedAt(c.getCreatedAt() != null ? c.getCreatedAt() : LocalDateTime.now());
+        return d;
+    }
+
+    private Comment toEntity(CommentDO d) {
+        return Comment.reconstruct(
+                d.getId(),
+                d.getPostId(),
+                d.getAuthorId(), // 可为 null（旧评论）
+                d.getAuthorName(),
+                d.getContent(),
+                CommentStatus.valueOf(d.getStatus()),
+                d.getCreatedAt());
+    }
 }

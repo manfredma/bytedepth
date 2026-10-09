@@ -19,30 +19,26 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequiredArgsConstructor
 public class AdminCategoryController {
 
-  private final ListCategoriesQryExe listCategoriesQryExe;
-  private final CreateCategoryCmdExe createCategoryCmdExe;
+    private final ListCategoriesQryExe listCategoriesQryExe;
+    private final CreateCategoryCmdExe createCategoryCmdExe;
 
-  @GetMapping
-  public String list(
-      Model model,
-      @RequestParam(required = false) String name,
-      @RequestParam(required = false) String slug) {
-    model.addAttribute("categories", listCategoriesQryExe.executeFiltered(name, slug));
-    model.addAttribute(
-        "filterFields",
-        List.of(
-            FilterField.text("name", "名称", name == null ? "" : name, "输入名称"),
-            FilterField.text("slug", "Slug", slug == null ? "" : slug, "输入 Slug")));
-    model.addAttribute("filterBaseUrl", "/admin/categories?");
-    return "admin/categories/list";
-  }
+    @GetMapping
+    public String list(
+            Model model, @RequestParam(required = false) String name, @RequestParam(required = false) String slug) {
+        model.addAttribute("categories", listCategoriesQryExe.executeFiltered(name, slug));
+        model.addAttribute(
+                "filterFields",
+                List.of(
+                        FilterField.text("name", "名称", name == null ? "" : name, "输入名称"),
+                        FilterField.text("slug", "Slug", slug == null ? "" : slug, "输入 Slug")));
+        model.addAttribute("filterBaseUrl", "/admin/categories?");
+        return "admin/categories/list";
+    }
 
-  @PostMapping
-  public String create(
-      @RequestParam String name,
-      @RequestParam String slug,
-      @RequestParam(required = false) Long parentId) {
-    createCategoryCmdExe.execute(name, slug, parentId);
-    return "redirect:/admin/categories";
-  }
+    @PostMapping
+    public String create(
+            @RequestParam String name, @RequestParam String slug, @RequestParam(required = false) Long parentId) {
+        createCategoryCmdExe.execute(name, slug, parentId);
+        return "redirect:/admin/categories";
+    }
 }

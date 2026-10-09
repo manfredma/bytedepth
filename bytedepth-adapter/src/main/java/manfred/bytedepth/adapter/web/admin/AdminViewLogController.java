@@ -21,40 +21,39 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequiredArgsConstructor
 public class AdminViewLogController {
 
-  private static final int PAGE_SIZE = 20;
+    private static final int PAGE_SIZE = 20;
 
-  private final PostViewLogPort postViewLogPort;
-  private final ViewLogRetentionPolicy retentionPolicy;
-  private final Clock clock;
+    private final PostViewLogPort postViewLogPort;
+    private final ViewLogRetentionPolicy retentionPolicy;
+    private final Clock clock;
 
-  @GetMapping
-  public String list(
-      Model model,
-      @RequestParam(required = false) Long postId,
-      @RequestParam(required = false) Long userId,
-      @RequestParam(defaultValue = "1") int page) {
-    int offset = (page - 1) * PAGE_SIZE;
-    LocalDateTime cutoff = retentionPolicy.detailCutoff(LocalDateTime.now(clock));
-    var logs = postViewLogPort.findPage(postId, userId, cutoff, offset, PAGE_SIZE);
-    long total = postViewLogPort.countPage(postId, userId, cutoff);
-    int totalPages = (int) Math.max(1, Math.ceil((double) total / PAGE_SIZE));
+    @GetMapping
+    public String list(
+            Model model,
+            @RequestParam(required = false) Long postId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(defaultValue = "1") int page) {
+        int offset = (page - 1) * PAGE_SIZE;
+        LocalDateTime cutoff = retentionPolicy.detailCutoff(LocalDateTime.now(clock));
+        var logs = postViewLogPort.findPage(postId, userId, cutoff, offset, PAGE_SIZE);
+        long total = postViewLogPort.countPage(postId, userId, cutoff);
+        int totalPages = (int) Math.max(1, Math.ceil((double) total / PAGE_SIZE));
 
-    model.addAttribute("logs", logs);
-    model.addAttribute("currentPage", page);
-    model.addAttribute("totalPages", totalPages);
-    model.addAttribute("total", total);
-    model.addAttribute("pageSize", PAGE_SIZE);
-    model.addAttribute(
-        "filterFields",
-        List.of(
-            FilterField.number("postId", "文章 ID", postId == null ? "" : postId.toString(), "文章 ID"),
-            FilterField.number(
-                "userId", "用户 ID", userId == null ? "" : userId.toString(), "用户 ID")));
-    model.addAttribute(
-        "filterBaseUrl",
-        "/admin/view-logs?"
-            + (postId == null ? "" : "postId=" + postId + "&")
-            + (userId == null ? "" : "userId=" + userId + "&"));
-    return "admin/view-logs/list";
-  }
+        model.addAttribute("logs", logs);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("total", total);
+        model.addAttribute("pageSize", PAGE_SIZE);
+        model.addAttribute(
+                "filterFields",
+                List.of(
+                        FilterField.number("postId", "文章 ID", postId == null ? "" : postId.toString(), "文章 ID"),
+                        FilterField.number("userId", "用户 ID", userId == null ? "" : userId.toString(), "用户 ID")));
+        model.addAttribute(
+                "filterBaseUrl",
+                "/admin/view-logs?"
+                        + (postId == null ? "" : "postId=" + postId + "&")
+                        + (userId == null ? "" : "userId=" + userId + "&"));
+        return "admin/view-logs/list";
+    }
 }

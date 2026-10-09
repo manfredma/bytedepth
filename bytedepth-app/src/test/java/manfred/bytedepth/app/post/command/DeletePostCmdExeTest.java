@@ -18,36 +18,36 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class DeletePostCmdExeTest {
 
-  @Mock private PostRepository postRepository;
+    @Mock
+    private PostRepository postRepository;
 
-  private DeletePostCmdExe deletePostCmdExe;
+    private DeletePostCmdExe deletePostCmdExe;
 
-  @BeforeEach
-  void setUp() {
-    deletePostCmdExe = new DeletePostCmdExe(postRepository);
-  }
+    @BeforeEach
+    void setUp() {
+        deletePostCmdExe = new DeletePostCmdExe(postRepository);
+    }
 
-  @Test
-  void execute_shouldDeletePostAndSave() {
-    Post existing =
-        Post.reconstruct(
-            1L, "标题", "内容", PostStatus.DRAFT, LocalDateTime.now(), null, LocalDateTime.now());
-    when(postRepository.findById(1L)).thenReturn(Optional.of(existing));
-    when(postRepository.save(any(Post.class))).thenReturn(existing);
+    @Test
+    void execute_shouldDeletePostAndSave() {
+        Post existing =
+                Post.reconstruct(1L, "标题", "内容", PostStatus.DRAFT, LocalDateTime.now(), null, LocalDateTime.now());
+        when(postRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(postRepository.save(any(Post.class))).thenReturn(existing);
 
-    deletePostCmdExe.execute(1L);
+        deletePostCmdExe.execute(1L);
 
-    assertEquals(PostStatus.DELETED, existing.getStatus());
-    verify(postRepository).save(existing);
-  }
+        assertEquals(PostStatus.DELETED, existing.getStatus());
+        verify(postRepository).save(existing);
+    }
 
-  @Test
-  void execute_shouldThrow_whenPostNotFound() {
-    when(postRepository.findById(42L)).thenReturn(Optional.empty());
+    @Test
+    void execute_shouldThrow_whenPostNotFound() {
+        when(postRepository.findById(42L)).thenReturn(Optional.empty());
 
-    RuntimeException ex = assertThrows(RuntimeException.class, () -> deletePostCmdExe.execute(42L));
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> deletePostCmdExe.execute(42L));
 
-    assertTrue(ex.getMessage().contains("42"));
-    verify(postRepository, never()).save(any());
-  }
+        assertTrue(ex.getMessage().contains("42"));
+        verify(postRepository, never()).save(any());
+    }
 }

@@ -17,8 +17,8 @@ import org.springframework.security.web.FilterInvocation;
 @Configuration
 public class ThymeleafSecurityHandlerConfig {
 
-  @Bean
-  public SecurityExpressionHandler<FilterInvocation> securityExpressionHandler() {
-    return new ThymeleafSecurityExpressionHandler();
-  }
+    @Bean
+    public SecurityExpressionHandler<FilterInvocation> securityExpressionHandler() {
+        return new ThymeleafSecurityExpressionHandler();
+    }
 }

@@ -19,70 +19,73 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class MovePostInSeriesCmdExeTest {
 
-  @Mock private PostRepository postRepository;
-  @Mock private SeriesRepository seriesRepository;
+    @Mock
+    private PostRepository postRepository;
 
-  private MovePostInSeriesCmdExe cmdExe;
+    @Mock
+    private SeriesRepository seriesRepository;
 
-  @BeforeEach
-  void setUp() {
-    cmdExe = new MovePostInSeriesCmdExe(postRepository, seriesRepository);
-  }
+    private MovePostInSeriesCmdExe cmdExe;
 
-  // 专栏中有 3 篇文章：order 1=postId 10, order 2=postId 20, order 3=postId 30
-  private List<SeriesPostItem> threePostSeries() {
-    return List.of(
-        new SeriesPostItem(10L, "文章A", 1),
-        new SeriesPostItem(20L, "文章B", 2),
-        new SeriesPostItem(30L, "文章C", 3));
-  }
+    @BeforeEach
+    void setUp() {
+        cmdExe = new MovePostInSeriesCmdExe(postRepository, seriesRepository);
+    }
 
-  @Test
-  void moveUp_middlePost_swapsWithPrev() {
-    when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
+    // 专栏中有 3 篇文章：order 1=postId 10, order 2=postId 20, order 3=postId 30
+    private List<SeriesPostItem> threePostSeries() {
+        return List.of(
+                new SeriesPostItem(10L, "文章A", 1),
+                new SeriesPostItem(20L, "文章B", 2),
+                new SeriesPostItem(30L, "文章C", 3));
+    }
 
-    cmdExe.execute(100L, 20L, MovePostInSeriesCmdExe.Direction.UP);
+    @Test
+    void moveUp_middlePost_swapsWithPrev() {
+        when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
 
-    // postId=20 order 2→1, postId=10 order 1→2
-    verify(postRepository).setPostSeries(20L, 100L, 1);
-    verify(postRepository).setPostSeries(10L, 100L, 2);
-  }
+        cmdExe.execute(100L, 20L, MovePostInSeriesCmdExe.Direction.UP);
 
-  @Test
-  void moveDown_middlePost_swapsWithNext() {
-    when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
+        // postId=20 order 2→1, postId=10 order 1→2
+        verify(postRepository).setPostSeries(20L, 100L, 1);
+        verify(postRepository).setPostSeries(10L, 100L, 2);
+    }
 
-    cmdExe.execute(100L, 20L, MovePostInSeriesCmdExe.Direction.DOWN);
+    @Test
+    void moveDown_middlePost_swapsWithNext() {
+        when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
 
-    // postId=20 order 2→3, postId=30 order 3→2
-    verify(postRepository).setPostSeries(20L, 100L, 3);
-    verify(postRepository).setPostSeries(30L, 100L, 2);
-  }
+        cmdExe.execute(100L, 20L, MovePostInSeriesCmdExe.Direction.DOWN);
 
-  @Test
-  void moveUp_firstPost_doesNothing() {
-    when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
+        // postId=20 order 2→3, postId=30 order 3→2
+        verify(postRepository).setPostSeries(20L, 100L, 3);
+        verify(postRepository).setPostSeries(30L, 100L, 2);
+    }
 
-    cmdExe.execute(100L, 10L, MovePostInSeriesCmdExe.Direction.UP);
+    @Test
+    void moveUp_firstPost_doesNothing() {
+        when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
 
-    verify(postRepository, never()).setPostSeries(anyLong(), anyLong(), anyInt());
-  }
+        cmdExe.execute(100L, 10L, MovePostInSeriesCmdExe.Direction.UP);
 
-  @Test
-  void moveDown_lastPost_doesNothing() {
-    when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
+        verify(postRepository, never()).setPostSeries(anyLong(), anyLong(), anyInt());
+    }
 
-    cmdExe.execute(100L, 30L, MovePostInSeriesCmdExe.Direction.DOWN);
+    @Test
+    void moveDown_lastPost_doesNothing() {
+        when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
 
-    verify(postRepository, never()).setPostSeries(anyLong(), anyLong(), anyInt());
-  }
+        cmdExe.execute(100L, 30L, MovePostInSeriesCmdExe.Direction.DOWN);
 
-  @Test
-  void move_postNotFound_doesNothing() {
-    when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
+        verify(postRepository, never()).setPostSeries(anyLong(), anyLong(), anyInt());
+    }
 
-    cmdExe.execute(100L, 999L, MovePostInSeriesCmdExe.Direction.UP);
+    @Test
+    void move_postNotFound_doesNothing() {
+        when(seriesRepository.findAllPostsBySeries(100L)).thenReturn(threePostSeries());
 
-    verify(postRepository, never()).setPostSeries(anyLong(), anyLong(), anyInt());
-  }
+        cmdExe.execute(100L, 999L, MovePostInSeriesCmdExe.Direction.UP);
+
+        verify(postRepository, never()).setPostSeries(anyLong(), anyLong(), anyInt());
+    }
 }

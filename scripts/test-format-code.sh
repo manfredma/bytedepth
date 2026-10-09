@@ -20,6 +20,8 @@ assert_contains() {
 [[ -f "$SOURCE_ROOT/.prettierrc.json" ]]
 [[ -f "$SOURCE_ROOT/.prettierignore" ]]
 grep -Fq 'spotless-maven-plugin' "$SOURCE_ROOT/pom.xml"
+grep -Fq 'palantirJavaFormat' "$SOURCE_ROOT/pom.xml"
+grep -Fq 'palantir-java-format.version' "$SOURCE_ROOT/pom.xml"
 ! bash "$FORMATTER" > /dev/null 2>&1
 ! rg -n 'git[[:space:]]+(add|commit|reset|checkout)' "$FORMATTER" "$FORMAT_CHECKER" "$SOURCE_ROOT/scripts/lib/format-common.sh"
 

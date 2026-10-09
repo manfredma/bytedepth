@@ -6,12 +6,12 @@
 
 ## 工具与规则
 
-| 文件                                                   | 工具                          | 规则                                                            |
-| ------------------------------------------------------ | ----------------------------- | --------------------------------------------------------------- |
-| Java                                                   | Spotless + google-java-format | 根 `pom.xml` 统一配置；不单独设置 Java 行宽                     |
-| JavaScript/TypeScript/HTML/CSS/SCSS/JSON/YAML/Markdown | Prettier                      | `.prettierrc.json`，目标行宽 120；Markdown `proseWrap=preserve` |
-| Shell                                                  | shfmt 3.11.0                  | 2 空格缩进、case 缩进、语法感知换行                             |
-| 通用文本                                               | `.editorconfig`               | UTF-8、LF、文件末尾换行、行尾空格和基础缩进                     |
+| 文件                                                   | 工具                            | 规则                                                            |
+| ------------------------------------------------------ | ------------------------------- | --------------------------------------------------------------- |
+| Java                                                   | Spotless + palantir-java-format | 根 `pom.xml` 统一配置；4 空格缩进、120 列目标行宽               |
+| JavaScript/TypeScript/HTML/CSS/SCSS/JSON/YAML/Markdown | Prettier                        | `.prettierrc.json`，目标行宽 120；Markdown `proseWrap=preserve` |
+| Shell                                                  | shfmt 3.11.0                    | 2 空格缩进、case 缩进、语法感知换行                             |
+| 通用文本                                               | `.editorconfig`                 | UTF-8、LF、文件末尾换行、行尾空格和基础缩进                     |
 
 Markdown 的 Mermaid、Obsidian 特殊语法必须先通过 fixture 验证；锁文件、生成物、依赖目录、压缩文件和二进制文件不纳入格式化。
 
@@ -45,6 +45,12 @@ source scripts/lib/java-25.sh
 JAVA_HOME="$(resolve_java_25)" ./mvnw \
   com.diffplug.spotless:spotless-maven-plugin:3.10.2:check
 ```
+
+Java 的唯一格式化实现是根 `pom.xml` 中固定版本的 Palantir Java Format。它采用 4 空格缩进和 120 列布局，并针对 lambda 与链式调用做了更适合代码审查的换行。IntelliJ IDEA 必须安装同版本的 `palantir-java-format` 插件并启用它，`⌘⌥L` / `Ctrl+Alt+L` 才会与 Spotless 使用同一套格式化算法；IDEA 自带 Java Formatter 不作为仓库格式化器。
+
+IntelliJ 设置路径：`Settings/Preferences → Other Settings → Palantir Java Format → Enable palantir-java-format`。插件版本必须与 `palantir-java-format.version` 一致；插件不可用时，使用仓库脚本或 Maven Wrapper，不要使用 IDEA 内置 Java formatter 生成提交内容。
+
+`.editorconfig` 中的 Java 规则只提供 IDE 基础缩进和右边界提示，不能改变 Palantir formatter 的换行算法，也不能替代 IntelliJ 插件。
 
 ## AI Agent 收尾流程
 

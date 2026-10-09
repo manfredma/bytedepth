@@ -11,20 +11,17 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MyBatisUserAuthenticationAdapter implements UserAuthenticationPort {
 
-  private final UserMapper userMapper;
+    private final UserMapper userMapper;
 
-  @Override
-  public Optional<UserAuthentication> findByUsername(String username) {
-    return Optional.ofNullable(
-            userMapper.selectOne(
-                new LambdaQueryWrapper<UserDO>().eq(UserDO::getUsername, username)))
-        .map(
-            user ->
-                new UserAuthentication(
-                    user.getId(),
-                    user.getUsername(),
-                    user.getPassword(),
-                    user.getStatus(),
-                    userMapper.selectPermissionCodesByUserId(user.getId())));
-  }
+    @Override
+    public Optional<UserAuthentication> findByUsername(String username) {
+        return Optional.ofNullable(
+                        userMapper.selectOne(new LambdaQueryWrapper<UserDO>().eq(UserDO::getUsername, username)))
+                .map(user -> new UserAuthentication(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getPassword(),
+                        user.getStatus(),
+                        userMapper.selectPermissionCodesByUserId(user.getId())));
+    }
 }

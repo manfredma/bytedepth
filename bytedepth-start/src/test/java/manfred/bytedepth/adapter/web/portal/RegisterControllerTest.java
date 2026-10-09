@@ -16,43 +16,39 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(
-    value = RegisterController.class,
-    excludeAutoConfiguration = SecurityAutoConfiguration.class)
+@WebMvcTest(value = RegisterController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class)
 @Import(ThymeleafSecurityHandlerConfig.class)
 class RegisterControllerTest {
 
-  @Autowired private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @MockitoBean private RegisterUserCmdExe registerUserCmdExe;
+    @MockitoBean
+    private RegisterUserCmdExe registerUserCmdExe;
 
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-  @Test
-  void get_returnsRegisterView() throws Exception {
-    mockMvc
-        .perform(get("/register"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("public/register"));
-  }
+    @Test
+    void get_returnsRegisterView() throws Exception {
+        mockMvc.perform(get("/register")).andExpect(status().isOk()).andExpect(view().name("public/register"));
+    }
 
-  @Test
-  void post_success_redirectsToLoginWithParam() throws Exception {
-    mockMvc
-        .perform(post("/register").param("username", "alice").param("password", "secret123"))
-        .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrl("/login?registered=1"));
+    @Test
+    void post_success_redirectsToLoginWithParam() throws Exception {
+        mockMvc.perform(post("/register").param("username", "alice").param("password", "secret123"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?registered=1"));
 
-    verify(registerUserCmdExe).execute("alice", "secret123");
-  }
+        verify(registerUserCmdExe).execute("alice", "secret123");
+    }
 
-  @Test
-  void post_duplicateUsername_redirectsBackWithError() throws Exception {
-    doThrow(new DomainException("用户名已存在：alice")).when(registerUserCmdExe).execute("alice", "pass");
+    @Test
+    void post_duplicateUsername_redirectsBackWithError() throws Exception {
+        doThrow(new DomainException("用户名已存在：alice")).when(registerUserCmdExe).execute("alice", "pass");
 
-    mockMvc
-        .perform(post("/register").param("username", "alice").param("password", "pass"))
-        .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrlPattern("/register?error=*"));
-  }
+        mockMvc.perform(post("/register").param("username", "alice").param("password", "pass"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/register?error=*"));
+    }
 }

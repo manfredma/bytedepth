@@ -18,49 +18,49 @@ import org.springframework.stereotype.Service;
 @Service
 public class GeoIpService {
 
-  private final String dbPath;
-  private DatabaseReader reader;
+    private final String dbPath;
+    private DatabaseReader reader;
 
-  public GeoIpService(@Value("${bytedepth.geoip.db-path:}") String dbPath) {
-    this.dbPath = dbPath;
-  }
+    public GeoIpService(@Value("${bytedepth.geoip.db-path:}") String dbPath) {
+        this.dbPath = dbPath;
+    }
 
-  @PostConstruct
-  void init() {
-    if (dbPath == null || dbPath.isBlank()) {
-      log.info("GeoIP: bytedepth.geoip.db-path 未配置，IP 地理解析已禁用");
-      return;
+    @PostConstruct
+    void init() {
+        if (dbPath == null || dbPath.isBlank()) {
+            log.info("GeoIP: bytedepth.geoip.db-path 未配置，IP 地理解析已禁用");
+            return;
+        }
+        File file = new File(dbPath);
+        if (!file.exists()) {
+            log.info("GeoIP: 数据库文件不存在：{}，IP 地理解析已禁用", dbPath);
+            return;
+        }
+        try {
+            reader = new DatabaseReader.Builder(file).build();
+            log.info("GeoIP: 数据库加载成功：{}", dbPath);
+        } catch (IOException e) {
+            log.info("GeoIP: 数据库加载失败：{}，IP 地理解析已禁用：{}", dbPath, e.getMessage());
+        }
     }
-    File file = new File(dbPath);
-    if (!file.exists()) {
-      log.info("GeoIP: 数据库文件不存在：{}，IP 地理解析已禁用", dbPath);
-      return;
-    }
-    try {
-      reader = new DatabaseReader.Builder(file).build();
-      log.info("GeoIP: 数据库加载成功：{}", dbPath);
-    } catch (IOException e) {
-      log.info("GeoIP: 数据库加载失败：{}，IP 地理解析已禁用：{}", dbPath, e.getMessage());
-    }
-  }
 
-  /** 解析 IP 地址的国家和城市。 任何异常均静默降级，返回 {@link GeoInfo#unknown()}。 */
-  public GeoInfo resolve(String ip) {
-    if (reader == null || ip == null || ip.isBlank()) {
-      return GeoInfo.unknown();
+    /** 解析 IP 地址的国家和城市。 任何异常均静默降级，返回 {@link GeoInfo#unknown()}。 */
+    public GeoInfo resolve(String ip) {
+        if (reader == null || ip == null || ip.isBlank()) {
+            return GeoInfo.unknown();
+        }
+        try {
+            InetAddress addr = InetAddress.getByName(ip);
+            var response = reader.city(addr);
+            String country = response.getCountry().getName();
+            String city = response.getCity().getName();
+            return new GeoInfo(country == null ? "" : country, city == null ? "" : city);
+        } catch (IOException | GeoIp2Exception e) {
+            log.debug("GeoIP: 解析失败 ip={}：{}", ip, e.getMessage());
+            return GeoInfo.unknown();
+        } catch (Exception e) {
+            log.debug("GeoIP: 意外异常 ip={}：{}", ip, e.getMessage());
+            return GeoInfo.unknown();
+        }
     }
-    try {
-      InetAddress addr = InetAddress.getByName(ip);
-      var response = reader.city(addr);
-      String country = response.getCountry().getName();
-      String city = response.getCity().getName();
-      return new GeoInfo(country == null ? "" : country, city == null ? "" : city);
-    } catch (IOException | GeoIp2Exception e) {
-      log.debug("GeoIP: 解析失败 ip={}：{}", ip, e.getMessage());
-      return GeoInfo.unknown();
-    } catch (Exception e) {
-      log.debug("GeoIP: 意外异常 ip={}：{}", ip, e.getMessage());
-      return GeoInfo.unknown();
-    }
-  }
 }

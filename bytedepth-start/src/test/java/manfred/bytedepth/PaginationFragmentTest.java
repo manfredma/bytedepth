@@ -9,23 +9,23 @@ import org.junit.jupiter.api.Test;
 
 class PaginationFragmentTest {
 
-  @Test
-  void usesAnIsolatedCompactComponentAndCollapsesPageJump() throws IOException {
-    String template = classpathText("/templates/fragments/pagination.html");
+    @Test
+    void usesAnIsolatedCompactComponentAndCollapsesPageJump() throws IOException {
+        String template = classpathText("/templates/fragments/pagination.html");
 
-    assertThat(template)
-        .contains("bd-pagination-wrap")
-        .contains("bd-pagination-nav")
-        .contains("<details class=\"bd-pagination-jump\"")
-        .contains(".bd-pagination-submit { white-space: nowrap; flex: 0 0 auto; }")
-        .doesNotContain("class=\"pagination\"")
-        .doesNotContain("class=\"page-btn");
-  }
-
-  private String classpathText(String path) throws IOException {
-    try (InputStream in = getClass().getResourceAsStream(path)) {
-      assertThat(in).as("classpath resource %s", path).isNotNull();
-      return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        assertThat(template)
+                .contains("bd-pagination-wrap")
+                .contains("bd-pagination-nav")
+                .contains("<details class=\"bd-pagination-jump\"")
+                .contains(".bd-pagination-submit { white-space: nowrap; flex: 0 0 auto; }")
+                .doesNotContain("class=\"pagination\"")
+                .doesNotContain("class=\"page-btn");
     }
-  }
+
+    private String classpathText(String path) throws IOException {
+        try (InputStream in = getClass().getResourceAsStream(path)) {
+            assertThat(in).as("classpath resource %s", path).isNotNull();
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
 }

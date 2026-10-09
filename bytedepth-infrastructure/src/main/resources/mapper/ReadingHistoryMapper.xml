@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="manfred.bytedepth.infrastructure.reading.ReadingHistoryMapper">
+    <resultMap id="eventMap" type="manfred.bytedepth.infrastructure.reading.ReadingEventDO">
+        <id property="id" column="id" />
+        <result property="eventId" column="event_id" javaType="java.util.UUID" jdbcType="CHAR" typeHandler="manfred.bytedepth.infrastructure.reading.UuidStringTypeHandler" />
+        <result property="userId" column="user_id" />
+        <result property="postId" column="post_id" />
+        <result property="sessionId" column="session_id" javaType="java.util.UUID" jdbcType="CHAR" typeHandler="manfred.bytedepth.infrastructure.reading.UuidStringTypeHandler" />
+        <result property="eventType" column="event_type" />
+        <result property="activeSecondsDelta" column="active_seconds_delta" />
+        <result property="maxScrollDepth" column="max_scroll_depth" />
+        <result property="occurredAt" column="occurred_at" />
+        <result property="receivedAt" column="received_at" />
+        <result property="projectedAt" column="projected_at" />
+    </resultMap>
+    <resultMap id="historyMap" type="manfred.bytedepth.infrastructure.reading.ReadingHistoryDO">
+        <id property="userId" column="user_id" />
+        <id property="postId" column="post_id" />
+        <result property="readCount" column="read_count" />
+        <result property="totalActiveSeconds" column="total_active_seconds" />
+        <result property="firstReadAt" column="first_read_at" />
+        <result property="lastReadAt" column="last_read_at" />
+        <result property="updatedAt" column="updated_at" />
+        <result property="postSlug" column="post_slug" />
+        <result property="title" column="title" />
+    </resultMap>
+
+    <insert id="insertIfAbsent" parameterType="manfred.bytedepth.infrastructure.reading.ReadingEventDO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO post_reading_event
+        (event_id, user_id, post_id, session_id, event_type, active_seconds_delta,
+         max_scroll_depth, occurred_at, received_at)
+        VALUES (#{eventId, jdbcType=CHAR, typeHandler=manfred.bytedepth.infrastructure.reading.UuidStringTypeHandler}, #{userId}, #{postId}, #{sessionId, jdbcType=CHAR, typeHandler=manfred.bytedepth.infrastructure.reading.UuidStringTypeHandler}, #{eventType},
+                #{activeSecondsDelta}, #{maxScrollDepth}, #{occurredAt}, #{receivedAt})
+        ON DUPLICATE KEY UPDATE event_id = event_id
+    </insert>
+
+    <select id="findUnprojected" resultMap="eventMap">
+        SELECT * FROM post_reading_event
+        WHERE projected_at IS NULL
+        ORDER BY received_at ASC, id ASC
+        LIMIT #{limit}
+    </select>
+    <update id="markProjected">
+        UPDATE post_reading_event SET projected_at = #{projectedAt}
+        WHERE id = #{id} AND projected_at IS NULL
+    </update>
+    <delete id="deleteProjectedBefore">
+        DELETE FROM post_reading_event
+        WHERE projected_at IS NOT NULL AND received_at &lt; #{cutoff}
+    </delete>
+    <insert id="upsertHistory" parameterType="manfred.bytedepth.infrastructure.reading.ReadingEventDO">
+        INSERT INTO user_post_reading_history
+        (user_id, post_id, read_count, total_active_seconds, first_read_at, last_read_at, updated_at)
+        VALUES (#{userId}, #{postId},
+                CASE WHEN #{eventType} = 'READ_OPEN' THEN 1 ELSE 0 END,
+                #{activeSecondsDelta}, #{receivedAt}, #{receivedAt}, #{receivedAt})
+        ON DUPLICATE KEY UPDATE
+            read_count = read_count + CASE WHEN #{eventType} = 'READ_OPEN' THEN 1 ELSE 0 END,
+            total_active_seconds = total_active_seconds + #{activeSecondsDelta},
+            first_read_at = LEAST(first_read_at, #{receivedAt}),
+            last_read_at = GREATEST(last_read_at, #{receivedAt}),
+            updated_at = #{receivedAt}
+    </insert>
+    <select id="findSummary" resultMap="historyMap">
+        SELECT h.* FROM user_post_reading_history h
+        JOIN post p ON p.id = h.post_id
+        WHERE h.user_id = #{userId} AND h.post_id = #{postId}
+          AND p.status = 'PUBLISHED'
+    </select>
+    <select id="findPage" resultMap="historyMap">
+        SELECT h.*, p.slug AS post_slug, p.title
+        FROM user_post_reading_history h
+        JOIN post p ON p.id = h.post_id
+        WHERE h.user_id = #{userId} AND p.status = 'PUBLISHED'
+        <if test="cursorTime != null">
+          AND (h.last_read_at &lt; #{cursorTime}
+               OR (h.last_read_at = #{cursorTime} AND h.post_id &lt; #{cursorPostId}))
+        </if>
+        ORDER BY h.last_read_at DESC, h.post_id DESC
+        LIMIT #{limit}
+    </select>
+</mapper>

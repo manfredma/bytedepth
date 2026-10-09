@@ -14,24 +14,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequiredArgsConstructor
 public class SearchController {
 
-  private final SearchPostsQryExe searchPostsQryExe;
-  private final SearchHighlight searchHighlight;
+    private final SearchPostsQryExe searchPostsQryExe;
+    private final SearchHighlight searchHighlight;
 
-  @GetMapping
-  public String search(
-      @RequestParam(defaultValue = "") String q,
-      @RequestParam(defaultValue = "1") int page,
-      Model model) {
-    var result = searchPostsQryExe.execute(q, page);
-    model.addAttribute("q", q);
-    model.addAttribute("results", result.getHits());
-    model.addAttribute("totalHits", result.getTotalHits());
-    model.addAttribute("currentPage", result.getPage());
-    model.addAttribute("totalPages", result.totalPages());
-    model.addAttribute("hasPrev", result.hasPrev());
-    model.addAttribute("hasNext", result.hasNext());
-    model.addAttribute("pageSize", 10);
-    model.addAttribute("searchHighlight", searchHighlight);
-    return "public/search";
-  }
+    @GetMapping
+    public String search(
+            @RequestParam(defaultValue = "") String q, @RequestParam(defaultValue = "1") int page, Model model) {
+        var result = searchPostsQryExe.execute(q, page);
+        model.addAttribute("q", q);
+        model.addAttribute("results", result.getHits());
+        model.addAttribute("totalHits", result.getTotalHits());
+        model.addAttribute("currentPage", result.getPage());
+        model.addAttribute("totalPages", result.totalPages());
+        model.addAttribute("hasPrev", result.hasPrev());
+        model.addAttribute("hasNext", result.hasNext());
+        model.addAttribute("pageSize", 10);
+        model.addAttribute("searchHighlight", searchHighlight);
+        return "public/search";
+    }
 }

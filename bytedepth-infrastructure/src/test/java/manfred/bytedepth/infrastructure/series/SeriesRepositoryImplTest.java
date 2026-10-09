@@ -21,134 +21,137 @@ import org.mockito.Mockito;
 
 class SeriesRepositoryImplTest {
 
-  private final SeriesMapper mapper = Mockito.mock(SeriesMapper.class);
-  private final SeriesRepositoryImpl repository = new SeriesRepositoryImpl(mapper);
+    private final SeriesMapper mapper = Mockito.mock(SeriesMapper.class);
+    private final SeriesRepositoryImpl repository = new SeriesRepositoryImpl(mapper);
 
-  @Test
-  void save_insertsNewSeriesAndUpdatesExistingSeries() {
-    when(mapper.insert(any(SeriesDO.class)))
-        .thenAnswer(
-            invocation -> {
-              invocation.<SeriesDO>getArgument(0).setId(1L);
-              return 1;
-            });
-    Series created = repository.save(Series.create("Java", "java", "基础", 7L));
-    assertEquals(1L, created.getId());
-    assertEquals(7L, created.getAuthorId());
+    @Test
+    void save_insertsNewSeriesAndUpdatesExistingSeries() {
+        when(mapper.insert(any(SeriesDO.class))).thenAnswer(invocation -> {
+            invocation.<SeriesDO>getArgument(0).setId(1L);
+            return 1;
+        });
+        Series created = repository.save(Series.create("Java", "java", "基础", 7L));
+        assertEquals(1L, created.getId());
+        assertEquals(7L, created.getAuthorId());
 
-    Series updated = repository.save(Series.reconstruct(1L, "Java", "java", "更新", 7L));
-    assertEquals("更新", updated.getDescription());
-    verify(mapper).updateById(any(SeriesDO.class));
-  }
+        Series updated = repository.save(Series.reconstruct(1L, "Java", "java", "更新", 7L));
+        assertEquals("更新", updated.getDescription());
+        verify(mapper).updateById(any(SeriesDO.class));
+    }
 
-  @Test
-  void findMethods_mapExistingSeriesAndReturnEmptyForMissing() {
-    SeriesDO row = seriesRow();
-    when(mapper.selectOne(any())).thenReturn(row).thenReturn((SeriesDO) null);
-    when(mapper.selectById(1L)).thenReturn(row);
-    when(mapper.selectById(2L)).thenReturn(null);
+    @Test
+    void findMethods_mapExistingSeriesAndReturnEmptyForMissing() {
+        SeriesDO row = seriesRow();
+        when(mapper.selectOne(any())).thenReturn(row).thenReturn((SeriesDO) null);
+        when(mapper.selectById(1L)).thenReturn(row);
+        when(mapper.selectById(2L)).thenReturn(null);
 
-    assertEquals(7L, repository.findBySlug("java").orElseThrow().getAuthorId());
-    assertFalse(repository.findBySlug("missing").isPresent());
-    assertEquals("Java", repository.findById(1L).orElseThrow().getName());
-    assertTrue(repository.findById(2L).isEmpty());
-  }
+        assertEquals(7L, repository.findBySlug("java").orElseThrow().getAuthorId());
+        assertFalse(repository.findBySlug("missing").isPresent());
+        assertEquals("Java", repository.findById(1L).orElseThrow().getName());
+        assertTrue(repository.findById(2L).isEmpty());
+    }
 
-  @Test
-  void postQueries_mapPublishedAllAndCandidatePosts() {
-    SeriesPostItemDO item = postRow();
-    when(mapper.findPublishedPostsBySeries(3L)).thenReturn(List.of(item));
-    when(mapper.findAllPostsBySeries(3L)).thenReturn(List.of(item));
-    when(mapper.findCandidatesForSeries(3L, "java", 10, 10)).thenReturn(List.of(item));
-    when(mapper.findCandidatesForSeriesByAuthor(3L, 7L, "java", 10, 10)).thenReturn(List.of(item));
+    @Test
+    void postQueries_mapPublishedAllAndCandidatePosts() {
+        SeriesPostItemDO item = postRow();
+        when(mapper.findPublishedPostsBySeries(3L)).thenReturn(List.of(item));
+        when(mapper.findAllPostsBySeries(3L)).thenReturn(List.of(item));
+        when(mapper.findCandidatesForSeries(3L, "java", 10, 10)).thenReturn(List.of(item));
+        when(mapper.findCandidatesForSeriesByAuthor(3L, 7L, "java", 10, 10)).thenReturn(List.of(item));
 
-    assertEquals("post", repository.findPublishedPostsBySeries(3L).get(0).slug());
-    assertEquals("内容", repository.findAllPostsBySeries(3L).get(0).content());
-    assertEquals(9L, repository.findCandidatesForSeries(3L, "java", 2, 10).get(0).id());
-    assertEquals(
-        "DRAFT", repository.findCandidatesForSeriesByAuthor(3L, 7L, "java", 2, 10).get(0).status());
-  }
+        assertEquals("post", repository.findPublishedPostsBySeries(3L).get(0).slug());
+        assertEquals("内容", repository.findAllPostsBySeries(3L).get(0).content());
+        assertEquals(
+                9L, repository.findCandidatesForSeries(3L, "java", 2, 10).get(0).id());
+        assertEquals(
+                "DRAFT",
+                repository
+                        .findCandidatesForSeriesByAuthor(3L, 7L, "java", 2, 10)
+                        .get(0)
+                        .status());
+    }
 
-  @Test
-  void candidateCountsAndMaximumOrder_delegateToMapper() {
-    when(mapper.countCandidatesForSeries(3L, "java")).thenReturn(4L);
-    when(mapper.countCandidatesForSeriesByAuthor(3L, 7L, "java")).thenReturn(2L);
-    when(mapper.findMaxOrderInSeries(3L)).thenReturn(8);
+    @Test
+    void candidateCountsAndMaximumOrder_delegateToMapper() {
+        when(mapper.countCandidatesForSeries(3L, "java")).thenReturn(4L);
+        when(mapper.countCandidatesForSeriesByAuthor(3L, 7L, "java")).thenReturn(2L);
+        when(mapper.findMaxOrderInSeries(3L)).thenReturn(8);
 
-    assertEquals(4L, repository.countCandidatesForSeries(3L, "java"));
-    assertEquals(2L, repository.countCandidatesForSeriesByAuthor(3L, 7L, "java"));
-    assertEquals(8, repository.findMaxOrderInSeries(3L));
-  }
+        assertEquals(4L, repository.countCandidatesForSeries(3L, "java"));
+        assertEquals(2L, repository.countCandidatesForSeriesByAuthor(3L, 7L, "java"));
+        assertEquals(8, repository.findMaxOrderInSeries(3L));
+    }
 
-  @Test
-  void deleteWithPosts_clearsPostAssociationsBeforeDeletingSeries() {
-    repository.deleteWithPosts(3L);
+    @Test
+    void deleteWithPosts_clearsPostAssociationsBeforeDeletingSeries() {
+        repository.deleteWithPosts(3L);
 
-    var order = Mockito.inOrder(mapper);
-    order.verify(mapper).clearAllPostsInSeries(3L);
-    order.verify(mapper).deleteById(3L);
-  }
+        var order = Mockito.inOrder(mapper);
+        order.verify(mapper).clearAllPostsInSeries(3L);
+        order.verify(mapper).deleteById(3L);
+    }
 
-  @Test
-  void listMethods_mapAllSeriesAndAuthorSeries() {
-    SeriesDO row = seriesRow();
-    when(mapper.selectList(any())).thenReturn(List.of(row));
+    @Test
+    void listMethods_mapAllSeriesAndAuthorSeries() {
+        SeriesDO row = seriesRow();
+        when(mapper.selectList(any())).thenReturn(List.of(row));
 
-    assertEquals("Java", repository.findAll().get(0).getName());
-    assertEquals(7L, repository.findByAuthorId(7L).get(0).getAuthorId());
-  }
+        assertEquals("Java", repository.findAll().get(0).getName());
+        assertEquals(7L, repository.findByAuthorId(7L).get(0).getAuthorId());
+    }
 
-  @Test
-  void findAll_usesChineseCollationAndStableIdTieBreaker() {
-    TableInfoHelper.initTableInfo(
-        new MapperBuilderAssistant(new MybatisConfiguration(), ""), SeriesDO.class);
-    when(mapper.selectList(any())).thenReturn(List.of());
+    @Test
+    void findAll_usesChineseCollationAndStableIdTieBreaker() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), SeriesDO.class);
+        when(mapper.selectList(any())).thenReturn(List.of());
 
-    repository.findAll();
+        repository.findAll();
 
-    ArgumentCaptor<Wrapper<SeriesDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
-    verify(mapper).selectList(captor.capture());
-    String sql = captor.getValue().getSqlSegment();
-    assertTrue(sql.contains("COLLATE utf8mb4_zh_0900_as_cs"));
-    assertTrue(sql.contains("id"));
-  }
+        ArgumentCaptor<Wrapper<SeriesDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(mapper).selectList(captor.capture());
+        String sql = captor.getValue().getSqlSegment();
+        assertTrue(sql.contains("COLLATE utf8mb4_zh_0900_as_cs"));
+        assertTrue(sql.contains("id"));
+    }
 
-  @Test
-  void pagedQueries_supportNameAndAuthorFilters() {
-    Page<SeriesDO> page = new Page<>(1, 10);
-    page.setRecords(List.of(seriesRow()));
-    when(mapper.selectPage(any(), any())).thenReturn(page);
-    when(mapper.selectCount(any())).thenReturn(3L, 2L, 3L, 2L);
+    @Test
+    void pagedQueries_supportNameAndAuthorFilters() {
+        Page<SeriesDO> page = new Page<>(1, 10);
+        page.setRecords(List.of(seriesRow()));
+        when(mapper.selectPage(any(), any())).thenReturn(page);
+        when(mapper.selectCount(any())).thenReturn(3L, 2L, 3L, 2L);
 
-    assertEquals("Java", repository.findPage("Java", 1, 10).getFirst().getName());
-    assertEquals(3L, repository.count(" "));
-    assertEquals(7L, repository.findPageByAuthorId(7L, "Java", 1, 10).getFirst().getAuthorId());
-    assertEquals(2L, repository.countByAuthorId(7L, ""));
-    assertEquals(3L, repository.count(null));
-    assertEquals(2L, repository.countByAuthorId(7L, null));
-    verify(mapper, org.mockito.Mockito.times(2)).selectPage(any(), any());
-    verify(mapper, org.mockito.Mockito.times(4)).selectCount(any());
-  }
+        assertEquals("Java", repository.findPage("Java", 1, 10).getFirst().getName());
+        assertEquals(3L, repository.count(" "));
+        assertEquals(
+                7L, repository.findPageByAuthorId(7L, "Java", 1, 10).getFirst().getAuthorId());
+        assertEquals(2L, repository.countByAuthorId(7L, ""));
+        assertEquals(3L, repository.count(null));
+        assertEquals(2L, repository.countByAuthorId(7L, null));
+        verify(mapper, org.mockito.Mockito.times(2)).selectPage(any(), any());
+        verify(mapper, org.mockito.Mockito.times(4)).selectCount(any());
+    }
 
-  private SeriesDO seriesRow() {
-    SeriesDO row = new SeriesDO();
-    row.setId(3L);
-    row.setName("Java");
-    row.setSlug("java");
-    row.setDescription("基础");
-    row.setAuthorId(7L);
-    return row;
-  }
+    private SeriesDO seriesRow() {
+        SeriesDO row = new SeriesDO();
+        row.setId(3L);
+        row.setName("Java");
+        row.setSlug("java");
+        row.setDescription("基础");
+        row.setAuthorId(7L);
+        return row;
+    }
 
-  private SeriesPostItemDO postRow() {
-    SeriesPostItemDO row = new SeriesPostItemDO();
-    row.setId(9L);
-    row.setSlug("post");
-    row.setTitle("标题");
-    row.setSeriesOrder(2);
-    row.setContent("内容");
-    row.setStatus("DRAFT");
-    row.setPublishedAt(LocalDateTime.now());
-    return row;
-  }
+    private SeriesPostItemDO postRow() {
+        SeriesPostItemDO row = new SeriesPostItemDO();
+        row.setId(9L);
+        row.setSlug("post");
+        row.setTitle("标题");
+        row.setSeriesOrder(2);
+        row.setContent("内容");
+        row.setStatus("DRAFT");
+        row.setPublishedAt(LocalDateTime.now());
+        return row;
+    }
 }

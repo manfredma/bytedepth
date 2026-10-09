@@ -22,35 +22,33 @@ import org.springframework.web.util.UriUtils;
 @RequiredArgsConstructor
 public class AdminTagListController {
 
-  private final ListTagsQryExe listTagsQryExe;
-  private final DeleteTagCmdExe deleteTagCmdExe;
+    private final ListTagsQryExe listTagsQryExe;
+    private final DeleteTagCmdExe deleteTagCmdExe;
 
-  @GetMapping
-  public String list(
-      Model model,
-      @RequestParam(required = false) String name,
-      @RequestParam(defaultValue = "1") int page,
-      @RequestParam(defaultValue = "20") int size) {
-    var result = listTagsQryExe.findPageWithCount(name, page, size);
-    model.addAttribute("tags", result.records());
-    model.addAttribute("currentPage", page);
-    model.addAttribute("totalPages", (int) Math.ceil((double) result.total() / size));
-    model.addAttribute("total", result.total());
-    model.addAttribute("pageSize", size);
-    model.addAttribute(
-        "filterFields", List.of(FilterField.text("name", "名称", name == null ? "" : name, "输入名称")));
-    String baseUrl =
-        "/admin/tags?"
-            + (name == null || name.isBlank()
-                ? ""
-                : "name=" + UriUtils.encodeQueryParam(name, StandardCharsets.UTF_8) + "&");
-    model.addAttribute("filterBaseUrl", baseUrl);
-    return "admin/tags/list";
-  }
+    @GetMapping
+    public String list(
+            Model model,
+            @RequestParam(required = false) String name,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        var result = listTagsQryExe.findPageWithCount(name, page, size);
+        model.addAttribute("tags", result.records());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", (int) Math.ceil((double) result.total() / size));
+        model.addAttribute("total", result.total());
+        model.addAttribute("pageSize", size);
+        model.addAttribute("filterFields", List.of(FilterField.text("name", "名称", name == null ? "" : name, "输入名称")));
+        String baseUrl = "/admin/tags?"
+                + (name == null || name.isBlank()
+                        ? ""
+                        : "name=" + UriUtils.encodeQueryParam(name, StandardCharsets.UTF_8) + "&");
+        model.addAttribute("filterBaseUrl", baseUrl);
+        return "admin/tags/list";
+    }
 
-  @PostMapping("/{tagId}/delete")
-  public String delete(@PathVariable Long tagId) {
-    deleteTagCmdExe.execute(tagId);
-    return "redirect:/admin/tags";
-  }
+    @PostMapping("/{tagId}/delete")
+    public String delete(@PathVariable Long tagId) {
+        deleteTagCmdExe.execute(tagId);
+        return "redirect:/admin/tags";
+    }
 }

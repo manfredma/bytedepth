@@ -21,50 +21,54 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class RatePostCmdExeTest {
 
-  @Mock private PostRepository postRepository;
-  @Mock private PostRatingRepository postRatingRepository;
-  private RatePostCmdExe exe;
+    @Mock
+    private PostRepository postRepository;
 
-  @BeforeEach
-  void setUp() {
-    exe = new RatePostCmdExe(postRepository, postRatingRepository);
-  }
+    @Mock
+    private PostRatingRepository postRatingRepository;
 
-  @Test
-  void execute_publishedPost_upsertsVisitorRating() {
-    when(postRepository.findById(1L)).thenReturn(Optional.of(post(1L, PostStatus.PUBLISHED)));
+    private RatePostCmdExe exe;
 
-    exe.execute(1L, "visitor-token", 5);
+    @BeforeEach
+    void setUp() {
+        exe = new RatePostCmdExe(postRepository, postRatingRepository);
+    }
 
-    verify(postRatingRepository).upsert(1L, "visitor-token", 5);
-  }
+    @Test
+    void execute_publishedPost_upsertsVisitorRating() {
+        when(postRepository.findById(1L)).thenReturn(Optional.of(post(1L, PostStatus.PUBLISHED)));
 
-  @Test
-  void execute_scoreOutsideRange_rejectsBeforeWriting() {
-    assertThrows(DomainException.class, () -> exe.execute(1L, "visitor-token", 0));
+        exe.execute(1L, "visitor-token", 5);
 
-    verify(postRatingRepository, never()).upsert(1L, "visitor-token", 0);
-  }
+        verify(postRatingRepository).upsert(1L, "visitor-token", 5);
+    }
 
-  @Test
-  void execute_scoreAboveFive_rejectsBeforeWriting() {
-    assertThrows(DomainException.class, () -> exe.execute(1L, "visitor-token", 6));
+    @Test
+    void execute_scoreOutsideRange_rejectsBeforeWriting() {
+        assertThrows(DomainException.class, () -> exe.execute(1L, "visitor-token", 0));
 
-    verify(postRatingRepository, never()).upsert(1L, "visitor-token", 6);
-  }
+        verify(postRatingRepository, never()).upsert(1L, "visitor-token", 0);
+    }
 
-  private Post post(Long id, PostStatus status) {
-    return Post.reconstruct(
-        id,
-        "article",
-        "title",
-        "content",
-        status,
-        LocalDateTime.now(),
-        LocalDateTime.now(),
-        LocalDateTime.now(),
-        null,
-        null,
-        false);
-  }
+    @Test
+    void execute_scoreAboveFive_rejectsBeforeWriting() {
+        assertThrows(DomainException.class, () -> exe.execute(1L, "visitor-token", 6));
+
+        verify(postRatingRepository, never()).upsert(1L, "visitor-token", 6);
+    }
+
+    private Post post(Long id, PostStatus status) {
+        return Post.reconstruct(
+                id,
+                "article",
+                "title",
+                "content",
+                status,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                null,
+                false);
+    }
 }

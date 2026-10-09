@@ -24,151 +24,145 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 class PostRepositoryIT {
 
-  @MockitoBean private RedisStatsService redisStatsService;
+    @MockitoBean
+    private RedisStatsService redisStatsService;
 
-  @Autowired private PostRepository postRepository;
+    @Autowired
+    private PostRepository postRepository;
 
-  @Autowired private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
-  @Test
-  void save_newPost_assignsIdAndPersists() {
-    Post post = Post.create("集成测试标题", "# 集成测试\n\n内容正文", 1L, "it-integration");
-    Post saved = postRepository.save(post);
+    @Test
+    void save_newPost_assignsIdAndPersists() {
+        Post post = Post.create("集成测试标题", "# 集成测试\n\n内容正文", 1L, "it-integration");
+        Post saved = postRepository.save(post);
 
-    assertNotNull(saved.getId());
-    assertEquals(PostStatus.DRAFT, saved.getStatus());
-    assertNotNull(saved.getCreatedAt());
-  }
+        assertNotNull(saved.getId());
+        assertEquals(PostStatus.DRAFT, saved.getStatus());
+        assertNotNull(saved.getCreatedAt());
+    }
 
-  @Test
-  void findById_existingPost_returnsPost() {
-    Post post = Post.create("可查询文章", "查询测试内容", 1L, "it-query");
-    Post saved = postRepository.save(post);
+    @Test
+    void findById_existingPost_returnsPost() {
+        Post post = Post.create("可查询文章", "查询测试内容", 1L, "it-query");
+        Post saved = postRepository.save(post);
 
-    Optional<Post> found = postRepository.findById(saved.getId());
-    assertTrue(found.isPresent());
-    assertEquals("可查询文章", found.get().getTitle());
-    assertEquals(PostStatus.DRAFT, found.get().getStatus());
-  }
+        Optional<Post> found = postRepository.findById(saved.getId());
+        assertTrue(found.isPresent());
+        assertEquals("可查询文章", found.get().getTitle());
+        assertEquals(PostStatus.DRAFT, found.get().getStatus());
+    }
 
-  @Test
-  void findById_nonExistent_returnsEmpty() {
-    Optional<Post> found = postRepository.findById(99999L);
-    assertTrue(found.isEmpty());
-  }
+    @Test
+    void findById_nonExistent_returnsEmpty() {
+        Optional<Post> found = postRepository.findById(99999L);
+        assertTrue(found.isEmpty());
+    }
 
-  @Test
-  void publish_persistsStatusChange() {
-    Post post = Post.create("待发布文章", "正文", 1L, "it-publish");
-    Post saved = postRepository.save(post);
+    @Test
+    void publish_persistsStatusChange() {
+        Post post = Post.create("待发布文章", "正文", 1L, "it-publish");
+        Post saved = postRepository.save(post);
 
-    saved.publish();
-    postRepository.save(saved);
+        saved.publish();
+        postRepository.save(saved);
 
-    Post reloaded = postRepository.findById(saved.getId()).orElseThrow();
-    assertEquals(PostStatus.PUBLISHED, reloaded.getStatus());
-    assertNotNull(reloaded.getPublishedAt());
-  }
+        Post reloaded = postRepository.findById(saved.getId()).orElseThrow();
+        assertEquals(PostStatus.PUBLISHED, reloaded.getStatus());
+        assertNotNull(reloaded.getPublishedAt());
+    }
 
-  @Test
-  void findPublished_returnsOnlyPublishedPosts() {
-    Post draft = Post.create("草稿文章IT", "内容", 1L, "it-draft");
-    postRepository.save(draft);
+    @Test
+    void findPublished_returnsOnlyPublishedPosts() {
+        Post draft = Post.create("草稿文章IT", "内容", 1L, "it-draft");
+        postRepository.save(draft);
 
-    Post toPublish = Post.create("已发布文章IT", "内容", 1L, "it-published");
-    Post saved = postRepository.save(toPublish);
-    saved.publish();
-    postRepository.save(saved);
+        Post toPublish = Post.create("已发布文章IT", "内容", 1L, "it-published");
+        Post saved = postRepository.save(toPublish);
+        saved.publish();
+        postRepository.save(saved);
 
-    List<Post> published = postRepository.findPublished(1, 100);
-    assertTrue(published.stream().allMatch(p -> p.getStatus() == PostStatus.PUBLISHED));
-  }
+        List<Post> published = postRepository.findPublished(1, 100);
+        assertTrue(published.stream().allMatch(p -> p.getStatus() == PostStatus.PUBLISHED));
+    }
 
-  @Test
-  void findsPublishedPostsByHotnessAndLatestExcludingIds() {
-    Post first = publishPost("热门排序第一篇");
-    Post second = publishPost("热门排序第二篇");
-    Post third = publishPost("热门排序第三篇");
+    @Test
+    void findsPublishedPostsByHotnessAndLatestExcludingIds() {
+        Post first = publishPost("热门排序第一篇");
+        Post second = publishPost("热门排序第二篇");
+        Post third = publishPost("热门排序第三篇");
 
-    jdbcTemplate.update(
-        "UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL 1 DAY) - INTERVAL 3 MINUTE WHERE"
-            + " id = ?",
-        first.getId());
-    jdbcTemplate.update(
-        "UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL 1 DAY) - INTERVAL 2 MINUTE WHERE"
-            + " id = ?",
-        second.getId());
-    jdbcTemplate.update(
-        "UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL 1 DAY) - INTERVAL 1 MINUTE WHERE"
-            + " id = ?",
-        third.getId());
-    jdbcTemplate.update(
-        "INSERT INTO page_stats (path, pv_count, updated_at) VALUES (?, ?, NOW())",
-        "/posts/" + first.getId(),
-        100);
-    jdbcTemplate.update(
-        "INSERT INTO page_stats (path, pv_count, updated_at) VALUES (?, ?, NOW())",
-        "/posts/" + second.getId(),
-        100);
+        jdbcTemplate.update(
+                "UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL 1 DAY) - INTERVAL 3 MINUTE WHERE" + " id = ?",
+                first.getId());
+        jdbcTemplate.update(
+                "UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL 1 DAY) - INTERVAL 2 MINUTE WHERE" + " id = ?",
+                second.getId());
+        jdbcTemplate.update(
+                "UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL 1 DAY) - INTERVAL 1 MINUTE WHERE" + " id = ?",
+                third.getId());
+        jdbcTemplate.update(
+                "INSERT INTO page_stats (path, pv_count, updated_at) VALUES (?, ?, NOW())",
+                "/posts/" + first.getId(),
+                100);
+        jdbcTemplate.update(
+                "INSERT INTO page_stats (path, pv_count, updated_at) VALUES (?, ?, NOW())",
+                "/posts/" + second.getId(),
+                100);
 
-    var hotPosts = postRepository.findPublishedByHotness(1, 3);
-    assertThat(hotPosts)
-        .extracting(row -> row.post().getId())
-        .containsExactly(second.getId(), first.getId(), third.getId());
-    assertThat(hotPosts.get(2).viewCount()).isZero();
+        var hotPosts = postRepository.findPublishedByHotness(1, 3);
+        assertThat(hotPosts)
+                .extracting(row -> row.post().getId())
+                .containsExactly(second.getId(), first.getId(), third.getId());
+        assertThat(hotPosts.get(2).viewCount()).isZero();
 
-    // The integration fixture may contain published baseline posts.  Ask for
-    // exactly the two records created by this test instead of assuming that
-    // this isolated schema is otherwise empty.
-    var hotPostsWithoutSecond =
-        postRepository.findPublishedByHotnessExcluding(List.of(second.getId()), 1, 2);
-    assertThat(hotPostsWithoutSecond)
-        .extracting(row -> row.post().getId())
-        .containsExactly(first.getId(), third.getId());
+        // The integration fixture may contain published baseline posts.  Ask for
+        // exactly the two records created by this test instead of assuming that
+        // this isolated schema is otherwise empty.
+        var hotPostsWithoutSecond = postRepository.findPublishedByHotnessExcluding(List.of(second.getId()), 1, 2);
+        assertThat(hotPostsWithoutSecond)
+                .extracting(row -> row.post().getId())
+                .containsExactly(first.getId(), third.getId());
 
-    List<Post> latest = postRepository.findLatestPublishedExcluding(List.of(third.getId()), 3);
-    assertThat(latest).extracting(Post::getId).doesNotContain(third.getId());
-    assertThat(latest)
-        .hasSizeLessThanOrEqualTo(3)
-        .isSortedAccordingTo(
-            (left, right) -> {
-              int publishedAtComparison = right.getPublishedAt().compareTo(left.getPublishedAt());
-              return publishedAtComparison != 0
-                  ? publishedAtComparison
-                  : right.getId().compareTo(left.getId());
-            });
-  }
+        List<Post> latest = postRepository.findLatestPublishedExcluding(List.of(third.getId()), 3);
+        assertThat(latest).extracting(Post::getId).doesNotContain(third.getId());
+        assertThat(latest).hasSizeLessThanOrEqualTo(3).isSortedAccordingTo((left, right) -> {
+            int publishedAtComparison = right.getPublishedAt().compareTo(left.getPublishedAt());
+            return publishedAtComparison != 0
+                    ? publishedAtComparison
+                    : right.getId().compareTo(left.getId());
+        });
+    }
 
-  @Test
-  void countAll_excludesDeletedPosts() {
-    long before = postRepository.countAll();
+    @Test
+    void countAll_excludesDeletedPosts() {
+        long before = postRepository.countAll();
 
-    Post post = Post.create("待删除文章IT", "内容", 1L, "it-delete");
-    Post saved = postRepository.save(post);
-    saved.delete();
-    postRepository.save(saved);
+        Post post = Post.create("待删除文章IT", "内容", 1L, "it-delete");
+        Post saved = postRepository.save(post);
+        saved.delete();
+        postRepository.save(saved);
 
-    assertEquals(before, postRepository.countAll());
-  }
+        assertEquals(before, postRepository.countAll());
+    }
 
-  @Test
-  void publicPostsPage_withRealDb_returns200() throws Exception {
-    mockMvc
-        .perform(get("/posts"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("public/posts/list"));
-  }
+    @Test
+    void publicPostsPage_withRealDb_returns200() throws Exception {
+        mockMvc.perform(get("/posts")).andExpect(status().isOk()).andExpect(view().name("public/posts/list"));
+    }
 
-  @Test
-  void homePage_withRealDb_returns200() throws Exception {
-    mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(view().name("public/index"));
-  }
+    @Test
+    void homePage_withRealDb_returns200() throws Exception {
+        mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(view().name("public/index"));
+    }
 
-  private Post publishPost(String title) {
-    Post post = postRepository.save(Post.create(title, "内容", 1L, title));
-    post.publish();
-    return postRepository.save(post);
-  }
+    private Post publishPost(String title) {
+        Post post = postRepository.save(Post.create(title, "内容", 1L, title));
+        post.publish();
+        return postRepository.save(post);
+    }
 }

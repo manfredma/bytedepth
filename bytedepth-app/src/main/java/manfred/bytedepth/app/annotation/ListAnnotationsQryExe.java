@@ -10,11 +10,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ListAnnotationsQryExe {
 
-  private final AnnotationRepositoryPort annotationRepository;
+    private final AnnotationRepositoryPort annotationRepository;
 
-  public List<PostAnnotation> execute(Long postId, Long userId, String ownerTokenHash) {
-    return annotationRepository.findVisibleByPostId(postId, userId, ownerTokenHash).stream()
-        .sorted(Comparator.comparingInt(PostAnnotation::startOffset))
-        .toList();
-  }
+    public List<PostAnnotation> execute(Long postId, Long userId, String ownerTokenHash) {
+        return annotationRepository.findVisibleByPostId(postId, userId, ownerTokenHash).stream()
+                .sorted(Comparator.comparingInt(PostAnnotation::startOffset))
+                .toList();
+    }
 }

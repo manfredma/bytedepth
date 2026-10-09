@@ -22,176 +22,173 @@ import org.springframework.web.server.ResponseStatusException;
 
 class ImageControllerTest {
 
-  @TempDir Path imageDir;
-  private ImageController controller;
+    @TempDir
+    Path imageDir;
 
-  @BeforeEach
-  void setUp() {
-    controller = new ImageController();
-    ReflectionTestUtils.setField(controller, "imageDir", imageDir.toString());
-  }
+    private ImageController controller;
 
-  @Test
-  void storesDetectedPngWithGeneratedSafeName() throws Exception {
-    MockMultipartFile file =
-        new MockMultipartFile("file", "misleading.jpg", "image/jpeg", pngBytes());
+    @BeforeEach
+    void setUp() {
+        controller = new ImageController();
+        ReflectionTestUtils.setField(controller, "imageDir", imageDir.toString());
+    }
 
-    var response = controller.upload(file);
-    String filename = response.getBody().get("filename");
+    @Test
+    void storesDetectedPngWithGeneratedSafeName() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "misleading.jpg", "image/jpeg", pngBytes());
 
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(filename).matches("[a-f0-9]{32}\\.png");
-    assertThat(response.getBody().get("url")).isEqualTo("/images/" + filename);
-    assertThat(Files.exists(imageDir.resolve(filename))).isTrue();
-  }
+        var response = controller.upload(file);
+        String filename = response.getBody().get("filename");
 
-  @Test
-  void storesDetectedJpegWithJpgExtension() throws Exception {
-    MockMultipartFile file = new MockMultipartFile("file", "image.png", "image/png", jpegBytes());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(filename).matches("[a-f0-9]{32}\\.png");
+        assertThat(response.getBody().get("url")).isEqualTo("/images/" + filename);
+        assertThat(Files.exists(imageDir.resolve(filename))).isTrue();
+    }
 
-    var response = controller.upload(file);
+    @Test
+    void storesDetectedJpegWithJpgExtension() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "image.png", "image/png", jpegBytes());
 
-    assertThat(response.getBody().get("filename")).matches("[a-f0-9]{32}\\.jpg");
-  }
+        var response = controller.upload(file);
 
-  @Test
-  void storesSvgWithGeneratedSafeName() throws Exception {
-    MockMultipartFile file =
-        new MockMultipartFile(
-            "file",
-            "diagram.drawio.SVG",
-            "image/svg+xml",
-            "<svg xmlns=\"http://www.w3.org/2000/svg\"/>".getBytes());
+        assertThat(response.getBody().get("filename")).matches("[a-f0-9]{32}\\.jpg");
+    }
 
-    var response = controller.upload(file);
-    String filename = response.getBody().get("filename");
+    @Test
+    void storesSvgWithGeneratedSafeName() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "diagram.drawio.SVG",
+                "image/svg+xml",
+                "<svg xmlns=\"http://www.w3.org/2000/svg\"/>".getBytes());
 
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(filename).matches("[a-f0-9]{32}\\.svg");
-    assertThat(Files.readString(imageDir.resolve(filename))).contains("<svg");
-  }
+        var response = controller.upload(file);
+        String filename = response.getBody().get("filename");
 
-  @Test
-  void rejectsNonImageContentEvenWhenFilenameUsesImageExtension() {
-    MockMultipartFile file =
-        new MockMultipartFile("file", "payload.png", "image/png", "not an image".getBytes());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(filename).matches("[a-f0-9]{32}\\.svg");
+        assertThat(Files.readString(imageDir.resolve(filename))).contains("<svg");
+    }
 
-    assertThatThrownBy(() -> controller.upload(file))
-        .isInstanceOf(ResponseStatusException.class)
-        .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-        .isEqualTo(HttpStatus.BAD_REQUEST);
-  }
+    @Test
+    void rejectsNonImageContentEvenWhenFilenameUsesImageExtension() {
+        MockMultipartFile file = new MockMultipartFile("file", "payload.png", "image/png", "not an image".getBytes());
 
-  @Test
-  void rejectsUnsupportedRasterImage() throws Exception {
-    MockMultipartFile file = new MockMultipartFile("file", "image.bmp", "image/bmp", bmpBytes());
+        assertThatThrownBy(() -> controller.upload(file))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
 
-    assertBadRequest(file, "仅支持 PNG、JPEG、GIF 和 SVG 图片");
-  }
+    @Test
+    void rejectsUnsupportedRasterImage() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "image.bmp", "image/bmp", bmpBytes());
 
-  @Test
-  void rejectsEmptyAndOversizedFiles() {
-    assertBadRequest(new MockMultipartFile("file", new byte[0]), "图片必须大于 0 且不超过 10MB");
-    assertBadRequest(
-        new MockMultipartFile("file", "large.png", "image/png", new byte[10 * 1024 * 1024 + 1]),
-        "图片必须大于 0 且不超过 10MB");
-  }
+        assertBadRequest(file, "仅支持 PNG、JPEG、GIF 和 SVG 图片");
+    }
 
-  @Test
-  void rejectsRasterImageExceedingPixelLimit() {
-    MockMultipartFile file =
-        new MockMultipartFile("file", "large.png", "image/png", oversizedPngHeader());
+    @Test
+    void rejectsEmptyAndOversizedFiles() {
+        assertBadRequest(new MockMultipartFile("file", new byte[0]), "图片必须大于 0 且不超过 10MB");
+        assertBadRequest(
+                new MockMultipartFile("file", "large.png", "image/png", new byte[10 * 1024 * 1024 + 1]),
+                "图片必须大于 0 且不超过 10MB");
+    }
 
-    assertBadRequest(file, "图片尺寸超过 4000 万像素限制");
-  }
+    @Test
+    void rejectsRasterImageExceedingPixelLimit() {
+        MockMultipartFile file = new MockMultipartFile("file", "large.png", "image/png", oversizedPngHeader());
 
-  @Test
-  void rejectsRasterImageWithNonPositivePixelCount() {
-    assertThatThrownBy(() -> ImageController.validatePixelCount(0))
-        .isInstanceOf(ResponseStatusException.class)
-        .extracting(e -> ((ResponseStatusException) e).getReason())
-        .isEqualTo("图片尺寸超过 4000 万像素限制");
-  }
+        assertBadRequest(file, "图片尺寸超过 4000 万像素限制");
+    }
 
-  @Test
-  void rejectsUnreadableImageStream() throws Exception {
-    MultipartFile file = mock(MultipartFile.class);
-    when(file.isEmpty()).thenReturn(false);
-    when(file.getSize()).thenReturn(1L);
-    when(file.getOriginalFilename()).thenReturn(null);
-    when(file.getInputStream()).thenThrow(new IOException("read failed"));
+    @Test
+    void rejectsRasterImageWithNonPositivePixelCount() {
+        assertThatThrownBy(() -> ImageController.validatePixelCount(0))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(e -> ((ResponseStatusException) e).getReason())
+                .isEqualTo("图片尺寸超过 4000 万像素限制");
+    }
 
-    assertBadRequest(file, "无法读取图片内容");
-  }
+    @Test
+    void rejectsUnreadableImageStream() throws Exception {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getSize()).thenReturn(1L);
+        when(file.getOriginalFilename()).thenReturn(null);
+        when(file.getInputStream()).thenThrow(new IOException("read failed"));
 
-  private void assertBadRequest(MultipartFile file, String reason) {
-    assertThatThrownBy(() -> controller.upload(file))
-        .isInstanceOf(ResponseStatusException.class)
-        .satisfies(
-            e -> {
-              ResponseStatusException exception = (ResponseStatusException) e;
-              assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-              assertThat(exception.getReason()).isEqualTo(reason);
-            });
-  }
+        assertBadRequest(file, "无法读取图片内容");
+    }
 
-  private byte[] pngBytes() throws Exception {
-    ByteArrayOutputStream output = new ByteArrayOutputStream();
-    ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "png", output);
-    return output.toByteArray();
-  }
+    private void assertBadRequest(MultipartFile file, String reason) {
+        assertThatThrownBy(() -> controller.upload(file))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(e -> {
+                    ResponseStatusException exception = (ResponseStatusException) e;
+                    assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+                    assertThat(exception.getReason()).isEqualTo(reason);
+                });
+    }
 
-  private byte[] bmpBytes() throws Exception {
-    ByteArrayOutputStream output = new ByteArrayOutputStream();
-    ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "bmp", output);
-    return output.toByteArray();
-  }
+    private byte[] pngBytes() throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "png", output);
+        return output.toByteArray();
+    }
 
-  private byte[] jpegBytes() throws Exception {
-    ByteArrayOutputStream output = new ByteArrayOutputStream();
-    ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "jpeg", output);
-    return output.toByteArray();
-  }
+    private byte[] bmpBytes() throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "bmp", output);
+        return output.toByteArray();
+    }
 
-  private byte[] oversizedPngHeader() {
-    return pngHeader(40_000_001, 1);
-  }
+    private byte[] jpegBytes() throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "jpeg", output);
+        return output.toByteArray();
+    }
 
-  private byte[] pngHeader(int width, int height) {
-    return new byte[] {
-      (byte) 0x89,
-      'P',
-      'N',
-      'G',
-      '\r',
-      '\n',
-      0x1a,
-      '\n',
-      0,
-      0,
-      0,
-      13,
-      'I',
-      'H',
-      'D',
-      'R',
-      (byte) (width >>> 24),
-      (byte) (width >>> 16),
-      (byte) (width >>> 8),
-      (byte) width,
-      (byte) (height >>> 24),
-      (byte) (height >>> 16),
-      (byte) (height >>> 8),
-      (byte) height,
-      8,
-      2,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    };
-  }
+    private byte[] oversizedPngHeader() {
+        return pngHeader(40_000_001, 1);
+    }
+
+    private byte[] pngHeader(int width, int height) {
+        return new byte[] {
+            (byte) 0x89,
+            'P',
+            'N',
+            'G',
+            '\r',
+            '\n',
+            0x1a,
+            '\n',
+            0,
+            0,
+            0,
+            13,
+            'I',
+            'H',
+            'D',
+            'R',
+            (byte) (width >>> 24),
+            (byte) (width >>> 16),
+            (byte) (width >>> 8),
+            (byte) width,
+            (byte) (height >>> 24),
+            (byte) (height >>> 16),
+            (byte) (height >>> 8),
+            (byte) height,
+            8,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        };
+    }
 }

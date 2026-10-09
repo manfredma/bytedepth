@@ -13,8 +13,8 @@ import manfred.bytedepth.app.analytics.ViewLogArchiveSource;
 @AllArgsConstructor
 public class ViewLogArchiveBucket {
 
-  private ViewLogArchiveSource source;
-  private LocalDateTime bucketStart;
-  private LocalDateTime bucketEnd;
-  private long archivedRowCount;
+    private ViewLogArchiveSource source;
+    private LocalDateTime bucketStart;
+    private LocalDateTime bucketEnd;
+    private long archivedRowCount;
 }

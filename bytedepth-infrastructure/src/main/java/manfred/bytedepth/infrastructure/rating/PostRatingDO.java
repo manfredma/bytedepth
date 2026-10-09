@@ -9,12 +9,12 @@ import lombok.Data;
 @Data
 @TableName("post_rating")
 public class PostRatingDO {
-  @TableId(type = IdType.AUTO)
-  private Long id;
+    @TableId(type = IdType.AUTO)
+    private Long id;
 
-  private Long postId;
-  private String visitorToken;
-  private Integer score;
-  private LocalDateTime createdAt;
-  private LocalDateTime updatedAt;
+    private Long postId;
+    private String visitorToken;
+    private Integer score;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

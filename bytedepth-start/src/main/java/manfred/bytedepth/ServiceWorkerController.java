@@ -11,11 +11,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class ServiceWorkerController {
 
-  @GetMapping(value = "/sw.js", produces = "application/javascript")
-  public ResponseEntity<ClassPathResource> serviceWorker() {
-    return ResponseEntity.ok()
-        .cacheControl(CacheControl.noStore())
-        .contentType(MediaType.valueOf("application/javascript"))
-        .body(new ClassPathResource("static/sw.js"));
-  }
+    @GetMapping(value = "/sw.js", produces = "application/javascript")
+    public ResponseEntity<ClassPathResource> serviceWorker() {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .contentType(MediaType.valueOf("application/javascript"))
+                .body(new ClassPathResource("static/sw.js"));
+    }
 }

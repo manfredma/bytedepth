@@ -11,33 +11,29 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SetPostTagsCmdExe {
 
-  private final TagRepository tagRepository;
+    private final TagRepository tagRepository;
 
-  /** tagSpecs 支持两种格式： "slug" → name = slug "slug:显示名" → name = 显示名 */
-  public void execute(Long postId, List<String> tagSpecs) {
-    List<Long> tagIds =
-        tagSpecs.stream()
-            .filter(s -> s != null && !s.isBlank())
-            .map(
-                spec -> {
-                  String[] parts = spec.split(":", 2);
-                  String slug = parts[0].trim().toLowerCase();
-                  String name = parts.length > 1 ? parts[1].trim() : slug;
-                  return tagRepository
-                      .findBySlug(slug)
-                      .map(
-                          existing -> {
-                            // 已有标签但名称不同时更新显示名
-                            if (!name.equals(existing.getName())) {
-                              return tagRepository.save(
-                                  Tag.reconstruct(existing.getId(), name, slug));
-                            }
-                            return existing;
-                          })
-                      .orElseGet(() -> tagRepository.save(Tag.create(name, slug)));
+    /** tagSpecs 支持两种格式： "slug" → name = slug "slug:显示名" → name = 显示名 */
+    public void execute(Long postId, List<String> tagSpecs) {
+        List<Long> tagIds = tagSpecs.stream()
+                .filter(s -> s != null && !s.isBlank())
+                .map(spec -> {
+                    String[] parts = spec.split(":", 2);
+                    String slug = parts[0].trim().toLowerCase();
+                    String name = parts.length > 1 ? parts[1].trim() : slug;
+                    return tagRepository
+                            .findBySlug(slug)
+                            .map(existing -> {
+                                // 已有标签但名称不同时更新显示名
+                                if (!name.equals(existing.getName())) {
+                                    return tagRepository.save(Tag.reconstruct(existing.getId(), name, slug));
+                                }
+                                return existing;
+                            })
+                            .orElseGet(() -> tagRepository.save(Tag.create(name, slug)));
                 })
-            .map(Tag::getId)
-            .collect(Collectors.toList());
-    tagRepository.savePostTags(postId, tagIds);
-  }
+                .map(Tag::getId)
+                .collect(Collectors.toList());
+        tagRepository.savePostTags(postId, tagIds);
+    }
 }

@@ -8,13 +8,13 @@ import org.mockito.Mockito;
 
 class DeleteTagCmdExeTest {
 
-  private final TagRepository tagRepository = Mockito.mock(TagRepository.class);
-  private final DeleteTagCmdExe command = new DeleteTagCmdExe(tagRepository);
+    private final TagRepository tagRepository = Mockito.mock(TagRepository.class);
+    private final DeleteTagCmdExe command = new DeleteTagCmdExe(tagRepository);
 
-  @Test
-  void execute_removesTagAndItsPostAssociations() {
-    command.execute(3L);
+    @Test
+    void execute_removesTagAndItsPostAssociations() {
+        command.execute(3L);
 
-    verify(tagRepository).deleteWithPostAssociations(3L);
-  }
+        verify(tagRepository).deleteWithPostAssociations(3L);
+    }
 }

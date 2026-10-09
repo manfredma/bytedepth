@@ -14,21 +14,21 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequiredArgsConstructor
 public class RegisterController {
 
-  private final RegisterUserCmdExe registerUserCmdExe;
+    private final RegisterUserCmdExe registerUserCmdExe;
 
-  @GetMapping("/register")
-  public String showForm() {
-    return "public/register";
-  }
-
-  @PostMapping("/register")
-  public String submit(@RequestParam String username, @RequestParam String password) {
-    try {
-      registerUserCmdExe.execute(username, password);
-      return "redirect:/login?registered=1";
-    } catch (DomainException e) {
-      String encoded = URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
-      return "redirect:/register?error=" + encoded;
+    @GetMapping("/register")
+    public String showForm() {
+        return "public/register";
     }
-  }
+
+    @PostMapping("/register")
+    public String submit(@RequestParam String username, @RequestParam String password) {
+        try {
+            registerUserCmdExe.execute(username, password);
+            return "redirect:/login?registered=1";
+        } catch (DomainException e) {
+            String encoded = URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+            return "redirect:/register?error=" + encoded;
+        }
+    }
 }

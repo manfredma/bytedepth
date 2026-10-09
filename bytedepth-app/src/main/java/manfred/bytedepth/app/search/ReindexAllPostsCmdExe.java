@@ -11,25 +11,25 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ReindexAllPostsCmdExe {
 
-  private final PostRepository postRepository;
-  private final IndexPostCmdExe indexPostCmdExe;
+    private final PostRepository postRepository;
+    private final IndexPostCmdExe indexPostCmdExe;
 
-  public int execute() {
-    int page = 1;
-    int size = 50;
-    int total = 0;
-    while (true) {
-      List<Post> posts = postRepository.findPage(page, size);
-      if (posts.isEmpty()) break;
-      for (Post post : posts) {
-        if (post.getStatus() == PostStatus.PUBLISHED) {
-          indexPostCmdExe.execute(post.getId());
-          total++;
+    public int execute() {
+        int page = 1;
+        int size = 50;
+        int total = 0;
+        while (true) {
+            List<Post> posts = postRepository.findPage(page, size);
+            if (posts.isEmpty()) break;
+            for (Post post : posts) {
+                if (post.getStatus() == PostStatus.PUBLISHED) {
+                    indexPostCmdExe.execute(post.getId());
+                    total++;
+                }
+            }
+            if (posts.size() < size) break;
+            page++;
         }
-      }
-      if (posts.size() < size) break;
-      page++;
+        return total;
     }
-    return total;
-  }
 }

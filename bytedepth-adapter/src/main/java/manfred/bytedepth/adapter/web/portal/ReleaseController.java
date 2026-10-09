@@ -11,20 +11,20 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class ReleaseController {
 
-  private final MarkdownRenderer markdownRenderer;
+    private final MarkdownRenderer markdownRenderer;
 
-  public ReleaseController(MarkdownRenderer markdownRenderer) {
-    this.markdownRenderer = markdownRenderer;
-  }
-
-  @GetMapping("/releases")
-  public String releases(Model model) throws IOException {
-    ClassPathResource resource = new ClassPathResource("release/CHANGELOG.md");
-    try (var input = resource.getInputStream()) {
-      model.addAttribute(
-          "releaseNotesHtml",
-          markdownRenderer.render(new String(input.readAllBytes(), StandardCharsets.UTF_8)));
+    public ReleaseController(MarkdownRenderer markdownRenderer) {
+        this.markdownRenderer = markdownRenderer;
     }
-    return "public/releases";
-  }
+
+    @GetMapping("/releases")
+    public String releases(Model model) throws IOException {
+        ClassPathResource resource = new ClassPathResource("release/CHANGELOG.md");
+        try (var input = resource.getInputStream()) {
+            model.addAttribute(
+                    "releaseNotesHtml",
+                    markdownRenderer.render(new String(input.readAllBytes(), StandardCharsets.UTF_8)));
+        }
+        return "public/releases";
+    }
 }

@@ -18,38 +18,39 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(
-    value = UserProfileController.class,
-    excludeAutoConfiguration = SecurityAutoConfiguration.class)
+@WebMvcTest(value = UserProfileController.class, excludeAutoConfiguration = SecurityAutoConfiguration.class)
 @Import(ThymeleafSecurityHandlerConfig.class)
 class UserProfileControllerTest {
 
-  @Autowired private MockMvc mockMvc;
-  @MockitoBean private GetUserProfileQryExe getUserProfileQryExe;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
+    @MockitoBean
+    private GetUserProfileQryExe getUserProfileQryExe;
 
-  @Test
-  void profile_existingUser_returnsProfileView() throws Exception {
-    UserProfileDTO dto = new UserProfileDTO();
-    dto.setId(1L);
-    dto.setUsername("alice");
-    dto.setBio("Hello");
-    dto.setPostCount(3);
-    dto.setRecentPosts(List.of());
-    when(getUserProfileQryExe.execute("alice")).thenReturn(dto);
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-    mockMvc
-        .perform(get("/u/alice"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("public/profile"))
-        .andExpect(model().attribute("profile", dto));
-  }
+    @Test
+    void profile_existingUser_returnsProfileView() throws Exception {
+        UserProfileDTO dto = new UserProfileDTO();
+        dto.setId(1L);
+        dto.setUsername("alice");
+        dto.setBio("Hello");
+        dto.setPostCount(3);
+        dto.setRecentPosts(List.of());
+        when(getUserProfileQryExe.execute("alice")).thenReturn(dto);
 
-  @Test
-  void profile_unknownUser_returns404() throws Exception {
-    when(getUserProfileQryExe.execute("nobody")).thenThrow(new DomainException("用户不存在：nobody"));
+        mockMvc.perform(get("/u/alice"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("public/profile"))
+                .andExpect(model().attribute("profile", dto));
+    }
 
-    mockMvc.perform(get("/u/nobody")).andExpect(status().isNotFound());
-  }
+    @Test
+    void profile_unknownUser_returns404() throws Exception {
+        when(getUserProfileQryExe.execute("nobody")).thenThrow(new DomainException("用户不存在：nobody"));
+
+        mockMvc.perform(get("/u/nobody")).andExpect(status().isNotFound());
+    }
 }

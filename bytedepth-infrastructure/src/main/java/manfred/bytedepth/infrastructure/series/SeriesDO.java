@@ -10,11 +10,11 @@ import lombok.Setter;
 @Setter
 @TableName("series")
 public class SeriesDO {
-  @TableId(type = IdType.AUTO)
-  private Long id;
+    @TableId(type = IdType.AUTO)
+    private Long id;
 
-  private String name;
-  private String slug;
-  private String description;
-  private Long authorId;
+    private String name;
+    private String slug;
+    private String description;
+    private Long authorId;
 }

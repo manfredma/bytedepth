@@ -9,15 +9,15 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DashboardStatsQryExe {
 
-  private final PostRepository postRepository;
-  private final ProjectRepository projectRepository;
+    private final PostRepository postRepository;
+    private final ProjectRepository projectRepository;
 
-  public DashboardStatsDTO execute() {
-    DashboardStatsDTO dto = new DashboardStatsDTO();
-    dto.setTotalPosts(postRepository.countAll());
-    dto.setPublishedPosts(postRepository.countPublished());
-    dto.setPendingComments(0); // 评论不再走审核流，无待审核数量
-    dto.setTotalProjects(projectRepository.findAll().size());
-    return dto;
-  }
+    public DashboardStatsDTO execute() {
+        DashboardStatsDTO dto = new DashboardStatsDTO();
+        dto.setTotalPosts(postRepository.countAll());
+        dto.setPublishedPosts(postRepository.countPublished());
+        dto.setPendingComments(0); // 评论不再走审核流，无待审核数量
+        dto.setTotalProjects(projectRepository.findAll().size());
+        return dto;
+    }
 }

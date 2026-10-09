@@ -27,30 +27,42 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(
-    value = AdminCategoryController.class,
-    excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@WebMvcTest(value = AdminCategoryController.class, excludeAutoConfiguration = DataSourceAutoConfiguration.class)
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 @Import({SecurityConfig.class, ThymeleafSecurityHandlerConfig.class, SecurityMockMvcConfig.class})
 class AdminCategoryControllerTest {
-  @Autowired MockMvc mockMvc;
-  @MockitoBean UserDetailsService userDetailsService;
-  @MockitoBean PasswordEncoder passwordEncoder;
-  @MockitoBean VisitRequestFilter visitRequestFilter;
-  @MockitoBean RateLimitPort rateLimitPort;
-  @MockitoBean RateLimitProperties rateLimitProperties;
-  @MockitoBean ListCategoriesQryExe listCategoriesQryExe;
-  @MockitoBean CreateCategoryCmdExe createCategoryCmdExe;
+    @Autowired
+    MockMvc mockMvc;
 
-  @Test
-  @WithMockUser(authorities = "admin:dashboard:view")
-  void list_forwardsFiltersAndExposesFilterFields() throws Exception {
-    mockMvc
-        .perform(get("/admin/categories").param("name", "Java").param("slug", "backend"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("admin/categories/list"))
-        .andExpect(model().attributeExists("filterFields", "filterBaseUrl"))
-        .andExpect(model().attribute("filterBaseUrl", "/admin/categories?"));
-    verify(listCategoriesQryExe).executeFiltered(eq("Java"), eq("backend"));
-  }
+    @MockitoBean
+    UserDetailsService userDetailsService;
+
+    @MockitoBean
+    PasswordEncoder passwordEncoder;
+
+    @MockitoBean
+    VisitRequestFilter visitRequestFilter;
+
+    @MockitoBean
+    RateLimitPort rateLimitPort;
+
+    @MockitoBean
+    RateLimitProperties rateLimitProperties;
+
+    @MockitoBean
+    ListCategoriesQryExe listCategoriesQryExe;
+
+    @MockitoBean
+    CreateCategoryCmdExe createCategoryCmdExe;
+
+    @Test
+    @WithMockUser(authorities = "admin:dashboard:view")
+    void list_forwardsFiltersAndExposesFilterFields() throws Exception {
+        mockMvc.perform(get("/admin/categories").param("name", "Java").param("slug", "backend"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/categories/list"))
+                .andExpect(model().attributeExists("filterFields", "filterBaseUrl"))
+                .andExpect(model().attribute("filterBaseUrl", "/admin/categories?"));
+        verify(listCategoriesQryExe).executeFiltered(eq("Java"), eq("backend"));
+    }
 }

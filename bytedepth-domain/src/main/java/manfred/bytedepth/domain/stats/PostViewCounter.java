@@ -1,7 +1,7 @@
 package manfred.bytedepth.domain.stats;
 
 public interface PostViewCounter {
-  void increment(Long postId);
+    void increment(Long postId);
 
-  long getCount(Long postId);
+    long getCount(Long postId);
 }

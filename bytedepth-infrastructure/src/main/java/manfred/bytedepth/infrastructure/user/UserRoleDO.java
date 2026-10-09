@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class UserRoleDO {
-  private Long userId;
-  private Long roleId;
+    private Long userId;
+    private Long roleId;
 }

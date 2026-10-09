@@ -6,116 +6,115 @@ import java.util.Optional;
 
 /** The small metadata contract supported by the unified top-level code block component. */
 record CodeBlockMetadata(
-    String language,
-    Optional<String> title,
-    boolean fold,
-    Optional<String> tabGroup,
-    Optional<String> tabLabel,
-    boolean obsidianGroup) {
+        String language,
+        Optional<String> title,
+        boolean fold,
+        Optional<String> tabGroup,
+        Optional<String> tabLabel,
+        boolean obsidianGroup) {
 
-  static CodeBlockMetadata parse(String info) {
-    List<String> tokens = tokenize(info);
-    if (tokens.isEmpty()) {
-      return ordinary();
+    static CodeBlockMetadata parse(String info) {
+        List<String> tokens = tokenize(info);
+        if (tokens.isEmpty()) {
+            return ordinary();
+        }
+
+        String language = tokens.get(0);
+        String title = null;
+        String tabGroup = null;
+        String tabLabel = null;
+        boolean obsidianGroup = false;
+        boolean fold = false;
+        for (String token : tokens.subList(1, tokens.size())) {
+            if (token.equals("fold")) {
+                fold = true;
+                continue;
+            }
+            int separator = separatorIndex(token);
+            if (separator <= 0 || separator == token.length() - 1) {
+                continue;
+            }
+            String key = token.substring(0, separator).toLowerCase();
+            String value = valueOf(token.substring(separator + 1));
+            if (value.isBlank()) {
+                continue;
+            }
+            if (key.equals("file") || (key.equals("title") && title == null)) {
+                title = value;
+            } else if (key.equals("tabs") || key.equals("group")) {
+                tabGroup = value;
+                obsidianGroup = key.equals("group");
+            } else if (key.equals("tab")) {
+                tabLabel = value;
+            }
+        }
+        return new CodeBlockMetadata(
+                language,
+                Optional.ofNullable(title),
+                fold,
+                Optional.ofNullable(tabGroup),
+                Optional.ofNullable(tabLabel),
+                obsidianGroup);
     }
 
-    String language = tokens.get(0);
-    String title = null;
-    String tabGroup = null;
-    String tabLabel = null;
-    boolean obsidianGroup = false;
-    boolean fold = false;
-    for (String token : tokens.subList(1, tokens.size())) {
-      if (token.equals("fold")) {
-        fold = true;
-        continue;
-      }
-      int separator = separatorIndex(token);
-      if (separator <= 0 || separator == token.length() - 1) {
-        continue;
-      }
-      String key = token.substring(0, separator).toLowerCase();
-      String value = valueOf(token.substring(separator + 1));
-      if (value.isBlank()) {
-        continue;
-      }
-      if (key.equals("file") || (key.equals("title") && title == null)) {
-        title = value;
-      } else if (key.equals("tabs") || key.equals("group")) {
-        tabGroup = value;
-        obsidianGroup = key.equals("group");
-      } else if (key.equals("tab")) {
-        tabLabel = value;
-      }
+    private static CodeBlockMetadata ordinary() {
+        return new CodeBlockMetadata("", Optional.empty(), false, Optional.empty(), Optional.empty(), false);
     }
-    return new CodeBlockMetadata(
-        language,
-        Optional.ofNullable(title),
-        fold,
-        Optional.ofNullable(tabGroup),
-        Optional.ofNullable(tabLabel),
-        obsidianGroup);
-  }
 
-  private static CodeBlockMetadata ordinary() {
-    return new CodeBlockMetadata(
-        "", Optional.empty(), false, Optional.empty(), Optional.empty(), false);
-  }
+    private static int separatorIndex(String token) {
+        int colon = token.indexOf(':');
+        int equals = token.indexOf('=');
+        if (colon < 0) {
+            return equals;
+        }
+        if (equals < 0) {
+            return colon;
+        }
+        return Math.min(colon, equals);
+    }
 
-  private static int separatorIndex(String token) {
-    int colon = token.indexOf(':');
-    int equals = token.indexOf('=');
-    if (colon < 0) {
-      return equals;
+    private static String valueOf(String raw) {
+        if (raw.length() >= 2 && raw.startsWith("\"") && raw.endsWith("\"")) {
+            return raw.substring(1, raw.length() - 1).replace("\\\"", "\"");
+        }
+        if (raw.startsWith("\"") || raw.endsWith("\"")) {
+            return "";
+        }
+        return raw;
     }
-    if (equals < 0) {
-      return colon;
-    }
-    return Math.min(colon, equals);
-  }
 
-  private static String valueOf(String raw) {
-    if (raw.length() >= 2 && raw.startsWith("\"") && raw.endsWith("\"")) {
-      return raw.substring(1, raw.length() - 1).replace("\\\"", "\"");
-    }
-    if (raw.startsWith("\"") || raw.endsWith("\"")) {
-      return "";
-    }
-    return raw;
-  }
-
-  private static List<String> tokenize(String info) {
-    if (info == null || info.isBlank()) {
-      return List.of();
-    }
-    List<String> tokens = new ArrayList<>();
-    StringBuilder token = new StringBuilder();
-    boolean quoted = false;
-    boolean escaped = false;
-    for (char character : info.trim().toCharArray()) {
-      if (escaped) {
-        token.append(character);
-        escaped = false;
-      } else if (character == '\\' && quoted) {
-        token.append(character);
-        escaped = true;
-      } else if (character == '"') {
-        quoted = !quoted;
-        token.append(character);
-      } else if (Character.isWhitespace(character) && !quoted) {
+    private static List<String> tokenize(String info) {
+        if (info == null || info.isBlank()) {
+            return List.of();
+        }
+        List<String> tokens = new ArrayList<>();
+        StringBuilder token = new StringBuilder();
+        boolean quoted = false;
+        boolean escaped = false;
+        for (char character : info.trim().toCharArray()) {
+            if (escaped) {
+                token.append(character);
+                escaped = false;
+            } else if (character == '\\' && quoted) {
+                token.append(character);
+                escaped = true;
+            } else if (character == '"') {
+                quoted = !quoted;
+                token.append(character);
+            } else if (Character.isWhitespace(character) && !quoted) {
+                addToken(tokens, token);
+            } else {
+                token.append(character);
+            }
+        }
         addToken(tokens, token);
-      } else {
-        token.append(character);
-      }
+        return tokens;
     }
-    addToken(tokens, token);
-    return tokens;
-  }
 
-  private static void addToken(List<String> tokens, StringBuilder token) {
-    if (token.length() > 0) {
-      tokens.add(token.toString());
-      token.setLength(0);
+    private static void addToken(List<String> tokens, StringBuilder token) {
+        if (token.length() > 0) {
+            tokens.add(token.toString());
+            token.setLength(0);
+        }
     }
-  }
 }

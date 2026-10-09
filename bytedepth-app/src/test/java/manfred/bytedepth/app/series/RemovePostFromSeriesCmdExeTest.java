@@ -12,18 +12,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class RemovePostFromSeriesCmdExeTest {
 
-  @Mock private PostRepository postRepository;
+    @Mock
+    private PostRepository postRepository;
 
-  private RemovePostFromSeriesCmdExe cmdExe;
+    private RemovePostFromSeriesCmdExe cmdExe;
 
-  @BeforeEach
-  void setUp() {
-    cmdExe = new RemovePostFromSeriesCmdExe(postRepository);
-  }
+    @BeforeEach
+    void setUp() {
+        cmdExe = new RemovePostFromSeriesCmdExe(postRepository);
+    }
 
-  @Test
-  void execute_shouldClearPostSeries() {
-    cmdExe.execute(42L);
-    verify(postRepository).clearPostSeries(42L);
-  }
+    @Test
+    void execute_shouldClearPostSeries() {
+        cmdExe.execute(42L);
+        verify(postRepository).clearPostSeries(42L);
+    }
 }

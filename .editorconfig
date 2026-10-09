@@ -14,6 +14,10 @@ trim_trailing_whitespace = true
 [*.{js,jsx,ts,tsx,css,scss,html,json,yml,yaml}]
 indent_size = 2
 
+[*.java]
+indent_size = 4
+ij_java_right_margin = 120
+
 [*.md]
 trim_trailing_whitespace = false
 

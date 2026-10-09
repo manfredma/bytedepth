@@ -58,421 +58,419 @@ import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(
-    value = PostController.class,
-    excludeAutoConfiguration = {SecurityAutoConfiguration.class, DataSourceAutoConfiguration.class})
+        value = PostController.class,
+        excludeAutoConfiguration = {SecurityAutoConfiguration.class, DataSourceAutoConfiguration.class})
 @Import(ThymeleafSecurityHandlerConfig.class)
 @RecordApplicationEvents
 class PostControllerTest {
 
-  @Autowired private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @Autowired private ApplicationEvents applicationEvents;
+    @Autowired
+    private ApplicationEvents applicationEvents;
 
-  @MockitoBean private ListPostsQryExe listPostsQryExe;
-  @MockitoBean private ListAnnotationsQryExe listAnnotationsQryExe;
-  @MockitoBean private AnnotationVisitorIdentity annotationVisitorIdentity;
+    @MockitoBean
+    private ListPostsQryExe listPostsQryExe;
 
-  @MockitoBean private GetPostQryExe getPostQryExe;
+    @MockitoBean
+    private ListAnnotationsQryExe listAnnotationsQryExe;
 
-  @MockitoBean private CreatePostCmdExe createPostCmdExe;
+    @MockitoBean
+    private AnnotationVisitorIdentity annotationVisitorIdentity;
 
-  @MockitoBean private PublishPostCmdExe publishPostCmdExe;
+    @MockitoBean
+    private GetPostQryExe getPostQryExe;
 
-  @MockitoBean private MarkdownRenderer markdownRenderer;
+    @MockitoBean
+    private CreatePostCmdExe createPostCmdExe;
 
-  @MockitoBean private ListCommentsQryExe listCommentsQryExe;
+    @MockitoBean
+    private PublishPostCmdExe publishPostCmdExe;
 
-  @MockitoBean private ListTagsQryExe listTagsQryExe;
+    @MockitoBean
+    private MarkdownRenderer markdownRenderer;
 
-  @MockitoBean private PostViewCounter postViewCounter;
+    @MockitoBean
+    private ListCommentsQryExe listCommentsQryExe;
 
-  @MockitoBean private ListCategoriesQryExe listCategoriesQryExe;
+    @MockitoBean
+    private ListTagsQryExe listTagsQryExe;
 
-  @MockitoBean private PostRepository postRepository;
+    @MockitoBean
+    private PostViewCounter postViewCounter;
 
-  @MockitoBean private SeriesRepository seriesRepository;
+    @MockitoBean
+    private ListCategoriesQryExe listCategoriesQryExe;
 
-  @MockitoBean private GetSeriesPostsQryExe getSeriesPostsQryExe;
+    @MockitoBean
+    private PostRepository postRepository;
 
-  @MockitoBean private SeriesNavigationQryExe seriesNavigationQryExe;
+    @MockitoBean
+    private SeriesRepository seriesRepository;
 
-  @MockitoBean private GetPostRatingQryExe getPostRatingQryExe;
+    @MockitoBean
+    private GetSeriesPostsQryExe getSeriesPostsQryExe;
 
-  @MockitoBean private VisitRequestFilter visitRequestFilter;
+    @MockitoBean
+    private SeriesNavigationQryExe seriesNavigationQryExe;
 
-  @BeforeEach
-  void setUp() {
-    when(getPostRatingQryExe.execute(anyLong(), any())).thenReturn(new PostRatingDTO(0D, 0L, null));
-    when(visitRequestFilter.shouldRecord(any())).thenReturn(true);
-  }
+    @MockitoBean
+    private GetPostRatingQryExe getPostRatingQryExe;
 
-  @Test
-  void listPosts_defaultParams_returnsOkWithPostsModel() throws Exception {
-    when(listPostsQryExe.execute(anyInt(), anyInt())).thenReturn(List.of());
-    when(listTagsQryExe.findAllWithCount()).thenReturn(List.of());
+    @MockitoBean
+    private VisitRequestFilter visitRequestFilter;
 
-    mockMvc
-        .perform(get("/posts"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("public/posts/list"))
-        .andExpect(model().attributeExists("posts"))
-        .andExpect(model().attributeExists("currentPage"))
-        .andExpect(model().attributeExists("allTags"));
-  }
-
-  @Test
-  void listPosts_withTagParam_callsExecuteByTag() throws Exception {
-    when(listPostsQryExe.executeByTag("java", 1, 10)).thenReturn(List.of());
-    when(listTagsQryExe.findAllWithCount()).thenReturn(List.of());
-
-    mockMvc
-        .perform(get("/posts").param("tag", "java"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("public/posts/list"))
-        .andExpect(model().attributeExists("posts"))
-        .andExpect(model().attribute("activeTag", "java"));
-  }
-
-  @Test
-  void listPosts_withPageAndSize_returnsOk() throws Exception {
-    when(listPostsQryExe.execute(2, 5)).thenReturn(List.of());
-    when(listTagsQryExe.findAllWithCount()).thenReturn(List.of());
-
-    mockMvc
-        .perform(get("/posts").param("page", "2").param("size", "5"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("public/posts/list"))
-        .andExpect(model().attribute("currentPage", 2));
-  }
-
-  @Test
-  void getPostDetail_existingPost_returnsOkWithPostModel() throws Exception {
-    PostDTO dto = new PostDTO();
-    dto.setId(1L);
-    dto.setSlug("test-post");
-    dto.setTitle("测试标题");
-    dto.setContent("# 标题\n正文内容");
-    dto.setStatus("PUBLISHED");
-
-    Post domainPost =
-        Post.reconstruct(
-            1L,
-            "test-post",
-            "测试标题",
-            "# 标题\n正文内容",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            null,
-            false);
-    when(postRepository.findById(1L)).thenReturn(Optional.of(domainPost));
-    when(postRepository.findPrevPublished(1L)).thenReturn(Optional.empty());
-    when(postRepository.findNextPublished(1L)).thenReturn(Optional.empty());
-    when(getPostQryExe.executeBySlug("test-post")).thenReturn(dto);
-    when(listTagsQryExe.findByPostId(1L)).thenReturn(List.of());
-    when(listCommentsQryExe.findApprovedByPostId(1L)).thenReturn(List.of());
-    when(markdownRenderer.render(dto.getContent())).thenReturn("<h1>标题</h1><p>正文内容</p>");
-    when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(6);
-    when(postViewCounter.getCount(1L)).thenReturn(42L);
-
-    mockMvc
-        .perform(get("/posts/test-post"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("public/posts/detail"))
-        .andExpect(model().attributeExists("post"))
-        .andExpect(model().attributeExists("renderedContent"))
-        .andExpect(model().attribute("wordCount", 6))
-        .andExpect(model().attribute("estimatedReadingMinutes", 1))
-        .andExpect(model().attributeExists("tags"))
-        .andExpect(model().attributeExists("comments"))
-        .andExpect(model().attributeExists("pvCount"))
-        .andExpect(content().string(containsString("id=\"post-rating\"")))
-        .andExpect(content().string(not(containsString("post-rating-top"))))
-        .andExpect(content().string(not(containsString("post-rating-end"))));
-  }
-
-  @Test
-  void getPostDetail_withAnnotationRendersBootstrapDataWithFormattedCreationTime()
-      throws Exception {
-    PostDTO dto = new PostDTO();
-    dto.setId(3L);
-    dto.setSlug("annotated-post");
-    dto.setTitle("带批注的文章");
-    dto.setContent("正文内容");
-    dto.setStatus("PUBLISHED");
-    Post domainPost =
-        Post.reconstruct(
-            3L,
-            "annotated-post",
-            "带批注的文章",
-            "正文内容",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            null,
-            false);
-    when(postRepository.findById(3L)).thenReturn(Optional.of(domainPost));
-    when(postRepository.findPrevPublished(3L)).thenReturn(Optional.empty());
-    when(postRepository.findNextPublished(3L)).thenReturn(Optional.empty());
-    when(getPostQryExe.executeBySlug("annotated-post")).thenReturn(dto);
-    when(markdownRenderer.render(dto.getContent())).thenReturn("<p>正文内容</p>");
-    when(markdownRenderer.render("这是一条评论")).thenReturn("<p><strong>这是一条评论</strong></p>");
-    when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
-    when(postViewCounter.getCount(3L)).thenReturn(0L);
-    when(listAnnotationsQryExe.execute(3L, null, null))
-        .thenReturn(
-            List.of(
-                new PostAnnotation(
-                    9L,
-                    3L,
-                    null,
-                    "visitor",
-                    "正文",
-                    "这是一条评论",
-                    "yellow",
-                    AnnotationVisibility.PUBLIC,
-                    0,
-                    2,
-                    LocalDateTime.of(2026, 8, 20, 17, 6),
-                    false)));
-
-    mockMvc
-        .perform(get("/posts/annotated-post"))
-        .andExpect(status().isOk())
-        .andExpect(content().string(containsString("window.__ANNOTATIONS__ = [{\"id\":9")))
-        .andExpect(content().string(containsString("\"visibility\":\"PUBLIC\"")))
-        .andExpect(
-            result ->
-                assertThat(result.getModelAndView().getModel().get("annotations").toString())
-                    .contains("annotationHtml=<p><strong>这是一条评论</strong></p>"))
-        .andExpect(content().string(containsString("\"createdAt\":\"2026-08-20 17:06\"")));
-  }
-
-  @Test
-  void getPostDetail_marksAnnotationsOwnedByMatchingUserOrVisitorToken() throws Exception {
-    PostDTO dto = new PostDTO();
-    dto.setId(4L);
-    dto.setSlug("annotation-owner");
-    dto.setTitle("批注归属");
-    dto.setContent("正文内容");
-    dto.setStatus("PUBLISHED");
-    Post post =
-        Post.reconstruct(
-            4L,
-            "annotation-owner",
-            "批注归属",
-            "正文内容",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            7L,
-            false);
-    when(postRepository.findById(4L)).thenReturn(Optional.of(post));
-    when(postRepository.findPrevPublished(4L)).thenReturn(Optional.empty());
-    when(postRepository.findNextPublished(4L)).thenReturn(Optional.empty());
-    when(getPostQryExe.executeBySlug("annotation-owner")).thenReturn(dto);
-    when(markdownRenderer.render(dto.getContent())).thenReturn("<p>正文内容</p>");
-    when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
-    when(postViewCounter.getCount(4L)).thenReturn(0L);
-    when(annotationVisitorIdentity.existingHash(any())).thenReturn("visitor-hash");
-    when(listAnnotationsQryExe.execute(4L, 7L, "visitor-hash"))
-        .thenReturn(
-            List.of(
-                annotation(11L, 7L, "other-hash"),
-                annotation(12L, 8L, "visitor-hash"),
-                annotation(13L, 8L, "other-hash")));
-    SiteUserDetails reader = new SiteUserDetails(7L, "reader", "", List.of());
-    SecurityContextHolder.getContext()
-        .setAuthentication(
-            new UsernamePasswordAuthenticationToken(reader, null, reader.getAuthorities()));
-
-    try {
-      mockMvc
-          .perform(get("/posts/annotation-owner"))
-          .andExpect(status().isOk())
-          .andExpect(
-              result ->
-                  assertThat(result.getModelAndView().getModel().get("annotations").toString())
-                      .contains(
-                          "id=11, selectedText=正文, annotationText=评论11, annotationHtml=null,"
-                              + " color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2,"
-                              + " createdAt=")
-                      .contains(
-                          "id=12, selectedText=正文, annotationText=评论12, annotationHtml=null,"
-                              + " color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2,"
-                              + " createdAt=")
-                      .contains(
-                          "id=13, selectedText=正文, annotationText=评论13, annotationHtml=null,"
-                              + " color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2,"
-                              + " createdAt=")
-                      .contains("ownedByCurrentVisitor=true")
-                      .contains("ownedByCurrentVisitor=false"));
-    } finally {
-      SecurityContextHolder.clearContext();
+    @BeforeEach
+    void setUp() {
+        when(getPostRatingQryExe.execute(anyLong(), any())).thenReturn(new PostRatingDTO(0D, 0L, null));
+        when(visitRequestFilter.shouldRecord(any())).thenReturn(true);
     }
-  }
 
-  private static PostAnnotation annotation(long id, long userId, String ownerTokenHash) {
-    return new PostAnnotation(
-        id,
-        4L,
-        userId,
-        ownerTokenHash,
-        "正文",
-        "评论" + id,
-        "yellow",
-        AnnotationVisibility.PUBLIC,
-        0,
-        2,
-        LocalDateTime.now(),
-        false);
-  }
+    @Test
+    void listPosts_defaultParams_returnsOkWithPostsModel() throws Exception {
+        when(listPostsQryExe.execute(anyInt(), anyInt())).thenReturn(List.of());
+        when(listTagsQryExe.findAllWithCount()).thenReturn(List.of());
 
-  @Test
-  void getPostDetail_numericId_redirectsToSlug() throws Exception {
-    Post domainPost =
-        Post.reconstruct(
-            1L,
-            "test-post",
-            "测试标题",
-            "内容",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            null,
-            false);
-    when(postRepository.findById(1L)).thenReturn(Optional.of(domainPost));
+        mockMvc.perform(get("/posts"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("public/posts/list"))
+                .andExpect(model().attributeExists("posts"))
+                .andExpect(model().attributeExists("currentPage"))
+                .andExpect(model().attributeExists("allTags"));
+    }
 
-    mockMvc
-        .perform(get("/posts/1"))
-        .andExpect(status().is3xxRedirection())
-        .andExpect(
-            result -> {
-              String loc = result.getResponse().getRedirectedUrl();
-              assert loc != null && loc.endsWith("/posts/test-post")
-                  : "Expected redirect to /posts/test-post, got: " + loc;
-            });
-  }
+    @Test
+    void listPosts_withTagParam_callsExecuteByTag() throws Exception {
+        when(listPostsQryExe.executeByTag("java", 1, 10)).thenReturn(List.of());
+        when(listTagsQryExe.findAllWithCount()).thenReturn(List.of());
 
-  @Test
-  void getPostDetail_checksViewCountIncremented() throws Exception {
-    PostDTO dto = new PostDTO();
-    dto.setId(2L);
-    dto.setSlug("another-post");
-    dto.setTitle("另一篇文章");
-    dto.setContent("内容");
-    dto.setStatus("PUBLISHED");
+        mockMvc.perform(get("/posts").param("tag", "java"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("public/posts/list"))
+                .andExpect(model().attributeExists("posts"))
+                .andExpect(model().attribute("activeTag", "java"));
+    }
 
-    Post domainPost2 =
-        Post.reconstruct(
-            2L,
-            "another-post",
-            "另一篇文章",
-            "内容",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            null,
-            false);
-    when(postRepository.findById(2L)).thenReturn(Optional.of(domainPost2));
-    when(postRepository.findPrevPublished(2L)).thenReturn(Optional.empty());
-    when(postRepository.findNextPublished(2L)).thenReturn(Optional.empty());
-    when(getPostQryExe.executeBySlug("another-post")).thenReturn(dto);
-    when(listTagsQryExe.findByPostId(anyLong())).thenReturn(List.of());
-    when(listCommentsQryExe.findApprovedByPostId(anyLong())).thenReturn(List.of());
-    when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");
-    when(postViewCounter.getCount(2L)).thenReturn(10L);
+    @Test
+    void listPosts_withPageAndSize_returnsOk() throws Exception {
+        when(listPostsQryExe.execute(2, 5)).thenReturn(List.of());
+        when(listTagsQryExe.findAllWithCount()).thenReturn(List.of());
 
-    mockMvc
-        .perform(get("/posts/another-post"))
-        .andExpect(status().isOk())
-        .andExpect(model().attribute("pvCount", 10L));
-  }
+        mockMvc.perform(get("/posts").param("page", "2").param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("public/posts/list"))
+                .andExpect(model().attribute("currentPage", 2));
+    }
 
-  @Test
-  void getPostDetail_publishesPostViewedEvent() throws Exception {
-    PostDTO dto = new PostDTO();
-    dto.setId(3L);
-    dto.setSlug("event-test");
-    dto.setTitle("事件测试");
-    dto.setContent("内容");
-    dto.setStatus("PUBLISHED");
+    @Test
+    void getPostDetail_existingPost_returnsOkWithPostModel() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(1L);
+        dto.setSlug("test-post");
+        dto.setTitle("测试标题");
+        dto.setContent("# 标题\n正文内容");
+        dto.setStatus("PUBLISHED");
 
-    Post domainPost =
-        Post.reconstruct(
-            3L,
-            "event-test",
-            "事件测试",
-            "内容",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            null,
-            false);
-    when(postRepository.findById(3L)).thenReturn(Optional.of(domainPost));
-    when(postRepository.findPrevPublished(3L)).thenReturn(Optional.empty());
-    when(postRepository.findNextPublished(3L)).thenReturn(Optional.empty());
-    when(getPostQryExe.executeBySlug("event-test")).thenReturn(dto);
-    when(listTagsQryExe.findByPostId(3L)).thenReturn(List.of());
-    when(listCommentsQryExe.findApprovedByPostId(3L)).thenReturn(List.of());
-    when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");
+        Post domainPost = Post.reconstruct(
+                1L,
+                "test-post",
+                "测试标题",
+                "# 标题\n正文内容",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                null,
+                false);
+        when(postRepository.findById(1L)).thenReturn(Optional.of(domainPost));
+        when(postRepository.findPrevPublished(1L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(1L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("test-post")).thenReturn(dto);
+        when(listTagsQryExe.findByPostId(1L)).thenReturn(List.of());
+        when(listCommentsQryExe.findApprovedByPostId(1L)).thenReturn(List.of());
+        when(markdownRenderer.render(dto.getContent())).thenReturn("<h1>标题</h1><p>正文内容</p>");
+        when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(6);
+        when(postViewCounter.getCount(1L)).thenReturn(42L);
 
-    mockMvc.perform(get("/posts/event-test")).andExpect(status().isOk());
+        mockMvc.perform(get("/posts/test-post"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("public/posts/detail"))
+                .andExpect(model().attributeExists("post"))
+                .andExpect(model().attributeExists("renderedContent"))
+                .andExpect(model().attribute("wordCount", 6))
+                .andExpect(model().attribute("estimatedReadingMinutes", 1))
+                .andExpect(model().attributeExists("tags"))
+                .andExpect(model().attributeExists("comments"))
+                .andExpect(model().attributeExists("pvCount"))
+                .andExpect(content().string(containsString("id=\"post-rating\"")))
+                .andExpect(content().string(not(containsString("post-rating-top"))))
+                .andExpect(content().string(not(containsString("post-rating-end"))));
+    }
 
-    assertThat(applicationEvents.stream(PostViewedEvent.class).count()).isGreaterThanOrEqualTo(1);
-    assertThat(
-            applicationEvents.stream(PostViewedEvent.class).findFirst().orElseThrow().visitToken())
-        .isNotBlank();
-  }
+    @Test
+    void getPostDetail_withAnnotationRendersBootstrapDataWithFormattedCreationTime() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(3L);
+        dto.setSlug("annotated-post");
+        dto.setTitle("带批注的文章");
+        dto.setContent("正文内容");
+        dto.setStatus("PUBLISHED");
+        Post domainPost = Post.reconstruct(
+                3L,
+                "annotated-post",
+                "带批注的文章",
+                "正文内容",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                null,
+                false);
+        when(postRepository.findById(3L)).thenReturn(Optional.of(domainPost));
+        when(postRepository.findPrevPublished(3L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(3L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("annotated-post")).thenReturn(dto);
+        when(markdownRenderer.render(dto.getContent())).thenReturn("<p>正文内容</p>");
+        when(markdownRenderer.render("这是一条评论")).thenReturn("<p><strong>这是一条评论</strong></p>");
+        when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
+        when(postViewCounter.getCount(3L)).thenReturn(0L);
+        when(listAnnotationsQryExe.execute(3L, null, null))
+                .thenReturn(List.of(new PostAnnotation(
+                        9L,
+                        3L,
+                        null,
+                        "visitor",
+                        "正文",
+                        "这是一条评论",
+                        "yellow",
+                        AnnotationVisibility.PUBLIC,
+                        0,
+                        2,
+                        LocalDateTime.of(2026, 8, 20, 17, 6),
+                        false)));
 
-  @Test
-  void getPostDetail_invalidVisitorDoesNotIncrementViewCountOrPublishEvent() throws Exception {
-    PostDTO dto = new PostDTO();
-    dto.setId(4L);
-    dto.setSlug("filtered-visitor");
-    dto.setTitle("过滤访问");
-    dto.setContent("内容");
-    dto.setStatus("PUBLISHED");
+        mockMvc.perform(get("/posts/annotated-post"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("window.__ANNOTATIONS__ = [{\"id\":9")))
+                .andExpect(content().string(containsString("\"visibility\":\"PUBLIC\"")))
+                .andExpect(result -> assertThat(result.getModelAndView()
+                                .getModel()
+                                .get("annotations")
+                                .toString())
+                        .contains("annotationHtml=<p><strong>这是一条评论</strong></p>"))
+                .andExpect(content().string(containsString("\"createdAt\":\"2026-08-20 17:06\"")));
+    }
 
-    Post domainPost =
-        Post.reconstruct(
-            4L,
-            "filtered-visitor",
-            "过滤访问",
-            "内容",
-            PostStatus.PUBLISHED,
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            LocalDateTime.now(),
-            null,
-            null,
-            false);
-    when(postRepository.findById(4L)).thenReturn(Optional.of(domainPost));
-    when(postRepository.findPrevPublished(4L)).thenReturn(Optional.empty());
-    when(postRepository.findNextPublished(4L)).thenReturn(Optional.empty());
-    when(getPostQryExe.executeBySlug("filtered-visitor")).thenReturn(dto);
-    when(listTagsQryExe.findByPostId(4L)).thenReturn(List.of());
-    when(listCommentsQryExe.findApprovedByPostId(4L)).thenReturn(List.of());
-    when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");
-    when(visitRequestFilter.shouldRecord(any())).thenReturn(false);
+    @Test
+    void getPostDetail_marksAnnotationsOwnedByMatchingUserOrVisitorToken() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(4L);
+        dto.setSlug("annotation-owner");
+        dto.setTitle("批注归属");
+        dto.setContent("正文内容");
+        dto.setStatus("PUBLISHED");
+        Post post = Post.reconstruct(
+                4L,
+                "annotation-owner",
+                "批注归属",
+                "正文内容",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                7L,
+                false);
+        when(postRepository.findById(4L)).thenReturn(Optional.of(post));
+        when(postRepository.findPrevPublished(4L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(4L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("annotation-owner")).thenReturn(dto);
+        when(markdownRenderer.render(dto.getContent())).thenReturn("<p>正文内容</p>");
+        when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
+        when(postViewCounter.getCount(4L)).thenReturn(0L);
+        when(annotationVisitorIdentity.existingHash(any())).thenReturn("visitor-hash");
+        when(listAnnotationsQryExe.execute(4L, 7L, "visitor-hash"))
+                .thenReturn(List.of(
+                        annotation(11L, 7L, "other-hash"),
+                        annotation(12L, 8L, "visitor-hash"),
+                        annotation(13L, 8L, "other-hash")));
+        SiteUserDetails reader = new SiteUserDetails(7L, "reader", "", List.of());
+        SecurityContextHolder.getContext()
+                .setAuthentication(new UsernamePasswordAuthenticationToken(reader, null, reader.getAuthorities()));
 
-    mockMvc
-        .perform(get("/posts/filtered-visitor").header("User-Agent", "Python-urllib/3.12"))
-        .andExpect(status().isOk());
+        try {
+            mockMvc.perform(get("/posts/annotation-owner"))
+                    .andExpect(status().isOk())
+                    .andExpect(result -> assertThat(result.getModelAndView()
+                                    .getModel()
+                                    .get("annotations")
+                                    .toString())
+                            .contains("id=11, selectedText=正文, annotationText=评论11, annotationHtml=null,"
+                                    + " color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2,"
+                                    + " createdAt=")
+                            .contains("id=12, selectedText=正文, annotationText=评论12, annotationHtml=null,"
+                                    + " color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2,"
+                                    + " createdAt=")
+                            .contains("id=13, selectedText=正文, annotationText=评论13, annotationHtml=null,"
+                                    + " color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2,"
+                                    + " createdAt=")
+                            .contains("ownedByCurrentVisitor=true")
+                            .contains("ownedByCurrentVisitor=false"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
 
-    verify(postViewCounter, never()).increment(4L);
-    assertThat(applicationEvents.stream(PostViewedEvent.class).count()).isZero();
-  }
+    private static PostAnnotation annotation(long id, long userId, String ownerTokenHash) {
+        return new PostAnnotation(
+                id,
+                4L,
+                userId,
+                ownerTokenHash,
+                "正文",
+                "评论" + id,
+                "yellow",
+                AnnotationVisibility.PUBLIC,
+                0,
+                2,
+                LocalDateTime.now(),
+                false);
+    }
+
+    @Test
+    void getPostDetail_numericId_redirectsToSlug() throws Exception {
+        Post domainPost = Post.reconstruct(
+                1L,
+                "test-post",
+                "测试标题",
+                "内容",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                null,
+                false);
+        when(postRepository.findById(1L)).thenReturn(Optional.of(domainPost));
+
+        mockMvc.perform(get("/posts/1")).andExpect(status().is3xxRedirection()).andExpect(result -> {
+            String loc = result.getResponse().getRedirectedUrl();
+            assert loc != null && loc.endsWith("/posts/test-post")
+                    : "Expected redirect to /posts/test-post, got: " + loc;
+        });
+    }
+
+    @Test
+    void getPostDetail_checksViewCountIncremented() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(2L);
+        dto.setSlug("another-post");
+        dto.setTitle("另一篇文章");
+        dto.setContent("内容");
+        dto.setStatus("PUBLISHED");
+
+        Post domainPost2 = Post.reconstruct(
+                2L,
+                "another-post",
+                "另一篇文章",
+                "内容",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                null,
+                false);
+        when(postRepository.findById(2L)).thenReturn(Optional.of(domainPost2));
+        when(postRepository.findPrevPublished(2L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(2L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("another-post")).thenReturn(dto);
+        when(listTagsQryExe.findByPostId(anyLong())).thenReturn(List.of());
+        when(listCommentsQryExe.findApprovedByPostId(anyLong())).thenReturn(List.of());
+        when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");
+        when(postViewCounter.getCount(2L)).thenReturn(10L);
+
+        mockMvc.perform(get("/posts/another-post"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("pvCount", 10L));
+    }
+
+    @Test
+    void getPostDetail_publishesPostViewedEvent() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(3L);
+        dto.setSlug("event-test");
+        dto.setTitle("事件测试");
+        dto.setContent("内容");
+        dto.setStatus("PUBLISHED");
+
+        Post domainPost = Post.reconstruct(
+                3L,
+                "event-test",
+                "事件测试",
+                "内容",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                null,
+                false);
+        when(postRepository.findById(3L)).thenReturn(Optional.of(domainPost));
+        when(postRepository.findPrevPublished(3L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(3L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("event-test")).thenReturn(dto);
+        when(listTagsQryExe.findByPostId(3L)).thenReturn(List.of());
+        when(listCommentsQryExe.findApprovedByPostId(3L)).thenReturn(List.of());
+        when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");
+
+        mockMvc.perform(get("/posts/event-test")).andExpect(status().isOk());
+
+        assertThat(applicationEvents.stream(PostViewedEvent.class).count()).isGreaterThanOrEqualTo(1);
+        assertThat(applicationEvents.stream(PostViewedEvent.class)
+                        .findFirst()
+                        .orElseThrow()
+                        .visitToken())
+                .isNotBlank();
+    }
+
+    @Test
+    void getPostDetail_invalidVisitorDoesNotIncrementViewCountOrPublishEvent() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(4L);
+        dto.setSlug("filtered-visitor");
+        dto.setTitle("过滤访问");
+        dto.setContent("内容");
+        dto.setStatus("PUBLISHED");
+
+        Post domainPost = Post.reconstruct(
+                4L,
+                "filtered-visitor",
+                "过滤访问",
+                "内容",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                null,
+                false);
+        when(postRepository.findById(4L)).thenReturn(Optional.of(domainPost));
+        when(postRepository.findPrevPublished(4L)).thenReturn(Optional.empty());
+        when(postRepository.findNextPublished(4L)).thenReturn(Optional.empty());
+        when(getPostQryExe.executeBySlug("filtered-visitor")).thenReturn(dto);
+        when(listTagsQryExe.findByPostId(4L)).thenReturn(List.of());
+        when(listCommentsQryExe.findApprovedByPostId(4L)).thenReturn(List.of());
+        when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");
+        when(visitRequestFilter.shouldRecord(any())).thenReturn(false);
+
+        mockMvc.perform(get("/posts/filtered-visitor").header("User-Agent", "Python-urllib/3.12"))
+                .andExpect(status().isOk());
+
+        verify(postViewCounter, never()).increment(4L);
+        assertThat(applicationEvents.stream(PostViewedEvent.class).count()).isZero();
+    }
 }

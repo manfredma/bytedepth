@@ -20,30 +20,27 @@ import org.springframework.security.web.access.intercept.RequestAuthorizationCon
  * GenericTypeResolver.resolveTypeArgument(...)} 能解析出 {@code FilterInvocation}， 从而被 Thymeleaf extras
  * 接受。实际求值委托给 {@link DefaultHttpSecurityExpressionHandler}。
  */
-public class ThymeleafSecurityExpressionHandler
-    implements SecurityExpressionHandler<FilterInvocation> {
+public class ThymeleafSecurityExpressionHandler implements SecurityExpressionHandler<FilterInvocation> {
 
-  private final DefaultHttpSecurityExpressionHandler delegate =
-      new DefaultHttpSecurityExpressionHandler();
+    private final DefaultHttpSecurityExpressionHandler delegate = new DefaultHttpSecurityExpressionHandler();
 
-  @Override
-  public ExpressionParser getExpressionParser() {
-    return delegate.getExpressionParser();
-  }
+    @Override
+    public ExpressionParser getExpressionParser() {
+        return delegate.getExpressionParser();
+    }
 
-  @Override
-  public EvaluationContext createEvaluationContext(
-      Authentication authentication, FilterInvocation invocation) {
-    return delegate.createEvaluationContext(() -> authentication, toRequestContext(invocation));
-  }
+    @Override
+    public EvaluationContext createEvaluationContext(Authentication authentication, FilterInvocation invocation) {
+        return delegate.createEvaluationContext(() -> authentication, toRequestContext(invocation));
+    }
 
-  @Override
-  public EvaluationContext createEvaluationContext(
-      Supplier<? extends Authentication> authentication, FilterInvocation invocation) {
-    return delegate.createEvaluationContext(authentication, toRequestContext(invocation));
-  }
+    @Override
+    public EvaluationContext createEvaluationContext(
+            Supplier<? extends Authentication> authentication, FilterInvocation invocation) {
+        return delegate.createEvaluationContext(authentication, toRequestContext(invocation));
+    }
 
-  private static RequestAuthorizationContext toRequestContext(FilterInvocation invocation) {
-    return new RequestAuthorizationContext(invocation.getRequest());
-  }
+    private static RequestAuthorizationContext toRequestContext(FilterInvocation invocation) {
+        return new RequestAuthorizationContext(invocation.getRequest());
+    }
 }

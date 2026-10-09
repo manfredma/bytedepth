@@ -4,29 +4,32 @@ bytedepth 是 Thymeleaf SSR 应用，所有 Controller 返回视图名或重定�
 
 ## 前台页面
 
-| 路径                             | 方法 | Controller            | 说明                               |
-| -------------------------------- | ---- | --------------------- | ---------------------------------- |
-| `/`                              | GET  | HomeController        | 首页                               |
-| `/posts`                         | GET  | PostController        | 文章列表（支持 tag/category 筛选） |
-| `/posts/{identifier}`            | GET  | PostController        | 文章详情（slug 或数字 ID）         |
-| `/posts/new`                     | GET  | PostController        | 新建文章表单                       |
-| `/posts`                         | POST | PostController        | 创建文章                           |
-| `/posts/{slug}/publish`          | POST | PostController        | 发布文章                           |
-| `/posts/{slug}/rating`           | POST | PostRatingController  | 文章评分                           |
-| `/posts/{slug}/reading-progress` | POST | PostReadingController | 阅读进度上报                       |
-| `/posts/{slug}/comments`         | POST | CommentController     | 提交评论                           |
-| `/columns`                       | GET  | ColumnController      | 专栏列表                           |
-| `/columns/{slug}`                | GET  | ColumnController      | 专栏详情                           |
-| `/search`                        | GET  | SearchController      | 搜索                               |
-| `/u/{username}`                  | GET  | UserProfileController | 用户主页                           |
-| `/projects`                      | GET  | ProjectController     | 项目列表                           |
-| `/releases`                      | GET  | ReleaseController     | 版本发布记录                       |
-| `/about`                         | GET  | AboutController       | 关于页面                           |
-| `/register`                      | GET  | RegisterController    | 注册表单                           |
-| `/register`                      | POST | RegisterController    | 提交注册                           |
-| `/login`                         | GET  | LoginController       | 登录页面                           |
-| `/sitemap.xml`                   | GET  | SitemapController     | 站点地图                           |
-| `/feed.xml`                      | GET  | FeedController        | RSS 2.0 最近更新订阅源             |
+| 路径                               | 方法 | Controller               | 说明                                    |
+| ---------------------------------- | ---- | ------------------------ | --------------------------------------- |
+| `/`                                | GET  | HomeController           | 首页                                    |
+| `/posts`                           | GET  | PostController           | 文章列表（支持 tag/category 筛选）      |
+| `/posts/{identifier}`              | GET  | PostController           | 文章详情（slug 或数字 ID）              |
+| `/posts/new`                       | GET  | PostController           | 新建文章表单                            |
+| `/posts`                           | POST | PostController           | 创建文章                                |
+| `/posts/{slug}/publish`            | POST | PostController           | 发布文章                                |
+| `/posts/{slug}/rating`             | POST | PostRatingController     | 文章评分                                |
+| `/posts/{slug}/reading-progress`   | POST | PostReadingController    | 阅读进度上报                            |
+| `/posts/{slug}/reading-events`     | POST | ReadingEventController   | 登录读者个人阅读事件上报（幂等）        |
+| `/reading-history`                 | GET  | ReadingHistoryController | 当前读者阅读历史（登录服务端/匿名本地） |
+| `/reading-history/available-posts` | GET  | ReadingHistoryController | 匿名历史文章可见性批量校验              |
+| `/posts/{slug}/comments`           | POST | CommentController        | 提交评论                                |
+| `/columns`                         | GET  | ColumnController         | 专栏列表                                |
+| `/columns/{slug}`                  | GET  | ColumnController         | 专栏详情                                |
+| `/search`                          | GET  | SearchController         | 搜索                                    |
+| `/u/{username}`                    | GET  | UserProfileController    | 用户主页                                |
+| `/projects`                        | GET  | ProjectController        | 项目列表                                |
+| `/releases`                        | GET  | ReleaseController        | 版本发布记录                            |
+| `/about`                           | GET  | AboutController          | 关于页面                                |
+| `/register`                        | GET  | RegisterController       | 注册表单                                |
+| `/register`                        | POST | RegisterController       | 提交注册                                |
+| `/login`                           | GET  | LoginController          | 登录页面                                |
+| `/sitemap.xml`                     | GET  | SitemapController        | 站点地图                                |
+| `/feed.xml`                        | GET  | FeedController           | RSS 2.0 最近更新订阅源                  |
 
 ## 后台管理
 

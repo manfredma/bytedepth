@@ -19,56 +19,52 @@ import org.springframework.web.client.ResourceAccessException;
 
 class MeiliSearchOpsAdapterTest {
 
-  @Test
-  void inspectChecksHealthAndStatsWithConfiguredAuthorization() throws IOException {
-    List<String> paths = new CopyOnWriteArrayList<>();
-    List<String> authorizations = new CopyOnWriteArrayList<>();
-    HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-    server.createContext(
-        "/",
-        exchange -> {
-          paths.add(exchange.getRequestURI().getPath());
-          authorizations.add(exchange.getRequestHeaders().getFirst("Authorization"));
-          exchange.sendResponseHeaders(200, -1);
-          exchange.close();
+    @Test
+    void inspectChecksHealthAndStatsWithConfiguredAuthorization() throws IOException {
+        List<String> paths = new CopyOnWriteArrayList<>();
+        List<String> authorizations = new CopyOnWriteArrayList<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/", exchange -> {
+            paths.add(exchange.getRequestURI().getPath());
+            authorizations.add(exchange.getRequestHeaders().getFirst("Authorization"));
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
         });
-    server.start();
-    try {
-      MeiliSearchOpsAdapter adapter =
-          new MeiliSearchOpsAdapter(
-              "http://localhost:" + server.getAddress().getPort(), "test-api-key");
-
-      assertEquals(
-          new manfred.bytedepth.app.ops.OpsMeiliSearchStatusDTO(true, true), adapter.inspect());
-      assertEquals(List.of("/health", "/stats"), paths);
-      assertEquals(List.of("Bearer test-api-key", "Bearer test-api-key"), authorizations);
-    } finally {
-      server.stop(0);
-    }
-  }
-
-  @Test
-  void inspect_timesOutWhenMeiliSearchDoesNotRespond() throws IOException {
-    ExecutorService executor = Executors.newSingleThreadExecutor();
-    Future<Socket> acceptedConnection = null;
-
-    try (ServerSocket blackhole = new ServerSocket(0)) {
-      acceptedConnection = executor.submit(blackhole::accept);
-      MeiliSearchOpsAdapter adapter =
-          new MeiliSearchOpsAdapter("http://localhost:" + blackhole.getLocalPort(), "test-api-key");
-
-      assertTimeoutPreemptively(
-          MeiliSearchOpsAdapter.READ_TIMEOUT.plusSeconds(2),
-          () -> assertThrows(ResourceAccessException.class, adapter::inspect));
-    } finally {
-      if (acceptedConnection != null && acceptedConnection.isDone()) {
+        server.start();
         try {
-          acceptedConnection.get().close();
-        } catch (Exception ignored) {
-          // The socket is only test infrastructure and may already be closed.
+            MeiliSearchOpsAdapter adapter = new MeiliSearchOpsAdapter(
+                    "http://localhost:" + server.getAddress().getPort(), "test-api-key");
+
+            assertEquals(new manfred.bytedepth.app.ops.OpsMeiliSearchStatusDTO(true, true), adapter.inspect());
+            assertEquals(List.of("/health", "/stats"), paths);
+            assertEquals(List.of("Bearer test-api-key", "Bearer test-api-key"), authorizations);
+        } finally {
+            server.stop(0);
         }
-      }
-      executor.shutdownNow();
     }
-  }
+
+    @Test
+    void inspect_timesOutWhenMeiliSearchDoesNotRespond() throws IOException {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<Socket> acceptedConnection = null;
+
+        try (ServerSocket blackhole = new ServerSocket(0)) {
+            acceptedConnection = executor.submit(blackhole::accept);
+            MeiliSearchOpsAdapter adapter =
+                    new MeiliSearchOpsAdapter("http://localhost:" + blackhole.getLocalPort(), "test-api-key");
+
+            assertTimeoutPreemptively(
+                    MeiliSearchOpsAdapter.READ_TIMEOUT.plusSeconds(2),
+                    () -> assertThrows(ResourceAccessException.class, adapter::inspect));
+        } finally {
+            if (acceptedConnection != null && acceptedConnection.isDone()) {
+                try {
+                    acceptedConnection.get().close();
+                } catch (Exception ignored) {
+                    // The socket is only test infrastructure and may already be closed.
+                }
+            }
+            executor.shutdownNow();
+        }
+    }
 }

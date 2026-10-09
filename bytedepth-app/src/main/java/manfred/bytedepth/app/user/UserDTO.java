@@ -5,8 +5,8 @@ import lombok.Data;
 
 @Data
 public class UserDTO {
-  private Long id;
-  private String username;
-  private String status;
-  private LocalDateTime createdAt;
+    private Long id;
+    private String username;
+    private String status;
+    private LocalDateTime createdAt;
 }

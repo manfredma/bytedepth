@@ -13,6 +13,7 @@ import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListPostsQryExe;
 import manfred.bytedepth.app.rating.GetPostRatingQryExe;
+import manfred.bytedepth.app.reading.GetReadingSummaryQryExe;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
 import manfred.bytedepth.app.series.SeriesNavigationQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
@@ -21,32 +22,59 @@ import manfred.bytedepth.domain.series.SeriesRepository;
 import manfred.bytedepth.domain.stats.PostViewCounter;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class PostControllerCoverageTest {
 
-  @Test
-  void constructor_acceptsTheAnnotationIdentityDependency() {
-    PostController controller =
-        new PostController(
-            mock(ListPostsQryExe.class),
-            mock(GetPostQryExe.class),
-            mock(CreatePostCmdExe.class),
-            mock(PublishPostCmdExe.class),
-            mock(MarkdownRenderer.class),
-            mock(ListCommentsQryExe.class),
-            mock(ListAnnotationsQryExe.class),
-            mock(AnnotationVisitorIdentity.class),
-            mock(ListTagsQryExe.class),
-            mock(ListCategoriesQryExe.class),
-            mock(PostViewCounter.class),
-            mock(PostRepository.class),
-            mock(SeriesRepository.class),
-            mock(GetSeriesPostsQryExe.class),
-            mock(SeriesNavigationQryExe.class),
-            mock(GetPostRatingQryExe.class),
-            mock(VisitRequestFilter.class),
-            mock(ApplicationEventPublisher.class));
+    @Test
+    void constructor_acceptsTheAnnotationIdentityDependency() {
+        PostController controller = new PostController(
+                mock(ListPostsQryExe.class),
+                mock(GetPostQryExe.class),
+                mock(CreatePostCmdExe.class),
+                mock(PublishPostCmdExe.class),
+                mock(MarkdownRenderer.class),
+                mock(ListCommentsQryExe.class),
+                mock(ListAnnotationsQryExe.class),
+                mock(AnnotationVisitorIdentity.class),
+                mock(ListTagsQryExe.class),
+                mock(ListCategoriesQryExe.class),
+                mock(PostViewCounter.class),
+                mock(PostRepository.class),
+                mock(SeriesRepository.class),
+                mock(GetSeriesPostsQryExe.class),
+                mock(SeriesNavigationQryExe.class),
+                mock(GetPostRatingQryExe.class),
+                mock(VisitRequestFilter.class),
+                mock(ApplicationEventPublisher.class));
 
-    assertThat(controller).isNotNull();
-  }
+        assertThat(controller).isNotNull();
+    }
+
+    @Test
+    void readingSummaryHelperUsesTheAuthenticatedSummaryQuery() {
+        PostController controller = new PostController(
+                mock(ListPostsQryExe.class),
+                mock(GetPostQryExe.class),
+                mock(CreatePostCmdExe.class),
+                mock(PublishPostCmdExe.class),
+                mock(MarkdownRenderer.class),
+                mock(ListCommentsQryExe.class),
+                mock(ListAnnotationsQryExe.class),
+                mock(AnnotationVisitorIdentity.class),
+                mock(ListTagsQryExe.class),
+                mock(ListCategoriesQryExe.class),
+                mock(PostViewCounter.class),
+                mock(PostRepository.class),
+                mock(SeriesRepository.class),
+                mock(GetSeriesPostsQryExe.class),
+                mock(SeriesNavigationQryExe.class),
+                mock(GetPostRatingQryExe.class),
+                mock(VisitRequestFilter.class),
+                mock(ApplicationEventPublisher.class));
+        var query = mock(GetReadingSummaryQryExe.class);
+        ReflectionTestUtils.setField(controller, "getReadingSummaryQryExe", query);
+        ReflectionTestUtils.invokeMethod(controller, "readingSummary", 7L, 12L);
+        org.mockito.Mockito.verify(query).execute(7L, 12L);
+    }
 }

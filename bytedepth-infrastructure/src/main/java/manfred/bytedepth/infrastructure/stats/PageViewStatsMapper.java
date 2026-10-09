@@ -11,28 +11,28 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface PageViewStatsMapper {
 
-  List<PageViewRankDTO> topPages(
-      @Param("startTime") LocalDateTime startTime,
-      @Param("endTime") LocalDateTime endTime,
-      @Param("limit") int limit);
+    List<PageViewRankDTO> topPages(
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("limit") int limit);
 
-  List<CountryViewStatDTO> pageCountryStats(
-      @Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
+    List<CountryViewStatDTO> pageCountryStats(
+            @Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
 
-  List<PageViewRankDTO> countryTopPages(
-      @Param("country") String country,
-      @Param("startTime") LocalDateTime startTime,
-      @Param("endTime") LocalDateTime endTime,
-      @Param("limit") int limit);
+    List<PageViewRankDTO> countryTopPages(
+            @Param("country") String country,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("limit") int limit);
 
-  List<TrendPointDTO> pageTrend(
-      @Param("pagePath") String pagePath,
-      @Param("startTime") LocalDateTime startTime,
-      @Param("endTime") LocalDateTime endTime,
-      @Param("format") String format);
+    List<TrendPointDTO> pageTrend(
+            @Param("pagePath") String pagePath,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("format") String format);
 
-  List<TrendPointDTO> pageOverviewTrend(
-      @Param("startTime") LocalDateTime startTime,
-      @Param("endTime") LocalDateTime endTime,
-      @Param("format") String format);
+    List<TrendPointDTO> pageOverviewTrend(
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("format") String format);
 }

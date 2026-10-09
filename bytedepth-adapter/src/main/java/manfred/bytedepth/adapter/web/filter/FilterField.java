@@ -12,38 +12,32 @@ import lombok.Getter;
 @Getter
 public class FilterField {
 
-  private final String name;
-  private final String label;
-  private final String type;
-  private final String value;
-  private final String placeholder;
-  private final List<FilterOption> options;
+    private final String name;
+    private final String label;
+    private final String type;
+    private final String value;
+    private final String placeholder;
+    private final List<FilterOption> options;
 
-  private FilterField(
-      String name,
-      String label,
-      String type,
-      String value,
-      String placeholder,
-      List<FilterOption> options) {
-    this.name = name;
-    this.label = label;
-    this.type = type;
-    this.value = value;
-    this.placeholder = placeholder;
-    this.options = options;
-  }
+    private FilterField(
+            String name, String label, String type, String value, String placeholder, List<FilterOption> options) {
+        this.name = name;
+        this.label = label;
+        this.type = type;
+        this.value = value;
+        this.placeholder = placeholder;
+        this.options = options;
+    }
 
-  public static FilterField text(String name, String label, String value, String placeholder) {
-    return new FilterField(name, label, "TEXT", value, placeholder, null);
-  }
+    public static FilterField text(String name, String label, String value, String placeholder) {
+        return new FilterField(name, label, "TEXT", value, placeholder, null);
+    }
 
-  public static FilterField number(String name, String label, String value, String placeholder) {
-    return new FilterField(name, label, "NUMBER", value, placeholder, null);
-  }
+    public static FilterField number(String name, String label, String value, String placeholder) {
+        return new FilterField(name, label, "NUMBER", value, placeholder, null);
+    }
 
-  public static FilterField select(
-      String name, String label, String value, List<FilterOption> options) {
-    return new FilterField(name, label, "SELECT", value, null, options);
-  }
+    public static FilterField select(String name, String label, String value, List<FilterOption> options) {
+        return new FilterField(name, label, "SELECT", value, null, options);
+    }
 }

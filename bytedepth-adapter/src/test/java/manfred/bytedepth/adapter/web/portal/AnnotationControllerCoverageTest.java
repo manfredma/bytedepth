@@ -29,70 +29,56 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 class AnnotationControllerCoverageTest {
 
-  @Test
-  void create_loggedInReaderDoesNotCreateAnAnonymousIdentity() {
-    PostRepository posts = mock(PostRepository.class);
-    CreateAnnotationCmdExe create = mock(CreateAnnotationCmdExe.class);
-    AnnotationVisitorIdentity visitorIdentity = mock(AnnotationVisitorIdentity.class);
-    AnnotationController controller =
-        new AnnotationController(
-            posts,
-            mock(ListAnnotationsQryExe.class),
-            create,
-            mock(DeleteAnnotationCmdExe.class),
-            mock(UpdateAnnotationCmdExe.class),
-            visitorIdentity,
-            mock(MarkdownRenderer.class));
-    when(posts.findBySlug("post")).thenReturn(Optional.of(post()));
-    when(create.execute(eq(1L), eq(7L), eq(null), any(), any(), any(), any(), anyInt(), anyInt()))
-        .thenReturn(annotation());
+    @Test
+    void create_loggedInReaderDoesNotCreateAnAnonymousIdentity() {
+        PostRepository posts = mock(PostRepository.class);
+        CreateAnnotationCmdExe create = mock(CreateAnnotationCmdExe.class);
+        AnnotationVisitorIdentity visitorIdentity = mock(AnnotationVisitorIdentity.class);
+        AnnotationController controller = new AnnotationController(
+                posts,
+                mock(ListAnnotationsQryExe.class),
+                create,
+                mock(DeleteAnnotationCmdExe.class),
+                mock(UpdateAnnotationCmdExe.class),
+                visitorIdentity,
+                mock(MarkdownRenderer.class));
+        when(posts.findBySlug("post")).thenReturn(Optional.of(post()));
+        when(create.execute(eq(1L), eq(7L), eq(null), any(), any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(annotation());
 
-    var result =
-        controller.create(
-            "post",
-            new AnnotationController.CreateAnnotationRequest(
-                "文字", "评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2),
-            new SiteUserDetails(
-                7L, "reader", "", List.of(new SimpleGrantedAuthority("blog:post:create"))),
-            new MockHttpServletRequest(),
-            new MockHttpServletResponse());
+        var result = controller.create(
+                "post",
+                new AnnotationController.CreateAnnotationRequest(
+                        "文字", "评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2),
+                new SiteUserDetails(7L, "reader", "", List.of(new SimpleGrantedAuthority("blog:post:create"))),
+                new MockHttpServletRequest(),
+                new MockHttpServletResponse());
 
-    assertThat(result.ownedByCurrentVisitor()).isTrue();
+        assertThat(result.ownedByCurrentVisitor()).isTrue();
 
-    when(posts.findBySlug("missing")).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> controller.list("missing", null, new MockHttpServletRequest()))
-        .isInstanceOf(java.util.NoSuchElementException.class)
-        .hasMessageContaining("missing");
-  }
+        when(posts.findBySlug("missing")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> controller.list("missing", null, new MockHttpServletRequest()))
+                .isInstanceOf(java.util.NoSuchElementException.class)
+                .hasMessageContaining("missing");
+    }
 
-  private static Post post() {
-    return Post.reconstruct(
-        1L,
-        "post",
-        "标题",
-        "内容",
-        PostStatus.PUBLISHED,
-        LocalDateTime.now(),
-        LocalDateTime.now(),
-        LocalDateTime.now(),
-        null,
-        7L,
-        false);
-  }
+    private static Post post() {
+        return Post.reconstruct(
+                1L,
+                "post",
+                "标题",
+                "内容",
+                PostStatus.PUBLISHED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                7L,
+                false);
+    }
 
-  private static PostAnnotation annotation() {
-    return new PostAnnotation(
-        2L,
-        1L,
-        7L,
-        null,
-        "文字",
-        "评论",
-        "yellow",
-        AnnotationVisibility.PUBLIC,
-        0,
-        2,
-        LocalDateTime.now(),
-        false);
-  }
+    private static PostAnnotation annotation() {
+        return new PostAnnotation(
+                2L, 1L, 7L, null, "文字", "评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2, LocalDateTime.now(), false);
+    }
 }
