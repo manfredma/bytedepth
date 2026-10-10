@@ -14,6 +14,8 @@ public interface PostRepository {
 
     List<HotPost> findPublishedByHotnessExcluding(List<Long> excludedIds, int page, int size);
 
+    List<HotPost> findPublishedByDiscoveryExcluding(List<Long> excludedIds, int page, int size);
+
     List<Post> findLatestPublishedExcluding(List<Long> excludedIds, int limit);
 
     List<Post> findFeaturedPublished();

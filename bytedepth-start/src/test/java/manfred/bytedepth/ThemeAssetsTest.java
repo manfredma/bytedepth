@@ -53,6 +53,13 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void homeHeroUsesRestrainedDisplayScale() throws Exception {
+        String css = classpathText("/static/css/home.css");
+
+        assertThat(css).contains("font: 700 clamp(2.6rem, 5vw, 4.5rem) / 0.98");
+    }
+
+    @Test
     void rssDiscoveryIsHiddenOnlyInStaging() throws Exception {
         String nav = classpathText("/templates/fragments/nav.html");
         String pwaHead = classpathText("/templates/fragments/pwa-head.html");

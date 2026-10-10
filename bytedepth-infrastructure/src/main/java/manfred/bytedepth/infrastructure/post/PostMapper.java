@@ -37,6 +37,32 @@ public interface PostMapper extends BaseMapper<PostDO> {
 
     @Select({
         "<script>",
+        "SELECT p.*, COALESCE(ps.pv_count, 0) AS view_count, ",
+        "COALESCE(recent.recent_score, 0) + COALESCE(ps.pv_count, 0) * 0.05 AS discovery_score ",
+        "FROM post p ",
+        "LEFT JOIN page_stats ps ON ps.path = CONCAT('/posts/', p.id) ",
+        "LEFT JOIN (",
+        "SELECT post_id, SUM(POW(0.5, TIMESTAMPDIFF(HOUR, visited_at, NOW()) / 72.0)) AS recent_score ",
+        "FROM post_view_log ",
+        "WHERE visited_at >= NOW() - INTERVAL 7 DAY ",
+        "GROUP BY post_id",
+        ") recent ON recent.post_id = p.id ",
+        "WHERE p.status = 'PUBLISHED'",
+        "<if test='excludedIds != null and !excludedIds.isEmpty()'>",
+        "AND p.id NOT IN",
+        "<foreach item='id' collection='excludedIds' open='(' separator=',' close=')'>",
+        "#{id}",
+        "</foreach>",
+        "</if>",
+        "ORDER BY discovery_score DESC, view_count DESC, p.published_at DESC, p.id DESC ",
+        "LIMIT #{offset}, #{limit}",
+        "</script>"
+    })
+    List<HotPostDO> findPublishedByDiscoveryExcluding(
+            @Param("excludedIds") List<Long> excludedIds, @Param("offset") int offset, @Param("limit") int limit);
+
+    @Select({
+        "<script>",
         "SELECT p.* FROM post p WHERE p.status = 'PUBLISHED'",
         "<if test='excludedIds != null and !excludedIds.isEmpty()'>",
         "AND p.id NOT IN",

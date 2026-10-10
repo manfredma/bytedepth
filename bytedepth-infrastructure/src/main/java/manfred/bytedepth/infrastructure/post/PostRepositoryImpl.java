@@ -60,6 +60,14 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
+    public List<HotPost> findPublishedByDiscoveryExcluding(List<Long> excludedIds, int page, int size) {
+        int offset = (page - 1) * size;
+        return postMapper.findPublishedByDiscoveryExcluding(excludedIds, offset, size).stream()
+                .map(row -> new HotPost(toEntity(row), row.getViewCount() == null ? 0L : row.getViewCount()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<Post> findLatestPublishedExcluding(List<Long> excludedIds, int limit) {
         return postMapper.findLatestPublishedExcluding(excludedIds, limit).stream()
                 .map(this::toEntity)

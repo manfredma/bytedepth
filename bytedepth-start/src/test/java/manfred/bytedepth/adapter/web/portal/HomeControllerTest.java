@@ -108,7 +108,7 @@ class HomeControllerTest {
         post.setTitle("最新文章");
         post.setStatus("PUBLISHED");
 
-        when(listPostsQryExe.executeByHotnessExcluding(anyList(), anyInt(), anyInt()))
+        when(listPostsQryExe.executeByDiscoveryExcluding(anyList(), anyInt(), anyInt()))
                 .thenReturn(List.of(post));
         when(listPostsQryExe.executeLatestExcluding(anyList(), anyInt())).thenReturn(List.of());
         when(listPostsQryExe.countPublished()).thenReturn(1L);
@@ -161,7 +161,7 @@ class HomeControllerTest {
         PostDTO recent2 = post(10L, "新发布二");
 
         when(listPostsQryExe.executeLatestExcluding(List.of(), 2)).thenReturn(List.of(recent1, recent2));
-        when(listPostsQryExe.executeByHotnessExcluding(List.of(9L, 10L), 1, 10))
+        when(listPostsQryExe.executeByDiscoveryExcluding(List.of(9L, 10L), 1, 10))
                 .thenReturn(List.of(hot1, hot2, hot3, hot4, hot5, hot6, hot7, hot8));
         when(listPostsQryExe.countPublished()).thenReturn(10L);
         when(listProjectsQryExe.execute()).thenReturn(List.of());
@@ -175,7 +175,7 @@ class HomeControllerTest {
                 .andExpect(model().attribute("discoveryNewPostIds", List.of(9L, 10L)));
 
         verify(listPostsQryExe).executeLatestExcluding(List.of(), 2);
-        verify(listPostsQryExe).executeByHotnessExcluding(List.of(9L, 10L), 1, 10);
+        verify(listPostsQryExe).executeByDiscoveryExcluding(List.of(9L, 10L), 1, 10);
         verify(listPostsQryExe, never()).execute(anyInt(), anyInt());
     }
 
@@ -192,7 +192,7 @@ class HomeControllerTest {
         PostDTO recent = post(9L, "新发布");
 
         when(listPostsQryExe.executeLatestExcluding(List.of(), 2)).thenReturn(List.of(recent));
-        when(listPostsQryExe.executeByHotnessExcluding(List.of(9L), 1, 10))
+        when(listPostsQryExe.executeByDiscoveryExcluding(List.of(9L), 1, 10))
                 .thenReturn(List.of(hot1, hot2, hot3, hot4, hot5, hot6, hot7, hot8));
         when(listPostsQryExe.countPublished()).thenReturn(9L);
         when(listProjectsQryExe.execute()).thenReturn(List.of());
@@ -209,7 +209,8 @@ class HomeControllerTest {
         PostDTO recent2 = post(10L, "新发布二");
 
         when(listPostsQryExe.executeLatestExcluding(List.of(), 2)).thenReturn(List.of(recent1, recent2));
-        when(listPostsQryExe.executeByHotnessExcluding(List.of(9L, 10L), 2, 10)).thenReturn(List.of(hotPost));
+        when(listPostsQryExe.executeByDiscoveryExcluding(List.of(9L, 10L), 2, 10))
+                .thenReturn(List.of(hotPost));
         when(listPostsQryExe.countPublished()).thenReturn(22L);
         when(listProjectsQryExe.execute()).thenReturn(List.of());
 
@@ -219,7 +220,7 @@ class HomeControllerTest {
                 .andExpect(model().attribute("discoveryNewPostIds", List.of()))
                 .andExpect(model().attribute("totalPages", 2L));
 
-        verify(listPostsQryExe).executeByHotnessExcluding(List.of(9L, 10L), 2, 10);
+        verify(listPostsQryExe).executeByDiscoveryExcluding(List.of(9L, 10L), 2, 10);
     }
 
     @Test
@@ -235,7 +236,7 @@ class HomeControllerTest {
         recentPost.setTitle("新发布文章");
 
         when(listPostsQryExe.executeLatestExcluding(List.of(), 2)).thenReturn(List.of(recentPost));
-        when(listPostsQryExe.executeByHotnessExcluding(List.of(2L), 1, 10)).thenReturn(List.of(hotPost));
+        when(listPostsQryExe.executeByDiscoveryExcluding(List.of(2L), 1, 10)).thenReturn(List.of(hotPost));
         when(listPostsQryExe.countPublished()).thenReturn(2L);
         when(listProjectsQryExe.execute()).thenReturn(List.of());
 
@@ -278,7 +279,7 @@ class HomeControllerTest {
 
     private void stubEmptyDiscoveryFeed() {
         when(listPostsQryExe.executeLatestExcluding(anyList(), anyInt())).thenReturn(List.of());
-        when(listPostsQryExe.executeByHotnessExcluding(anyList(), anyInt(), anyInt()))
+        when(listPostsQryExe.executeByDiscoveryExcluding(anyList(), anyInt(), anyInt()))
                 .thenReturn(List.of());
     }
 }

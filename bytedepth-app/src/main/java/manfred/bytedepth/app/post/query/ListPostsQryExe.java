@@ -48,6 +48,12 @@ public class ListPostsQryExe {
                 .collect(Collectors.toList());
     }
 
+    public List<PostDTO> executeByDiscoveryExcluding(List<Long> excludedIds, int page, int size) {
+        return postRepository.findPublishedByDiscoveryExcluding(excludedIds, page, size).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
     public List<PostDTO> executeLatestExcluding(List<Long> excludedIds, int limit) {
         return postRepository.findLatestPublishedExcluding(excludedIds, limit).stream()
                 .map(this::toDTO)

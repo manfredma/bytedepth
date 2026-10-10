@@ -201,6 +201,29 @@ class PostRepositoryImplTest {
         verify(postMapper).findPublishedByHotnessExcluding(List.of(9L, 10L), 10, 5);
     }
 
+    @Test
+    void findPublishedByDiscoveryExcluding_passesIdsAndMapsResults() {
+        HotPostDO discovery = hotRow(2L, 17L);
+        when(postMapper.findPublishedByDiscoveryExcluding(List.of(9L, 10L), 10, 5))
+                .thenReturn(List.of(discovery));
+
+        var result = repository.findPublishedByDiscoveryExcluding(List.of(9L, 10L), 3, 5);
+
+        assertEquals(1, result.size());
+        assertEquals(2L, result.getFirst().post().getId());
+        assertEquals(17L, result.getFirst().viewCount());
+        verify(postMapper).findPublishedByDiscoveryExcluding(List.of(9L, 10L), 10, 5);
+    }
+
+    @Test
+    void findPublishedByDiscoveryExcluding_viewCountNullDefaultsToZero() {
+        when(postMapper.findPublishedByDiscoveryExcluding(List.of(), 0, 10)).thenReturn(List.of(hotRow(1L, null)));
+
+        var result = repository.findPublishedByDiscoveryExcluding(List.of(), 1, 10);
+
+        assertEquals(0L, result.getFirst().viewCount());
+    }
+
     // ---- findLatestPublishedExcluding ----
 
     @Test

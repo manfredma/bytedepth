@@ -47,7 +47,8 @@
 
 ## 首页排序
 
-- 热度 = 文章历史总访问量，读取自定时刷入的 `page_stats` 表，有同步间隔延迟，不为首页排序额外扫描 Redis。
+- 热门排序的热度 = 文章历史总访问量，读取自定时刷入的 `page_stats` 表，有同步间隔延迟，不为首页排序额外扫描 Redis。
+- 发现排序优先使用最近 7 天 `post_view_log` 的时间衰减访问量：按访问时间以 3 天为半衰期计算 `0.5 ^ (ageHours / 72)`，再加历史总访问量的 5% 作为稳定兜底；只在发现查询中使用该分数，避免改变纯热门排序口径。
 - 文章统计路径统一为 `/posts/{post.id}`，须与 `RedisStatsService.flushToDB()` 落库路径一致。
 - 热门排序为 `pv_count DESC, published_at DESC, id DESC`（三级排序保证分页稳定）。
 - `sort` 参数允许值为 `discover`、`latest` 与 `hot`，分页 URL 保留当前 `sort`；`latest` 按文章最后修改时间 `updated_at` 倒序，`id` 倒序作为稳定兜底。

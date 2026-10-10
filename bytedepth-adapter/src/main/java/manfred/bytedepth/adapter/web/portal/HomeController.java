@@ -44,7 +44,7 @@ public class HomeController {
             var discoveryCandidateIds =
                     discoveryCandidates.stream().map(PostDTO::getId).toList();
             var recentPosts = page == 1 ? discoveryCandidates : List.<PostDTO>of();
-            var hotPosts = listPostsQryExe.executeByHotnessExcluding(discoveryCandidateIds, page, PAGE_SIZE);
+            var hotPosts = listPostsQryExe.executeByDiscoveryExcluding(discoveryCandidateIds, page, PAGE_SIZE);
             posts = interleaveDiscoveryPosts(hotPosts, recentPosts);
             model.addAttribute(
                     "discoveryNewPostIds",

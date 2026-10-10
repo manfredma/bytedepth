@@ -24,7 +24,7 @@
 }
 .bd-home-hero h1 {
   margin: 14px 0 18px;
-  font: 700 clamp(3.1rem, 7vw, 6rem) / 0.98 var(--display, Georgia, serif);
+  font: 700 clamp(2.6rem, 5vw, 4.5rem) / 0.98 var(--display, Georgia, serif);
   letter-spacing: -0.07em;
 }
 .bd-home-hero h1 em {

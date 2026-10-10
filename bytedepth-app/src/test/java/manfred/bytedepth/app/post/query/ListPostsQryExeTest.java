@@ -132,6 +132,18 @@ class ListPostsQryExeTest {
         assertEquals(999L, result.getFirst().getViewCount());
     }
 
+    @Test
+    void executeByDiscoveryExcluding_mapsRecentWeightedPostsToDTOsWithViewCount() {
+        Post post = postWithoutCategory(1L, "slug-1", "Discovery Title");
+        when(postRepository.findPublishedByDiscoveryExcluding(List.of(9L, 10L), 2, 5))
+                .thenReturn(List.of(new HotPost(post, 999L)));
+
+        List<PostDTO> result = exe.executeByDiscoveryExcluding(List.of(9L, 10L), 2, 5);
+
+        assertEquals(1L, result.getFirst().getId());
+        assertEquals(999L, result.getFirst().getViewCount());
+    }
+
     // --- executeLatestExcluding ---
 
     @Test
