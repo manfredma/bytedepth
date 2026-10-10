@@ -14,6 +14,10 @@
 - Quality execution is consolidated into the local pre-PR gate and release-platform Host Agent; the repository no longer runs a GitHub Actions quality workflow.
 - AI Agent 修改代码后由 PR 合并，release-platform 使用完整 commit SHA 完成构建、staging 验收和 production 提升；项目仓库不再提供发布脚本。
 
+### Fixed
+
+- 修复公共主题未重置浏览器默认 `body` 外边距，避免页头在公共页面出现边缘留白。
+
 ### Removed
 
 - 删除项目侧 staging/production 发布、远程发布、生产验证及其专用契约测试；统一由 release-platform 的 Host Agent 执行。

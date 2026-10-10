@@ -46,6 +46,13 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void sharedThemeResetsBrowserBodyMargin() throws Exception {
+        String css = classpathText("/static/css/theme.css");
+
+        assertThat(css).contains("body {\n  margin: 0;");
+    }
+
+    @Test
     void rssDiscoveryIsHiddenOnlyInStaging() throws Exception {
         String nav = classpathText("/templates/fragments/nav.html");
         String pwaHead = classpathText("/templates/fragments/pwa-head.html");
