@@ -19,19 +19,20 @@
                 <a th:href="@{/projects}">项目</a>
                 <a th:href="@{/network}">网络地图</a>
                 <a th:href="@{/reading-history}">阅读历史</a>
-                <a th:if="${environment != 'staging'}" th:href="@{/feed.xml}" class="nav-rss" aria-label="订阅 RSS 更新">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.18 17.82A2.18 2.18 0 1 1 6.18 22a2.18 2.18 0 0 1 0-4.18ZM3 3v3.02c8.82 0 15.98 7.16 15.98 15.98H22C22 11.51 13.49 3 3 3Zm0 6.02v3.02c5.5 0 9.96 4.46 9.96 9.96H16C16 14.83 10.17 9.02 3 9.02Z"/></svg>
-                </a>
             </div>
         </div>
         <div class="nav-actions">
-            <form action="/search" method="get" class="nav-search">
-                <input type="text" name="q" placeholder="搜索文章…" />
-                <button type="submit">🔍</button>
-            </form>
-            <div class="theme-switcher" th:classappend="${showThemeSwitcher} ? '' : ' nav-theme-placeholder'">
-                <button th:if="${showThemeSwitcher}" type="button" class="theme-trigger" aria-label="切换主题" aria-expanded="false">◐</button>
-                <div th:if="${showThemeSwitcher}" class="theme-menu">
+            <div class="nav-utility">
+                <a th:if="${environment != 'staging'}" th:href="@{/feed.xml}" class="nav-rss" aria-label="订阅 RSS 更新">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.18 17.82A2.18 2.18 0 1 1 6.18 22a2.18 2.18 0 0 1 0-4.18ZM3 3v3.02c8.82 0 15.98 7.16 15.98 15.98H22C22 11.51 13.49 3 3 3Zm0 6.02v3.02c5.5 0 9.96 4.46 9.96 9.96H16C16 14.83 10.17 9.02 3 9.02Z"/></svg>
+                </a>
+                <form action="/search" method="get" class="nav-search">
+                    <input type="text" name="q" placeholder="搜索文章…" />
+                    <button type="submit">🔍</button>
+                </form>
+                <div class="theme-switcher" th:classappend="${showThemeSwitcher} ? '' : ' nav-theme-placeholder'">
+                    <button th:if="${showThemeSwitcher}" type="button" class="theme-trigger" aria-label="切换主题" aria-expanded="false">◐</button>
+                    <div th:if="${showThemeSwitcher}" class="theme-menu">
                     <button type="button" class="theme-option" data-theme-option="default" aria-pressed="true">
                         <span class="theme-swatch default"></span><span>默认</span>
                     </button>
@@ -50,6 +51,7 @@
                     <button type="button" class="theme-option" data-theme-option="rose" aria-pressed="false">
                         <span class="theme-swatch rose"></span><span>玫瑰暖色</span>
                     </button>
+                    </div>
                 </div>
             </div>
             <div class="nav-auth">

@@ -95,7 +95,7 @@ class ThemeAssetsTest {
                 .contains(".nav-bar *::before,")
                 .contains(".nav-bar *::after")
                 .contains("box-sizing: border-box")
-                .contains("max-width: var(--bd-page-max, 1060px)")
+                .contains("max-width: 1180px")
                 .contains("padding: 0 var(--bd-page-pad, 20px)")
                 .contains("background: var(--bd-nav-bg")
                 .contains(".nav-bar[data-env=\"staging\"]")
@@ -495,6 +495,7 @@ class ThemeAssetsTest {
     @Test
     void navbarUsesBoundedHeaderLayout() throws Exception {
         String nav = classpathText("/templates/fragments/nav.html");
+        String css = classpathText("/static/css/nav.css");
 
         assertThat(nav)
                 .contains("@{/css/nav.css}")
@@ -502,6 +503,7 @@ class ThemeAssetsTest {
                 .contains("class=\"nav-left\"")
                 .contains("class=\"nav-primary\"")
                 .contains("class=\"nav-actions\"")
+                .contains("class=\"nav-utility\"")
                 .contains("class=\"nav-about\"")
                 .contains("class=\"nav-about-menu\"")
                 .contains("<a th:href=\"@{/about}\">关于本站</a>")
@@ -512,5 +514,6 @@ class ThemeAssetsTest {
                 .contains("method=\"get\"")
                 .doesNotContain("<style>")
                 .doesNotContain(".nav-bar {");
+        assertThat(css).contains("max-width: 1180px").contains(".nav-utility").contains("@media (max-width: 940px)");
     }
 }

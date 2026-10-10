@@ -12,6 +12,7 @@
 
 - 首页改为真实数据驱动的编辑部入口，支持后台主推文章、推荐理由、推荐阅读和动态空状态；公共页头统一品牌 slogan 与视觉样式。
 - 首页发现流按最近 7 天阅读量进行时间衰减排序（半衰期 3 天），并保留历史访问量作为低权重兜底；首页 hero 标题收敛为更克制的展示字号。
+- 公共页头改为宽版工具分区布局，将 RSS、搜索、主题和认证操作隔离，避免窄宽度下相互重叠。
 - Quality execution is consolidated into the local pre-PR gate and release-platform Host Agent; the repository no longer runs a GitHub Actions quality workflow.
 - AI Agent 修改代码后由 PR 合并，release-platform 使用完整 commit SHA 完成构建、staging 验收和 production 提升；项目仓库不再提供发布脚本。
 
