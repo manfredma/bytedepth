@@ -12,6 +12,7 @@
 
 - Quality execution is consolidated into the local pre-PR gate and release-platform Host Agent; the repository no longer runs a GitHub Actions quality workflow.
 - AI Agent 修改代码后由 PR 合并，release-platform 使用完整 commit SHA 完成构建、staging 验收和 production 提升；项目仓库不再提供发布脚本。
+- 新增 `scripts/prepare-release.sh`，在创建 release-platform candidate 前将 `Unreleased` 固化为 minor、patch 或显式指定的正式版本。
 
 ### Removed
 
