@@ -32,6 +32,16 @@ source=当前 PR head 的完整 40 位 commit SHA
 target=staging（默认先人工验收）
 ```
 
+Agent 在创建 candidate 前必须先执行本仓库的版本准备脚本：
+
+```bash
+bash scripts/prepare-release.sh              # 默认 minor
+bash scripts/prepare-release.sh --patch      # bug 修复
+bash scripts/prepare-release.sh --version v2.27.0  # 初始化或纠正版本
+```
+
+脚本只读取并修改本地 `docs/releases/CHANGELOG.md`，不依赖线上服务。脚本成功后必须把 changelog 变更提交到 PR 并合并；release-platform 会在后续发布链校验正式 changelog section 与 acceptance `releaseTag` 一致。不要跳过脚本直接创建 candidate。
+
 发布完成的依据是 release-platform 返回的 candidate、完整 commit SHA、artifact digest、task/evidence 和 request ID；本仓库的本地命令输出不能替代平台发布回执。
 
 ## Agent 验收授权与 production 晋级
