@@ -164,8 +164,8 @@ build_release_artifact() {
         }
     ' "$source_root/pom.xml")"
   if validate_release_tag "$release_ref"; then
-    [[ "$application_version" == "${release_ref#v}" && "$pom_version" == "$application_version" ]] || {
-      printf 'Refusing: production artifact version, Tag, and POM version must match.\n' >&2
+    [[ "$application_version" == "${release_ref#v}" && ("$pom_version" == "$application_version" || "$pom_version" == "$application_version-SNAPSHOT") ]] || {
+      printf 'Refusing: production artifact version, Tag, and POM/build version must match the unified version contract.\n' >&2
       return 1
     }
   else
@@ -190,7 +190,7 @@ build_release_artifact() {
   set +e
   (
     cd "$source_root" || return 1
-    JAVA_HOME="$java_25_home" ./mvnw clean install -Drelease.commit-id="$commit" -Drelease.built-at="$build_built_at" -DskipTests -Dsort.skip=true
+    JAVA_HOME="$java_25_home" ./mvnw clean install -Drelease.commit-id="$commit" -Drelease.built-at="$build_built_at" -Drelease.application-version="$application_version" -DskipTests -Dsort.skip=true
     JAVA_HOME="$java_25_home" ./mvnw verify -DskipTests -Dsort.skip=true
   ) 2>&1 | tee "$build_log"
   maven_status="${PIPESTATUS[0]}"
@@ -219,6 +219,10 @@ build_release_artifact() {
   [[ -n "$build_info" ]] || build_info="$(unzip -p "$jar" BOOT-INF/classes/META-INF/build-info.properties 2> /dev/null || true)"
   grep -Fqx "build.commitId=$commit" <<< "$build_info" || {
     printf 'Release JAR build-info commitId mismatch.\n' >&2
+    return 1
+  }
+  grep -Fqx "build.applicationVersion=$application_version" <<< "$build_info" || {
+    printf 'Release JAR build-info applicationVersion mismatch.\n' >&2
     return 1
   }
   install -m 0644 "$jar" "$output_dir/app.jar"
