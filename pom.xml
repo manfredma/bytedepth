@@ -36,6 +36,7 @@
         <coverage.check.skip>true</coverage.check.skip>
         <release.commit-id>unknown</release.commit-id>
         <release.built-at>unknown</release.built-at>
+        <release.application-version>unknown</release.application-version>
         <spotless.version>3.10.2</spotless.version>
         <palantir-java-format.version>2.99.0</palantir-java-format.version>
     </properties>

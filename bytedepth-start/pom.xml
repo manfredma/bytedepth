@@ -90,6 +90,7 @@
                             <additionalProperties>
                                 <commitId>${release.commit-id}</commitId>
                                 <builtAt>${release.built-at}</builtAt>
+                                <applicationVersion>${release.application-version}</applicationVersion>
                             </additionalProperties>
                         </configuration>
                     </execution>
