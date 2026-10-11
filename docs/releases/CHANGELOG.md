@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## [v2.27.0] - 2026-10-10
+
 ### Added
 
 - 新增文章阅读历史与个人阅读摘要：登录读者通过服务端事件投影长期保存，未登录读者仅在当前浏览器本地保留最近 1,000 篇文章记录。
@@ -15,6 +17,7 @@
 - 公共页头改为宽版工具分区布局，将 RSS、搜索、主题和认证操作隔离，避免窄宽度下相互重叠。
 - Quality execution is consolidated into the local pre-PR gate and release-platform Host Agent; the repository no longer runs a GitHub Actions quality workflow.
 - AI Agent 修改代码后由 PR 合并，release-platform 使用完整 commit SHA 完成构建、staging 验收和 production 提升；项目仓库不再提供发布脚本。
+- 新增 `scripts/prepare-release.sh`，在创建 release-platform candidate 前将 `Unreleased` 固化为 minor、patch 或显式指定的正式版本。
 
 ### Fixed
 
