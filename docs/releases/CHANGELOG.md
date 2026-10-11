@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## [v2.28.0] - 2026-10-11
+
 ### Changed
 
 - `/version` now distinguishes the business release `version` from the Maven `buildVersion`, while retaining commit and build-time provenance; native artifact validation passes the same application version into Spring Boot build-info.
