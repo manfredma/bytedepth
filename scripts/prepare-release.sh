@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
       KIND="$2"
       shift 2
       ;;
-    --patch|--minor|--major)
+    --patch | --minor | --major)
       KIND="${1#--}"
       shift
       ;;
@@ -41,7 +41,7 @@ while [[ $# -gt 0 ]]; do
       CHANGELOG="$2"
       shift 2
       ;;
-    -h|--help)
+    -h | --help)
       usage
       ;;
     *)
@@ -90,8 +90,15 @@ else
   minor="${BASH_REMATCH[2]}"
   patch="${BASH_REMATCH[3]}"
   case "$KIND" in
-    major) major=$((major + 1)); minor=0; patch=0 ;;
-    minor) minor=$((minor + 1)); patch=0 ;;
+    major)
+      major=$((major + 1))
+      minor=0
+      patch=0
+      ;;
+    minor)
+      minor=$((minor + 1))
+      patch=0
+      ;;
     patch) patch=$((patch + 1)) ;;
   esac
   next_version="v${major}.${minor}.${patch}"
