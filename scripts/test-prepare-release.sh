@@ -6,7 +6,7 @@ PREPARE="$ROOT_DIR/scripts/prepare-release.sh"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bytedepth-prepare-release.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-cat > "$TMP_DIR/CHANGELOG.md" <<'EOF'
+cat > "$TMP_DIR/CHANGELOG.md" << 'EOF'
 # Changelog
 
 ## Unreleased
@@ -27,7 +27,7 @@ grep -Fq '## Unreleased' "$TMP_DIR/CHANGELOG.md"
 grep -Fq '## [v2.27.0] - 2026-10-10' "$TMP_DIR/CHANGELOG.md"
 grep -Fq -- '- 修复示例问题。' "$TMP_DIR/CHANGELOG.md"
 
-cat > "$TMP_DIR/CHANGELOG-patch.md" <<'EOF'
+cat > "$TMP_DIR/CHANGELOG-patch.md" << 'EOF'
 # Changelog
 
 ## Unreleased
@@ -45,7 +45,7 @@ EOF
 bash "$PREPARE" --kind patch --changelog "$TMP_DIR/CHANGELOG-patch.md" --date 2026-10-10
 grep -Fq '## [v2.26.6] - 2026-10-10' "$TMP_DIR/CHANGELOG-patch.md"
 
-cat > "$TMP_DIR/CHANGELOG-init.md" <<'EOF'
+cat > "$TMP_DIR/CHANGELOG-init.md" << 'EOF'
 # Changelog
 
 ## Unreleased
@@ -62,7 +62,7 @@ if bash "$PREPARE" --version 1.0.0 --changelog "$TMP_DIR/CHANGELOG-init.md"; the
   exit 1
 fi
 
-cat > "$TMP_DIR/empty.md" <<'EOF'
+cat > "$TMP_DIR/empty.md" << 'EOF'
 # Changelog
 
 ## Unreleased

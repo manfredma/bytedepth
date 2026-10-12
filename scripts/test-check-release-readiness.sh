@@ -179,4 +179,65 @@ if (cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --targe
   exit 1
 fi
 
+# Platform-managed releases freeze notes with prepare-release without legacy
+# Tag/rollback fields. Both the released base and next PR head must be accepted.
+git -C "$TEMP_REPO" checkout -q -b platform-base base
+printf '%s\n' '# Changelog' '' '## Unreleased' '' '## [v2.28.0] - 2026-10-10' '' \
+  '### Fixed' '' '- Platform-managed previous release.' > "$TEMP_REPO/docs/releases/CHANGELOG.md"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm platform-base
+git -C "$TEMP_REPO" tag -a -m 'v2.28.0 release' v2.28.0 HEAD
+git -C "$TEMP_REPO" checkout -q -b platform-candidate
+mkdir -p "$TEMP_REPO/src/main/java"
+printf 'class PlatformChange {}\n' > "$TEMP_REPO/src/main/java/PlatformChange.java"
+sed -i.bak '/^## Unreleased$/a\
+\
+### Fixed\
+\
+- Platform-managed candidate change.\
+' "$TEMP_REPO/docs/releases/CHANGELOG.md"
+rm "$TEMP_REPO/docs/releases/CHANGELOG.md.bak"
+(cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --base platform-base)
+bash "$SOURCE_ROOT/scripts/prepare-release.sh" --patch --date 2026-10-12 \
+  --changelog "$TEMP_REPO/docs/releases/CHANGELOG.md"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm platform-frozen-candidate
+run_frozen_check_against platform-base
+(cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --base platform-base --mode release --expected-release 2.28.1)
+(cd "$TEMP_REPO" && "$SOURCE_ROOT/scripts/check-release-readiness.sh" --base HEAD)
+
+# A supplied valid rollback declaration still accepts its annotated base tag.
+awk '
+  { print }
+  /^## \[v2.28.1\] - / { print "**回滚基线**：`v2.28.0`" }
+' "$TEMP_REPO/docs/releases/CHANGELOG.md" > "$TEMP_ROOT/valid-rollback.md"
+cp "$TEMP_ROOT/valid-rollback.md" "$TEMP_REPO/docs/releases/CHANGELOG.md"
+run_frozen_check_against platform-base
+git -C "$TEMP_REPO" checkout -- docs/releases/CHANGELOG.md
+
+# Optional legacy metadata must still reject conflicting or malformed values.
+git -C "$TEMP_REPO" tag v2.27.9 platform-base
+for invalid_field in '**Tag**：`v2.28.0`' '**Tag**：invalid' '**回滚基线**：invalid' \
+  '**回滚基线**：`v2.28.1`' '**回滚基线**：`v2.25.2`' '**回滚基线**：`v2.27.9`'; do
+  git -C "$TEMP_REPO" checkout -- docs/releases/CHANGELOG.md
+  awk -v field="$invalid_field" '
+    { print }
+    /^## \[v2.28.1\] - / { print field }
+  ' "$TEMP_REPO/docs/releases/CHANGELOG.md" > "$TEMP_ROOT/invalid-changelog.md"
+  cp "$TEMP_ROOT/invalid-changelog.md" "$TEMP_REPO/docs/releases/CHANGELOG.md"
+  assert_fails run_frozen_check_against platform-base
+done
+git -C "$TEMP_REPO" checkout -- docs/releases/CHANGELOG.md
+
+# Absence on the base is valid; an explicitly wrong base Tag remains invalid.
+git -C "$TEMP_REPO" checkout -q -b platform-invalid-base platform-base
+sed -i.bak '/^## \[v2.28.0\] - /a\
+**Tag**：`v2.27.0`\
+' "$TEMP_REPO/docs/releases/CHANGELOG.md"
+rm "$TEMP_REPO/docs/releases/CHANGELOG.md.bak"
+git -C "$TEMP_REPO" add .
+git -C "$TEMP_REPO" commit -qm platform-invalid-base
+git -C "$TEMP_REPO" checkout -q platform-candidate
+assert_fails run_frozen_check_against platform-invalid-base
+
 printf 'Release readiness checker contract tests passed.\n'

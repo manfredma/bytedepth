@@ -22,7 +22,9 @@ bash scripts/prepare-release.sh --patch
 bash scripts/prepare-release.sh --version v2.27.0
 ```
 
-脚本会把非空的 `## Unreleased` 固化为 `## [vX.Y.Z] - YYYY-MM-DD`，并在顶部保留新的空 `## Unreleased`。完成后提交 PR 并合并；release-platform 使用合并后的完整 SHA 创建 candidate，并校验 changelog 中的正式版本与 acceptance 的 `releaseTag` 一致。版本号计算只读取本地 changelog，不访问线上服务。
+脚本会把非空的 `## Unreleased` 固化为 `## [vX.Y.Z] - YYYY-MM-DD`，并在顶部保留新的空 `## Unreleased`。完成后将 changelog 变更提交到 PR；release-platform 使用当前 PR head 的完整 SHA 创建 candidate，先完成 staging 集成/E2E，再等待项目所有者验收。acceptance 的 `releaseTag` 必须与 changelog 正式版本一致；验收通过后由平台将同一 SHA fast-forward 合并到 main，再提升同一 artifact 到 production。版本号计算只读取本地 changelog，不访问线上服务。
+
+本地 `check-release-readiness.sh` 以正式 section 标题作为版本事实源：候选冻结后 `Unreleased` 必须为空，版本必须高于基线，条目必须归入规定分类。无变更的已发布基线允许保留同一版本。平台管理的版本不要求历史 `**Tag**`、`**回滚基线**` 字段；Git Tag 和生产回滚状态以平台记录为准，不为通过本地门禁补造字段。若仍保留这些字段，Tag 必须与 section 版本一致，回滚版本必须低于候选且不高于基线，并且对应 Git Tag 必须是基线可达的 annotated tag；显式错误或无法解析的字段仍会被拒绝。契约测试通过实际版本准备脚本覆盖无历史字段的基线和冻结候选。
 
 构建、发布、日志、重试、验证和回滚都必须在 release-platform 页面完成，并以页面中的候选、制品和任务记录为准。
 

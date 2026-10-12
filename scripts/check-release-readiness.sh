@@ -101,11 +101,13 @@ check_frozen_changelog() {
             else uncategorized_item = 1
         }
         in_release && /^\*\*Tag\*\*[：:]/ {
+            saw_tag = 1
             if (match($0, /`v[0-9]+\.[0-9]+\.[0-9]+`/)) {
                 candidate_tag = substr($0, RSTART + 1, RLENGTH - 2)
             }
         }
         in_release && /^\*\*回滚基线\*\*[：:]/ {
+            saw_rollback = 1
             if (match($0, /`v[0-9]+\.[0-9]+\.[0-9]+`/)) {
                 candidate_rollback = substr($0, RSTART + 1, RLENGTH - 2)
             }
@@ -113,13 +115,15 @@ check_frozen_changelog() {
         END {
             valid = saw_unreleased && !stale_content && saw_release && has_category && has_item && !uncategorized_item
             newer_release = version_is_newer(release_version, baseline_version)
-            same_released_version = allow_same_release == "1" && release_version == baseline_version && candidate_tag == baseline_tag
+            same_released_version = allow_same_release == "1" && release_version == baseline_version
             valid = valid && release_version != "" && (newer_release || same_released_version)
-            valid = valid && candidate_tag == ("v" release_version)
-            valid = valid && candidate_rollback ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/
-            rollback_version = substr(candidate_rollback, 2)
-            valid = valid && version_is_newer(release_version, rollback_version)
-            valid = valid && !version_is_newer(rollback_version, baseline_version)
+            if (saw_tag) valid = valid && candidate_tag == ("v" release_version)
+            if (saw_rollback) {
+                valid = valid && candidate_rollback ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/
+                rollback_version = substr(candidate_rollback, 2)
+                valid = valid && version_is_newer(release_version, rollback_version)
+                valid = valid && !version_is_newer(rollback_version, baseline_version)
+            }
             if (expected_release != "") valid = valid && release_version == expected_release
             exit !valid
         }
@@ -129,6 +133,9 @@ check_frozen_changelog() {
 
   local rollback_tag rollback_commit
   rollback_tag="$(first_release_field "$CHANGELOG_FILE" '回滚基线')"
+  # Rollback deployment state belongs to release-platform. Validate legacy
+  # declarations when supplied, but never invent one for platform-managed notes.
+  [[ -n "$rollback_tag" ]] || return 0
   [[ "$rollback_tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || return 1
   [[ "$(git cat-file -t "refs/tags/$rollback_tag" 2> /dev/null || true)" == tag ]] || return 1
   rollback_commit="$(git rev-parse --verify "refs/tags/$rollback_tag^{commit}" 2> /dev/null)" || return 1
@@ -150,8 +157,10 @@ first_release_field() {
         in_release && $0 ~ "^\\*\\*" field_name "\\*\\*[：:]" {
             if (match($0, /`v[0-9]+\.[0-9]+\.[0-9]+`/)) {
                 print substr($0, RSTART + 1, RLENGTH - 2)
-                exit
+            } else {
+                print "invalid"
             }
+            exit
         }
     ' "$changelog_path"
 }
@@ -225,7 +234,7 @@ else
   fi
   BASE_RELEASE_VERSION="$(first_release_version "$BASE_CHANGELOG_TEMP")"
   BASE_RELEASE_TAG="$(first_release_field "$BASE_CHANGELOG_TEMP" Tag)"
-  if [[ -n "$BASE_RELEASE_VERSION" && "$BASE_RELEASE_TAG" != "v$BASE_RELEASE_VERSION" ]]; then
+  if [[ -n "$BASE_RELEASE_TAG" && "$BASE_RELEASE_TAG" != "v$BASE_RELEASE_VERSION" ]]; then
     printf 'Release readiness refused: base Changelog latest version and Tag do not match.\n' >&2
     exit 1
   fi
@@ -239,7 +248,7 @@ bash "$REPOSITORY_ROOT/scripts/check-changelog-order.sh" "$CHANGELOG_FILE"
 
 if [[ "$MODE" == frozen-candidate || "$MODE" == release ]]; then
   if ! check_frozen_changelog "$BASE_RELEASE_VERSION" "$BASE_RELEASE_TAG"; then
-    printf 'Release readiness refused: frozen Changelog requires an empty ## Unreleased section and a categorized version entry with Tag and rollback baseline.\n' >&2
+    printf 'Release readiness refused: frozen Changelog requires an empty ## Unreleased section and a newer categorized version entry; any supplied Tag and rollback baseline must be valid.\n' >&2
     exit 1
   fi
   printf 'Release readiness passed: frozen Changelog has no stale Unreleased entries.\n'
@@ -262,7 +271,7 @@ mapfile -t changed_files < <(printf '%s\n' "$changed_paths" | sed '/^$/d' | sort
 if [[ "${#changed_files[@]}" -eq 0 ]]; then
   if [[ "$MODE" == candidate ]] && ! unreleased_has_items && has_release_heading; then
     if ! check_frozen_changelog "$BASE_RELEASE_VERSION" "$BASE_RELEASE_TAG" 1; then
-      printf 'Release readiness refused: frozen Changelog requires an empty ## Unreleased section and a categorized version entry with Tag and rollback baseline.\n' >&2
+      printf 'Release readiness refused: frozen Changelog requires an empty ## Unreleased section and a newer categorized version entry; any supplied Tag and rollback baseline must be valid.\n' >&2
       exit 1
     fi
     printf 'Release readiness passed: frozen Changelog has no stale Unreleased entries.\n'
@@ -302,7 +311,7 @@ fi
 
 if [[ "$MODE" == frozen-candidate || "$MODE" == release ]] || { ! unreleased_has_items && has_release_heading; }; then
   if ! check_frozen_changelog "$BASE_RELEASE_VERSION" "$BASE_RELEASE_TAG"; then
-    printf 'Release readiness refused: frozen Changelog requires an empty ## Unreleased section and a categorized version entry with Tag and rollback baseline.\n' >&2
+    printf 'Release readiness refused: frozen Changelog requires an empty ## Unreleased section and a newer categorized version entry; any supplied Tag and rollback baseline must be valid.\n' >&2
     exit 1
   fi
   printf 'Release readiness passed: frozen Changelog has no stale Unreleased entries.\n'
