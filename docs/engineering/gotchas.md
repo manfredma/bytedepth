@@ -113,3 +113,7 @@
 ## 合并分支后的 Flyway 版本
 
 - 并行分支新增 Flyway 迁移时，合并前必须检查 `ls bytedepth-start/src/main/resources/db/migration | sort -V`，确保每个版本号唯一。若主线已占用版本号，应在候选合并前递增新迁移版本，并运行 migration contract 测试。
+
+## 共享页头空隙反复出现
+
+版本页、后台页和公共主题先后清除过浏览器默认 `body` margin；这不能保证后来新增的消费页加载了这些资源。阅读历史页漏载 `theme.css`，而主题检查和移动端 E2E 的手写名单都遗漏了它；原有 `headerLeft >= 0` 断言也允许 8px 空隙通过。修复应覆盖资源消费路径和最终浏览器几何，不能只断言 CSS 文件包含清零规则。权威接入要求与检查边界见 [前台页面基线与页头贴边](frontend-patterns.md#前台页面基线与页头贴边)。

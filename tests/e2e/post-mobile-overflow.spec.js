@@ -20,6 +20,7 @@ test("公共页面的无分隔英文不会撑宽手机页面和页头", async ({
     "/projects",
     "/network",
     "/releases",
+    "/reading-history",
     "/about",
     "/u/admin",
     "/login",
@@ -43,7 +44,8 @@ test("公共页面的无分隔英文不会撑宽手机页面和页头", async ({
         documentWidth: document.documentElement.scrollWidth,
         viewportWidth: document.documentElement.clientWidth,
         horizontalScroll: window.scrollX,
-        headerLeft: document.querySelector(".nav-bar")?.getBoundingClientRect().left ?? null,
+        header: document.querySelector(".nav-bar")?.getBoundingClientRect().toJSON() ?? null,
+        bodyMargin: getComputedStyle(document.body).margin,
         wordWrap: getComputedStyle(probe).overflowWrap,
       };
       probe.remove();
@@ -52,8 +54,12 @@ test("公共页面的无分隔英文不会撑宽手机页面和页头", async ({
 
     expect(metrics.documentWidth, `document width on ${route}`).toBeLessThanOrEqual(metrics.viewportWidth);
     expect(metrics.horizontalScroll, `horizontal scroll on ${route}`).toBe(0);
-    if (metrics.headerLeft !== null) {
-      expect(metrics.headerLeft, `header position on ${route}`).toBeGreaterThanOrEqual(0);
+    expect(metrics.bodyMargin, `browser body margin on ${route}`).toBe("0px");
+    if (!["/login", "/register"].includes(route)) {
+      expect(metrics.header, `shared header should exist on ${route}`).not.toBeNull();
+      expect(metrics.header.left, `header left edge on ${route}`).toBe(0);
+      expect(metrics.header.top, `header top edge on ${route}`).toBe(0);
+      expect(metrics.header.right, `header right edge on ${route}`).toBe(metrics.viewportWidth);
     }
     expect(metrics.wordWrap, `word wrapping on ${route}`).toBe("anywhere");
   }

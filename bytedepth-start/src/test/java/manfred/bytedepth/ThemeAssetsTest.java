@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -374,25 +376,18 @@ class ThemeAssetsTest {
 
     @Test
     void publicTemplatesLoadThemeAssets() throws Exception {
-        List<String> templates = List.of(
-                "/templates/public/index.html",
-                "/templates/public/posts/list.html",
-                "/templates/public/posts/detail.html",
-                "/templates/public/columns/list.html",
-                "/templates/public/columns/detail.html",
-                "/templates/public/search.html",
-                "/templates/public/about.html",
-                "/templates/public/projects/list.html",
-                "/templates/public/network.html",
-                "/templates/public/releases.html",
-                "/templates/public/profile.html",
-                "/templates/public/login.html",
-                "/templates/public/register.html");
-
-        for (String template : templates) {
-            String html = classpathText(template);
-            assertThat(html).as(template).contains("@{/css/theme.css}");
-            assertThat(html).as(template).contains("@{/js/theme-switcher.js}");
+        Path publicTemplates =
+                Path.of(getClass().getResource("/templates/public").toURI());
+        // Discover consumers rather than maintaining a list that silently omits new pages.
+        try (var paths = Files.walk(publicTemplates)) {
+            List<Path> templates =
+                    paths.filter(path -> path.toString().endsWith(".html")).toList();
+            assertThat(templates).isNotEmpty();
+            for (Path template : templates) {
+                String html = Files.readString(template, StandardCharsets.UTF_8);
+                assertThat(html).as(template.toString()).contains("@{/css/theme.css}");
+                assertThat(html).as(template.toString()).contains("@{/js/theme-switcher.js}");
+            }
         }
     }
 

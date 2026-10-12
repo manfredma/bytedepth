@@ -2,6 +2,12 @@
 
 公共组件必须自隔离：样式、脚本和标记只作用于自身命名空间；组件间只能通过明确的参数和相对位置协作。完整约束见 [前端组件指南](../agent-guides/frontend-components.md)。
 
+## 前台页面基线与页头贴边
+
+`templates/public/` 下每个页面必须显式加载 `theme.css` 和 `theme-switcher.js`。页面基线中的 `body { margin: 0; }` 由 `theme.css` 定义；导航组件只管理自身命名空间，不负责修改宿主页面的 `body`。新增页面不能只加载自身 CSS 和导航 fragment，否则浏览器默认 8px margin 会让共享页头四周出现空隙，主题按钮也缺少初始化。
+
+`ThemeAssetsTest.publicTemplatesLoadThemeAssets` 必须递归枚举实际公共模板，不能维护手写页面名单。这个离线检查验证每个消费页接入基线资源，但不代表浏览器最终布局已经正确。staging 移动端 E2E 必须同时检查 `body` 计算 margin 为 0，以及共享页头左、上边界为 0、右边界等于视口宽度；仅检查无横向溢出或左边界非负不能发现空隙。阅读历史的匿名空态也是公共页面，必须纳入几何检查；登录后的导航控件更多，移动端重设计还需单独验证权限态下的控件可见性和可操作性。
+
 ## 分页组件
 
 位置：`bytedepth-start/src/main/resources/templates/fragments/pagination.html`
