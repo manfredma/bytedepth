@@ -8,7 +8,7 @@
     <link rel="stylesheet" th:href="@{/css/reading-history.css}">
     <script th:src="@{/js/theme-switcher.js}"></script>
 </head>
-<body>
+<body class="bd-reading-history-shell">
 <nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
 <main class="reading-history-page" id="reading-history-page"
       th:data-authenticated="${#authorization.expression('isAuthenticated()')}">

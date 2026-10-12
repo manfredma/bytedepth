@@ -3,9 +3,10 @@
   color: var(--bd-text, #1c1c1a);
 }
 .bd-home-shell {
+  box-sizing: border-box;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 0 32px 90px;
+  padding: 0 20px 90px;
 }
 .bd-home-hero {
   display: grid;
@@ -330,7 +331,7 @@
 }
 @media (max-width: 800px) {
   .bd-home-shell {
-    padding: 0 20px 70px;
+    padding: 0 16px 70px;
   }
   .bd-home-hero,
   .bd-home-feature,
@@ -338,14 +339,12 @@
     grid-template-columns: 1fr;
   }
   .bd-home-hero {
-    padding: 44px 0;
+    min-height: 0;
+    padding: 28px 0;
+    gap: 20px;
   }
   .bd-home-mark {
-    order: -1;
-    height: 190px;
-    justify-self: end;
-    transform: scale(0.75);
-    transform-origin: right;
+    display: none;
   }
   .bd-home-feature {
     margin: 38px 0 52px;
@@ -371,7 +370,7 @@
 }
 @media (max-width: 480px) {
   .bd-home-hero h1 {
-    font-size: 3.2rem;
+    font-size: clamp(2.25rem, 9vw, 3rem);
   }
   .bd-home-stats {
     gap: 14px;

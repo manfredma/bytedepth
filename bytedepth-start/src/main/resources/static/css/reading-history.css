@@ -1,4 +1,10 @@
+.bd-reading-history-shell {
+  background: var(--bd-bg, #f0f2f5);
+}
 .reading-history-page {
+  box-sizing: border-box;
+  font-family: var(--bd-font-sans, system-ui, sans-serif);
+  color: var(--bd-text, #1a1a2e);
   max-width: 920px;
   margin: 0 auto;
   padding: 36px 20px;
@@ -29,11 +35,11 @@
   white-space: nowrap;
 }
 .reading-history-meta {
-  color: var(--ink-3, #777);
+  color: var(--bd-text-muted, #777);
   white-space: nowrap;
 }
 .reading-history-empty {
-  color: var(--ink-3, #777);
+  color: var(--bd-text-muted, #777);
 }
 @media (max-width: 640px) {
   .reading-history-item {

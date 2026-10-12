@@ -5,7 +5,8 @@ export default defineConfig({
     coverage: {
       include: [
         'bytedepth-start/src/main/resources/static/js/post-image-lightbox.js',
-        'bytedepth-start/src/main/resources/static/js/code-blocks.js'
+        'bytedepth-start/src/main/resources/static/js/code-blocks.js',
+        'bytedepth-start/src/main/resources/static/js/nav-menu.js'
       ],
       provider: 'v8',
       reporter: ['text'],

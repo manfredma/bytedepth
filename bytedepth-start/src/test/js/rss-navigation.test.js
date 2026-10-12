@@ -9,5 +9,5 @@ test("shared navigation exposes an accessible RSS link without breaking its mobi
   expect(nav).toContain('aria-label="订阅 RSS 更新"');
   expect(nav).toContain('aria-hidden="true"');
   expect(css).toContain(".nav-rss");
-  expect(css).toContain("@media (max-width: 940px)");
+  expect(css).toContain("@media (max-width: 1100px)");
 });

@@ -121,7 +121,7 @@ class ThemeAssetsTest {
                 .contains("/login")
                 .contains("/register")
                 .contains("/network");
-        assertThat(css).contains(".nav-brand-subtitle").contains("font-size: 0.68rem");
+        assertThat(css).contains(".nav-brand-subtitle").contains("font-size: 10.88px");
     }
 
     @Test
@@ -509,6 +509,6 @@ class ThemeAssetsTest {
                 .contains("method=\"get\"")
                 .doesNotContain("<style>")
                 .doesNotContain(".nav-bar {");
-        assertThat(css).contains("max-width: 1180px").contains(".nav-utility").contains("@media (max-width: 940px)");
+        assertThat(css).contains("max-width: 1180px").contains(".nav-utility").contains("@media (max-width: 1100px)");
     }
 }
