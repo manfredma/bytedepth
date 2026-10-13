@@ -87,7 +87,7 @@ rg -q 'warning_policy_check_file "\$SLOT_JOURNAL_LOG"' "$RUNNER"
 rg -q 'state-uncertain' "$RUNNER"
 rg -q 'runtime_mode=host-native|test_resource_manifest_sha=|cleanup=result=passed' "$RUNNER"
 
-mkdir -p "$FIXTURE_SOURCE/deploy/lib" "$FAKE_BIN" "$(dirname "$RUNTIME_MANIFEST")"
+mkdir -p "$TEMP_ROOT/lib" "$FIXTURE_SOURCE/deploy/lib" "$FAKE_BIN" "$(dirname "$RUNTIME_MANIFEST")"
 printf 'lockfile\n' > "$FIXTURE_SOURCE/package-lock.json"
 printf '<project/>\n' > "$FIXTURE_SOURCE/pom.xml"
 printf 'jar fixture\n' > "$FIXTURE_JAR"
@@ -112,6 +112,7 @@ SCRIPT
 chmod +x "$FIXTURE_FFMPEG"
 sed "s@^readonly SHARED_PLAYWRIGHT_BROWSERS_PATH=.*\$@readonly SHARED_PLAYWRIGHT_BROWSERS_PATH=$FIXTURE_FFMPEG_ROOT@" "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh" > "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh.tmp"
 mv "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh.tmp" "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh"
+cp "$SOURCE_ROOT/deploy/lib/staging-platform-contract.sh" "$TEMP_ROOT/lib/staging-platform-contract.sh"
 cp "$SOURCE_ROOT/deploy/lib/warning-policy.sh" "$FIXTURE_SOURCE/deploy/lib/warning-policy.sh"
 cp "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh" "$FIXTURE_SOURCE/deploy/lib/staging-test-slot.sh"
 cp "$SOURCE_ROOT/deploy/lib/staging-native-target.sh" "$FIXTURE_SOURCE/deploy/lib/staging-native-target.sh"
@@ -177,7 +178,11 @@ set -Eeuo pipefail
 printf 'app-active\n' > "$STAGING_E2E_SYSTEMCTL_STATE"
 SCRIPT
 chmod +x "$FIXTURE_SOURCE/deploy/teardown-staging-test-slot.sh"
-printf 'ref=main\ncommit=%s\ndeployed_at=2026-09-10T10:11:12Z\n---\n' "$CURRENT_SHA" > "$DEPLOY_HISTORY"
+FIXTURE_DIGEST="sha256:$(shasum -a 256 "$FIXTURE_JAR" | awk '{print $1}')"
+printf 'commit=%s\nartifact_digest=%s\n' "$CURRENT_SHA" "$FIXTURE_DIGEST" > "$DEPLOY_HISTORY"
+printf '%s\n' "$CURRENT_SHA" > "$FIXTURE_SOURCE/.release-platform-source-commit"
+printf 'snapshot archive\n' > "$FIXTURE_ROOT/staging-source.tar.gz"
+printf 'commit=%s\nsource_commit=%s\nartifact_digest=%s\nsource_sha256=%s\n' "$CURRENT_SHA" "$CURRENT_SHA" "$FIXTURE_DIGEST" "$(shasum -a 256 "$FIXTURE_ROOT/staging-source.tar.gz" | awk '{print $1}')" > "$FIXTURE_ROOT/manifest"
 
 sed \
   -e "s@^readonly SOURCE_ROOT=/opt/bytedepth\$@readonly SOURCE_ROOT=$FIXTURE_SOURCE@" \
@@ -213,6 +218,7 @@ chmod +x "$FAKE_BIN/flock"
 
 cat > "$FAKE_BIN/npm" << 'SCRIPT'
 #!/usr/bin/env bash
+if [[ "$1" == ci ]]; then exit 0; fi
 printf '%s\n' "$@" > "$STAGING_E2E_NPM_ARGS"
 printf 'E2E_BASE_URL=%s\nE2E_POST_SLUG=%s\nE2E_ADMIN_USERNAME=%s\nE2E_LOCAL_HOST_RESOLVER_RULE=%s\nPLAYWRIGHT_CHROMIUM_EXECUTABLE=%s\n' "$E2E_BASE_URL" "$E2E_POST_SLUG" "$E2E_ADMIN_USERNAME" "$E2E_LOCAL_HOST_RESOLVER_RULE" "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" > "$STAGING_E2E_NPM_ENV"
 [[ "$E2E_BASE_URL" == 'https://staging-bytedepth.bytedepth.cn' ]]
@@ -221,7 +227,10 @@ printf 'E2E_BASE_URL=%s\nE2E_POST_SLUG=%s\nE2E_ADMIN_USERNAME=%s\nE2E_LOCAL_HOST
 [[ "$E2E_ADMIN_USERNAME" == 'fixture-e2e-admin' ]]
 [[ "$E2E_ADMIN_PASSWORD" == 'fixture-e2e-password' ]]
 [[ "$PLAYWRIGHT_CHROMIUM_EXECUTABLE" == "$STAGING_E2E_CHROMIUM" ]]
-[[ -s "$STAGING_E2E_GIT_LOG" ]]
+printf '{"stats":{"expected":%s,"unexpected":0,"flaky":0}}\n' "${STAGING_E2E_TEST_COUNT:-2}" > "$PLAYWRIGHT_JSON_OUTPUT_FILE"
+if [[ -n "${STAGING_E2E_SHA_AFTER:-}" ]]; then
+  printf '%s\n' "$STAGING_E2E_SHA_AFTER" > "$RELEASE_PLATFORM_TEST_SOURCE_ROOT/.release-platform-source-commit"
+fi
 printf '%s\n' "${STAGING_E2E_NPM_OUTPUT:-Playwright passed}"
 exit "${STAGING_E2E_NPM_EXIT:-0}"
 SCRIPT
@@ -329,6 +338,17 @@ EOF
 
 run_runner() {
   PATH="$FAKE_BIN:$PATH" \
+    RELEASE_PLATFORM_TEST_SOURCE_ROOT="$FIXTURE_SOURCE" \
+    RELEASE_PLATFORM_TEST_CONFIG_FILE="$FIXTURE_CONFIG" \
+    RELEASE_PLATFORM_TEST_EVIDENCE_DIR="$EVIDENCE_DIR" \
+    RELEASE_PLATFORM_TEST_RUNTIME_MANIFEST="$RUNTIME_MANIFEST" \
+    RELEASE_PLATFORM_TEST_DEPLOY_HISTORY="$DEPLOY_HISTORY" \
+    RELEASE_PLATFORM_TEST_LOCK_FILE="$LOCK_FILE" \
+    RELEASE_PLATFORM_TEST_STATE_DIR="$FIXTURE_ROOT/test-slots" \
+    RELEASE_PLATFORM_TEST_RELEASE_MANIFEST="$FIXTURE_ROOT/manifest" \
+    RELEASE_PLATFORM_TEST_JAR="$FIXTURE_JAR" \
+    ARTIFACT_DIGEST="$FIXTURE_DIGEST" \
+    RELEASE_PLATFORM_TASK_NONCE=fixture-attempt \
     STAGING_E2E_NPM_ARGS="$NPM_ARGS" \
     STAGING_E2E_FLOCK_ARGS="$FLOCK_ARGS" \
     STAGING_E2E_CURL_ARGS="$CURL_ARGS" \
@@ -352,10 +372,12 @@ run_runner() {
     STAGING_E2E_CHROMIUM="$FIXTURE_CHROMIUM" \
     BYTEDEPTH_STAGING_E2E_USERNAME='fixture-e2e-admin' \
     BYTEDEPTH_STAGING_E2E_PASSWORD='fixture-e2e-password' \
+    RELEASE_PLATFORM_TEST_LOCK_HELD="${RELEASE_PLATFORM_TEST_LOCK_HELD:-}" \
+    STAGING_E2E_TEST_COUNT="${STAGING_E2E_TEST_COUNT:-2}" \
     STAGING_E2E_NPM_OUTPUT="${STAGING_E2E_NPM_OUTPUT:-}" \
     STAGING_E2E_NPM_EXIT="${STAGING_E2E_NPM_EXIT:-0}" \
     STAGING_E2E_JOURNAL_OUTPUT="${STAGING_E2E_JOURNAL_OUTPUT:-}" \
-    "$TEMP_ROOT/runner" > "$RUNNER_OUTPUT" 2>&1 || {
+    "$TEMP_ROOT/runner" --commit-sha "$CURRENT_SHA" > "$RUNNER_OUTPUT" 2>&1 || {
     cat "$RUNNER_OUTPUT" >&2
     return 1
   }
@@ -396,6 +418,22 @@ grep -Fqx 'cleanup=result=passed' "$EVIDENCE_DIR/staging-e2e"
 grep -Fqx -- '-o' "$INSTALL_ARGS"
 grep -Fqx 'ubuntu' "$INSTALL_ARGS"
 
+# An outer verifier already owns the lock: the runner must not acquire it again.
+rm -f "$FLOCK_ARGS"
+RELEASE_PLATFORM_TEST_LOCK_HELD=1 run_runner
+[[ ! -e "$FLOCK_ARGS" ]]
+grep -Fqx "artifact_digest=$FIXTURE_DIGEST" "$EVIDENCE_DIR/staging-e2e"
+grep -Fqx 'attempt_nonce=fixture-attempt' "$EVIDENCE_DIR/staging-e2e"
+grep -Fqx 'tests_total=2' "$EVIDENCE_DIR/staging-e2e"
+
+# Exit zero without any executed tests must invalidate an earlier pass.
+if STAGING_E2E_TEST_COUNT=0 run_runner; then
+  printf 'Expected zero-test Playwright report rejection.\n' >&2
+  exit 1
+fi
+[[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
+grep -Fq 'no successful test cases' "$RUNNER_OUTPUT"
+
 # A warning invalidates a previous pass before Playwright starts and cannot mint a replacement.
 rm -f "$GIT_LOG" "$TEMP_ROOT/git.count"
 if STAGING_E2E_NPM_OUTPUT='WARNING: simulated Playwright warning' run_runner; then
@@ -435,6 +473,8 @@ fi
 grep -Fq 'checked-out commit changed during staging E2E tests' "$RUNNER_OUTPUT"
 [[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
 
+printf '%s\n' "$CURRENT_SHA" > "$FIXTURE_SOURCE/.release-platform-source-commit"
+
 # A current checkout without a matching deployed-app record is never evidence for the running app.
 rm -f "$GIT_LOG" "$TEMP_ROOT/git.count"
 run_runner
@@ -445,7 +485,7 @@ if run_runner; then
   printf 'Expected runner to reject an app deployment SHA different from the checkout.\n' >&2
   exit 1
 fi
-grep -Fq 'staging app deployment does not match the tested checkout commit' "$RUNNER_OUTPUT"
+grep -Fq 'source snapshot or deployed artifact does not match the signed candidate' "$RUNNER_OUTPUT"
 [[ ! -e "$NPM_ARGS" ]]
 [[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
 

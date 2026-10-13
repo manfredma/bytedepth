@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- staging integration/E2E runner 接入统一 Host Agent 契约，严格绑定候选完整 SHA、部署源快照、制品 digest 与当前 attempt；复用外层测试锁并从实际测试报告拒绝零用例成功，避免版本探针或旧 checkout 被作为测试通过依据。
+
 ## [v2.29.0] - 2026-10-12
 
 ### Changed
