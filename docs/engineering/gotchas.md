@@ -119,3 +119,5 @@
 版本页、后台页和公共主题先后清除过浏览器默认 `body` margin；这不能保证后来新增的消费页加载了这些资源。阅读历史页漏载 `theme.css`，而主题检查和移动端 E2E 的手写名单都遗漏了它；原有 `headerLeft >= 0` 断言也允许 8px 空隙通过。修复应覆盖资源消费路径和最终浏览器几何，不能只断言 CSS 文件包含清零规则。权威接入要求与检查边界见 [前台页面基线与页头贴边](frontend-patterns.md#前台页面基线与页头贴边)。
 
 - 通用 Host Agent 的 staging runner 使用候选 release/source 快照；依赖准备也必须读取同一快照，不能继续读取 `/opt/bytedepth` 的历史 Git checkout。runner 在已持有部署/测试锁时调用 `ensure_staging_runtime`，仅既有 bootstrap 成功后写 runtime manifest，再检查当前依赖输入；准备失败或未更新 manifest 均拒绝测试。对应回归入口为 `scripts/test-staging-runtime-preparation.sh`。
+
+- 平台通用发布的 release 与 images-test 属于 ubuntu，私有目录保持 0700/0750。native E2E test-slot 必须使用与实际 app 一致的 ubuntu 身份；旧 bytedepth 用户会在进入 WorkingDirectory 时触发 systemd `200/CHDIR`，此时浏览器尚未运行，不能误报为登录失败，也不能通过 chmod 777 绕过。2026-10-13 正式日志 task f4c295f6-1087-4263-86f2-a3ec5642b64d 已复现此问题。

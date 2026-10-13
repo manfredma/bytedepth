@@ -10,8 +10,8 @@ ConditionPathExists=/opt/bytedepth/current/app.jar
 
 [Service]
 Type=simple
-User=bytedepth
-Group=bytedepth
+User=ubuntu
+Group=ubuntu
 EnvironmentFile=/run/bytedepth/staging-native-e2e.env
 WorkingDirectory=/opt/bytedepth/current
 ExecStartPre=/bin/sh -c '! /bin/systemctl is-active --quiet bytedepth-staging-native-app.service'

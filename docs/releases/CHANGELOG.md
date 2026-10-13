@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- staging E2E test-slot 服务使用与实际 app 和项目发布目录一致的 ubuntu 身份，避免私有 release 目录导致 CHDIR 拒绝；不放宽目录权限。
 - E2E runner 优先读取 staging Host Agent 基础设施提供的通用测试账号环境，保留项目登录实现和全部测试用例；拒绝不完整的共享凭据。
 - staging runner 从项目私有测试配置读取已有测试槽凭据引用，保留显式环境注入优先级与签名任务身份，避免依赖 Host Agent 全局环境中的项目变量。
 - staging runner 在已持有的平台锁内复用依赖准备入口；bootstrap 读取本候选 source snapshot，依赖准备成功后才刷新 runtime manifest，防止旧工作目录/旧依赖记录阻断实际测试。
