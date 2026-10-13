@@ -5,6 +5,14 @@
 load_staging_test_configuration() {
   local config="${BYTEDEPTH_STAGING_TEST_CONFIG:-/etc/bytedepth/staging-test.env}"
   local key value password_file
+  if [[ -n "${E2E_ADMIN_USERNAME:-}" || -n "${E2E_ADMIN_PASSWORD:-}" ]]; then
+    [[ -n "${E2E_ADMIN_USERNAME:-}" && -n "${E2E_ADMIN_PASSWORD:-}" ]] || {
+      printf 'Refusing: shared E2E account environment is incomplete.\n' >&2
+      return 1
+    }
+    export BYTEDEPTH_STAGING_E2E_USERNAME="$E2E_ADMIN_USERNAME"
+    export BYTEDEPTH_STAGING_E2E_PASSWORD="$E2E_ADMIN_PASSWORD"
+  fi
   [[ -e "$config" || -L "$config" ]] || return 0
   slot_root_private "$config" || return 1
   while IFS='=' read -r key value || [[ -n "$key" ]]; do

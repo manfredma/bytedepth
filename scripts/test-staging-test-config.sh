@@ -16,8 +16,8 @@ chmod 600 "$tmp/password"
 cat > "$tmp/config" << CONFIG
 BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE=$tmp/mysql.defaults
 BYTEDEPTH_TEST_STAGING_REDIS_DB=0
-BYTEDEPTH_TEST_IT_REDIS_DB=1
-BYTEDEPTH_TEST_E2E_REDIS_DB=2
+BYTEDEPTH_TEST_IT_REDIS_DB=14
+BYTEDEPTH_TEST_E2E_REDIS_DB=15
 BYTEDEPTH_STAGING_E2E_USERNAME=fixture-admin
 BYTEDEPTH_STAGING_E2E_PASSWORD_FILE=$tmp/password
 CONFIG
@@ -33,6 +33,17 @@ load_staging_test_configuration
 BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE=explicit-input
 load_staging_test_configuration
 [[ "$BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE" == explicit-input ]]
+# Shared infrastructure credentials take precedence over legacy project inputs.
+export E2E_ADMIN_USERNAME=shared-account E2E_ADMIN_PASSWORD=shared-secret
+load_staging_test_configuration
+[[ "$BYTEDEPTH_STAGING_E2E_USERNAME" == shared-account && "$BYTEDEPTH_STAGING_E2E_PASSWORD" == shared-secret ]] || {
+  echo 'Shared infrastructure account was not used' >&2
+  exit 1
+}
+if E2E_ADMIN_PASSWORD='' load_staging_test_configuration; then
+  echo 'Partial shared account accepted' >&2
+  exit 1
+fi
 printf 'RELEASE_PLATFORM_TASK_NONCE=forged\n' >> "$tmp/config"
 if load_staging_test_configuration; then
   echo 'Task identity accepted from project test configuration' >&2
