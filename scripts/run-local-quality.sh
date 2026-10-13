@@ -14,6 +14,7 @@ bash scripts/format-check.sh --all
 bash scripts/test-format-code.sh
 bash scripts/test-staging-platform-contract.sh
 bash scripts/test-staging-runtime-preparation.sh
+bash scripts/test-staging-test-config.sh
 bash scripts/test-run-staging-integration-tests.sh
 bash scripts/test-run-staging-e2e-tests.sh
 readonly JAVA_25_HOME="$(resolve_java_25)"

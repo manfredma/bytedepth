@@ -70,3 +70,11 @@ PENDING_ACCEPTANCE → ACCEPTED → FAST_FORWARD_MERGING → TAGGED
 ```
 
 acceptance 成功后由平台 Worker 自动执行 fast-forward、annotated tag、production task 和 verification。AI Agent 不打开页面、不 SSH、不执行 bytedepth 部署脚本，也不直接调用 production promotion import 接口；只轮询 canonical `release-view`、`release-tasks` 和 `release-operations` API，并记录 candidateId、commitSha、artifact digest、taskId、requestId、releaseTag 和最终状态。
+
+## Host Agent staging 测试输入
+
+integration/E2E runner 从 `/etc/bytedepth/staging-test.env` 读取项目测试输入；可由 `BYTEDEPTH_STAGING_TEST_CONFIG` 指定位置。配置与秘密文件均须 `ubuntu:ubuntu`、0600、非符号链接；配置采用字面量 `KEY=value`，不执行 shell 表达式，不写入仓库。显式注入的环境变量优先。
+
+允许的配置键为 `BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE`、`BYTEDEPTH_TEST_REDIS_SECRET_FILE`、`BYTEDEPTH_TEST_MEILI_SECRET_FILE`、`BYTEDEPTH_TEST_FIXTURE`、`BYTEDEPTH_TEST_FIXTURE_SHA256_FILE`、`BYTEDEPTH_TEST_STAGING_REDIS_DB`、`BYTEDEPTH_TEST_IT_REDIS_DB`、`BYTEDEPTH_TEST_E2E_REDIS_DB`、`BYTEDEPTH_STAGING_E2E_USERNAME` 和 `BYTEDEPTH_STAGING_E2E_PASSWORD_FILE`。引用真实已有的测试输入，不自动生成临时凭据；Redis DB 必须明确配置且通过容量及隔离检查。密码只在执行主机读取，不在对话、日志或 API 回执中输出。
+
+缺少配置/凭据、依赖准备失败、零执行用例或清理失败，均不生成 PASS evidence。配置传递与权限回归入口为 `bash scripts/test-staging-test-config.sh`。

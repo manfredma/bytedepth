@@ -31,6 +31,8 @@ readonly CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
+source "$SOURCE_ROOT/deploy/lib/staging-test-config.sh"
+load_staging_test_configuration
 source "$SOURCE_ROOT/deploy/lib/staging-native-target.sh"
 load_staging_native_target
 readonly SLOT_SERVICE="$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"

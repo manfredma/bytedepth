@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- staging runner 从项目私有测试配置读取已有测试槽凭据引用，保留显式环境注入优先级与签名任务身份，避免依赖 Host Agent 全局环境中的项目变量。
 - staging runner 在已持有的平台锁内复用依赖准备入口；bootstrap 读取本候选 source snapshot，依赖准备成功后才刷新 runtime manifest，防止旧工作目录/旧依赖记录阻断实际测试。
 
 - staging integration/E2E runner 接入统一 Host Agent 契约，严格绑定候选完整 SHA、部署源快照、制品 digest 与当前 attempt；复用外层测试锁并从实际测试报告拒绝零用例成功，避免版本探针或旧 checkout 被作为测试通过依据。

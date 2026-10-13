@@ -31,6 +31,8 @@ source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 # shellcheck disable=SC1090,SC1091
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
+source "$SOURCE_ROOT/deploy/lib/staging-test-config.sh"
+load_staging_test_configuration
 source "$SOURCE_ROOT/deploy/lib/staging-native-target.sh"
 load_staging_native_target
 

@@ -115,6 +115,7 @@ mv "$FIXTURE_SOURCE/deploy/lib/staging-runtime.sh.tmp" "$FIXTURE_SOURCE/deploy/l
 cp "$SOURCE_ROOT/deploy/lib/staging-platform-contract.sh" "$TEMP_ROOT/lib/staging-platform-contract.sh"
 cp "$SOURCE_ROOT/deploy/lib/warning-policy.sh" "$FIXTURE_SOURCE/deploy/lib/warning-policy.sh"
 cp "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh" "$FIXTURE_SOURCE/deploy/lib/staging-test-slot.sh"
+cp "$SOURCE_ROOT/deploy/lib/staging-test-config.sh" "$FIXTURE_SOURCE/deploy/lib/staging-test-config.sh"
 cp "$SOURCE_ROOT/deploy/lib/staging-native-target.sh" "$FIXTURE_SOURCE/deploy/lib/staging-native-target.sh"
 cat >> "$FIXTURE_SOURCE/deploy/lib/staging-test-slot.sh" << 'SCRIPT'
 slot_root_private() { return 0; }
