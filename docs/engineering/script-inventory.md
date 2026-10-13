@@ -26,15 +26,16 @@
 
 ### 平台边界与契约检查
 
-| 路径                                    | 保留理由                                            |
-| --------------------------------------- | --------------------------------------------------- |
-| `scripts/check-staging-checklist.sh`    | 汇总本地质量、平台边界、Maven 与文档契约            |
-| `scripts/test-release-platform-only.sh` | 防止项目侧部署入口、Tag、SSH 发布路径复活           |
-| `scripts/test-run-local-quality.sh`     | 锁定本地质量顺序和依赖预热约束                      |
-| `scripts/test-maven-runtime.sh`         | 锁定 Maven Wrapper、Java 25 和 staging offline 约束 |
-| `scripts/test-platform-portability.sh`  | 检查 macOS/Linux 脚本可移植性                       |
-| `scripts/test-host-native-docs.sh`      | 检查 Host Agent 所需运行时文档契约                  |
-| `scripts/test-staging-checklist.sh`     | 检查 active staging 文档不暴露项目发布入口          |
+| 路径                                      | 保留理由                                                        |
+| ----------------------------------------- | --------------------------------------------------------------- |
+| `scripts/check-staging-checklist.sh`      | 汇总本地质量、平台边界、Maven 与文档契约                        |
+| `scripts/test-release-platform-only.sh`   | 防止项目侧部署入口、Tag、SSH 发布路径复活                       |
+| `scripts/test-run-local-quality.sh`       | 锁定本地质量顺序和依赖预热约束                                  |
+| `scripts/test-agent-delivery-workflow.sh` | 本地质量入口调用；检查项目 Agent 默认停点、授权与免人工验收规则 |
+| `scripts/test-maven-runtime.sh`           | 锁定 Maven Wrapper、Java 25 和 staging offline 约束             |
+| `scripts/test-platform-portability.sh`    | 检查 macOS/Linux 脚本可移植性                                   |
+| `scripts/test-host-native-docs.sh`        | 检查 Host Agent 所需运行时文档契约                              |
+| `scripts/test-staging-checklist.sh`       | 检查 active staging 文档不暴露项目发布入口                      |
 
 ### staging 测试辅助与运行时库
 

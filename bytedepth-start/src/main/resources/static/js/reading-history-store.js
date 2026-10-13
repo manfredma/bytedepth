@@ -100,7 +100,10 @@
           const response = await fetch(eventsUrl, {
             method: "POST",
             credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-TOKEN": global.document.querySelector('meta[name="_csrf"]')?.content || "",
+            },
             body: JSON.stringify(event),
             keepalive: true,
           });

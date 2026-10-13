@@ -15,7 +15,7 @@ staging 是唯一的集成、E2E、部署和业务验收环境，production 只�
 
 1. PR opened、reopened、synchronize 或 ready-for-review webhook 以 PR head 完整 SHA 创建或复用候选。
 2. release-platform 对该候选执行 `QUALITY`、`BUILD`，并记录 candidate、flow、artifact 和 evidence 标识。
-3. 使用同一不可变 artifact 发布 staging，Host Agent 执行集成测试、E2E、健康检查并生成 evidence；项目所有者在页面完成验收。
+3. 使用同一不可变 artifact 发布 staging，Host Agent 执行集成测试、E2E、健康检查并生成 evidence；按本项目的[Agent 交付授权规则](../../agent-guides/agent-responsibility-boundary.md#默认交付终点与授权范围)处理人工验收或本任务明确免人工验收，不要求项目所有者必须操作页面。
 4. staging 验收通过后，合并仍指向同一完整 SHA 的 PR。
 5. release-platform 校验 `main` HEAD 与已验收候选 SHA 完全一致；一致时提升同一 artifact 到 production。SHA 不一致时必须重新构建、重新 staging 和重新生成 evidence。
 

@@ -48,7 +48,7 @@ bash scripts/prepare-release.sh --version v2.27.0  # 初始化或纠正版本
 
 staging 完成 integration/E2E 后，release-platform 会将 candidate 置为 `PENDING_ACCEPTANCE`。这里的“人工验收”是业务授权边界，不要求项目所有者打开页面点击按钮。
 
-项目所有者在 Agent 对话中明确回复“验收通过”后，AI Agent 才能调用 canonical API：
+AI Agent 按本项目的[交付授权规则](../agent-guides/agent-responsibility-boundary.md#默认交付终点与授权范围)确认人工验收通过或本任务明确免人工验收，核对 staging 门禁与证据后，调用既有 canonical API。此处只描述 CI/CD 接口，不另行定义开发流程的授权或停点：
 
 ```http
 POST https://devops.bytedepth.cn/api/v1/candidates/{candidateId}/acceptance

@@ -24,6 +24,7 @@ Spring Boot 多模块博客（DDD 分层）与 Obsidian 笔记同步项目。项
 3. 修改代码后，先格式化明确变更文件，再跑格式检查、测试和质量门禁；不要只编译不测试。
 4. 所有输出中的 `WARNING`、失败和不确定状态都必须处理或报告。
 5. 提交前检查 diff、测试证据、文档沉淀和工作区状态；完成后给出可复核的 SHA、命令和结果。
+6. 默认推进到 staging 部署及验证完成、需要人工验收的位置；本任务明确免人工验收时，全部门禁通过后继续上线并核对生产终态。提交、推送、PR、停点和阻塞处理以[Agent 交付职责](docs/agent-guides/agent-responsibility-boundary.md#默认交付终点与授权范围)为准。
 
 ## 不可违反的核心边界
 
@@ -32,7 +33,7 @@ Spring Boot 多模块博客（DDD 分层）与 Obsidian 笔记同步项目。项
 - 格式化必须在 PR 和本地质量门禁前完成：变更文件执行 `bash scripts/format-code.sh <paths>` 与 `bash scripts/format-check.sh <paths>`；全局格式化必须单独执行 `--all`。格式化规范见 [`docs/engineering/code-formatting.md`](docs/engineering/code-formatting.md)。
 - 每项代码改动都要有相应测试；本次业务分支覆盖率必须达到项目门禁要求。统一本机入口是 `bash scripts/run-local-quality.sh`。
 - 发布只能由 canonical release-platform 和 Host Agent 编排。本仓库不 SSH、不运行部署脚本、不创建发布 Tag、不直接部署 staging/production、不伪造 evidence。
-- staging 是唯一集成、E2E 和验收环境；production 只能提升同一已验收的完整 SHA 和不可变 artifact。项目所有者在 Agent 对话中确认后，由 Agent 按平台手册提交 acceptance API；后续只轮询平台状态。
+- staging 是唯一集成、E2E 和验收环境；production 只能提升同一已验收的完整 SHA 和不可变 artifact。人工验收或本任务明确免人工验收的授权，以[Agent 交付职责](docs/agent-guides/agent-responsibility-boundary.md#默认交付终点与授权范围)为准；发布执行仍遵守平台手册。
 - 任何运行时、用户可见、部署或配置变更都必须有分类明确的 `docs/releases/CHANGELOG.md` `Unreleased` 条目，并按发布流程冻结。
 - 不新增 Maven 模块，不越过模块依赖方向，不跨项目污染共享基础设施；需要长期约束或不可逆取舍时使用版本化 ADR。
 - 发现流程、配置、测试或部署错误，结束前必须把规则写入项目文档并补自动检查；不能只在回复中说明。
@@ -40,6 +41,7 @@ Spring Boot 多模块博客（DDD 分层）与 Obsidian 笔记同步项目。项
 ## 按需读取
 
 - **项目导航、文档维护、知识库**：[`docs/README.md`](docs/README.md)
+- **开发任务的默认交付、提交/推送/PR、停点、免人工验收或阻塞**：[`docs/agent-guides/agent-responsibility-boundary.md`](docs/agent-guides/agent-responsibility-boundary.md)
 - **模块边界、依赖方向、架构设计**：[`docs/architecture/overview.md`](docs/architecture/overview.md)
 - **Maven、Java 25、测试和覆盖率**：[`docs/agent-guides/maven.md`](docs/agent-guides/maven.md)、[`docs/agent-guides/code-quality.md`](docs/agent-guides/code-quality.md)
 - **代码格式化与 IntelliJ 对齐**：[`docs/engineering/code-formatting.md`](docs/engineering/code-formatting.md)

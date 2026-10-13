@@ -2,6 +2,7 @@ package manfred.bytedepth.adapter.web.security;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -10,11 +11,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import manfred.bytedepth.adapter.web.portal.CommentController;
+import manfred.bytedepth.adapter.web.portal.ReadingEventController;
 import manfred.bytedepth.adapter.web.ratelimit.RateLimitProperties;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import manfred.bytedepth.app.comment.SubmitCommentCmdExe;
 import manfred.bytedepth.app.ratelimit.RateLimitDecision;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;
+import manfred.bytedepth.app.reading.RecordReadingEventCmdExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +32,9 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(value = CommentController.class, excludeAutoConfiguration = DataSourceAutoConfiguration.class)
+@WebMvcTest(
+        value = {CommentController.class, ReadingEventController.class},
+        excludeAutoConfiguration = DataSourceAutoConfiguration.class)
 @Import({SecurityConfig.class})
 class SecurityRoutingTest {
 
@@ -49,6 +54,9 @@ class SecurityRoutingTest {
     private SubmitCommentCmdExe submitCommentCmdExe;
 
     @MockitoBean
+    private RecordReadingEventCmdExe recordReadingEventCmdExe;
+
+    @MockitoBean
     private PostRepository postRepository;
 
     @MockitoBean
@@ -61,6 +69,41 @@ class SecurityRoutingTest {
     void allowRateLimitedRequests() {
         when(rateLimitProperties.getCommentRatingIp()).thenReturn(new RateLimitProperties.Rule());
         when(rateLimitPort.tryConsume(any(), anyLong(), any(), any())).thenReturn(RateLimitDecision.permit());
+    }
+
+    @Test
+    void authenticatedReadingEventWithoutCsrfIsRejectedBeforeRecording() throws Exception {
+        mockMvc.perform(post("/posts/java/reading-events")
+                        .with(SecurityMockMvcRequestPostProcessors.user(
+                                new SiteUserDetails(7L, "reader", "", java.util.List.of())))
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(readingOpenEvent()))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(recordReadingEventCmdExe);
+    }
+
+    @Test
+    void authenticatedReadingEventWithCsrfHeaderReachesRecording() throws Exception {
+        mockMvc.perform(post("/posts/java/reading-events")
+                        .with(SecurityMockMvcRequestPostProcessors.user(
+                                new SiteUserDetails(7L, "reader", "", java.util.List.of())))
+                        .with(SecurityMockMvcRequestPostProcessors.csrf().asHeader())
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(readingOpenEvent()))
+                .andExpect(status().isAccepted());
+
+        verify(recordReadingEventCmdExe)
+                .execute(org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq("java"), any());
+    }
+
+    private static String readingOpenEvent() {
+        return """
+                {"eventId":"00000000-0000-0000-0000-000000000001",
+                 "sessionId":"00000000-0000-0000-0000-000000000002",
+                 "type":"READ_OPEN","activeSecondsDelta":0,"maxScrollDepth":0,
+                 "occurredAt":"2026-10-13T00:00:00Z"}
+                """;
     }
 
     @Test

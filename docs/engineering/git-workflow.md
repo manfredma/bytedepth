@@ -2,6 +2,8 @@
 
 ByteDepth 使用 GitHub Flow。功能、修复和文档改动从最新 `origin/main` 创建短生命周期分支，经本地质量检查、PR head staging 验收和 PR 合并；发布不在项目仓库中执行。
 
+Agent 对提交、推送、PR 和交付终点的默认授权，统一见[Agent 交付职责](../agent-guides/agent-responsibility-boundary.md#默认交付终点与授权范围)；本文件定义 Git 操作顺序，不另设逐步人工确认。
+
 1. 从最新 `origin/main` 创建 `feat/*`、`fix/*` 或 `docs/*` 分支。
 2. 本地只运行项目质量检查，不创建发布 Tag，不执行远程部署脚本。
 3. PR opened/synchronize 后，release-platform 以 PR head 完整 SHA 创建候选并启动 `BUILD`/staging flow；不依赖 GitHub Actions quality。
