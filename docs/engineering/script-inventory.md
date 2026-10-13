@@ -9,6 +9,7 @@
 - `scripts/test-*.sh` 是契约检查，不代表脚本一定会被主质量入口调用；未被入口调用的检查必须在本文说明保留理由。
 - `deploy/` 中的 staging integration/E2E runner 和依赖库由 release-platform Host Agent 通过平台编排调用，不是项目仓库的人工发布入口。
 - 旧的项目侧安装、部署、证书同步、production SSH 和合并发布脚本不得恢复。
+- 文档检查锁定项目职责、完整 SHA 和有效入口，不要求固定主机 IP；环境绑定由 CI/CD 配置管理。`prepare-release.sh` 只准备本地版本记录，不是部署入口。交接检查规则变更必须通过 fixture 验证，避免用过期文本断言阻塞交付。
 
 ## 保留资产
 
@@ -26,16 +27,17 @@
 
 ### 平台边界与契约检查
 
-| 路径                                      | 保留理由                                                        |
-| ----------------------------------------- | --------------------------------------------------------------- |
-| `scripts/check-staging-checklist.sh`      | 汇总本地质量、平台边界、Maven 与文档契约                        |
-| `scripts/test-release-platform-only.sh`   | 防止项目侧部署入口、Tag、SSH 发布路径复活                       |
-| `scripts/test-run-local-quality.sh`       | 锁定本地质量顺序和依赖预热约束                                  |
-| `scripts/test-agent-delivery-workflow.sh` | 本地质量入口调用；检查项目 Agent 默认停点、授权与免人工验收规则 |
-| `scripts/test-maven-runtime.sh`           | 锁定 Maven Wrapper、Java 25 和 staging offline 约束             |
-| `scripts/test-platform-portability.sh`    | 检查 macOS/Linux 脚本可移植性                                   |
-| `scripts/test-host-native-docs.sh`        | 检查 Host Agent 所需运行时文档契约                              |
-| `scripts/test-staging-checklist.sh`       | 检查 active staging 文档不暴露项目发布入口                      |
+| 路径                                      | 保留理由                                                                                             |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `scripts/check-staging-checklist.sh`      | 汇总本地质量、平台边界、Maven 与文档契约                                                             |
+| `scripts/test-release-platform-only.sh`   | 防止项目侧部署入口、Tag、SSH 发布路径复活                                                            |
+| `scripts/test-run-local-quality.sh`       | 锁定本地质量顺序和依赖预热约束                                                                       |
+| `scripts/test-agent-delivery-workflow.sh` | 本地质量入口调用；检查项目 Agent 默认停点、授权与免人工验收规则                                      |
+| `scripts/test-maven-runtime.sh`           | 锁定 Maven Wrapper、Java 25 和 staging offline 约束                                                  |
+| `scripts/test-platform-portability.sh`    | 检查 macOS/Linux 脚本可移植性                                                                        |
+| `scripts/test-host-native-docs.sh`        | 检查 Host Agent 所需运行时文档契约                                                                   |
+| `scripts/test-handoff-documentation.sh`   | 本地质量入口和交接 checklist 调用；验证无固定 IP、允许本地版本准备，仍拒绝失效部署入口与缺失完整 SHA |
+| `scripts/test-staging-checklist.sh`       | 检查 active staging 文档不暴露项目发布入口                                                           |
 
 ### staging 测试辅助与运行时库
 

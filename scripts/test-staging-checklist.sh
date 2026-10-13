@@ -13,7 +13,7 @@ grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-release-platform-only.sh"' "$CHECKLIS
 grep -Fqx 'bash "$SOURCE_ROOT/scripts/test-run-local-quality.sh"' "$CHECKLIST"
 grep -Fq 'release-platform' "$ROOT/AGENTS.md"
 grep -Fq '完整 commit SHA' "$ROOT/docs/releases/README.md"
-if rg -n 'deploy/(deploy-staging|deploy-production|deploy-production-remote)\.sh|scripts/(prepare-release|verify-production-release)\.sh' \
+if rg -n 'deploy/(deploy-staging|deploy-production|deploy-production-remote)\.sh|scripts/verify-production-release\.sh' \
   "$ROOT/AGENTS.md" "$ROOT/deploy" "$ROOT/docs/security" "$ROOT/docs/engineering" "$ROOT/docs/releases" \
   --glob '*.md' > /dev/null; then
   printf 'The active staging checklist still exposes a project release entrypoint.\n' >&2

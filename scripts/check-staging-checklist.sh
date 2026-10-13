@@ -11,6 +11,7 @@ bash "$SOURCE_ROOT/scripts/test-release-platform-only.sh"
 bash "$SOURCE_ROOT/scripts/test-run-local-quality.sh"
 bash "$SOURCE_ROOT/scripts/test-maven-runtime.sh"
 bash "$SOURCE_ROOT/scripts/test-host-native-docs.sh"
+bash "$SOURCE_ROOT/scripts/test-handoff-documentation.sh"
 bash "$SOURCE_ROOT/scripts/test-platform-portability.sh"
 bash "$SOURCE_ROOT/scripts/test-staging-checklist.sh"
 
