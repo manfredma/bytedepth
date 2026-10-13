@@ -42,6 +42,8 @@ bash scripts/prepare-release.sh --version v2.27.0  # 初始化或纠正版本
 
 脚本只读取并修改本地 `docs/releases/CHANGELOG.md`，不依赖线上服务。脚本成功后必须把 changelog 变更提交到 PR，并使用该 PR head 的完整 SHA 创建或复用 candidate，先完成 staging 集成/E2E 和验收。验收通过后由平台 fast-forward 合并同一 SHA；release-platform 会在后续发布链校验正式 changelog section 与 acceptance `releaseTag` 一致。不要跳过脚本直接创建 candidate。本地版本检查的兼容规则见[发布准备说明](../releases/README.md)：平台管理的 changelog 不要求历史 Tag/回滚基线字段，显式提供的字段仍须通过校验。
 
+创建 PR 候选时 `sourceRef` 必须使用 `refs/pull/<PR编号>/head`，并绑定该 PR head 的完整 SHA。平台依据 pull ref 在验收后将同一 SHA fast-forward 到默认分支；不能以 feature branch ref 替代。候选按 project + SHA 唯一，错误 ref 的候选不能改写或用于验收，应保留记录并以新的 PR head 正式验证。
+
 发布完成的依据是 release-platform 返回的 candidate、完整 commit SHA、artifact digest、task/evidence 和 request ID；本仓库的本地命令输出不能替代平台发布回执。
 
 ## Agent 验收授权与 production 晋级
