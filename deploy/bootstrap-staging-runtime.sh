@@ -10,11 +10,11 @@ if [[ "${EUID}" -ne 0 ]]; then
   exit 1
 fi
 
-readonly SOURCE_ROOT=/opt/bytedepth
-readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
-readonly STATE_DIR=/var/lib/bytedepth-staging
-readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
-readonly RUNTIME_MANIFEST="$STATE_DIR/runtime/manifest"
+readonly SOURCE_ROOT="${RELEASE_PLATFORM_TEST_SOURCE_ROOT:-/opt/bytedepth}"
+readonly CONFIG_FILE="${RELEASE_PLATFORM_TEST_CONFIG_FILE:-/etc/bytedepth-deploy.conf}"
+readonly STATE_DIR="${RELEASE_PLATFORM_TEST_WORK_DIR:-/var/lib/bytedepth-staging}"
+readonly LOCK_FILE="${RELEASE_PLATFORM_TEST_LOCK_FILE:-$STATE_DIR/deployment-test.lock}"
+readonly RUNTIME_MANIFEST="${RELEASE_PLATFORM_TEST_RUNTIME_MANIFEST:-$STATE_DIR/runtime/manifest}"
 readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository
 readonly SHARED_MAVEN_LOCK=/opt/shared-maven/repository.lock
 source "$SOURCE_ROOT/deploy/lib/timing.sh"
@@ -46,7 +46,12 @@ if [[ "$deploy_mode" != staging ]]; then
   exit 1
 fi
 
-commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-parse HEAD)"
+if [[ -n "${RELEASE_PLATFORM_TEST_SOURCE_ROOT:-}" ]]; then
+  source "$SOURCE_ROOT/deploy/lib/staging-platform-contract.sh"
+  commit="$(staging_platform_source_commit)"
+else
+  commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-parse HEAD)"
+fi
 if [[ "$bootstrap_mode" == ensure && -d "$SHARED_MAVEN_REPOSITORY" ]] \
   && require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT" > /dev/null 2>&1; then
   printf 'Staging runtime already satisfies the current dependency inputs.\n'

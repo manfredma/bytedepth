@@ -280,7 +280,7 @@ fi
 invalidate_evidence
 tested_commit="$STAGING_PLATFORM_COMMIT"
 require_deployed_commit "$tested_commit"
-require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
+ensure_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
 load_resource_credentials
 
 if [[ ! -x "$CHROMIUM_EXECUTABLE" ]]; then

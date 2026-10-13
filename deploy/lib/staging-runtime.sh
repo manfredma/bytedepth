@@ -103,6 +103,8 @@ require_staging_runtime() {
 
   if [[ "$actual_lock_sha" != "$expected_lock_sha" || "$actual_pom_sha" != "$expected_pom_sha" ]]; then
     printf 'Refusing: staging runtime manifest does not match dependency inputs. Run bootstrap-staging-runtime.sh.\n' >&2
+    printf 'Runtime dependency hashes: package_lock recorded=%s expected=%s; pom recorded=%s expected=%s\n' \
+      "$actual_lock_sha" "$expected_lock_sha" "$actual_pom_sha" "$expected_pom_sha" >&2
     return 1
   fi
   if [[ ! -x "$SHARED_CHROMIUM_EXECUTABLE" || "$actual_chromium_version" != "$("$SHARED_CHROMIUM_EXECUTABLE" --version)" ]]; then
@@ -113,4 +115,18 @@ require_staging_runtime() {
     printf 'Refusing: manifest Playwright ffmpeg runtime changed. Run bootstrap-staging-runtime.sh.\n' >&2
     return 1
   fi
+}
+
+# Called by the candidate runner under the platform deployment/test lock. The
+# manifest is written only by successful dependency preparation, never relabeled.
+ensure_staging_runtime() {
+  local manifest="$1" source_root="$2"
+  if require_staging_runtime "$manifest" "$source_root"; then
+    return 0
+  fi
+  printf 'Preparing staging dependencies for candidate source=%s\n' "$source_root"
+  RELEASE_PLATFORM_TEST_SOURCE_ROOT="$source_root" \
+    RELEASE_PLATFORM_TEST_RUNTIME_MANIFEST="$manifest" \
+    bash "$source_root/deploy/bootstrap-staging-runtime.sh" --lock-held --ensure || return $?
+  require_staging_runtime "$manifest" "$source_root"
 }

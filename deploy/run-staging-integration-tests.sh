@@ -208,7 +208,7 @@ deploy_mode="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value = substr($0, index(
 invalidate_evidence
 tested_commit="$STAGING_PLATFORM_COMMIT"
 require_deployed_commit "$tested_commit"
-require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
+ensure_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
 require_workspace_headroom
 require_test_slot_inputs
 load_resource_credentials
