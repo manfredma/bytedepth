@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- 搜索输入框允许在窄屏 flex 布局中收缩，避免 Linux Chromium 的默认最小宽度将 320px 页面撑宽。
 - 版本说明中的长代码块在自身区域横向滚动，避免 320px 手机页面被撑宽；保留完整代码内容及 E2E 溢出断言。
 - staging E2E test-slot 服务使用与实际 app 和项目发布目录一致的 ubuntu 身份，避免私有 release 目录导致 CHDIR 拒绝；不放宽目录权限。
 - E2E runner 优先读取 staging Host Agent 基础设施提供的通用测试账号环境，保留项目登录实现和全部测试用例；拒绝不完整的共享凭据。
