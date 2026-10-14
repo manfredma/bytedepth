@@ -49,6 +49,19 @@ describe("shared mobile navigation", () => {
     expect(panel.hidden).toBe(true);
   });
 
+  test("visible menu label reflects opening, Escape and breakpoint reset", async () => {
+    const { nav, toggle, resize } = await initialize();
+    expect(toggle.textContent.trim()).toBe("菜单");
+    toggle.click();
+    expect(toggle.textContent.trim()).toBe("收起");
+    nav.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(toggle.textContent.trim()).toBe("菜单");
+    toggle.click();
+    resize(false);
+    resize(true);
+    expect(toggle.textContent.trim()).toBe("菜单");
+  });
+
   test("Escape closes the mobile menu and returns keyboard focus", async () => {
     const { nav, toggle, panel } = await initialize();
     toggle.click();

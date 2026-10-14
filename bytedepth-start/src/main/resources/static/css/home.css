@@ -47,6 +47,23 @@
   color: var(--bd-text-muted, #77746d);
   font: 11px var(--sans, system-ui, sans-serif);
 }
+.bd-home-stats a {
+  display: block;
+  min-height: 44px;
+  color: inherit;
+  text-decoration: none;
+}
+.bd-home-stats a span {
+  display: inline-block;
+  margin-top: 4px;
+  text-decoration: underline;
+  text-decoration-color: var(--bd-border, #d9d5ca);
+  text-underline-offset: 4px;
+}
+.bd-home-stats a:hover span,
+.bd-home-stats a:focus-visible span {
+  color: var(--bd-accent, #c45a35);
+}
 .bd-home-stats b {
   display: block;
   color: var(--bd-text, #1c1c1a);
@@ -134,13 +151,6 @@
   margin: 0;
   color: var(--bd-text-muted, #77746d);
 }
-.bd-home-empty-feature {
-  margin: 54px 0 72px;
-  padding: 26px 0;
-  border-top: 1px solid var(--bd-border, #d9d5ca);
-  border-bottom: 1px solid var(--bd-border, #d9d5ca);
-  color: var(--bd-text-muted, #77746d);
-}
 .bd-home-link {
   color: var(--bd-accent, #c45a35);
   font: 700 0.8rem var(--sans, system-ui, sans-serif);
@@ -153,6 +163,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 290px;
   gap: 84px;
+}
+.bd-home-hero + .bd-home-recent {
+  margin-top: 32px;
+}
+.bd-home-side {
+  scroll-margin-top: 84px;
 }
 .bd-home-section-head {
   display: flex;
@@ -328,6 +344,12 @@
 .bd-home-map p {
   margin: 0;
   color: var(--bd-text-muted, #77746d);
+}
+@media (max-width: 1100px) {
+  .bd-home-side {
+    /* A topic link remains reachable while the sticky mobile menu is open. */
+    scroll-margin-top: min(520px, calc(100dvh - 36px));
+  }
 }
 @media (max-width: 800px) {
   .bd-home-shell {

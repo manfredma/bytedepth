@@ -13,6 +13,7 @@
 
   function setOpen(open) {
     toggle.setAttribute("aria-expanded", String(open));
+    toggle.querySelector(".nav-toggle-label").textContent = open ? "收起" : "菜单";
     panel.hidden = mobile.matches && !open;
     if (!open) {
       // Nested menus must not reopen unexpectedly after collapsing or resizing.

@@ -14,7 +14,7 @@
                 <img th:src="@{/icons/logo.svg}" alt="bd" width="28" height="28">
                 <span class="nav-brand-copy"><strong>bytedepth</strong><small class="nav-brand-subtitle" th:if="${showThemeSwitcher}">深入字节，理解系统</small></span>
             </a>
-            <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="nav-panel" hidden>菜单</button>
+            <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="nav-panel" hidden><span class="nav-toggle-icon" aria-hidden="true"></span><span class="nav-toggle-label">菜单</span></button>
         </div>
         <div class="nav-panel" id="nav-panel">
             <div class="nav-primary">
@@ -28,13 +28,14 @@
                 <div class="nav-utility">
                     <a th:if="${environment != 'staging'}" th:href="@{/feed.xml}" class="nav-rss" aria-label="订阅 RSS 更新">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.18 17.82A2.18 2.18 0 1 1 6.18 22a2.18 2.18 0 0 1 0-4.18ZM3 3v3.02c8.82 0 15.98 7.16 15.98 15.98H22C22 11.51 13.49 3 3 3Zm0 6.02v3.02c5.5 0 9.96 4.46 9.96 9.96H16C16 14.83 10.17 9.02 3 9.02Z"/></svg>
+                        <span class="nav-tool-label">订阅</span>
                     </a>
                     <form action="/search" method="get" class="nav-search">
                         <input type="text" name="q" aria-label="搜索文章" placeholder="搜索文章…" />
                         <button type="submit" aria-label="提交搜索">🔍</button>
                     </form>
                     <div class="theme-switcher" th:classappend="${showThemeSwitcher} ? '' : ' nav-theme-placeholder'">
-                        <button th:if="${showThemeSwitcher}" type="button" class="theme-trigger" aria-label="切换主题" aria-expanded="false">◐</button>
+                        <button th:if="${showThemeSwitcher}" type="button" class="theme-trigger" aria-label="切换主题" aria-expanded="false">◐<span class="nav-tool-label">主题</span></button>
                         <div th:if="${showThemeSwitcher}" class="theme-menu">
                         <button type="button" class="theme-option" data-theme-option="default" aria-pressed="true">
                             <span class="theme-swatch default"></span><span>默认</span>
@@ -58,20 +59,24 @@
                     </div>
                 </div>
                 <div class="nav-auth">
-                    <a sec:authorize="hasAnyAuthority('admin:dashboard:view', 'blog:post:create', 'blog:series:create:own')"
-                       th:href="@{/admin}" class="nav-admin">后台</a>
-                    <a sec:authorize="hasAuthority('blog:post:create')"
-                       th:href="@{/posts/new}" class="nav-write">写文章</a>
-                    <a sec:authorize="isAuthenticated()"
-                       th:href="@{/u/{u}(u=${#authentication.name})}"
-                       th:text="${#authentication.name}">用户名</a>
-                    <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="nav-logout">
-                        <button type="submit">退出</button>
-                    </form>
-                    <a sec:authorize="!isAuthenticated()"
-                       th:href="@{/login}">登录</a>
-                    <a sec:authorize="!isAuthenticated()"
-                       th:href="@{/register}" class="nav-register">注册</a>
+                    <div class="nav-author-actions" sec:authorize="hasAnyAuthority('admin:dashboard:view', 'blog:post:create', 'blog:series:create:own')">
+                        <a sec:authorize="hasAnyAuthority('admin:dashboard:view', 'blog:post:create', 'blog:series:create:own')"
+                           th:href="@{/admin}" class="nav-admin">后台</a>
+                        <a sec:authorize="hasAuthority('blog:post:create')"
+                           th:href="@{/posts/new}" class="nav-write">写文章</a>
+                    </div>
+                    <div class="nav-account-links">
+                        <a sec:authorize="isAuthenticated()"
+                           th:href="@{/u/{u}(u=${#authentication.name})}"
+                           th:text="${#authentication.name}">用户名</a>
+                        <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="nav-logout">
+                            <button type="submit">退出</button>
+                        </form>
+                        <a sec:authorize="!isAuthenticated()"
+                           th:href="@{/login}">登录</a>
+                        <a sec:authorize="!isAuthenticated()"
+                           th:href="@{/register}" class="nav-register">注册</a>
+                    </div>
                 </div>
                 <details class="nav-about-menu">
                     <summary class="nav-about">关于</summary>

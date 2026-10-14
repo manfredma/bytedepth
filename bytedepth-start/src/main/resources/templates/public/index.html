@@ -19,9 +19,9 @@
             <h1 id="home-title">记录系统，<br><em>理解复杂。</em></h1>
             <p class="bd-home-lede">bytedepth 是一个持续记录软件工程、架构实践与长期思考的地方。</p>
             <div class="bd-home-stats" aria-label="站点统计">
-                <span><b th:text="${total}">0</b>篇文章</span>
-                <span><b th:text="${#lists.size(allCategories)}">0</b>个主题</span>
-                <span><b th:text="${#lists.size(projects)}">0</b>个项目</span>
+                <a th:href="@{/posts}"><b th:text="${total}">0</b><span>篇文章 ↗</span></a>
+                <a href="#home-topics"><b th:text="${#lists.size(allCategories)}">0</b><span>个主题 ↓</span></a>
+                <a th:href="@{/projects}"><b th:text="${#lists.size(projects)}">0</b><span>个项目 ↗</span></a>
             </div>
         </div>
         <div class="bd-home-mark" aria-label="bytedepth 品牌标记">
@@ -45,9 +45,6 @@
             <h3>编辑推荐</h3>
             <p>从后台精选的文章，作为第一次访问 bytedepth 的阅读入口。</p>
         </div>
-    </section>
-    <section class="bd-home-empty-feature" th:if="${featuredPost == null}">
-        <p class="bd-home-eyebrow">EDITOR'S PICK</p><p>暂时没有主推文章，从最近更新开始阅读。</p>
     </section>
 
     <section class="bd-home-recent" id="recent-notes">
@@ -75,7 +72,7 @@
             <div th:if="${totalPages > 1}" th:replace="~{fragments/pagination :: pagination(${currentPage}, ${totalPages}, ${total}, ${pageSize}, ${paginationBaseUrl})}"></div>
             <a th:href="@{/posts}" class="bd-home-link bd-home-all-link">查看全部文章 →</a>
         </div>
-        <aside class="bd-home-side">
+        <aside class="bd-home-side" id="home-topics" aria-label="按分类浏览" tabindex="-1">
             <p class="bd-home-eyebrow">EXPLORE TOPICS</p><h2>按分类浏览</h2>
             <div class="bd-home-topic-list"><a th:each="cat : ${allCategories}" th:if="${cat.depth == 0}" th:href="@{/posts(category=${cat.slug})}"><span th:text="${cat.name}">架构</span><span>↗</span></a></div>
             <p class="bd-home-eyebrow bd-home-side-label">THE LAB</p><h2>正在构建</h2>

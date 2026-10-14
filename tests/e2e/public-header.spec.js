@@ -38,6 +38,7 @@ for (const width of [320, 390, 768, 1280]) {
       if (width <= 1100) {
         await expect(toggle).toBeVisible();
         await expect(toggle).toHaveAttribute("aria-expanded", "false");
+        await expect(toggle).toHaveText("菜单");
         await expect(panel).toBeHidden();
       } else {
         await expect(toggle).toBeHidden();
@@ -79,6 +80,20 @@ for (const width of [320, 390, 768, 1280]) {
         await toggle.click();
         await expect(panel).toBeVisible();
         await expect(toggle).toHaveAttribute("aria-expanded", "true");
+        await expect(toggle).toHaveText("收起");
+        const layout = await nav.evaluate((element) => {
+          const box = (selector) => element.querySelector(selector).getBoundingClientRect();
+          return {
+            searchBottom: box(".nav-search").bottom,
+            primaryTop: box(".nav-primary").top,
+            columns: getComputedStyle(element.querySelector(".nav-primary")).gridTemplateColumns.split(" ").length,
+            themeTop: box(".theme-switcher").top,
+            aboutTop: box(".nav-about-menu").top,
+          };
+        });
+        expect(layout.searchBottom).toBeLessThanOrEqual(layout.primaryTop);
+        expect(layout.columns).toBe(2);
+        expect(layout.themeTop).toBe(layout.aboutTop);
       }
       const input = nav.locator('input[name="q"]');
       await expect(input).toBeVisible();
@@ -97,8 +112,21 @@ for (const width of [320, 390, 768, 1280]) {
         expect(option.right, `theme option right on ${route}`).toBeLessThanOrEqual(option.viewport);
         if (width <= 1100) expect(option.height).toBeGreaterThanOrEqual(44);
       }
+      // The popup can exceed a narrow panel; its final option must remain
+      // reachable through panel scrolling, rather than only the first option.
+      await nav.locator('[data-theme-option="rose"]').click();
+      await expect(nav.locator(".theme-menu")).toBeHidden();
+      await themeTrigger.click();
       await nav.locator('[data-theme-option="default"]').click();
       await expect(nav.locator(".theme-menu")).toBeHidden();
+      await nav.locator(".nav-about").click();
+      await expect(nav.locator(".nav-about-menu__panel")).toBeVisible();
+      await expect(nav.getByRole("link", { name: "关于本站", exact: true })).toBeVisible();
+      await nav.getByRole("link", { name: "版本", exact: true }).click();
+      await expect(page).toHaveURL(/\/releases$/);
+      // Restore this route before measuring its navigation and homepage title.
+      await page.goto(route, { waitUntil: "domcontentloaded" });
+      if (width <= 1100) await toggle.click();
       const outOfBounds = await nav.evaluate((element) =>
         [...element.querySelectorAll("a,button,input,summary")]
           .filter((control) => {
@@ -157,6 +185,12 @@ test("登录后的手机页头保留账号操作、搜索和键盘关闭", async
     await toggle.click();
     await expect(nav.locator(".nav-admin")).toBeVisible();
     await expect(nav.locator(".nav-write")).toBeVisible();
+    const writePadding = await nav.locator(".nav-write").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { left: parseFloat(style.paddingLeft), right: parseFloat(style.paddingRight) };
+    });
+    expect(writePadding.left).toBeGreaterThanOrEqual(12);
+    expect(writePadding.right).toBeGreaterThanOrEqual(12);
     await expect(nav.getByRole("button", { name: "退出", exact: true })).toBeVisible();
     const input = nav.locator('input[name="q"]');
     expect((await input.boundingBox()).width).toBeGreaterThanOrEqual(160);
@@ -174,5 +208,6 @@ test("登录后的手机页头保留账号操作、搜索和键盘关闭", async
     await input.press("Escape");
     await expect(nav.locator(".nav-panel")).toBeHidden();
     await expect(toggle).toBeFocused();
+    await expect(toggle).toHaveText("菜单");
   }
 });
