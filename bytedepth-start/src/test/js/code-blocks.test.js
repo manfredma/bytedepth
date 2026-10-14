@@ -35,6 +35,9 @@ test("code bodies cap their shared scroll area at thirty code lines", () => {
   expect(bodyStyle.overflowY).toBe("auto");
   expect(bodyStyle.overflowX).toBe("auto");
   expect(bodyStyle.lineHeight).toBe("1.7");
+  expect(bodyStyle.borderTopWidth).toBe("17px");
+  expect(bodyStyle.borderBottomWidth).toBe("17px");
+  expect(bodyStyle.boxSizing).toBe("border-box");
   expect(getComputedStyle(document.querySelector("pre")).fontSize).toBe(
     getComputedStyle(document.querySelector(".bd-code-block__lines")).fontSize,
   );

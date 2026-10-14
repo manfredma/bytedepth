@@ -83,6 +83,7 @@ test.describe("代码块增强兼容性", () => {
       });
       expect(Math.abs(metrics.height - (Math.min(count, 30) * metrics.lineHeight + metrics.padding))).toBeLessThan(2);
       expect(metrics.gutterLineHeight).toBeCloseTo(metrics.lineHeight, 1);
+      expect(metrics.padding).toBe(0);
       if (count <= 30) {
         expect(metrics.scrollHeight).toBe(metrics.height);
       } else {
