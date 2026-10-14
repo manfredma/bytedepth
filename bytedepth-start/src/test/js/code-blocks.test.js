@@ -28,7 +28,7 @@ test("code block CSS is scoped to enhanced markup", () => {
 test("code bodies cap their shared scroll area at thirty code lines", () => {
   document.body.innerHTML = `<style>${codeBlocksCss}</style><div class="content">
     <div class="bd-code-block"><div class="bd-code-block__body">
-      <div class="bd-code-block__code"><div class="bd-code-block__lines"></div><pre><code>code</code></pre></div>
+      <div class="bd-code-block__code"><div class="bd-code-block__lines">${Array.from({ length: 31 }, (_, index) => `<span class="bd-code-block__line">${index + 1}</span>`).join("")}</div><pre><code>code</code></pre></div>
     </div></div></div>`;
   const bodyStyle = getComputedStyle(document.querySelector(".bd-code-block__body"));
   expect(bodyStyle.maxHeight).toBe("calc(30 * 27.2px + 34px)");
@@ -41,6 +41,24 @@ test("code bodies cap their shared scroll area at thirty code lines", () => {
   expect(getComputedStyle(document.querySelector("pre")).fontSize).toBe(
     getComputedStyle(document.querySelector(".bd-code-block__lines")).fontSize,
   );
+});
+
+test("thirty-line code does not constrain the space needed by a horizontal scrollbar", () => {
+  document.body.innerHTML = `<style>${codeBlocksCss}</style><div class="content">
+    <div class="bd-code-block__body"><div class="bd-code-block__lines">${Array.from({ length: 30 }, (_, index) => `<span class="bd-code-block__line">${index + 1}</span>`).join("")}</div><pre><code>${"x".repeat(400)}</code></pre></div>
+  </div>`;
+  expect(getComputedStyle(document.querySelector(".bd-code-block__body")).maxHeight).toBe("none");
+});
+
+test("code scrollbar styling declares explicit sizing and a non-hover thumb", () => {
+  document.body.innerHTML = `<style>${codeBlocksCss}</style>`;
+  const rules = Array.from(document.styleSheets[0].cssRules);
+  const scrollbar = rules.find((rule) => rule.selectorText === ".content .bd-code-block__body::-webkit-scrollbar");
+  const thumb = rules.find((rule) => rule.selectorText === ".content .bd-code-block__body::-webkit-scrollbar-thumb");
+  expect(scrollbar?.style.width).toBe("10px");
+  expect(scrollbar?.style.height).toBe("10px");
+  expect(thumb?.style.minHeight).toBe("24px");
+  expect(thumb?.style.borderRadius).toBe("6px");
 });
 
 test("ordinary and unmarked code blocks use the unified component behavior", async () => {

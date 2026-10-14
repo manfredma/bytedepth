@@ -65,7 +65,7 @@ test.describe("代码块增强兼容性", () => {
       ...[29, 30, 31].map((count) => `\`\`\`text\n${source(count)}\n\`\`\``),
       `\`\`\`text fold tabs:height\n${longSource}\n\`\`\``,
       `\`\`\`text tabs:height\n${source(31)}\n\`\`\``,
-      `\`\`\`text\n${"x".repeat(400)}\n\`\`\``,
+      `\`\`\`text\n${Array.from({ length: 30 }, () => "x".repeat(400)).join("\n")}\n\`\`\``,
     ].join("\n\n");
     const paths = await createDraft(page, `code-height-e2e-${Date.now()}`, content);
     const assertHeight = async (block, count) => {
@@ -79,6 +79,10 @@ test.describe("代码块增强兼容性", () => {
           lineHeight: parseFloat(preStyle.lineHeight),
           gutterLineHeight: parseFloat(getComputedStyle(lines).lineHeight),
           padding: parseFloat(preStyle.paddingTop) + parseFloat(preStyle.paddingBottom),
+          scrollbarWidth: body.offsetWidth - body.clientWidth,
+          scrollbarColor: getComputedStyle(body).scrollbarColor,
+          trackColor: getComputedStyle(body, "::-webkit-scrollbar-track").backgroundColor,
+          thumbColor: getComputedStyle(body, "::-webkit-scrollbar-thumb").backgroundColor,
         };
       });
       expect(Math.abs(metrics.height - (Math.min(count, 30) * metrics.lineHeight + metrics.padding))).toBeLessThan(2);
@@ -86,12 +90,19 @@ test.describe("代码块增强兼容性", () => {
       expect(metrics.padding).toBe(0);
       if (count <= 30) {
         expect(metrics.scrollHeight).toBe(metrics.height);
+        expect(metrics.scrollbarWidth).toBe(0);
       } else {
         expect(metrics.scrollHeight).toBeGreaterThan(metrics.height);
+        expect(metrics.scrollbarWidth).toBe(10);
+        expect(metrics.scrollbarColor).toBe("auto");
+        expect(metrics.thumbColor).not.toBe(metrics.trackColor);
+        expect(metrics.thumbColor).not.toBe("rgba(0, 0, 0, 0)");
+        expect(metrics.trackColor).not.toBe("rgba(0, 0, 0, 0)");
       }
     };
     try {
       await page.goto(paths.postPath, { waitUntil: "domcontentloaded" });
+      await page.mouse.move(0, 0);
       const blocks = page.locator(".bd-code-block");
       for (const [index, count] of [29, 30, 31].entries()) {
         await assertHeight(blocks.nth(index), count);
@@ -102,6 +113,12 @@ test.describe("代码块增强兼容性", () => {
       await expect(longBlock.locator(".bd-code-block__body")).toBeHidden();
       await longBlock.getByRole("button", { name: "展开代码" }).click();
       await assertHeight(longBlock, 120);
+      for (const theme of ["midnight", "paper", "blue"]) {
+        await page.evaluate((selectedTheme) => {
+          document.documentElement.dataset.theme = selectedTheme;
+        }, theme);
+        await assertHeight(longBlock, 120);
+      }
       await expect(longBlock.locator("pre code")).toHaveText(`${longSource}\n`);
       await expect(longBlock.locator(".bd-code-block__line")).toHaveCount(120);
       await page.evaluate(() => {
@@ -136,6 +153,7 @@ test.describe("代码块增强兼容性", () => {
           .locator(".bd-code-block__body")
           .evaluate((element) => element.scrollWidth > element.clientWidth),
       ).toBe(true);
+      await assertHeight(blocks.last(), 30);
     } finally {
       await deleteDraft(page, paths.editPath);
     }
