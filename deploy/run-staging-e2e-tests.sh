@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+source "$(dirname "$0")/lib/staging-platform-contract.sh"
+staging_platform_parse_args "$@"
+
 # Host Agent staging E2E runner. It uses the platform-provided browser and
 # isolated test-slot resources, then emits evidence for the candidate SHA.
 # It is not a production deployment entrypoint.
@@ -10,15 +13,15 @@ if [[ "${EUID}" -ne 0 ]]; then
   exit 1
 fi
 
-readonly SOURCE_ROOT=/opt/bytedepth
-readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
-readonly EVIDENCE_DIR=/var/lib/bytedepth-staging/test-history
-readonly RUNTIME_MANIFEST=/var/lib/bytedepth-staging/runtime/manifest
-readonly DEPLOY_HISTORY=/var/lib/bytedepth-staging/deploy-history
-readonly LOCK_FILE=/var/lib/bytedepth-staging/deployment-test.lock
-readonly TEST_STATE_DIR=/var/lib/bytedepth-staging/test-slots
-readonly SLOT_PROVISION=/opt/bytedepth/deploy/provision-staging-test-slot.sh
-readonly SLOT_TEARDOWN=/opt/bytedepth/deploy/teardown-staging-test-slot.sh
+readonly SOURCE_ROOT="${RELEASE_PLATFORM_TEST_SOURCE_ROOT:-/opt/bytedepth}"
+readonly CONFIG_FILE="${RELEASE_PLATFORM_TEST_CONFIG_FILE:-/etc/bytedepth-deploy.conf}"
+readonly EVIDENCE_DIR="${RELEASE_PLATFORM_TEST_EVIDENCE_DIR:-/var/lib/bytedepth-staging/test-history}"
+readonly RUNTIME_MANIFEST="${RELEASE_PLATFORM_TEST_RUNTIME_MANIFEST:-/var/lib/bytedepth-staging/runtime/manifest}"
+readonly DEPLOY_HISTORY="${RELEASE_PLATFORM_TEST_DEPLOY_HISTORY:-/var/lib/bytedepth-staging/deploy-history}"
+readonly LOCK_FILE="${RELEASE_PLATFORM_TEST_LOCK_FILE:-/var/lib/bytedepth-staging/deployment-test.lock}"
+readonly TEST_STATE_DIR="${RELEASE_PLATFORM_TEST_STATE_DIR:-/var/lib/bytedepth-staging/test-slots}"
+readonly SLOT_PROVISION="$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
+readonly SLOT_TEARDOWN="$SOURCE_ROOT/deploy/teardown-staging-test-slot.sh"
 readonly E2E_BASE_URL=https://staging-bytedepth.bytedepth.cn
 readonly E2E_DOMAIN=staging-bytedepth.bytedepth.cn
 readonly E2E_LOCAL_RESOLVE="$E2E_DOMAIN:443:127.0.0.1"
@@ -28,6 +31,8 @@ readonly CHROMIUM_EXECUTABLE=/opt/shared-e2e/chrome-linux64/chrome
 source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
+source "$SOURCE_ROOT/deploy/lib/staging-test-config.sh"
+load_staging_test_configuration
 source "$SOURCE_ROOT/deploy/lib/staging-native-target.sh"
 load_staging_native_target
 readonly SLOT_SERVICE="$BYTEDEPTH_STAGING_TEST_SLOT_SERVICE"
@@ -37,7 +42,7 @@ else
   readonly SLOT_ENV=/run/bytedepth/staging-e2e.env
 fi
 readonly SLOT_RUNTIME_DIR=/run/bytedepth
-readonly SLOT_JAR=/opt/bytedepth/current/app.jar
+readonly SLOT_JAR="${RELEASE_PLATFORM_TEST_JAR:-$(dirname "$SOURCE_ROOT")/app.jar}"
 WORK_DIR="$(mktemp -d)"
 staging_ensure_ubuntu_owner "$WORK_DIR"
 readonly WORK_DIR
@@ -212,32 +217,19 @@ trap on_exit EXIT
 
 # Deployment, integration tests and E2E share this lock so an evidence record
 # can only be written for a stable deployed checkout.
-if [[ "${1:-}" != '--lock-held' ]]; then
+if [[ "${RELEASE_PLATFORM_TEST_LOCK_HELD:-}" != 1 ]]; then
   install -d -o ubuntu -g ubuntu -m 0700 "$(dirname "$LOCK_FILE")"
-  exec flock -x "$LOCK_FILE" "$0" --lock-held "$@"
+  exec env RELEASE_PLATFORM_TEST_LOCK_HELD=1 BYTEDEPTH_TEST_SLOT_LOCK_HELD=1 \
+    flock -x "$LOCK_FILE" "$0" "$@"
 fi
-shift
+export BYTEDEPTH_TEST_SLOT_LOCK_HELD=1
 
 read_checked_out_commit() {
-  local commit
-
-  commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-parse HEAD)"
-  if [[ ! "$commit" =~ ^[0-9a-f]{40}$ ]]; then
-    printf 'Refusing: unable to determine the full checked-out commit SHA.\n' >&2
-    exit 1
-  fi
-  printf '%s\n' "$commit"
+  staging_platform_source_commit
 }
 
 require_deployed_commit() {
-  local expected_commit="$1"
-  local deployed_commit
-
-  deployed_commit="$(awk -F= '$1 == "commit" {value = $2} END {print value}' "$DEPLOY_HISTORY" 2> /dev/null || true)"
-  if [[ "$deployed_commit" != "$expected_commit" ]]; then
-    printf 'Refusing: staging app deployment does not match the tested checkout commit.\n' >&2
-    exit 1
-  fi
+  staging_platform_require_candidate "$1"
 }
 
 invalidate_evidence() {
@@ -270,6 +262,8 @@ write_evidence() {
   evidence_tmp="$(mktemp "$EVIDENCE_DIR/.staging-e2e.XXXXXX")"
   printf 'commit=%s\ncommand=run-staging-e2e-tests\ntimestamp=%s\nresult=passed\nruntime_mode=host-native\nrun_id=%s\ntest_resource_manifest_sha=%s\ncleanup=result=passed\n' \
     "$tested_commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$run_id" "$manifest_sha" > "$evidence_tmp"
+  staging_platform_write_binding >> "$evidence_tmp"
+  printf 'tests_total=%s\n' "$test_count" >> "$evidence_tmp"
   install -o ubuntu -g ubuntu -m 0600 "$evidence_tmp" "$EVIDENCE_DIR/staging-e2e"
   rm -f "$evidence_tmp"
 }
@@ -286,9 +280,9 @@ if [[ -z "${BYTEDEPTH_STAGING_E2E_USERNAME:-}" || -z "${BYTEDEPTH_STAGING_E2E_PA
 fi
 
 invalidate_evidence
-tested_commit="$(read_checked_out_commit)"
+tested_commit="$STAGING_PLATFORM_COMMIT"
 require_deployed_commit "$tested_commit"
-require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
+ensure_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
 load_resource_credentials
 
 if [[ ! -x "$CHROMIUM_EXECUTABLE" ]]; then
@@ -297,6 +291,11 @@ if [[ ! -x "$CHROMIUM_EXECUTABLE" ]]; then
 fi
 
 cd "$SOURCE_ROOT"
+if ! npm ci --ignore-scripts --no-audit --no-fund 2>&1 | redact_secrets | tee "$E2E_LOG"; then
+  printf 'Staging E2E dependency preparation failed.\n' >&2
+  exit 1
+fi
+warning_policy_check_file "$E2E_LOG"
 run_id="$(date -u +%Y%m%d_%H%M%S)_$(openssl rand -hex 4)"
 manifest="$TEST_STATE_DIR/$run_id/manifest"
 export BYTEDEPTH_TEST_STATE_DIR="$TEST_STATE_DIR"
@@ -340,8 +339,9 @@ export E2E_LOCAL_HOST_RESOLVER_RULE
 if ! E2E_POST_SLUG="$e2e_post_slug" \
   E2E_ADMIN_USERNAME="$BYTEDEPTH_STAGING_E2E_USERNAME" \
   E2E_ADMIN_PASSWORD="$BYTEDEPTH_STAGING_E2E_PASSWORD" \
+  PLAYWRIGHT_JSON_OUTPUT_FILE="$WORK_DIR/playwright-results.json" \
   PLAYWRIGHT_CHROMIUM_EXECUTABLE="$CHROMIUM_EXECUTABLE" \
-  npm run test:e2e 2>&1 | tee "$E2E_LOG"; then
+  npm run test:e2e -- --reporter=list,json 2>&1 | redact_secrets | tee -a "$E2E_LOG"; then
   printf 'Staging E2E tests failed.\n' >&2
   exit 1
 fi
@@ -351,6 +351,7 @@ if ! warning_policy_check_file "$E2E_LOG"; then
   exit 1
 fi
 
+test_count="$(staging_platform_test_count e2e "$WORK_DIR/playwright-results.json")"
 stop_test_slot
 test_slot_started=0
 cleanup_slot

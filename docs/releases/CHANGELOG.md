@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-## [v2.29.1] - 2026-10-13
+## [v2.29.2] - 2026-10-14
 
 ### Fixed
 
@@ -14,6 +14,19 @@
 ### Changed
 
 - 明确本仓库 Agent 默认交付至 staging 验证完成后等待人工验收；本任务明确免人工验收时，全部门禁通过后继续生产发布。常规提交、推送与 PR 无需逐步请示，真实阻塞须明确报告，并将开发交付规则检查纳入本地质量入口。
+
+## [v2.29.1] - 2026-10-13
+
+### Fixed
+
+- 搜索输入框允许在窄屏 flex 布局中收缩，避免 Linux Chromium 的默认最小宽度将 320px 页面撑宽。
+- 版本说明中的长代码块在自身区域横向滚动，避免 320px 手机页面被撑宽；保留完整代码内容及 E2E 溢出断言。
+- staging E2E test-slot 服务使用与实际 app 和项目发布目录一致的 ubuntu 身份，避免私有 release 目录导致 CHDIR 拒绝；不放宽目录权限。
+- E2E runner 优先读取 staging Host Agent 基础设施提供的通用测试账号环境，保留项目登录实现和全部测试用例；拒绝不完整的共享凭据。
+- staging runner 从项目私有测试配置读取已有测试槽凭据引用，保留显式环境注入优先级与签名任务身份，避免依赖 Host Agent 全局环境中的项目变量。
+- staging runner 在已持有的平台锁内复用依赖准备入口；bootstrap 读取本候选 source snapshot，依赖准备成功后才刷新 runtime manifest，防止旧工作目录/旧依赖记录阻断实际测试。
+
+- staging integration/E2E runner 接入统一 Host Agent 契约，严格绑定候选完整 SHA、部署源快照、制品 digest 与当前 attempt；复用外层测试锁并从实际测试报告拒绝零用例成功，避免版本探针或旧 checkout 被作为测试通过依据。
 
 ## [v2.29.0] - 2026-10-12
 

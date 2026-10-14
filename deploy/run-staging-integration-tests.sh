@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+source "$(dirname "$0")/lib/staging-platform-contract.sh"
+staging_platform_parse_args "$@"
+
 # Host Agent staging integration runner. It creates/uses an isolated test slot,
 # records evidence, and cleans up resources; the project workspace must not run
 # this as a substitute for release-platform acceptance.
@@ -10,14 +13,14 @@ if [[ "${EUID}" -ne 0 ]]; then
   exit 1
 fi
 
-readonly SOURCE_ROOT=/opt/bytedepth
-readonly CONFIG_FILE=/etc/bytedepth-deploy.conf
-readonly STATE_DIR=/var/lib/bytedepth-staging
-readonly EVIDENCE_DIR="$STATE_DIR/test-history"
-readonly DEPLOY_HISTORY="$STATE_DIR/deploy-history"
-readonly LOCK_FILE="$STATE_DIR/deployment-test.lock"
-readonly TEST_STATE_DIR="$STATE_DIR/test-slots"
-readonly RUNTIME_MANIFEST="$STATE_DIR/runtime/manifest"
+readonly SOURCE_ROOT="${RELEASE_PLATFORM_TEST_SOURCE_ROOT:-/opt/bytedepth}"
+readonly CONFIG_FILE="${RELEASE_PLATFORM_TEST_CONFIG_FILE:-/etc/bytedepth-deploy.conf}"
+readonly STATE_DIR="${RELEASE_PLATFORM_TEST_WORK_DIR:-/var/lib/bytedepth-staging}"
+readonly EVIDENCE_DIR="${RELEASE_PLATFORM_TEST_EVIDENCE_DIR:-/var/lib/bytedepth-staging/test-history}"
+readonly DEPLOY_HISTORY="${RELEASE_PLATFORM_TEST_DEPLOY_HISTORY:-/var/lib/bytedepth-staging/deploy-history}"
+readonly LOCK_FILE="${RELEASE_PLATFORM_TEST_LOCK_FILE:-/var/lib/bytedepth-staging/deployment-test.lock}"
+readonly TEST_STATE_DIR="${RELEASE_PLATFORM_TEST_STATE_DIR:-/var/lib/bytedepth-staging/test-slots}"
+readonly RUNTIME_MANIFEST="${RELEASE_PLATFORM_TEST_RUNTIME_MANIFEST:-/var/lib/bytedepth-staging/runtime/manifest}"
 readonly SHARED_MAVEN_REPOSITORY=/opt/shared-maven/repository
 readonly MINIMUM_WORKSPACE_FREE_KIB=2097152
 readonly SLOT_PROVISION="$SOURCE_ROOT/deploy/provision-staging-test-slot.sh"
@@ -28,6 +31,8 @@ source "$SOURCE_ROOT/deploy/lib/staging-runtime.sh"
 source "$SOURCE_ROOT/deploy/lib/warning-policy.sh"
 # shellcheck disable=SC1090,SC1091
 source "$SOURCE_ROOT/deploy/lib/staging-test-slot.sh"
+source "$SOURCE_ROOT/deploy/lib/staging-test-config.sh"
+load_staging_test_configuration
 source "$SOURCE_ROOT/deploy/lib/staging-native-target.sh"
 load_staging_native_target
 
@@ -41,25 +46,11 @@ cleanup_done=0
 cleanup_result=failed
 
 read_checked_out_commit() {
-  local commit
-
-  commit="$(git -c safe.directory="$SOURCE_ROOT" -C "$SOURCE_ROOT" rev-parse HEAD)"
-  [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || {
-    printf 'Refusing: unable to determine the full checked-out commit SHA.\n' >&2
-    return 1
-  }
-  printf '%s\n' "$commit"
+  staging_platform_source_commit
 }
 
 require_deployed_commit() {
-  local expected_commit="$1"
-  local deployed_commit
-
-  deployed_commit="$(awk -F= '$1 == "commit" {value = $2} END {print value}' "$DEPLOY_HISTORY" 2> /dev/null || true)"
-  [[ "$deployed_commit" == "$expected_commit" ]] || {
-    printf 'Refusing: staging app deployment does not match the tested checkout commit.\n' >&2
-    return 1
-  }
+  staging_platform_require_candidate "$1"
 }
 
 invalidate_evidence() {
@@ -203,11 +194,12 @@ on_exit() {
 }
 trap on_exit EXIT
 
-if [[ "${1:-}" != '--lock-held' ]]; then
-  install -d -o ubuntu -g ubuntu -m 0700 "$STATE_DIR"
-  exec env BYTEDEPTH_TEST_SLOT_LOCK_HELD=1 flock -x "$LOCK_FILE" "$0" --lock-held "$@"
+if [[ "${RELEASE_PLATFORM_TEST_LOCK_HELD:-}" != 1 ]]; then
+  install -d -o ubuntu -g ubuntu -m 0700 "$(dirname "$LOCK_FILE")"
+  exec env RELEASE_PLATFORM_TEST_LOCK_HELD=1 BYTEDEPTH_TEST_SLOT_LOCK_HELD=1 \
+    flock -x "$LOCK_FILE" "$0" "$@"
 fi
-shift
+export BYTEDEPTH_TEST_SLOT_LOCK_HELD=1
 
 deploy_mode="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value = substr($0, index($0, "=") + 1)} END {print value}' "$CONFIG_FILE" 2> /dev/null || true)"
 [[ "$deploy_mode" == staging ]] || {
@@ -216,9 +208,9 @@ deploy_mode="$(awk -F= '$1 == "BYTEDEPTH_DEPLOY_MODE" {value = substr($0, index(
 }
 
 invalidate_evidence
-tested_commit="$(read_checked_out_commit)"
+tested_commit="$STAGING_PLATFORM_COMMIT"
 require_deployed_commit "$tested_commit"
-require_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
+ensure_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
 require_workspace_headroom
 require_test_slot_inputs
 load_resource_credentials
@@ -263,6 +255,7 @@ staging_ensure_ubuntu_owner "$MAVEN_LOG"
   exit 1
 }
 cd "$SOURCE_ROOT"
+find . -path "*/target/failsafe-reports/failsafe-summary.xml" -type f -delete
 if ! ./mvnw -o -Pstaging-integration verify -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" 2>&1 \
   | redact_secrets | tee "$MAVEN_LOG"; then
   printf 'Staging integration tests failed.\n' >&2
@@ -273,6 +266,7 @@ warning_policy_check_file "$MAVEN_LOG" || {
   exit 1
 }
 
+test_count="$(staging_platform_test_count integration "$SOURCE_ROOT")"
 cleanup_slot
 [[ "$cleanup_result" == passed ]] || {
   printf 'Refusing: test resource cleanup or staging restoration failed.\n' >&2
@@ -288,6 +282,8 @@ install -d -o ubuntu -g ubuntu -m 0700 "$EVIDENCE_DIR"
 evidence_tmp="$(mktemp "$EVIDENCE_DIR/.staging-integration.XXXXXX")"
 printf 'commit=%s\ncommand=run-staging-integration-tests\ntimestamp=%s\nresult=passed\nruntime_mode=host-native\nrun_id=%s\ntest_resource_manifest_sha=%s\ncleanup=result=passed\n' \
   "$tested_commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$run_id" "$manifest_sha" > "$evidence_tmp"
+staging_platform_write_binding >> "$evidence_tmp"
+printf 'tests_total=%s\n' "$test_count" >> "$evidence_tmp"
 install -o ubuntu -g ubuntu -m 0600 "$evidence_tmp" "$EVIDENCE_DIR/staging-integration"
 rm -f -- "$evidence_tmp"
 printf 'Staging integration tests passed for %s.\n' "$tested_commit"

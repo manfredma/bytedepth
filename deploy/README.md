@@ -12,4 +12,31 @@ ByteDepth 的 staging、production 构建、制品生成、环境绑定、发布
 4. 在构建详情页创建 staging 发布，等待部署、验证和页面验收证据完成。
 5. staging 验收通过后，在“发布”页面将同一不可变制品提升到 production。
 
-平台适配器负责识别现有 `bytedepth-start` 模块布局，并沿用既有 native 运行时、端口、数据目录和 systemd unit。项目源码不需要改名或新增发布脚本；历史发布说明只用于追溯，不得照此执行。
+平台使用项目与环境元数据配置模块布局、制品、runner、native 运行时、端口、数据目录和 systemd unit，阶段算法不按项目名称分流。历史发布说明只用于追溯，不得照此执行。
+
+## staging 测试 runner 契约
+
+Host Agent 调用 `deploy/run-staging-integration-tests.sh --commit-sha <40 位 SHA>` 和 `deploy/run-staging-e2e-tests.sh --commit-sha <40 位 SHA>`。缺失、重复或未知参数均失败；runner 不再读取 `/opt/bytedepth` 的 Git HEAD 来证明候选身份。
+
+平台提供以下上下文：
+
+| 变量                                                                    | 说明                                                                                    |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `RELEASE_PLATFORM_TEST_SOURCE_ROOT`                                     | 本次已部署 release 的 `source` 快照目录，包含 `.release-platform-source-commit`         |
+| `RELEASE_PLATFORM_TEST_RELEASE_MANIFEST`                                | 本次 release manifest，含 `commit`、`source_commit`、`source_sha256`、`artifact_digest` |
+| `RELEASE_PLATFORM_TEST_SOURCE_ARCHIVE`                                  | 与 manifest 校验和一致的 `staging-source.tar.gz`                                        |
+| `ARTIFACT_DIGEST` / `RELEASE_PLATFORM_TEST_ARTIFACT_DIGEST`             | 签名任务制品 digest（后者为 verifier 显式传入的同值别名）                               |
+| `RELEASE_PLATFORM_TASK_NONCE`                                           | 当前任务 attempt nonce                                                                  |
+| `RELEASE_PLATFORM_TEST_DEPLOY_HISTORY`                                  | 本次部署记录，含唯一 `commit` 和 `artifact_digest`                                      |
+| `RELEASE_PLATFORM_TEST_EVIDENCE_DIR`                                    | 当前 verifier 的证据目录                                                                |
+| `RELEASE_PLATFORM_TEST_LOCK_FILE` / `RELEASE_PLATFORM_TEST_LOCK_HELD=1` | 统一测试锁及外层已持锁标记；已持锁时 runner 不再次 flock                                |
+| `RELEASE_PLATFORM_TEST_RUNTIME_MANIFEST`                                | 与候选 `package-lock.json`、`pom.xml`、Chromium 和 ffmpeg 一致的既有依赖 manifest       |
+| `RELEASE_PLATFORM_TEST_CONFIG_FILE`                                     | 既有 staging 配置；必须声明 staging 模式                                                |
+| `RELEASE_PLATFORM_TEST_STATE_DIR` / `RELEASE_PLATFORM_TEST_WORK_DIR`    | 隔离测试 slot 状态和 integration 临时工作目录                                           |
+| `RELEASE_PLATFORM_TEST_JAR`                                             | 已部署 E2E test-slot JAR；默认 release 下的 `app.jar`                                   |
+
+隔离 MySQL、Redis、Meili、fixture、管理员账号和 native target 配置仍须由环境显式注入，原有资源隔离、清理和依赖校验保持生效。源快照没有 `.git`，也不自带 `node_modules`；E2E runner 在隔离快照中按 lockfile 执行 `npm ci --ignore-scripts --no-audit --no-fund`；宿主机须预备一致的 runtime manifest 与离线 Maven 仓库。依赖准备或校验失败时失败，不能退回版本探针。
+
+integration 从本次 Maven Failsafe summary 统计 `completed - skipped`（执行前清除旧 summary）；E2E 使用本次 Playwright JSON reporter 的成功用例数。用例数为零或报告失败时，不生成 PASS。证据包含 `commit`、`artifact_digest`、`attempt_nonce`、`tests_total`、`command`、`result` 与清理结果；这些文件仅由正式 Host Agent 任务生成，本地回归测试不上传为 staging evidence。
+
+本地防复发检查：`bash scripts/test-staging-platform-contract.sh`、`bash scripts/test-run-staging-integration-tests.sh` 和 `bash scripts/test-run-staging-e2e-tests.sh`，也纳入 `scripts/run-local-quality.sh`。

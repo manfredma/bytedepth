@@ -42,6 +42,8 @@ bash scripts/prepare-release.sh --version v2.27.0  # 初始化或纠正版本
 
 脚本只读取并修改本地 `docs/releases/CHANGELOG.md`，不依赖线上服务。脚本成功后必须把 changelog 变更提交到 PR，并使用该 PR head 的完整 SHA 创建或复用 candidate，先完成 staging 集成/E2E 和验收。验收通过后由平台 fast-forward 合并同一 SHA；release-platform 会在后续发布链校验正式 changelog section 与 acceptance `releaseTag` 一致。不要跳过脚本直接创建 candidate。本地版本检查的兼容规则见[发布准备说明](../releases/README.md)：平台管理的 changelog 不要求历史 Tag/回滚基线字段，显式提供的字段仍须通过校验。
 
+创建 PR 候选时 `sourceRef` 必须使用 `refs/pull/<PR编号>/head`，并绑定该 PR head 的完整 SHA。平台依据 pull ref 在验收后将同一 SHA fast-forward 到默认分支；不能以 feature branch ref 替代。候选按 project + SHA 唯一，错误 ref 的候选不能改写或用于验收，应保留记录并以新的 PR head 正式验证。
+
 发布完成的依据是 release-platform 返回的 candidate、完整 commit SHA、artifact digest、task/evidence 和 request ID；本仓库的本地命令输出不能替代平台发布回执。
 
 ## Agent 验收授权与 production 晋级
@@ -68,3 +70,11 @@ PENDING_ACCEPTANCE → ACCEPTED → FAST_FORWARD_MERGING → TAGGED
 ```
 
 acceptance 成功后由平台 Worker 自动执行 fast-forward、annotated tag、production task 和 verification。AI Agent 不打开页面、不 SSH、不执行 bytedepth 部署脚本，也不直接调用 production promotion import 接口；只轮询 canonical `release-view`、`release-tasks` 和 `release-operations` API，并记录 candidateId、commitSha、artifact digest、taskId、requestId、releaseTag 和最终状态。
+
+## Host Agent staging 测试输入
+
+integration/E2E runner 从 `/etc/bytedepth/staging-test.env` 读取项目测试输入；可由 `BYTEDEPTH_STAGING_TEST_CONFIG` 指定位置。配置与秘密文件均须 `ubuntu:ubuntu`、0600、非符号链接；配置采用字面量 `KEY=value`，不执行 shell 表达式，不写入仓库。基础设施提供的 `E2E_ADMIN_USERNAME` / `E2E_ADMIN_PASSWORD` 优先用于 E2E 登录；必须成对注入。其他测试输入仍优先使用显式环境注入。登录 URL、交互和成功断言由项目 E2E 实现，不由平台统一。
+
+允许的配置键为 `BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE`、`BYTEDEPTH_TEST_REDIS_SECRET_FILE`、`BYTEDEPTH_TEST_MEILI_SECRET_FILE`、`BYTEDEPTH_TEST_FIXTURE`、`BYTEDEPTH_TEST_FIXTURE_SHA256_FILE`、`BYTEDEPTH_TEST_STAGING_REDIS_DB`、`BYTEDEPTH_TEST_IT_REDIS_DB`、`BYTEDEPTH_TEST_E2E_REDIS_DB`、`BYTEDEPTH_STAGING_E2E_USERNAME` 和 `BYTEDEPTH_STAGING_E2E_PASSWORD_FILE`。引用真实已有的测试输入，不自动生成临时凭据；Redis DB 必须明确配置且通过容量及隔离检查。密码只在执行主机读取，不在对话、日志或 API 回执中输出。
+
+缺少配置/凭据、依赖准备失败、零执行用例或清理失败，均不生成 PASS evidence。配置传递与权限回归入口为 `bash scripts/test-staging-test-config.sh`。
