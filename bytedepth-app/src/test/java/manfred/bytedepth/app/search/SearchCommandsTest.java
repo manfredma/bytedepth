@@ -34,7 +34,7 @@ class SearchCommandsTest {
     void index_skipsMissingPostAndIncludesResolvedMetadata() {
         when(posts.findById(1L)).thenReturn(Optional.empty());
         index.execute(1L);
-        verifyNoInteractions(search);
+        verify(search).delete(1L);
 
         Post post = Post.reconstruct(
                 2L,
@@ -151,7 +151,7 @@ class SearchCommandsTest {
     }
 
     @Test
-    void reindex_handlesEmptyFinalPageAndPublishedOnly() {
+    void reindexRefreshesPublishedSourceSnapshot() {
         Post published = Post.reconstruct(
                 1L,
                 "p",
@@ -166,18 +166,18 @@ class SearchCommandsTest {
                 false);
         Post draft = Post.reconstruct(
                 2L, "d", "t", "c", PostStatus.DRAFT, LocalDateTime.now(), null, LocalDateTime.now(), null, null, false);
-        when(posts.findPage(1, 50)).thenReturn(List.of(published, draft));
+        when(posts.findAllPublished()).thenReturn(List.of(published));
 
         IndexPostCmdExe indexer = mock(IndexPostCmdExe.class);
-        assertEquals(1, new ReindexAllPostsCmdExe(posts, indexer).execute());
+        assertEquals(1, new ReindexAllPostsCmdExe(posts, indexer, search).execute());
         verify(indexer).execute(1L);
     }
 
     @Test
-    void reindex_stopsOnEmptyPageAndPaginatesFullPages() {
-        when(posts.findPage(1, 50)).thenReturn(List.of());
+    void reindexHandlesEmptyAndLargePublishedSnapshots() {
+        when(posts.findAllPublished()).thenReturn(List.of());
         IndexPostCmdExe indexer = mock(IndexPostCmdExe.class);
-        assertEquals(0, new ReindexAllPostsCmdExe(posts, indexer).execute());
+        assertEquals(0, new ReindexAllPostsCmdExe(posts, indexer, search).execute());
         verifyNoInteractions(indexer);
 
         Post published = Post.reconstruct(
@@ -192,22 +192,52 @@ class SearchCommandsTest {
                 null,
                 null,
                 false);
-        // 满页触发翻页，第二页为空时停止
-        when(posts.findPage(1, 50))
+        // All snapshot IDs are synchronized, independently of legacy page boundaries.
+        when(posts.findAllPublished())
                 .thenReturn(java.util.stream.IntStream.range(0, 50)
                         .mapToObj(i -> published)
                         .toList());
-        when(posts.findPage(2, 50)).thenReturn(List.of());
-        assertEquals(50, new ReindexAllPostsCmdExe(posts, indexer).execute());
+
+        assertEquals(50, new ReindexAllPostsCmdExe(posts, indexer, search).execute());
+    }
+
+    @Test
+    void reindexDoesNotSkipPublishedArticleWhenEarlierRowIsRemovedDuringScan() {
+        var source = new java.util.ArrayList<Post>();
+        for (long id = 1; id <= 51; id++) {
+            source.add(Post.reconstruct(
+                    id,
+                    "p" + id,
+                    "title",
+                    "body",
+                    PostStatus.PUBLISHED,
+                    LocalDateTime.now(),
+                    LocalDateTime.now(),
+                    LocalDateTime.now(),
+                    null,
+                    null,
+                    false));
+        }
+        when(posts.findAllPublished()).thenAnswer(i -> List.copyOf(source));
+
+        IndexPostCmdExe indexer = mock(IndexPostCmdExe.class);
+        doAnswer(i -> {
+                    source.remove(0);
+                    return null;
+                })
+                .when(indexer)
+                .execute(1L);
+        new ReindexAllPostsCmdExe(posts, indexer, search).execute();
+        verify(indexer).execute(51L);
     }
 
     @Test
     void search_trimsMeaningfulQueriesAndReturnsEmptyForBlankInput() {
-        SearchPostsQryExe query = new SearchPostsQryExe(search);
+        SearchPostsQryExe query = new SearchPostsQryExe(search, posts);
         SearchResult expected = new SearchResult(List.of(), 0, 2, 10);
         when(search.search("java", 2, 10)).thenReturn(expected);
         assertEquals(0, query.execute("  ", 1).getTotalHits());
         assertEquals(0, query.execute(null, 1).getTotalHits());
-        assertSame(expected, query.execute(" java ", 2));
+        assertEquals(0, query.execute(" java ", 2).getTotalHits());
     }
 }

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 import manfred.bytedepth.adapter.web.security.ContentOwnershipGuard;
+import manfred.bytedepth.app.series.DeleteSeriesCmdExe;
 import manfred.bytedepth.domain.series.Series;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import org.junit.jupiter.api.Test;
@@ -21,8 +22,9 @@ class AdminSeriesListControllerTest {
     private final SeriesRepository seriesRepository = Mockito.mock(SeriesRepository.class);
     private final ContentOwnershipGuard ownershipGuard = Mockito.mock(ContentOwnershipGuard.class);
     private final TestingAuthenticationToken authentication = new TestingAuthenticationToken("author", null);
+    private final DeleteSeriesCmdExe deleteSeriesCmdExe = Mockito.mock(DeleteSeriesCmdExe.class);
     private final AdminSeriesListController controller =
-            new AdminSeriesListController(seriesRepository, ownershipGuard);
+            new AdminSeriesListController(seriesRepository, ownershipGuard, deleteSeriesCmdExe);
 
     @Test
     void administratorList_includesEverySeries() {
@@ -114,6 +116,6 @@ class AdminSeriesListControllerTest {
         assertEquals("redirect:/admin/series", controller.delete(authentication, 3L));
 
         verify(ownershipGuard).requireSeriesOwner(authentication, 3L);
-        verify(seriesRepository).deleteWithPosts(3L);
+        verify(deleteSeriesCmdExe).execute(3L);
     }
 }

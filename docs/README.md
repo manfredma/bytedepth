@@ -13,6 +13,7 @@
 - 修改前端页面、组件、视觉样式或交互：**必须先读** [前端设计语言](architecture/frontend-design-language.md)，再按需读 [前端公共组件模式](engineering/frontend-patterns.md) 与 [前端组件约束](agent-guides/frontend-components.md)。
 - 修改分页：读 [前端模式](engineering/frontend-patterns.md)。
 - 查询所有路由：读 [路由一览](architecture/routes.md)。
+- 搜索索引同步、残留清理与失败恢复：读 [搜索索引同步](engineering/search-indexing.md)。
 - 排查已知问题：读 [工程陷阱](engineering/gotchas.md)。
 - 管理尚未处理的技术债：读 [技术债清单](engineering/technical-debt.md)。
 - 修改访问日志、阅读统计或首页排序：读 [访问日志与统计](engineering/view-log-and-analytics.md)。

@@ -16,6 +16,7 @@ import manfred.bytedepth.app.post.command.FeaturePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
+import manfred.bytedepth.app.post.command.UpdatePostSlugCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListAllPostsQryExe;
 import manfred.bytedepth.app.series.AppendPostToSeriesCmdExe;
@@ -58,6 +59,7 @@ public class AdminPostController {
     private final RemovePostFromSeriesCmdExe removePostFromSeriesCmdExe;
     private final PostRepository postRepository;
     private final ContentOwnershipGuard contentOwnershipGuard;
+    private final UpdatePostSlugCmdExe updatePostSlugCmdExe;
 
     public AdminPostController(
             ListAllPostsQryExe listAllPostsQryExe,
@@ -73,7 +75,8 @@ public class AdminPostController {
             AppendPostToSeriesCmdExe appendPostToSeriesCmdExe,
             RemovePostFromSeriesCmdExe removePostFromSeriesCmdExe,
             PostRepository postRepository,
-            ContentOwnershipGuard contentOwnershipGuard) {
+            ContentOwnershipGuard contentOwnershipGuard,
+            UpdatePostSlugCmdExe updatePostSlugCmdExe) {
         this.listAllPostsQryExe = listAllPostsQryExe;
         this.getPostQryExe = getPostQryExe;
         this.createPostCmdExe = createPostCmdExe;
@@ -88,6 +91,7 @@ public class AdminPostController {
         this.removePostFromSeriesCmdExe = removePostFromSeriesCmdExe;
         this.postRepository = postRepository;
         this.contentOwnershipGuard = contentOwnershipGuard;
+        this.updatePostSlugCmdExe = updatePostSlugCmdExe;
     }
 
     @GetMapping
@@ -272,7 +276,7 @@ public class AdminPostController {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("slug '" + slug + "' 已被 postId=" + conflict.get().getId() + " 占用");
         }
-        postRepository.updateSlug(id, slug);
+        updatePostSlugCmdExe.execute(id, slug);
         return ResponseEntity.ok("ok");
     }
 

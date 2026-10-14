@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import manfred.bytedepth.app.search.IndexPostCmdExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.Series;
 import manfred.bytedepth.domain.series.SeriesRepository;
@@ -14,9 +15,12 @@ import org.mockito.Mockito;
 
 class SetPostSeriesCmdExeTest {
 
+    private final IndexPostCmdExe indexPostCmdExe = org.mockito.Mockito.mock(IndexPostCmdExe.class);
+
     private final PostRepository postRepository = Mockito.mock(PostRepository.class);
     private final SeriesRepository seriesRepository = Mockito.mock(SeriesRepository.class);
-    private final SetPostSeriesCmdExe command = new SetPostSeriesCmdExe(postRepository, seriesRepository);
+    private final SetPostSeriesCmdExe command =
+            new SetPostSeriesCmdExe(postRepository, seriesRepository, indexPostCmdExe);
 
     @Test
     void missingSeries_isCreatedForTheRequestingAdministrator() {
@@ -29,6 +33,7 @@ class SetPostSeriesCmdExeTest {
         verify(seriesRepository).save(created.capture());
         assertEquals(1L, created.getValue().getAuthorId());
         verify(postRepository).setPostSeries(9L, 3L, 2);
+        verify(indexPostCmdExe).execute(9L);
     }
 
     @Test
@@ -40,6 +45,7 @@ class SetPostSeriesCmdExeTest {
 
         Mockito.verify(seriesRepository, Mockito.never()).save(Mockito.any());
         verify(postRepository).setPostSeries(9L, 3L, 2);
+        verify(indexPostCmdExe).execute(9L);
     }
 
     @Test

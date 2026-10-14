@@ -6,6 +6,7 @@ import manfred.bytedepth.app.post.MarkdownTextExtractor;
 import manfred.bytedepth.domain.category.CategoryRepository;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
+import manfred.bytedepth.domain.post.PostStatus;
 import manfred.bytedepth.domain.search.PostSearchDoc;
 import manfred.bytedepth.domain.search.PostSearchPort;
 import manfred.bytedepth.domain.series.SeriesRepository;
@@ -22,9 +23,15 @@ public class IndexPostCmdExe {
     private final SeriesRepository seriesRepository;
     private final PostSearchPort postSearchPort;
 
-    public void execute(Long postId) {
+    // Serialize projection reads and writes in the current single application instance:
+    // a slow published write must finish before a later deletion can remove its document.
+    public synchronized void execute(Long postId) {
         Post post = postRepository.findById(postId).orElse(null);
-        if (post == null) return;
+        // Search is a projection: retrying synchronization must also remove stale documents.
+        if (post == null || post.getStatus() != PostStatus.PUBLISHED) {
+            postSearchPort.delete(postId);
+            return;
+        }
 
         List<String> tags = tagRepository.findByPostId(postId).stream()
                 .map(t -> t.getName())

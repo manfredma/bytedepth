@@ -1,27 +1,23 @@
 package manfred.bytedepth.infrastructure.search;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 class MinTest {
     @Test
-    void delete_passesTheIndexAndPostIdAsUriVariables() {
-        RestClient restClient = mock(RestClient.class);
-        RestClient.RequestHeadersUriSpec<?> uriSpec = mock(RestClient.RequestHeadersUriSpec.class);
-        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
-        doReturn(uriSpec).when(restClient).delete();
-        doReturn(uriSpec).when(uriSpec).uri(anyString(), any(Object[].class));
-        doReturn(responseSpec).when(uriSpec).retrieve();
-
-        new MeiliSearchPostIndexer(restClient).delete(99L);
-
-        verify(uriSpec).uri("/indexes/{index}/documents/{id}", "posts", 99L);
-        verify(responseSpec).toBodilessEntity();
+    void deletePassesTheDefaultIndexAndPostIdAndWaitsForCompletion() {
+        var builder = RestClient.builder().baseUrl("http://meili");
+        var server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://meili/indexes/posts/documents/99"))
+                .andRespond(withSuccess("{\"taskUid\":7}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo("http://meili/tasks/7"))
+                .andRespond(withSuccess("{\"status\":\"succeeded\"}", MediaType.APPLICATION_JSON));
+        new MeiliSearchPostIndexer(builder.build()).delete(99L);
+        server.verify();
     }
 }

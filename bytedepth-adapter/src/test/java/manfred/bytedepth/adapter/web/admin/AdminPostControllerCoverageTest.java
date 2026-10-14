@@ -14,6 +14,7 @@ import manfred.bytedepth.app.post.command.FeaturePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
+import manfred.bytedepth.app.post.command.UpdatePostSlugCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListAllPostsQryExe;
 import manfred.bytedepth.app.series.AppendPostToSeriesCmdExe;
@@ -45,7 +46,8 @@ class AdminPostControllerCoverageTest {
             mock(AppendPostToSeriesCmdExe.class),
             mock(RemovePostFromSeriesCmdExe.class),
             mock(PostRepository.class),
-            ownershipGuard);
+            ownershipGuard,
+            mock(UpdatePostSlugCmdExe.class));
     private final TestingAuthenticationToken authentication = new TestingAuthenticationToken("author", null);
 
     @Test

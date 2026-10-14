@@ -8,6 +8,8 @@ import static org.mockito.Mockito.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import manfred.bytedepth.app.search.IndexPostCmdExe;
+import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.tag.Tag;
 import manfred.bytedepth.domain.tag.TagRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +22,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class SetPostTagsCmdExeTest {
 
+    private final PostRepository postRepository = org.mockito.Mockito.mock(PostRepository.class);
+
+    private final IndexPostCmdExe indexPostCmdExe = org.mockito.Mockito.mock(IndexPostCmdExe.class);
+
     @Mock
     private TagRepository tagRepository;
 
@@ -27,7 +33,7 @@ class SetPostTagsCmdExeTest {
 
     @BeforeEach
     void setUp() {
-        setPostTagsCmdExe = new SetPostTagsCmdExe(tagRepository);
+        setPostTagsCmdExe = new SetPostTagsCmdExe(tagRepository, postRepository, indexPostCmdExe);
     }
 
     @Test
@@ -121,6 +127,7 @@ class SetPostTagsCmdExeTest {
         verify(tagRepository, never()).findBySlug(any());
         verify(tagRepository, never()).save(any(Tag.class));
         verify(tagRepository).savePostTags(eq(100L), eq(List.of()));
+        verify(indexPostCmdExe).execute(100L);
     }
 
     @Test

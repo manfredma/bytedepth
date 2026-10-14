@@ -56,4 +56,33 @@ class PublishPostCmdExeTest {
         verify(postRepository, never()).save(any());
         verify(indexPostCmdExe, never()).execute(any());
     }
+
+    @Test
+    void execute_retriesIndexingAfterPublishedDatabaseStateSurvivesSearchFailure() {
+        Post draft = Post.reconstruct(1L, "标题", "内容", PostStatus.DRAFT, LocalDateTime.now(), null, LocalDateTime.now());
+        when(postRepository.findById(1L)).thenReturn(Optional.of(draft));
+        when(postRepository.save(any())).thenReturn(draft);
+        doThrow(new IllegalStateException("search unavailable"))
+                .doNothing()
+                .when(indexPostCmdExe)
+                .execute(1L);
+
+        assertThrows(IllegalStateException.class, () -> publishPostCmdExe.execute(1L));
+        LocalDateTime firstPublishedAt = draft.getPublishedAt();
+        publishPostCmdExe.execute(1L);
+
+        assertEquals(firstPublishedAt, draft.getPublishedAt());
+        verify(postRepository, times(1)).save(draft);
+        verify(indexPostCmdExe, times(2)).execute(1L);
+    }
+
+    @Test
+    void execute_deletedArticleCannotBePublished() {
+        Post deleted =
+                Post.reconstruct(1L, "标题", "内容", PostStatus.DELETED, LocalDateTime.now(), null, LocalDateTime.now());
+        when(postRepository.findById(1L)).thenReturn(Optional.of(deleted));
+        assertThrows(RuntimeException.class, () -> publishPostCmdExe.execute(1L));
+        verify(postRepository, never()).save(any());
+        verifyNoInteractions(indexPostCmdExe);
+    }
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.adapter.web.filter.FilterField;
 import manfred.bytedepth.adapter.web.security.ContentOwnershipGuard;
+import manfred.bytedepth.app.series.DeleteSeriesCmdExe;
 import manfred.bytedepth.domain.series.Series;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +27,7 @@ public class AdminSeriesListController {
 
     private final SeriesRepository seriesRepository;
     private final ContentOwnershipGuard contentOwnershipGuard;
+    private final DeleteSeriesCmdExe deleteSeriesCmdExe;
 
     @GetMapping
     public String list(
@@ -74,7 +76,7 @@ public class AdminSeriesListController {
     @PostMapping("/{id}/delete")
     public String delete(Authentication authentication, @PathVariable Long id) {
         contentOwnershipGuard.requireSeriesOwner(authentication, id);
-        seriesRepository.deleteWithPosts(id);
+        deleteSeriesCmdExe.execute(id);
         return "redirect:/admin/series";
     }
 }

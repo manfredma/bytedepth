@@ -81,7 +81,7 @@ class UpdatePostCmdExeTest {
         assertEquals("新标题", existing.getTitle());
         assertEquals("新内容", existing.getContent());
         verify(postRepository).save(existing);
-        verify(indexPostCmdExe, never()).execute(any());
+        verify(indexPostCmdExe).execute(1L);
     }
 
     @Test
@@ -100,14 +100,14 @@ class UpdatePostCmdExeTest {
     }
 
     @Test
-    void execute_withDraftPost_doesNotTriggerIndexing() {
+    void execute_withDraftPost_synchronizesDesiredState() {
         Post draft = Post.reconstruct(1L, "标题", "内容", PostStatus.DRAFT, LocalDateTime.now(), null, LocalDateTime.now());
         when(postRepository.findById(1L)).thenReturn(Optional.of(draft));
         when(postRepository.save(any(Post.class))).thenReturn(draft);
 
         updatePostCmdExe.execute(1L, "新标题", "新内容", 3L);
 
-        verify(indexPostCmdExe, never()).execute(any());
+        verify(indexPostCmdExe).execute(1L);
     }
 
     @Test
@@ -184,5 +184,17 @@ class UpdatePostCmdExeTest {
         verify(annotationRepository, never()).findByPostId(any());
         verify(annotationRecalculator, never()).recalculate(any(), any(), any());
         verify(postRepository).save(existing);
+    }
+
+    @Test
+    void execute_deletedArticleSynchronizesRemovalAfterSave() {
+        Post deleted =
+                Post.reconstruct(1L, "标题", "内容", PostStatus.DELETED, LocalDateTime.now(), null, LocalDateTime.now());
+        when(postRepository.findById(1L)).thenReturn(Optional.of(deleted));
+        when(postRepository.save(any())).thenReturn(deleted);
+        updatePostCmdExe.execute(1L, "标题", "内容");
+        var order = inOrder(postRepository, indexPostCmdExe);
+        order.verify(postRepository).save(deleted);
+        order.verify(indexPostCmdExe).execute(1L);
     }
 }

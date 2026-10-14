@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.app.search.IndexPostCmdExe;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
+import manfred.bytedepth.domain.post.PostStatus;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,8 +16,10 @@ public class PublishPostCmdExe {
 
     public void execute(Long postId) {
         Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("博文不存在：" + postId));
-        post.publish();
-        postRepository.save(post);
+        if (post.getStatus() != PostStatus.PUBLISHED) {
+            post.publish();
+            postRepository.save(post);
+        }
         indexPostCmdExe.execute(postId);
     }
 }

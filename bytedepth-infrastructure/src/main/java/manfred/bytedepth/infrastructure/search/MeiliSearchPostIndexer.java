@@ -1,5 +1,7 @@
 package manfred.bytedepth.infrastructure.search;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import manfred.bytedepth.domain.search.PostSearchDoc;
@@ -10,15 +12,21 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 @Component
 public class MeiliSearchPostIndexer implements PostSearchPort {
 
     private static final Logger log = LoggerFactory.getLogger(MeiliSearchPostIndexer.class);
     private final RestClient restClient;
+    private static final int DOCUMENT_PAGE_SIZE = 1000;
     private final String index;
+    private final Duration taskTimeout;
+    private final Duration pollInterval;
 
     @Autowired
     public MeiliSearchPostIndexer(
@@ -28,6 +36,7 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
         this(
                 RestClient.builder()
                         .baseUrl(url)
+                        .requestFactory(requestFactory())
                         .defaultHeader("Authorization", "Bearer " + apiKey)
                         .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                         .build(),
@@ -40,35 +49,166 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
     }
 
     MeiliSearchPostIndexer(RestClient restClient, String index) {
+        this(restClient, index, Duration.ofSeconds(30), Duration.ofMillis(100));
+    }
+
+    MeiliSearchPostIndexer(RestClient restClient, String index, Duration taskTimeout, Duration pollInterval) {
         this.restClient = restClient;
         this.index = index;
+        this.taskTimeout = taskTimeout;
+        this.pollInterval = pollInterval;
+    }
+
+    private static SimpleClientHttpRequestFactory requestFactory() {
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(3));
+        factory.setReadTimeout(Duration.ofSeconds(5));
+        return factory;
     }
 
     @Override
-    public void index(PostSearchDoc doc) {
+    public List<Long> findIndexedIds() {
+        var ids = new ArrayList<Long>();
+        long offset = 0;
+        long total;
+        // Finish enumeration before reconciliation deletes anything: offsets shift after deletion.
+        do {
+            Map<?, ?> response;
+            try {
+                response = restClient
+                        .get()
+                        .uri(
+                                "/indexes/{index}/documents?fields=id&limit={limit}&offset={offset}",
+                                index,
+                                DOCUMENT_PAGE_SIZE,
+                                offset)
+                        .retrieve()
+                        .body(Map.class);
+            } catch (HttpClientErrorException.NotFound e) {
+                if (isMissingIndex(e)) return List.of();
+                throw e;
+            }
+            var page = requireResponse(response);
+            total = requireNonNegativeLong(page.get("total"));
+            if (requireNonNegativeLong(page.get("offset")) != offset
+                    || requireNonNegativeLong(page.get("limit")) != DOCUMENT_PAGE_SIZE) {
+                throw new IllegalStateException("Unexpected Meilisearch document pagination");
+            }
+            if (!(page.get("results") instanceof List<?> documents)) {
+                throw new IllegalStateException("Missing Meilisearch document results");
+            }
+            if (documents.isEmpty() && offset < total) {
+                throw new IllegalStateException("Incomplete Meilisearch document page");
+            }
+            for (Object document : documents) {
+                if (!(document instanceof Map<?, ?> fields)) {
+                    throw new IllegalStateException("Malformed Meilisearch document");
+                }
+                ids.add(requireNonNegativeLong(fields.get("id")));
+            }
+            offset += documents.size();
+            if (offset > total) throw new IllegalStateException("Inconsistent Meilisearch document total");
+        } while (offset < total);
+        return List.copyOf(ids);
+    }
+
+    private boolean isMissingIndex(HttpClientErrorException.NotFound error) {
         try {
-            restClient
-                    .post()
-                    .uri("/indexes/{index}/documents", index)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(List.of(toMap(doc)))
-                    .retrieve()
-                    .toBodilessEntity();
-        } catch (Exception e) {
-            log.info("MeiliSearch 索引延后 postId={}: {}", doc.getId(), e.getMessage());
+            Map<?, ?> body = error.getResponseBodyAs(Map.class);
+            return body != null && "index_not_found".equals(body.get("code"));
+        } catch (RestClientException invalidBody) {
+            return false;
         }
     }
 
     @Override
+    public void index(PostSearchDoc doc) {
+        ensureNotInterrupted();
+        awaitTask(
+                restClient
+                        .post()
+                        .uri("/indexes/{index}/documents", index)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(List.of(toMap(doc)))
+                        .retrieve()
+                        .body(Map.class),
+                false);
+    }
+
+    @Override
     public void delete(Long postId) {
+        ensureNotInterrupted();
+        Map<?, ?> acceptance;
         try {
-            restClient
+            acceptance = restClient
                     .delete()
                     .uri("/indexes/{index}/documents/{id}", index, postId)
                     .retrieve()
-                    .toBodilessEntity();
-        } catch (Exception e) {
-            log.info("MeiliSearch 删除索引延后 postId={}: {}", postId, e.getMessage());
+                    .body(Map.class);
+        } catch (HttpClientErrorException.NotFound e) {
+            // Absence already satisfies deletion, but unrelated 404s must remain visible.
+            if (isMissingIndex(e)) return;
+            throw e;
+        }
+        awaitTask(acceptance, true);
+    }
+
+    private static void ensureNotInterrupted() {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new IllegalStateException("Interrupted before submitting Meilisearch write");
+        }
+    }
+
+    private void awaitTask(Map<?, ?> acceptance, boolean deletion) {
+        long uid = requireNonNegativeLong(requireResponse(acceptance).get("taskUid"));
+        long started = System.nanoTime();
+        // Each HTTP call is independently bounded; a deadline may overrun by one read timeout.
+        while (System.nanoTime() - started < taskTimeout.toNanos()) {
+            Map<?, ?> task = requireResponse(
+                    restClient.get().uri("/tasks/{uid}", uid).retrieve().body(Map.class));
+            Object status = task.get("status");
+            if (!(status instanceof String state)) {
+                throw new IllegalStateException("Missing Meilisearch task status uid=" + uid);
+            }
+            switch (state) {
+                case "succeeded":
+                    return;
+                case "failed", "canceled":
+                    // The task endpoint can fail asynchronously even when DELETE itself was accepted.
+                    if (deletion
+                            && "failed".equals(state)
+                            && task.get("error") instanceof Map<?, ?> error
+                            && "index_not_found".equals(error.get("code"))) return;
+                    throw new IllegalStateException(
+                            "Meilisearch task uid=" + uid + " " + state + ": " + task.get("error"));
+                case "enqueued", "processing":
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown Meilisearch task status: " + state);
+            }
+            try {
+                Thread.sleep(pollInterval);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted waiting for Meilisearch task uid=" + uid, e);
+            }
+        }
+        throw new IllegalStateException("Timed out waiting for Meilisearch task uid=" + uid);
+    }
+
+    private static Map<?, ?> requireResponse(Map<?, ?> response) {
+        if (response == null) throw new IllegalStateException("Empty Meilisearch response");
+        return response;
+    }
+
+    private static long requireNonNegativeLong(Object value) {
+        if (!(value instanceof Number)) throw new IllegalStateException("Invalid Meilisearch numeric field: " + value);
+        try {
+            long number = Long.parseLong(value.toString());
+            if (number < 0) throw new IllegalStateException("Negative Meilisearch numeric field: " + value);
+            return number;
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("Invalid Meilisearch integer field: " + value, e);
         }
     }
 

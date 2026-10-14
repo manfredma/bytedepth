@@ -4,7 +4,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,14 +17,19 @@ import manfred.bytedepth.domain.search.SearchResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 class MeiliSearchPostIndexerTest {
-
     private RestClient restClient;
     private MeiliSearchPostIndexer indexer;
+    private MockRestServiceServer server;
 
     @BeforeEach
     void setUp() {
@@ -28,169 +37,371 @@ class MeiliSearchPostIndexerTest {
         indexer = new MeiliSearchPostIndexer(restClient);
     }
 
-    private record IndexStubs(RestClient.RequestBodyUriSpec uriSpec, RestClient.ResponseSpec responseSpec) {}
+    private void useServer() {
+        var builder = RestClient.builder().baseUrl("http://meili");
+        server = MockRestServiceServer.bindTo(builder).build();
+        indexer = new MeiliSearchPostIndexer(builder.build(), "isolated_posts");
+    }
 
-    /**
-     * 桩 index() 的调用链： restClient.post() -> uriSpec .uri(...) -> uriSpec .contentType(...) -> uriSpec
-     * .body(Object) -> uriSpec (RequestBodySpec 自身，因 RequestBodyUriSpec extends RequestBodySpec)
-     * .retrieve() -> responseSpec .toBodilessEntity() -> null 关键：RequestBodyUriSpec 同时是
-     * RequestBodySpec，body() 返回 RequestBodySpec(=uriSpec 自身)。
-     */
-    private IndexStubs stubIndexChain() {
-        RestClient.RequestBodyUriSpec uriSpec = mock(RestClient.RequestBodyUriSpec.class);
-        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
-        doReturn(uriSpec).when(restClient).post();
-        doReturn(uriSpec).when(uriSpec).uri(anyString(), any(Object[].class));
-        doReturn(uriSpec).when(uriSpec).contentType(any(MediaType.class));
-        doReturn(uriSpec).when(uriSpec).body(any(Object.class));
-        doReturn(responseSpec).when(uriSpec).retrieve();
-        doReturn(null).when(responseSpec).toBodilessEntity();
-        return new IndexStubs(uriSpec, responseSpec);
+    private void accepted(HttpMethod method, String path, String response) {
+        server.expect(requestTo("http://meili/indexes/isolated_posts/documents" + path))
+                .andExpect(method(method))
+                .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
+    }
+
+    private void task(String response) {
+        server.expect(requestTo("http://meili/tasks/7")).andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
+    }
+
+    private void page(int offset, String response) {
+        server.expect(requestTo("http://meili/indexes/isolated_posts/documents?fields=id&limit=1000&offset=" + offset))
+                .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
+    }
+
+    private PostSearchDoc doc() {
+        return PostSearchDoc.builder().id(1L).title("Title").build();
     }
 
     @Test
-    void productionConstructorIsExplicitlyAutowiredWhenTestConstructorExists() throws Exception {
+    void productionConstructorBuildsConfiguredClientAndIsAutowired() throws Exception {
         assertTrue(MeiliSearchPostIndexer.class
                 .getDeclaredConstructor(String.class, String.class, String.class)
                 .isAnnotationPresent(Autowired.class));
+        assertDoesNotThrow(() -> new MeiliSearchPostIndexer("http://localhost:7700", "key", "posts"));
     }
 
     @Test
-    void productionConstructorBuildsConfiguredClient() {
-        assertDoesNotThrow(() -> new MeiliSearchPostIndexer("http://localhost:7700", "test-key", "posts_it_r1"));
+    void indexWaitsThroughEnqueuedAndProcessingUntilSucceeded() {
+        useServer();
+        accepted(HttpMethod.POST, "", "{\"taskUid\":7}");
+        task("{\"status\":\"enqueued\"}");
+        task("{\"status\":\"processing\"}");
+        task("{\"status\":\"succeeded\"}");
+        indexer.index(doc());
+        server.verify();
     }
 
     @Test
-    void configuredIndexIsUsedByIndexDeleteAndSearch() {
-        indexer = new MeiliSearchPostIndexer(restClient, "posts_it_r1");
-        IndexStubs indexStubs = stubIndexChain();
-        indexer.index(PostSearchDoc.builder().id(1L).title("T").build());
-        verify(indexStubs.uriSpec()).uri("/indexes/{index}/documents", "posts_it_r1");
-
-        RestClient.RequestHeadersUriSpec<?> deleteSpec = mock(RestClient.RequestHeadersUriSpec.class);
-        RestClient.ResponseSpec deleteResponse = mock(RestClient.ResponseSpec.class);
-        doReturn(deleteSpec).when(restClient).delete();
-        doReturn(deleteSpec).when(deleteSpec).uri(anyString(), any(Object[].class));
-        doReturn(deleteResponse).when(deleteSpec).retrieve();
+    void deleteWaitsForSuccessInConfiguredIndex() {
+        useServer();
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        task("{\"status\":\"succeeded\"}");
         indexer.delete(1L);
-        verify(deleteSpec).uri("/indexes/{index}/documents/{id}", "posts_it_r1", 1L);
-
-        RestClient.RequestHeadersUriSpec<?> searchSpec = mock(RestClient.RequestHeadersUriSpec.class);
-        RestClient.ResponseSpec searchResponse = mock(RestClient.ResponseSpec.class);
-        doReturn(searchSpec).when(restClient).get();
-        doReturn(searchSpec).when(searchSpec).uri(anyString(), any(Object[].class));
-        doReturn(searchResponse).when(searchSpec).retrieve();
-        doReturn(Map.of("hits", List.of())).when(searchResponse).body(Map.class);
-        indexer.search("query", 1, 10);
-        verify(searchSpec)
-                .uri(
-                        org.mockito.ArgumentMatchers.contains("/indexes/{index}/search"),
-                        eq("posts_it_r1"),
-                        eq("query"),
-                        eq(10),
-                        eq(0));
+        server.verify();
     }
 
-    @Nested
-    class IndexTests {
-
-        @Test
-        void index_sendsDocumentViaPostAndReturnsBodiless() {
-            IndexStubs stubs = stubIndexChain();
-            PostSearchDoc doc = PostSearchDoc.builder()
-                    .id(1L)
-                    .slug("hello")
-                    .title("Title")
-                    .content("Body")
-                    .categoryName("Cat")
-                    .categorySlug("cat")
-                    .tags(List.of("tag1"))
-                    .seriesName("Series")
-                    .build();
-
-            indexer.index(doc);
-
-            verify(restClient).post();
-            verify(stubs.responseSpec()).toBodilessEntity();
-        }
-
-        @Test
-        void index_handlesNullOptionalFields() {
-            IndexStubs stubs = stubIndexChain();
-            PostSearchDoc doc = PostSearchDoc.builder()
-                    .id(2L)
-                    .title("Title2")
-                    .content(null)
-                    .slug(null)
-                    .categoryName(null)
-                    .categorySlug(null)
-                    .tags(null)
-                    .seriesName(null)
-                    .build();
-
-            indexer.index(doc);
-
-            verify(stubs.responseSpec()).toBodilessEntity();
-        }
-
-        @Test
-        @SuppressWarnings("unchecked")
-        void index_truncatesLongContent() {
-            IndexStubs stubs = stubIndexChain();
-            String longContent = "x".repeat(4000);
-            PostSearchDoc doc = PostSearchDoc.builder()
-                    .id(3L)
-                    .slug("s")
-                    .title("T")
-                    .content(longContent)
-                    .build();
-
-            indexer.index(doc);
-
-            org.mockito.ArgumentCaptor<List<Map<String, Object>>> captor =
-                    org.mockito.ArgumentCaptor.forClass(List.class);
-            verify(stubs.uriSpec()).body(captor.capture());
-            Map<String, Object> sent = captor.getValue().get(0);
-            assertEquals(3000, sent.get("content").toString().length());
-        }
-
-        @Test
-        void index_swallowsException() {
-            when(restClient.post()).thenThrow(new RuntimeException("connection refused"));
-
-            PostSearchDoc doc = PostSearchDoc.builder().id(4L).title("T").build();
-            indexer.index(doc);
-
-            verify(restClient).post();
-        }
+    @ParameterizedTest
+    @ValueSource(strings = {"failed", "canceled", "unknown", ""})
+    void unsuccessfulTaskIsReported(String status) {
+        useServer();
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        task("{\"status\":\"" + status + "\",\"error\":{\"message\":\"bad document\"}}");
+        assertThrows(IllegalStateException.class, () -> indexer.delete(1L));
+        server.verify();
     }
 
-    @Nested
-    class DeleteTests {
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "",
+                "{}",
+                "{\"taskUid\":-1}",
+                "{\"taskUid\":1.5}",
+                "{\"taskUid\":\"7\"}",
+                "{\"taskUid\":9223372036854775808}"
+            })
+    void malformedAcceptanceFails(String response) {
+        useServer();
+        accepted(HttpMethod.POST, "", response);
+        assertThrows(IllegalStateException.class, () -> indexer.index(doc()));
+        server.verify();
+    }
 
-        @Test
-        void delete_sendsDeleteRequest() {
-            RestClient.RequestHeadersUriSpec<?> uriSpec = mock(RestClient.RequestHeadersUriSpec.class);
-            RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
-            doReturn(uriSpec).when(restClient).delete();
-            doReturn(uriSpec).when(uriSpec).uri(anyString(), any(Object[].class));
-            doReturn(responseSpec).when(uriSpec).retrieve();
-            doReturn(null).when(responseSpec).toBodilessEntity();
+    @ParameterizedTest
+    @ValueSource(strings = {"", "{}", "{\"status\":null}", "{\"status\":3}"})
+    void malformedTaskFails(String response) {
+        useServer();
+        accepted(HttpMethod.POST, "", "{\"taskUid\":7}");
+        task(response);
+        assertThrows(IllegalStateException.class, () -> indexer.index(doc()));
+        server.verify();
+    }
 
-            indexer.delete(99L);
+    @Test
+    void pendingTaskTimesOut() {
+        var builder = RestClient.builder().baseUrl("http://meili");
+        server = MockRestServiceServer.bindTo(builder).build();
+        indexer = new MeiliSearchPostIndexer(builder.build(), "isolated_posts", Duration.ZERO, Duration.ofMillis(1));
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        assertThrows(IllegalStateException.class, () -> indexer.delete(1L));
+        server.verify();
+    }
 
-            verify(restClient).delete();
-            verify(responseSpec).toBodilessEntity();
+    @Test
+    void interruptionDuringPendingTaskAbortsAndPreservesFlag() {
+        useServer();
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        server.expect(requestTo("http://meili/tasks/7"))
+                .andExpect(request -> Thread.currentThread().interrupt())
+                .andRespond(withSuccess("{\"status\":\"processing\"}", MediaType.APPLICATION_JSON));
+        try {
+            assertThrows(IllegalStateException.class, () -> indexer.delete(1L));
+            assertTrue(Thread.currentThread().isInterrupted());
+        } finally {
+            Thread.interrupted();
         }
+        server.verify();
+    }
 
-        @Test
-        void delete_swallowsException() {
-            when(restClient.delete()).thenThrow(new RuntimeException("timeout"));
-
-            indexer.delete(99L);
-
-            verify(restClient).delete();
+    @Test
+    void preInterruptedWritesAbortBeforeSubmittingRequests() {
+        useServer();
+        Thread.currentThread().interrupt();
+        try {
+            assertThrows(IllegalStateException.class, () -> indexer.index(doc()));
+            assertThrows(IllegalStateException.class, () -> indexer.delete(1L));
+            assertTrue(Thread.currentThread().isInterrupted());
+        } finally {
+            Thread.interrupted();
         }
+        server.verify();
+    }
+
+    @Test
+    void deletingAbsentIndexSucceedsOnSynchronousExactMissingIndexError() {
+        useServer();
+        server.expect(requestTo("http://meili/indexes/isolated_posts/documents/1"))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"code\":\"index_not_found\"}"));
+        assertDoesNotThrow(() -> indexer.delete(1L));
+        server.verify();
+    }
+
+    @Test
+    void deletingAbsentIndexSucceedsOnAsynchronousExactMissingIndexError() {
+        useServer();
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        task("{\"status\":\"failed\",\"error\":{\"code\":\"index_not_found\"}}");
+        assertDoesNotThrow(() -> indexer.delete(1L));
+        server.verify();
+    }
+
+    @Test
+    void indexingStillFailsForAsynchronousMissingIndexError() {
+        useServer();
+        accepted(HttpMethod.POST, "", "{\"taskUid\":7}");
+        task("{\"status\":\"failed\",\"error\":{\"code\":\"index_not_found\"}}");
+        assertThrows(IllegalStateException.class, () -> indexer.index(doc()));
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"code\":\"other\"}", "{}", "invalid json", ""})
+    void deleteDoesNotAcceptOtherSynchronousNotFoundErrors(String response) {
+        useServer();
+        server.expect(requestTo("http://meili/indexes/isolated_posts/documents/1"))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(response));
+        assertThrows(org.springframework.web.client.RestClientException.class, () -> indexer.delete(1L));
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "{}", "{\"code\":\"other\"}", "\"index_not_found\""})
+    void deleteDoesNotAcceptOtherAsynchronousFailures(String error) {
+        useServer();
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        task("{\"status\":\"failed\",\"error\":" + error + "}");
+        assertThrows(IllegalStateException.class, () -> indexer.delete(1L));
+        server.verify();
+    }
+
+    @Test
+    void deleteDoesNotAcceptMissingIndexErrorFromTaskEndpoint() {
+        useServer();
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        server.expect(requestTo("http://meili/tasks/7"))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"code\":\"index_not_found\"}"));
+        assertThrows(org.springframework.web.client.RestClientException.class, () -> indexer.delete(1L));
+        server.verify();
+    }
+
+    @Test
+    void writeTransportFailuresPropagate() {
+        useServer();
+        server.expect(requestTo("http://meili/indexes/isolated_posts/documents"))
+                .andRespond(withException(new IOException("offline")));
+        assertThrows(org.springframework.web.client.RestClientException.class, () -> indexer.index(doc()));
+        server.verify();
+    }
+
+    @Test
+    void deleteTransportFailuresPropagate() {
+        useServer();
+        server.expect(requestTo("http://meili/indexes/isolated_posts/documents/1"))
+                .andRespond(withServerError());
+        assertThrows(org.springframework.web.client.RestClientException.class, () -> indexer.delete(1L));
+        server.verify();
+    }
+
+    @Test
+    void taskTransportFailuresPropagateAfterAcceptedWrite() {
+        useServer();
+        accepted(HttpMethod.POST, "", "{\"taskUid\":7}");
+        server.expect(requestTo("http://meili/tasks/7")).andRespond(withServerError());
+        assertThrows(org.springframework.web.client.RestClientException.class, () -> indexer.index(doc()));
+        server.verify();
+    }
+
+    @Test
+    void searchUsesConfiguredIndex() {
+        useServer();
+        server.expect(request -> assertEquals(
+                        "/indexes/isolated_posts/search", request.getURI().getPath()))
+                .andRespond(withSuccess("{\"hits\":[]}", MediaType.APPLICATION_JSON));
+        assertTrue(indexer.search("query", 1, 10).getHits().isEmpty());
+        server.verify();
+    }
+
+    @Test
+    void collectsAllPagesBeforeReturningIds() {
+        useServer();
+        page(0, "{\"results\":[{\"id\":1},{\"id\":2}],\"total\":3,\"offset\":0,\"limit\":1000}");
+        page(2, "{\"results\":[{\"id\":3}],\"total\":3,\"offset\":2,\"limit\":1000}");
+        assertEquals(List.of(1L, 2L, 3L), indexer.findIndexedIds());
+        server.verify();
+    }
+
+    @Test
+    void emptyIndexReturnsEmptyIds() {
+        useServer();
+        page(0, "{\"results\":[],\"total\":0,\"offset\":0,\"limit\":1000}");
+        assertEquals(List.of(), indexer.findIndexedIds());
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "",
+                "{}",
+                "{\"results\":{},\"total\":0}",
+                "{\"results\":[{}],\"total\":1}",
+                "{\"results\":[{\"id\":\"bad\"}],\"total\":1}",
+                "{\"results\":[],\"total\":1}",
+                "{\"results\":[],\"total\":-1}",
+                "{\"results\":[{\"id\":1.5}],\"total\":1}",
+                "{\"results\":[{\"id\":1}],\"total\":0}"
+            })
+    void malformedDocumentPagesFail(String response) {
+        useServer();
+        page(
+                0,
+                response.startsWith("{")
+                        ? response.substring(0, response.length() - 1) + (response.length() > 2 ? "," : "")
+                                + "\"offset\":0,\"limit\":1000}"
+                        : response);
+        assertThrows(IllegalStateException.class, () -> indexer.findIndexedIds());
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "{\"results\":[],\"total\":0,\"offset\":1,\"limit\":1000}",
+                "{\"results\":[],\"total\":0,\"offset\":0,\"limit\":10}",
+                "{\"results\":[3],\"total\":1,\"offset\":0,\"limit\":1000}"
+            })
+    void invalidPaginationAndDocumentShapesFail(String response) {
+        useServer();
+        page(0, response);
+        assertThrows(IllegalStateException.class, () -> indexer.findIndexedIds());
+        server.verify();
+    }
+
+    @Test
+    void missingIndexReturnsEmptyOnlyForExactErrorCode() {
+        useServer();
+        server.expect(anything())
+                .andRespond(withStatus(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"code\":\"index_not_found\"}"));
+        assertEquals(List.of(), indexer.findIndexedIds());
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"code\":\"other\"}", "{}", "invalid json", ""})
+    void otherNotFoundResponsesFail(String response) {
+        useServer();
+        server.expect(anything())
+                .andRespond(withStatus(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(response));
+        assertThrows(org.springframework.web.client.RestClientException.class, () -> indexer.findIndexedIds());
+        server.verify();
+    }
+
+    @Test
+    void listTransportFailurePropagates() {
+        useServer();
+        server.expect(anything()).andRespond(withException(new IOException("offline")));
+        assertThrows(org.springframework.web.client.RestClientException.class, () -> indexer.findIndexedIds());
+        server.verify();
+    }
+
+    @Test
+    void optionalFieldsAndContentAreSerializedCorrectly() {
+        useServer();
+        server.expect(anything())
+                .andExpect(
+                        content()
+                                .json(
+                                        "[{\"id\":1,\"title\":\"Title\",\"content\":\"\",\"slug\":\"\",\"categoryName\":\"\",\"categorySlug\":\"\",\"tags\":[],\"seriesName\":\"\"}]"))
+                .andRespond(withSuccess("{\"taskUid\":7}", MediaType.APPLICATION_JSON));
+        task("{\"status\":\"succeeded\"}");
+        indexer.index(doc());
+        server.verify();
+    }
+
+    @Test
+    void populatedFieldsAndLongContentAreSerializedCorrectly() {
+        useServer();
+        server.expect(anything())
+                .andExpect(
+                        content()
+                                .json(
+                                        "[{\"id\":1,\"title\":\"Title\",\"content\":\"" + "x".repeat(3000)
+                                                + "\",\"slug\":\"slug\",\"categoryName\":\"cat\",\"categorySlug\":\"cat\",\"tags\":[\"t\"],\"seriesName\":\"series\"}]"))
+                .andRespond(withSuccess("{\"taskUid\":7}", MediaType.APPLICATION_JSON));
+        task("{\"status\":\"succeeded\"}");
+        indexer.index(PostSearchDoc.builder()
+                .id(1L)
+                .title("Title")
+                .content("x".repeat(3001))
+                .slug("slug")
+                .categoryName("cat")
+                .categorySlug("cat")
+                .tags(List.of("t"))
+                .seriesName("series")
+                .build());
+        server.verify();
+    }
+
+    @Test
+    void shortContentIsPreserved() {
+        useServer();
+        server.expect(anything())
+                .andExpect(content().json("[{\"content\":\"body\"}]"))
+                .andRespond(withSuccess("{\"taskUid\":7}", MediaType.APPLICATION_JSON));
+        task("{\"status\":\"succeeded\"}");
+        indexer.index(
+                PostSearchDoc.builder().id(1L).title("Title").content("body").build());
+        server.verify();
     }
 
     @Nested
@@ -317,79 +528,6 @@ class MeiliSearchPostIndexerTest {
             assertTrue(result.getHits().isEmpty());
             assertEquals(2, result.getPage());
         }
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    void toMap_nullOptionalFieldsBecomeEmptyStrings() {
-        IndexStubs stubs = stubIndexChain();
-        PostSearchDoc doc = PostSearchDoc.builder()
-                .id(10L)
-                .title("T")
-                .content(null)
-                .slug(null)
-                .categoryName(null)
-                .categorySlug(null)
-                .tags(null)
-                .seriesName(null)
-                .build();
-        indexer.index(doc);
-
-        org.mockito.ArgumentCaptor<List<Map<String, Object>>> captor = org.mockito.ArgumentCaptor.forClass(List.class);
-        verify(stubs.uriSpec()).body(captor.capture());
-        Map<String, Object> m = captor.getValue().get(0);
-        assertEquals("", m.get("slug"));
-        assertEquals("", m.get("categoryName"));
-        assertEquals("", m.get("categorySlug"));
-        assertEquals(List.of(), m.get("tags"));
-        assertEquals("", m.get("seriesName"));
-        assertEquals("", m.get("content"));
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    void toMap_truncateAtBoundary() {
-        IndexStubs stubs = stubIndexChain();
-        String content = "x".repeat(3000);
-        PostSearchDoc doc =
-                PostSearchDoc.builder().id(11L).title("T").content(content).build();
-        indexer.index(doc);
-
-        org.mockito.ArgumentCaptor<List<Map<String, Object>>> captor = org.mockito.ArgumentCaptor.forClass(List.class);
-        verify(stubs.uriSpec()).body(captor.capture());
-        Map<String, Object> m = captor.getValue().get(0);
-        assertEquals(3000, m.get("content").toString().length());
-    }
-
-    @Test
-    void fromMap_usesHitDirectlyWhenNoFormatted() {
-        Map<String, Object> hit = new HashMap<>();
-        hit.put("id", 5);
-        hit.put("slug", "my-slug");
-        hit.put("title", "My Title");
-        hit.put("content", "My Content");
-        hit.put("categoryName", "Cat");
-        hit.put("categorySlug", "cat");
-        hit.put("tags", List.of("a"));
-        hit.put("seriesName", "Ser");
-
-        stubSearch(responseWith(hit));
-
-        SearchResult result = indexer.search("q", 1, 5);
-        PostSearchDoc d = result.getHits().get(0);
-        assertEquals("My Title", d.getTitle());
-        assertEquals("My Content", d.getContent());
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private RestClient.ResponseSpec stubSearch(Map<String, Object> response) {
-        RestClient.RequestHeadersUriSpec uriSpec = mock(RestClient.RequestHeadersUriSpec.class);
-        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
-        doReturn(uriSpec).when(restClient).get();
-        doReturn(uriSpec).when(uriSpec).uri(anyString(), any(Object[].class));
-        doReturn(responseSpec).when(uriSpec).retrieve();
-        doReturn(response).when(responseSpec).body(Map.class);
-        return responseSpec;
     }
 
     private Map<String, Object> hitWithFormatted(int id, String slug) {

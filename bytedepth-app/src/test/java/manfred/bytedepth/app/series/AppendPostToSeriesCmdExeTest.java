@@ -3,6 +3,7 @@ package manfred.bytedepth.app.series;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import manfred.bytedepth.app.search.IndexPostCmdExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class AppendPostToSeriesCmdExeTest {
 
+    private final IndexPostCmdExe indexPostCmdExe = org.mockito.Mockito.mock(IndexPostCmdExe.class);
+
     @Mock
     private PostRepository postRepository;
 
@@ -24,7 +27,7 @@ class AppendPostToSeriesCmdExeTest {
 
     @BeforeEach
     void setUp() {
-        cmdExe = new AppendPostToSeriesCmdExe(postRepository, seriesRepository);
+        cmdExe = new AppendPostToSeriesCmdExe(postRepository, seriesRepository, indexPostCmdExe);
     }
 
     @Test
@@ -34,6 +37,7 @@ class AppendPostToSeriesCmdExeTest {
         cmdExe.execute(99L, 10L);
 
         verify(postRepository).setPostSeries(99L, 10L, 4);
+        verify(indexPostCmdExe).execute(99L);
     }
 
     @Test

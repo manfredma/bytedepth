@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import manfred.bytedepth.app.search.IndexPostCmdExe;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.PostStatus;
@@ -18,6 +19,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class DeletePostCmdExeTest {
 
+    private final IndexPostCmdExe indexPostCmdExe = org.mockito.Mockito.mock(IndexPostCmdExe.class);
+
     @Mock
     private PostRepository postRepository;
 
@@ -25,7 +28,7 @@ class DeletePostCmdExeTest {
 
     @BeforeEach
     void setUp() {
-        deletePostCmdExe = new DeletePostCmdExe(postRepository);
+        deletePostCmdExe = new DeletePostCmdExe(postRepository, indexPostCmdExe);
     }
 
     @Test
@@ -39,6 +42,7 @@ class DeletePostCmdExeTest {
 
         assertEquals(PostStatus.DELETED, existing.getStatus());
         verify(postRepository).save(existing);
+        verify(indexPostCmdExe).execute(1L);
     }
 
     @Test

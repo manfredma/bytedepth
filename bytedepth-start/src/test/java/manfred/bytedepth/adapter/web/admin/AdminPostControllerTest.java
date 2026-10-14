@@ -29,6 +29,7 @@ import manfred.bytedepth.app.post.command.FeaturePostCmdExe;
 import manfred.bytedepth.app.post.command.PublishPostCmdExe;
 import manfred.bytedepth.app.post.command.SetPostTagsCmdExe;
 import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
+import manfred.bytedepth.app.post.command.UpdatePostSlugCmdExe;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListAllPostsQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
@@ -90,6 +91,9 @@ class AdminPostControllerTest {
 
     @MockitoBean
     private UpdatePostCmdExe updatePostCmdExe;
+
+    @MockitoBean
+    private UpdatePostSlugCmdExe updatePostSlugCmdExe;
 
     @MockitoBean
     private PublishPostCmdExe publishPostCmdExe;
@@ -381,7 +385,7 @@ class AdminPostControllerTest {
         mockMvc.perform(post("/admin/posts/1/slug").with(csrf()).param("slug", "available"))
                 .andExpect(status().isOk());
 
-        verify(postRepository).updateSlug(1L, "available");
+        verify(updatePostSlugCmdExe).execute(1L, "available");
     }
 
     @Test
@@ -404,7 +408,7 @@ class AdminPostControllerTest {
         mockMvc.perform(post("/admin/posts/1/slug").with(csrf()).param("slug", "unchanged"))
                 .andExpect(status().isOk());
 
-        verify(postRepository).updateSlug(1L, "unchanged");
+        verify(updatePostSlugCmdExe).execute(1L, "unchanged");
     }
 
     @Test
@@ -454,6 +458,7 @@ class AdminPostControllerTest {
                 appendPostToSeriesCmdExe,
                 removePostFromSeriesCmdExe,
                 postRepository,
-                contentOwnershipGuard);
+                contentOwnershipGuard,
+                updatePostSlugCmdExe);
     }
 }
