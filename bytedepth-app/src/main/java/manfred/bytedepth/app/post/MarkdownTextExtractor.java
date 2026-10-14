@@ -4,11 +4,19 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.parser.ParserDelegator;
+import org.commonmark.Extension;
+import org.commonmark.ext.footnotes.FootnoteDefinition;
+import org.commonmark.ext.footnotes.FootnotesExtension;
+import org.commonmark.ext.footnotes.InlineFootnote;
 import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.AbstractVisitor;
+import org.commonmark.node.CustomBlock;
+import org.commonmark.node.CustomNode;
 import org.commonmark.node.HardLineBreak;
 import org.commonmark.node.Node;
 import org.commonmark.node.Paragraph;
@@ -22,18 +30,23 @@ public final class MarkdownTextExtractor {
 
     private static final int CHARACTERS_PER_READING_MINUTE = 500;
 
-    private static final Parser PARSER =
-            Parser.builder().extensions(List.of(TablesExtension.create())).build();
+    /** Shared syntax for page HTML and annotation offsets; enabling an extension on only one breaks selection positions. */
+    public static final List<Extension> EXTENSIONS = List.of(
+            TablesExtension.create(),
+            FootnotesExtension.builder().inlineFootnotes(true).build());
+
+    private static final Parser PARSER = Parser.builder().extensions(EXTENSIONS).build();
 
     private static final HtmlRenderer HTML_RENDERER = HtmlRenderer.builder()
-            .extensions(List.of(TablesExtension.create()))
+            .extensions(EXTENSIONS)
+            .attributeProviderFactory(context -> new FootnoteIdProvider())
             .escapeHtml(true)
             .sanitizeUrls(true)
             .build();
 
     private MarkdownTextExtractor() {}
 
-    /** Returns all reader-visible prose, excluding headings and code blocks. */
+    /** Returns main prose for previews/search, excluding headings, code blocks and supplemental footnotes. */
     public static String plainText(String markdown) {
         if (markdown == null || markdown.isBlank()) {
             return "";
@@ -55,7 +68,7 @@ public final class MarkdownTextExtractor {
             return "";
         }
 
-        String html = HTML_RENDERER.render(PARSER.parse(markdown));
+        String html = MarkdownHtmlPolicy.sanitize(HTML_RENDERER.render(PARSER.parse(markdown)));
         StringBuilder encodedText = new StringBuilder();
         boolean inTag = false;
         for (int index = 0; index < html.length(); index++) {
@@ -97,8 +110,24 @@ public final class MarkdownTextExtractor {
             return 0;
         }
 
+        Node document = PARSER.parse(markdown);
+        Set<Node> renderedNodes = new HashSet<>();
+        HtmlRenderer.builder()
+                .extensions(EXTENSIONS)
+                .attributeProviderFactory(context -> (node, tagName, attributes) -> renderedNodes.add(node))
+                .build()
+                .render(document);
         StringBuilder text = new StringBuilder();
-        PARSER.parse(markdown).accept(new AbstractVisitor() {
+        document.accept(new AbstractVisitor() {
+            @Override
+            public void visit(CustomBlock node) {
+                // The renderer follows reachable references, including nested footnotes. The AST
+                // alone also contains unused definitions, which readers never see.
+                if (!(node instanceof FootnoteDefinition) || renderedNodes.contains(node)) {
+                    visitChildren(node);
+                }
+            }
+
             @Override
             public void visit(Text node) {
                 text.append(node.getLiteral());
@@ -158,6 +187,14 @@ public final class MarkdownTextExtractor {
         List<Node> paragraphs = new ArrayList<>();
         PARSER.parse(markdown).accept(new AbstractVisitor() {
             @Override
+            public void visit(CustomBlock node) {
+                // Footnotes are supplemental prose, never a candidate for the article's lead.
+                if (!(node instanceof FootnoteDefinition)) {
+                    visitChildren(node);
+                }
+            }
+
+            @Override
             public void visit(Paragraph node) {
                 paragraphs.add(node);
                 visitChildren(node);
@@ -171,6 +208,13 @@ public final class MarkdownTextExtractor {
             output.append(' ');
         }
         paragraph.accept(new AbstractVisitor() {
+            @Override
+            public void visit(CustomNode node) {
+                if (!(node instanceof InlineFootnote)) {
+                    visitChildren(node);
+                }
+            }
+
             @Override
             public void visit(Text node) {
                 output.append(node.getLiteral());

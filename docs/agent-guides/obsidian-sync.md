@@ -44,3 +44,27 @@ anchor = heading_text.replace(' ', '%20')
 ## 专栏与批量变更
 
 专栏绑定、重命名或批量调整会影响已发布内容。操作前先从远程后台核对文章与现有归属，不能只依赖本地目录或 `sync_state.json` 推断；除非任务明确要求，不改变专栏或文章顺序。
+
+## Markdown 脚注
+
+正文解析与 HTML 渲染启用 CommonMark 官方 `commonmark-ext-footnotes`，与 GFM 表格共用 `MarkdownTextExtractor.EXTENSIONS`。支持命名脚注和 Obsidian 行内脚注：
+
+```markdown
+内存事务[^memory] 可以包含多拍传输。另一处也可引用[^memory]。
+
+直接写补充说明^[这里是行内脚注内容]。
+
+[^memory]: 内存系统某一层接口上的一次硬件读写请求及其传输、响应过程。
+
+    缩进四个空格可继续写脚注的第二段。
+```
+
+脚注按正文首次引用顺序编号，统一显示在正文末尾；重复引用共用定义并各有返回链接。命名标签采用 UTF-8 十六进制编码，与引用次数后缀和行内编号分开，避免 `n` 的第二引用与 `n-2` 的首引用发生锚点碰撞；特殊字符和长标签也无需放宽安全过滤。未定义引用保持普通文本，未引用定义不展示。脚注用于补充解释，影响当前推理的关键前提仍在首次出现处就地解释。
+
+安全过滤只保留生成脚注所需的 `section`、`sup`、受限 class、`bd-fn`/`bd-fnref` 锚点和返回链接标签；原始 HTML 仍转义，危险链接协议仍被过滤。`MarkdownHtmlPolicy` 同时用于文章 HTML 和服务端批注文本：过滤器会改变列表空白，不能用未过滤 HTML 计算偏移。摘要与搜索正文不包含脚注定义或行内补充，阅读字数只包含实际引用到的脚注文本，不计脚注语法或未引用定义。
+
+回归入口：`MarkdownRendererTest`、`MarkdownTextExtractorTest` 与 staging 的 `tests/e2e/footnotes.spec.js`。E2E 用真实管理员创建临时草稿，验证桌面/手机、三种主题、脚注往返跳转和编辑后的批注位置，并清理草稿与批注；本机不启动浏览器替代 staging 验证。
+
+增强代码块与批注文本的既有表示差异仍见 [TD-0005](../engineering/technical-debt.md#td-0005增强代码块与服务端批注文本的表示不同)；本次脚注回归覆盖普通正文，不宣称已修复代码框之后的批注。
+
+本功能先在 PR 候选 staging 验收；production 晋级前，笔记库模板和检查器应继续保护不支持脚注的 production 同步目标，不能仅因本地 Obsidian 可显示就向旧版网站批量发布。

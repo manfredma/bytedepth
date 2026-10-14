@@ -9,6 +9,75 @@ class MarkdownRendererTest {
     private final MarkdownRenderer renderer = new MarkdownRenderer();
 
     @Test
+    void footnoteAnchorsRemainUniqueForNumericSuffixLabelsAndSafeForAnyLabel() {
+        String html = renderer.render("正文[^n]，重复[^n]，另一个[^n-2]，特殊[^a<b]，长标签[^" + "x".repeat(257)
+                + "]。\n\n[^n]: 第一条。\n\n[^n-2]: 第二条。\n\n[^a<b]: 第三条。\n\n[^" + "x".repeat(257) + "]: 第四条。");
+        var matcher = java.util.regex.Pattern.compile("id=\"([^\"]+)\"").matcher(html);
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        while (matcher.find()) {
+            assertThat(ids.add(matcher.group(1)))
+                    .as("unique anchor %s", matcher.group(1))
+                    .isTrue();
+        }
+        assertThat(ids).hasSize(9);
+        matcher = java.util.regex.Pattern.compile("href=\"#([^\"]+)\"").matcher(html);
+        while (matcher.find()) {
+            assertThat(ids).contains(matcher.group(1));
+        }
+    }
+
+    @Test
+    void rendersFootnotesWithWorkingReferencesAndBacklinksAfterSanitizing() {
+        String rendered = renderer.render("正文[^memory]，再次引用[^memory]。\n\n[^memory]: 一次**硬件读写**。\n\n    第二段解释。");
+
+        assertThat(rendered)
+                .contains("<sup class=\"footnote-ref\">")
+                .contains("href=\"#bd-fn-l6d656d6f7279\" id=\"bd-fnref-l6d656d6f7279\"")
+                .contains("id=\"bd-fnref-l6d656d6f7279-2\"")
+                .contains("<section class=\"footnotes\">")
+                .contains("<li id=\"bd-fn-l6d656d6f7279\">")
+                .contains("<strong>硬件读写</strong>")
+                .contains("第二段解释。")
+                .contains("href=\"#bd-fnref-l6d656d6f7279\"")
+                .contains("href=\"#bd-fnref-l6d656d6f7279-2\"")
+                .contains("class=\"footnote-backref\"")
+                .contains("aria-label=\"Back to reference 1\"")
+                .doesNotContain("[^memory]");
+    }
+
+    @Test
+    void rendersInlineFootnotesAlongsideNamedFootnotesWithoutLeakingAcrossPosts() {
+        assertThat(renderer.render("正文^[行内解释]，术语[^名词]。\n\n[^名词]: 命名解释。"))
+                .contains("id=\"bd-fn-i1\"")
+                .contains("id=\"bd-fn-le5908de8af8d\"")
+                .contains("行内解释")
+                .contains("命名解释。")
+                .doesNotContain("^[行内解释]");
+        assertThat(renderer.render("另一个正文^[独立解释]。")).contains("id=\"bd-fn-i1\"").doesNotContain("命名解释。");
+        assertThat(renderer.render("普通正文")).doesNotContain("footnote");
+    }
+
+    @Test
+    void preservesUndefinedReferencesAndCodeWhileKeepingFootnoteContentSafe() {
+        assertThat(renderer.render("未知[^missing]，`[^code]`。\n\n[^unused]: 不应显示的定义。"))
+                .contains("[^missing]", "<code>[^code]</code>")
+                .doesNotContain("不应显示的定义。", "class=\"footnotes\"");
+        assertThat(renderer.render("正文[^safe]。\n\n[^safe]: <script>alert(1)</script>\n\n    [危险](javascript:alert(1))"))
+                .contains("&lt;script&gt;")
+                .doesNotContain("<script>", "javascript:", "onclick=");
+    }
+
+    @Test
+    void footnoteDomTextMatchesAnnotationTextRepresentation() {
+        String markdown = "正文[^memory]，后续文字。\n\n行内^[补充]。\n\n[^memory]: 注释**内容**。";
+        String html = renderer.render(markdown);
+        String domText = manfred.bytedepth.app.post.MarkdownTextExtractor.renderedText(markdown);
+        // DOM 模拟的 textContent 与服务端批注表示必须保留相同编号、空白与返回箭头。
+        assertThat(org.springframework.web.util.HtmlUtils.htmlUnescape(html.replaceAll("<[^>]*>", "")))
+                .isEqualTo(domText);
+    }
+
+    @Test
     void countsVisibleUnicodeCharactersWithoutMarkdownSyntaxOrWhitespace() {
         assertThat(renderer.countVisibleCharacters("# 标题\n[链接](https://example.com) `代码` 😀"))
                 .isEqualTo(7);

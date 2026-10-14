@@ -81,6 +81,11 @@
                 <version>${commonmark.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.commonmark</groupId>
+                <artifactId>commonmark-ext-footnotes</artifactId>
+                <version>${commonmark.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
                 <artifactId>owasp-java-html-sanitizer</artifactId>
                 <version>${owasp.html.sanitizer.version}</version>

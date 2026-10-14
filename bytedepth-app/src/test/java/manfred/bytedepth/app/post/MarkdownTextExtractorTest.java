@@ -9,6 +9,28 @@ import org.junit.jupiter.api.Test;
 class MarkdownTextExtractorTest {
 
     @Test
+    void readingCountExcludesUnusedDefinitionsButIncludesReachableNestedFootnotesOnce() {
+        String markdown =
+                "正文[^used]。\n\n[^used]: 显示[^nested]。\n\n[^nested]: 嵌套。\n\n[^unused]: 不显示[^hidden]。\n\n[^hidden]: 隐藏。";
+        assertEquals(9, MarkdownTextExtractor.visibleCharacterCount(markdown));
+    }
+
+    @Test
+    void footnoteSyntaxDoesNotPolluteProseOrExcerpts() {
+        String markdown = "正文[^note]，行内^[补充说明]。\n\n[^note]: 文末说明。";
+        assertEquals("正文，行内。", MarkdownTextExtractor.plainText(markdown));
+        assertEquals("正文，行内。", MarkdownTextExtractor.excerpt(markdown, 100));
+        assertEquals(15, MarkdownTextExtractor.visibleCharacterCount(markdown));
+    }
+
+    @Test
+    void annotationTextIncludesFootnoteNumbersAndRenderedDefinitions() {
+        String markdown = "正文[^note]，后续文字。\n\n[^note]: 补充说明。";
+        assertEquals(
+                "正文1，后续文字。补充说明。↩", MarkdownTextExtractor.renderedText(markdown).replaceAll("\\s+", ""));
+    }
+
+    @Test
     void extractsOnlyReaderVisibleProse() {
         String markdown = "# 标题\n\n"
                 + "> 一段值得阅读的导语，解释核心价值。\n\n"
@@ -154,6 +176,12 @@ class MarkdownTextExtractorTest {
     void visibleCharacterCountUsesTextAndInlineCodeWithoutWhitespace() {
         assertEquals(7, MarkdownTextExtractor.visibleCharacterCount("# 标题\n[链接](https://example.com) `代码` 😀"));
         assertEquals(0, MarkdownTextExtractor.visibleCharacterCount(" \n\t"));
+    }
+
+    @Test
+    void visibleCharacterCountIncludesTableTextAlongsideReferencedFootnotes() {
+        String markdown = "| 标题A | 标题B |\n| --- | --- |\n| 单元1 | 单元2 |\n\n正文[^note]。\n\n[^note]: 说明。";
+        assertEquals(18, MarkdownTextExtractor.visibleCharacterCount(markdown));
     }
 
     @Test
