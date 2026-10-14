@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class IndexPostCmdExe {
+    private static final int BATCH_SIZE = 100;
 
     private final PostRepository postRepository;
     private final TagRepository tagRepository;
@@ -26,12 +27,32 @@ public class IndexPostCmdExe {
     // Serialize projection reads and writes in the current single application instance:
     // a slow published write must finish before a later deletion can remove its document.
     public synchronized void execute(Long postId) {
-        Post post = postRepository.findById(postId).orElse(null);
-        // Search is a projection: retrying synchronization must also remove stale documents.
-        if (post == null || post.getStatus() != PostStatus.PUBLISHED) {
-            postSearchPort.delete(postId);
-            return;
+        PostSearchDoc doc = document(postId);
+        if (doc == null) postSearchPort.delete(postId);
+        else postSearchPort.index(doc);
+    }
+
+    public synchronized void executeBatch(List<Long> postIds) {
+        for (int offset = 0; offset < postIds.size(); offset += BATCH_SIZE) {
+            synchronizeBatch(postIds.subList(offset, Math.min(offset + BATCH_SIZE, postIds.size())));
         }
+    }
+
+    private void synchronizeBatch(List<Long> postIds) {
+        List<PostSearchDoc> documents = new java.util.ArrayList<>();
+        List<Long> deletedIds = new java.util.ArrayList<>();
+        for (Long id : postIds) {
+            PostSearchDoc doc = document(id);
+            if (doc == null) deletedIds.add(id);
+            else documents.add(doc);
+        }
+        if (!documents.isEmpty()) postSearchPort.indexAll(documents);
+        if (!deletedIds.isEmpty()) postSearchPort.deleteAll(deletedIds);
+    }
+
+    private PostSearchDoc document(Long postId) {
+        Post post = postRepository.findById(postId).orElse(null);
+        if (post == null || post.getStatus() != PostStatus.PUBLISHED) return null;
 
         List<String> tags = tagRepository.findByPostId(postId).stream()
                 .map(t -> t.getName())
@@ -55,7 +76,7 @@ public class IndexPostCmdExe {
                     .orElse(null);
         }
 
-        PostSearchDoc doc = PostSearchDoc.builder()
+        return PostSearchDoc.builder()
                 .id(postId)
                 .slug(post.getSlug())
                 .title(post.getTitle())
@@ -65,7 +86,5 @@ public class IndexPostCmdExe {
                 .tags(tags)
                 .seriesName(seriesName)
                 .build();
-
-        postSearchPort.index(doc);
     }
 }

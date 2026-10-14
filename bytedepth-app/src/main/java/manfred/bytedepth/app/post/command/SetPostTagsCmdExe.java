@@ -46,7 +46,7 @@ public class SetPostTagsCmdExe {
                 .map(Tag::getId)
                 .collect(Collectors.toList());
         tagRepository.savePostTags(postId, tagIds);
-        affectedPostIds.forEach(indexPostCmdExe::execute);
+        indexPostCmdExe.executeBatch(new ArrayList<>(affectedPostIds));
     }
 
     private List<Long> findPublishedPostIds(String tagSlug) {

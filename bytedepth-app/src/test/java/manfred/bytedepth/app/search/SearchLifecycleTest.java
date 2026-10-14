@@ -149,10 +149,51 @@ class SearchLifecycleTest {
         assertFalse(delayed.documents.containsKey(1L));
     }
 
+    @Test
+    void reindexBatchesThousandArticlesInsteadOfAwaitingThousandIndividualWrites() {
+        var published = new ArrayList<Post>();
+        for (long id = 1; id <= 1000; id++) published.add(add(id, PostStatus.PUBLISHED));
+        when(posts.findAllPublished()).thenReturn(published);
+        assertEquals(1000, new ReindexAllPostsCmdExe(posts, index, search).execute());
+        assertEquals(1000, search.documents.size());
+        assertTrue(
+                search.writeRequests <= 10,
+                "full reconciliation must batch writes to fit the gateway request budget, requests="
+                        + search.writeRequests);
+    }
+
+    @Test
+    void batchSynchronizationHandlesMixedPublishedDraftDeletedAndMissingStates() {
+        add(1, PostStatus.PUBLISHED);
+        add(2, PostStatus.DRAFT);
+        add(3, PostStatus.DELETED);
+        for (long id = 2; id <= 4; id++)
+            search.index(PostSearchDoc.builder().id(id).title("stale").build());
+        index.executeBatch(List.of(1L, 2L, 3L, 4L));
+        assertEquals(Set.of(1L), search.documents.keySet());
+        assertEquals("old-slug", search.documents.get(1L).getSlug());
+        index.executeBatch(List.of());
+        index.executeBatch(List.of(1L));
+        records.clear();
+        index.executeBatch(List.of(1L));
+        assertTrue(search.documents.isEmpty());
+    }
+
     static class MemorySearch implements PostSearchPort {
         final Map<Long, PostSearchDoc> documents = new LinkedHashMap<>();
+        int writeRequests;
+
+        public void indexAll(List<PostSearchDoc> docs) {
+            writeRequests++;
+            docs.forEach(doc -> documents.put(doc.getId(), doc));
+        }
+
+        public void deleteAll(List<Long> ids) {
+            ids.forEach(documents::remove);
+        }
 
         public void index(PostSearchDoc doc) {
+            writeRequests++;
             documents.put(doc.getId(), doc);
         }
 

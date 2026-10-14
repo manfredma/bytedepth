@@ -6,7 +6,11 @@ public interface PostSearchPort {
 
     void index(PostSearchDoc doc);
 
+    void indexAll(java.util.List<PostSearchDoc> docs);
+
     void delete(Long postId);
+
+    void deleteAll(java.util.List<Long> postIds);
 
     SearchResult search(String query, int page, int size);
 }

@@ -23,7 +23,7 @@ public class DeleteTagCmdExe {
                 .map(tag -> findPublishedPostIds(tag.getSlug()))
                 .orElseGet(List::of);
         tagRepository.deleteWithPostAssociations(tagId);
-        affectedPostIds.forEach(indexPostCmdExe::execute);
+        if (!affectedPostIds.isEmpty()) indexPostCmdExe.executeBatch(new ArrayList<>(affectedPostIds));
     }
 
     private List<Long> findPublishedPostIds(String tagSlug) {

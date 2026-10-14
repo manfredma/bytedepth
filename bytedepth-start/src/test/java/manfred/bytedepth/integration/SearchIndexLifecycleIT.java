@@ -124,4 +124,34 @@ class SearchIndexLifecycleIT {
             jdbc.update("DELETE FROM post WHERE id = ?", saved.getId());
         }
     }
+
+    @Test
+    void thousandPublishedArticlesReconcileWithinGatewayBudget() throws Exception {
+        String prefix = "batch" + UUID.randomUUID().toString().replace("-", "");
+        var rows = new java.util.ArrayList<Object[]>();
+        for (int i = 0; i < 1000; i++) rows.add(new Object[] {prefix + "-" + i, prefix, "batch regression body"});
+        jdbc.batchUpdate(
+                "INSERT INTO post (slug, title, content, status, author_id, created_at, updated_at, published_at, content_version) "
+                        + "VALUES (?, ?, ?, 'PUBLISHED', 1, NOW(), NOW(), NOW(), 1)",
+                rows);
+        var ids = jdbc.queryForList("SELECT id FROM post WHERE title = ?", Long.class, prefix);
+        try {
+            long started = System.nanoTime();
+            mvc.perform(post("/admin/search/reindex")
+                            .with(csrf())
+                            .with(user("admin")
+                                    .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                            "admin:dashboard:view"))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("ok"));
+            long elapsedMillis = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+            assertThat(elapsedMillis)
+                    .as("1000-article reconciliation must finish before the gateway timeout")
+                    .isLessThan(55_000);
+            assertThat(search.findIndexedIds()).containsAll(ids);
+        } finally {
+            search.deleteAll(ids);
+            jdbc.update("DELETE FROM post WHERE title = ?", prefix);
+        }
+    }
 }

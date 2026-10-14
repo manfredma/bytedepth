@@ -127,7 +127,7 @@ class SetPostTagsCmdExeTest {
         verify(tagRepository, never()).findBySlug(any());
         verify(tagRepository, never()).save(any(Tag.class));
         verify(tagRepository).savePostTags(eq(100L), eq(List.of()));
-        verify(indexPostCmdExe).execute(100L);
+        verify(indexPostCmdExe).executeBatch(List.of(100L));
     }
 
     @Test

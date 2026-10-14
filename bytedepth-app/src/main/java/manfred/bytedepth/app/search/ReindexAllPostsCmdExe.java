@@ -21,12 +21,10 @@ public class ReindexAllPostsCmdExe {
         // move rows between offset pages and can silently skip documents missing from the index.
         var publishedIds =
                 postRepository.findAllPublished().stream().map(Post::getId).toList();
-        for (Long id : publishedIds) {
-            indexPostCmdExe.execute(id);
-            remainingIds.remove(id);
-        }
+        if (!publishedIds.isEmpty()) indexPostCmdExe.executeBatch(publishedIds);
+        publishedIds.forEach(remainingIds::remove);
         // Re-read remaining IDs so concurrent publications are refreshed rather than deleted.
-        remainingIds.forEach(indexPostCmdExe::execute);
+        if (!remainingIds.isEmpty()) indexPostCmdExe.executeBatch(new java.util.ArrayList<>(remainingIds));
         return publishedIds.size();
     }
 }

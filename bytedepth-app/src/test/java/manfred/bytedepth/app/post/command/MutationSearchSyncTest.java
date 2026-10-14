@@ -57,9 +57,10 @@ class MutationSearchSyncTest {
         var order = inOrder(tags, search);
         order.verify(tags).savePostTags(1L, List.of(3L));
         order.verify(search)
-                .index(argThat(doc -> doc.getId().equals(1L) && doc.getTags().equals(List.of("New"))));
-        order.verify(search)
-                .index(argThat(doc -> doc.getId().equals(2L) && doc.getTags().equals(List.of("New"))));
+                .indexAll(argThat(docs -> docs.size() == 2
+                        && docs.get(0).getId().equals(1L)
+                        && docs.get(1).getId().equals(2L)
+                        && docs.stream().allMatch(doc -> doc.getTags().equals(List.of("New")))));
         verify(posts).findPublishedByTag("java", 2, 100);
     }
 
@@ -69,7 +70,9 @@ class MutationSearchSyncTest {
         new SetPostTagsCmdExe(tags, posts, index).execute(1L, List.of());
         var order = inOrder(tags, search);
         order.verify(tags).savePostTags(1L, List.of());
-        order.verify(search).index(argThat(doc -> doc.getTags().isEmpty()));
+        order.verify(search)
+                .indexAll(argThat(
+                        docs -> docs.size() == 1 && docs.get(0).getTags().isEmpty()));
     }
 
     @Test
@@ -83,7 +86,9 @@ class MutationSearchSyncTest {
         order.verify(posts).findPublishedByTag("java", 2, 100);
         order.verify(tags).deleteWithPostAssociations(3L);
         order.verify(search)
-                .index(argThat(doc -> doc.getId().equals(1L) && doc.getTags().isEmpty()));
+                .indexAll(argThat(docs -> docs.size() == 1
+                        && docs.get(0).getId().equals(1L)
+                        && docs.get(0).getTags().isEmpty()));
     }
 
     @Test
@@ -101,7 +106,16 @@ class MutationSearchSyncTest {
         var order = inOrder(series, search);
         order.verify(series).findAllPostsBySeries(3L);
         order.verify(series).deleteWithPosts(3L);
-        order.verify(search).index(argThat(doc -> doc.getId().equals(1L) && doc.getSeriesName() == null));
+        order.verify(search)
+                .indexAll(argThat(docs -> docs.size() == 1
+                        && docs.get(0).getId().equals(1L)
+                        && docs.get(0).getSeriesName() == null));
+    }
+
+    @Test
+    void emptySeriesDeletionDoesNotSubmitSearchTasks() {
+        new DeleteSeriesCmdExe(series, index).execute(3L);
+        verifyNoInteractions(search);
     }
 
     @Test
@@ -158,7 +172,7 @@ class MutationSearchSyncTest {
         order.verify(posts).findPublishedByTag("java", 3, 100);
         order.verify(tags).save(any());
         order.verify(tags).savePostTags(1L, List.of(3L));
-        order.verify(sync, times(101)).execute(anyLong());
+        order.verify(sync).executeBatch(argThat(ids -> ids.size() == 101 && ids.contains(101L)));
     }
 
     @Test
@@ -177,6 +191,6 @@ class MutationSearchSyncTest {
         order.verify(posts).findPublishedByTag("java", 2, 100);
         order.verify(posts).findPublishedByTag("java", 3, 100);
         order.verify(tags).deleteWithPostAssociations(3L);
-        order.verify(sync, times(101)).execute(anyLong());
+        order.verify(sync).executeBatch(argThat(ids -> ids.size() == 101 && ids.contains(101L)));
     }
 }

@@ -18,6 +18,6 @@ public class DeleteSeriesCmdExe {
                 .map(SeriesPostItem::id)
                 .toList();
         seriesRepository.deleteWithPosts(seriesId);
-        affectedPostIds.forEach(indexPostCmdExe::execute);
+        if (!affectedPostIds.isEmpty()) indexPostCmdExe.executeBatch(new java.util.ArrayList<>(affectedPostIds));
     }
 }

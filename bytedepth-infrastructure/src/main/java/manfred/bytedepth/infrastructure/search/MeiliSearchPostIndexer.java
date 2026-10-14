@@ -123,13 +123,19 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
 
     @Override
     public void index(PostSearchDoc doc) {
+        indexAll(List.of(doc));
+    }
+
+    @Override
+    public void indexAll(List<PostSearchDoc> docs) {
+        if (docs.isEmpty()) return;
         ensureNotInterrupted();
         awaitTask(
                 restClient
                         .post()
                         .uri("/indexes/{index}/documents", index)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .body(List.of(toMap(doc)))
+                        .body(docs.stream().map(this::toMap).toList())
                         .retrieve()
                         .body(Map.class),
                 false);
@@ -137,16 +143,31 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
 
     @Override
     public void delete(Long postId) {
+        submitDeletion(() -> restClient
+                .delete()
+                .uri("/indexes/{index}/documents/{id}", index, postId)
+                .retrieve()
+                .body(Map.class));
+    }
+
+    @Override
+    public void deleteAll(List<Long> ids) {
+        if (ids.isEmpty()) return;
+        submitDeletion(() -> restClient
+                .post()
+                .uri("/indexes/{index}/documents/delete-batch", index)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(ids)
+                .retrieve()
+                .body(Map.class));
+    }
+
+    private void submitDeletion(java.util.function.Supplier<Map<?, ?>> submission) {
         ensureNotInterrupted();
         Map<?, ?> acceptance;
         try {
-            acceptance = restClient
-                    .delete()
-                    .uri("/indexes/{index}/documents/{id}", index, postId)
-                    .retrieve()
-                    .body(Map.class);
+            acceptance = submission.get();
         } catch (HttpClientErrorException.NotFound e) {
-            // Absence already satisfies deletion, but unrelated 404s must remain visible.
             if (isMissingIndex(e)) return;
             throw e;
         }

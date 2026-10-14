@@ -170,7 +170,7 @@ class SearchCommandsTest {
 
         IndexPostCmdExe indexer = mock(IndexPostCmdExe.class);
         assertEquals(1, new ReindexAllPostsCmdExe(posts, indexer, search).execute());
-        verify(indexer).execute(1L);
+        verify(indexer).executeBatch(List.of(1L));
     }
 
     @Test
@@ -226,9 +226,9 @@ class SearchCommandsTest {
                     return null;
                 })
                 .when(indexer)
-                .execute(1L);
+                .executeBatch(anyList());
         new ReindexAllPostsCmdExe(posts, indexer, search).execute();
-        verify(indexer).execute(51L);
+        verify(indexer).executeBatch(argThat(ids -> ids.contains(51L)));
     }
 
     @Test

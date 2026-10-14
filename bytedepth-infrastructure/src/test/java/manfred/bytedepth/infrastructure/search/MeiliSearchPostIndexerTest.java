@@ -63,6 +63,39 @@ class MeiliSearchPostIndexerTest {
     }
 
     @Test
+    void bulkIndexSubmitsAllDocumentsInOneTask() {
+        useServer();
+        server.expect(requestTo("http://meili/indexes/isolated_posts/documents"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().json("[{\"id\":1,\"title\":\"Title\"},{\"id\":2,\"title\":\"Second\"}]"))
+                .andRespond(withSuccess("{\"taskUid\":7}", MediaType.APPLICATION_JSON));
+        task("{\"status\":\"succeeded\"}");
+        assertDoesNotThrow(() -> indexer.indexAll(
+                List.of(doc(), PostSearchDoc.builder().id(2L).title("Second").build())));
+        server.verify();
+    }
+
+    @Test
+    void bulkDeletionSubmitsIdsInOneScopedTask() {
+        useServer();
+        server.expect(requestTo("http://meili/indexes/isolated_posts/documents/delete-batch"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().json("[1,2]"))
+                .andRespond(withSuccess("{\"taskUid\":7}", MediaType.APPLICATION_JSON));
+        task("{\"status\":\"succeeded\"}");
+        assertDoesNotThrow(() -> indexer.deleteAll(List.of(1L, 2L)));
+        server.verify();
+    }
+
+    @Test
+    void emptyBatchesDoNotSubmitTasks() {
+        useServer();
+        indexer.indexAll(List.of());
+        indexer.deleteAll(List.of());
+        server.verify();
+    }
+
+    @Test
     void productionConstructorBuildsConfiguredClientAndIsAutowired() throws Exception {
         assertTrue(MeiliSearchPostIndexer.class
                 .getDeclaredConstructor(String.class, String.class, String.class)
