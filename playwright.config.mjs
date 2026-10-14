@@ -4,6 +4,7 @@ const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 const localHostResolverRule = process.env.E2E_LOCAL_HOST_RESOLVER_RULE;
 const chromiumLaunchOptions = {
     launchOptions: {
+        ignoreDefaultArgs: ['--hide-scrollbars'],
         ...(chromiumExecutablePath ? {executablePath: chromiumExecutablePath} : {}),
         ...(localHostResolverRule ? {args: [`--host-resolver-rules=${localHostResolverRule}`]} : {})
     }
