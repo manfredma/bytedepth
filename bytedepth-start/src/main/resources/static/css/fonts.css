@@ -1,6 +1,6 @@
 /* 自托管 Google Fonts：woff2 随站点静态资源分发，避免 fonts.gstatic.com
  * 文件轮换导致的 404。Family 名与 theme.css 的 --bd-font-* 变量保持一致。
- * 由 scripts/selfhost-fonts.py 从 googleapis CSS2 生成。 */
+ * 字体文件与此 CSS 一同纳入版本管理。 */
 @font-face {
   font-family: "DM Serif Display";
   font-style: italic;

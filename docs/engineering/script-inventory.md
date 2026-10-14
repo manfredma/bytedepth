@@ -49,7 +49,6 @@
 - `test-run-staging-e2e-tests.sh`
 - `test-staging-test-slot.sh`
 - `test-test-resource-isolation.sh`
-- `test-staging-e2e-credential-injection.sh`
 - `test-warning-policy.sh`
 - `test-timing.sh`
 - `test-flyway-migration-warning-safety.sh`
@@ -58,9 +57,10 @@
 ### 一次性工具
 
 - `scripts/configure-git-hooks.sh`：只配置仓库级 `config/git-hooks`，不参与发布。
-- `scripts/selfhost-fonts.py`：生成静态字体资源；生成结果必须经过正常格式检查和提交评审。
 
 ## 已删除资产
+
+`scripts/selfhost-fonts.py` 已完成一次性字体导入并删除；字体文件与 `fonts.css` 作为普通静态资源维护，不需要在构建或发布阶段重新生成。
 
 以下检查曾引用已经删除的项目侧安装、部署、证书同步或合并脚本，无法代表当前 release-platform-only 架构，已删除：
 
