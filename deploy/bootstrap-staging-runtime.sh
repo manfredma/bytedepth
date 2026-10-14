@@ -67,7 +67,8 @@ prepare_maven() {
     flock -x 8
     cd "$SOURCE_ROOT"
     maven_log="$(mktemp)"
-    staging_ensure_ubuntu_owner "$maven_log"
+    # Keep this private /tmp file owned by its writer. Chown before root tee
+    # opens it can trigger Linux protected_regular and leave an empty log.
     trap 'rm -f "$maven_log"' EXIT
     set +e
     (
@@ -97,10 +98,14 @@ prepare_maven() {
       "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -Pstaging-integration verify -DskipTests -Dsort.skip=true
       "$SOURCE_ROOT/mvnw" -s .mvn/settings.xml -Dmaven.repo.local="$SHARED_MAVEN_REPOSITORY" -o -Pstaging-integration verify -DskipTests -Dsort.skip=true
     ) 2>&1 | tee "$maven_log"
-    maven_status="${PIPESTATUS[0]}"
+    maven_pipeline_status=("${PIPESTATUS[@]}")
     set -e
-    if [[ "$maven_status" -ne 0 ]]; then
-      return "$maven_status"
+    if [[ "${maven_pipeline_status[0]}" -ne 0 ]]; then
+      return "${maven_pipeline_status[0]}"
+    fi
+    if [[ "${maven_pipeline_status[1]}" -ne 0 ]]; then
+      printf 'Refusing: Maven runtime preparation log capture failed.\n' >&2
+      return 1
     fi
     if ! warning_policy_check_file "$maven_log"; then
       printf 'Refusing: Maven runtime preparation emitted an unallowlisted WARN or WARNING.\n' >&2
@@ -120,10 +125,14 @@ prepare_playwright_runtime() {
   trap 'rm -f "$playwright_log"' RETURN
   set +e
   npm exec playwright -- install ffmpeg 2>&1 | tee "$playwright_log"
-  playwright_status="${PIPESTATUS[0]}"
+  playwright_pipeline_status=("${PIPESTATUS[@]}")
   set -e
-  if [[ "$playwright_status" -ne 0 ]]; then
-    return "$playwright_status"
+  if [[ "${playwright_pipeline_status[0]}" -ne 0 ]]; then
+    return "${playwright_pipeline_status[0]}"
+  fi
+  if [[ "${playwright_pipeline_status[1]}" -ne 0 ]]; then
+    printf 'Refusing: Playwright runtime preparation log capture failed.\n' >&2
+    return 1
   fi
   warning_policy_check_file "$playwright_log"
 }

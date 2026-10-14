@@ -121,3 +121,9 @@
 - 通用 Host Agent 的 staging runner 使用候选 release/source 快照；依赖准备也必须读取同一快照，不能继续读取 `/opt/bytedepth` 的历史 Git checkout。runner 在已持有部署/测试锁时调用 `ensure_staging_runtime`，仅既有 bootstrap 成功后写 runtime manifest，再检查当前依赖输入；准备失败或未更新 manifest 均拒绝测试。对应回归入口为 `scripts/test-staging-runtime-preparation.sh`。
 
 - 平台通用发布的 release 与 images-test 属于 ubuntu，私有目录保持 0700/0750。native E2E test-slot 必须使用与实际 app 一致的 ubuntu 身份；旧 bytedepth 用户会在进入 WorkingDirectory 时触发 systemd `200/CHDIR`，此时浏览器尚未运行，不能误报为登录失败，也不能通过 chmod 777 绕过。2026-10-13 正式日志 task f4c295f6-1087-4263-86f2-a3ec5642b64d 已复现此问题。
+
+## staging 预热日志的临时文件与管道退出码
+
+`bootstrap-staging-runtime.sh` 的私有 `mktemp` 日志必须保持写入进程的所有权，不能在 root 的 `tee` 打开前改为 `ubuntu`；Linux `protected_regular` 可拒绝在 `/tmp` 中打开其他用户拥有的文件。脚注候选的 integration 日志曾出现临时日志 `Permission denied (os error 13)`，Maven 命令成功但日志采集失败。
+
+Maven 与 Playwright 预热必须同时检查命令和 `tee` 的 `PIPESTATUS`，日志写入失败必须阻断并禁止刷新 runtime manifest；不能只检查第一个退出码后对空日志运行 WARNING 过滤。`scripts/test-staging-runtime-preparation.sh` 用真实采集函数与离线命令验证成功、日志写入失败、未允许 WARNING 和日志所有权边界。已允许的 Javassist WARNING 仍遵循 `TD-0001` 与窄范围 warning policy。
