@@ -18,6 +18,13 @@
     return;
   }
   const slugs = entries.map((entry) => entry.postSlug).filter(Boolean);
+  if (slugs.length === 0) {
+    list.innerHTML = "";
+    if (empty) {
+      empty.hidden = false;
+    }
+    return;
+  }
   const query = new URLSearchParams();
   slugs.slice(0, 20).forEach((slug) => query.append("slugs", slug));
   fetch(`/reading-history/available-posts?${query.toString()}`, { credentials: "same-origin" })
