@@ -26,6 +26,12 @@ bash scripts/prepare-release.sh --version v2.27.0
 
 本地 `check-release-readiness.sh` 以正式 section 标题作为版本事实源：候选冻结后 `Unreleased` 必须为空，版本必须高于基线，条目必须归入规定分类。无变更的已发布基线允许保留同一版本。平台管理的版本不要求历史 `**Tag**`、`**回滚基线**` 字段；Git Tag 和生产回滚状态以平台记录为准，不为通过本地门禁补造字段。若仍保留这些字段，Tag 必须与 section 版本一致，回滚版本必须低于候选且不高于基线，并且对应 Git Tag 必须是基线可达的 annotated tag；显式错误或无法解析的字段仍会被拒绝。契约测试通过实际版本准备脚本覆盖无历史字段的基线和冻结候选。
 
+## 运行版本信息
+
+`/version.version` 是当前候选冻结的应用发布版本，不带 Tag 的 `v` 前缀。平台通用构建从同一候选的 changelog 读取该值，通过 `release.application-version` 写入 Spring Boot build-info；缺失或未冻结时拒绝构建。构建约定及回归检查见[平台运行时元数据](https://github.com/manfredma/release-platform/blob/main/docs/agent/runtime-project-metadata.md)。
+
+`buildVersion` 表示真实 Maven 坐标，可以与应用发布版本不同；`commitId` 和 `builtAt` 表示完整源码 SHA 与实际构建时间。版本展示不能替代平台 SHA/digest 校验。历史不可变 JAR 的 `unknown` 不会因平台升级自动改变，必须使用新候选正常构建和发布，不覆盖或重新构建旧 SHA 的制品。
+
 构建、发布、日志、重试、验证和回滚都必须在 release-platform 页面完成，并以页面中的候选、制品和任务记录为准。
 
 触发候选任务只允许通过 release-platform 页面或授权平台连接器完成；仓库内的 Agent 只能准备 PR、完整 commit SHA 和触发参数，不能把本地脚本执行结果当成平台触发回执。
