@@ -61,6 +61,24 @@ test("code scrollbar styling declares explicit sizing and a non-hover thumb", ()
   expect(thumb?.style.borderRadius).toBe("6px");
 });
 
+test("staging Chromium projects do not suppress native scrollbars in headless mode", () => {
+  const { execFileSync } = require("node:child_process");
+  const output = execFileSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      "import config from './playwright.config.mjs'; console.log(JSON.stringify(config.projects.map(project => project.use.launchOptions.ignoreDefaultArgs ?? [])));",
+    ],
+    { cwd: path.resolve(__dirname, "../../../.."), encoding: "utf-8" },
+  );
+  const projectArguments = JSON.parse(output);
+  expect(projectArguments).toHaveLength(2);
+  for (const ignoredArguments of projectArguments) {
+    expect(ignoredArguments).toContain("--hide-scrollbars");
+  }
+});
+
 test("ordinary and unmarked code blocks use the unified component behavior", async () => {
   document.body.innerHTML = `
         <article id="post-article"><div class="content">

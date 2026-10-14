@@ -45,6 +45,8 @@ JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw test -Dsort.skip=true
 
 ### staging 验证的执行纪律
 
+原生滚动条的视觉和几何断言必须使用真实显示状态。Playwright 的 Chromium 无头启动默认包含 `--hide-scrollbars`，本仓库 `playwright.config.mjs` 显式通过 `ignoreDefaultArgs: ['--hide-scrollbars']` 移除该参数；不能把被测试框架隐藏的轨道当成组件缺陷，也不能删除轨道宽度或未悬停可见性断言来伪造通过。`code-blocks.test.js` 在不启动浏览器的独立 Node 配置加载进程中验证桌面与移动项目的实际启动选项，避免 Playwright 在 DOM 模拟单测环境中误走浏览器连接路径。该回归由本地质量入口执行，真实浏览器验证仍只在 staging 运行。
+
 部署、集成测试和 E2E 是有成本的串行门禁，不能把它们当成开发期试错工具。提交候选分支前，先在本机完成离线单测和 runner 的 fake/fixture 测试；首次 staging 验证前必须一次性核对 runner 的前提：部署 SHA 一致、原生 systemd 服务健康、可用磁盘空间、固定的 Playwright 浏览器可执行，以及 E2E 所需的真实公开数据。E2E 不得依赖可能被同步清除的固定文章、用户或其他种子数据，应在运行时发现当前可用的只读数据，或由 runner 显式创建并清理测试数据。
 
 staging 上一次完整 `*IT` 目前通常需要约 3–4 分钟（Maven `verify` 与隔离资源初始化），完整 E2E 通常约 1 分钟。超过这个范围时，先读取该次 run 的持久化日志和进程状态，取得第一个明确错误后再修复；不得依据路径、文章或系统包的猜测连续改动并重复部署。每次修复都先用对应的离线 runner 测试复现，再进行一次 staging 重试。
