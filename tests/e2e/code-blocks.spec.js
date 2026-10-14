@@ -56,6 +56,90 @@ async function deleteDraft(page, editPath) {
 }
 
 test.describe("代码块增强兼容性", () => {
+  test("代码内容最多展示三十行并保留完整内容与独立状态", async ({ page }) => {
+    test.skip(!adminUsername || !adminPassword, "需要 E2E_ADMIN_USERNAME/E2E_ADMIN_PASSWORD 才能执行真实文章 E2E");
+    await loginAsAdmin(page);
+    const source = (count) => Array.from({ length: count }, (_, index) => `line ${index + 1}`).join("\n");
+    const longSource = source(120);
+    const content = [
+      ...[29, 30, 31].map((count) => `\`\`\`text\n${source(count)}\n\`\`\``),
+      `\`\`\`text fold tabs:height\n${longSource}\n\`\`\``,
+      `\`\`\`text tabs:height\n${source(31)}\n\`\`\``,
+      `\`\`\`text\n${"x".repeat(400)}\n\`\`\``,
+    ].join("\n\n");
+    const paths = await createDraft(page, `code-height-e2e-${Date.now()}`, content);
+    const assertHeight = async (block, count) => {
+      const metrics = await block.locator(".bd-code-block__body").evaluate((body) => {
+        const pre = body.querySelector("pre");
+        const preStyle = getComputedStyle(pre);
+        const lines = body.querySelector(".bd-code-block__lines");
+        return {
+          height: body.clientHeight,
+          scrollHeight: body.scrollHeight,
+          lineHeight: parseFloat(preStyle.lineHeight),
+          gutterLineHeight: parseFloat(getComputedStyle(lines).lineHeight),
+          padding: parseFloat(preStyle.paddingTop) + parseFloat(preStyle.paddingBottom),
+        };
+      });
+      expect(Math.abs(metrics.height - (Math.min(count, 30) * metrics.lineHeight + metrics.padding))).toBeLessThan(2);
+      expect(metrics.gutterLineHeight).toBeCloseTo(metrics.lineHeight, 1);
+      if (count <= 30) {
+        expect(metrics.scrollHeight).toBe(metrics.height);
+      } else {
+        expect(metrics.scrollHeight).toBeGreaterThan(metrics.height);
+      }
+    };
+    try {
+      await page.goto(paths.postPath, { waitUntil: "domcontentloaded" });
+      const blocks = page.locator(".bd-code-block");
+      for (const [index, count] of [29, 30, 31].entries()) {
+        await assertHeight(blocks.nth(index), count);
+      }
+      const tabs = page.locator(".bd-code-tabs");
+      const panels = tabs.locator(".bd-code-tabs__panel");
+      const longBlock = panels.first().locator(".bd-code-block");
+      await expect(longBlock.locator(".bd-code-block__body")).toBeHidden();
+      await longBlock.getByRole("button", { name: "展开代码" }).click();
+      await assertHeight(longBlock, 120);
+      await expect(longBlock.locator("pre code")).toHaveText(`${longSource}\n`);
+      await expect(longBlock.locator(".bd-code-block__line")).toHaveCount(120);
+      await page.evaluate(() => {
+        window.copiedCode = null;
+        Object.defineProperty(navigator, "clipboard", {
+          configurable: true,
+          value: {
+            writeText: async (text) => {
+              window.copiedCode = text;
+            },
+          },
+        });
+      });
+      await longBlock.getByRole("button", { name: "复制代码" }).click();
+      await expect.poll(() => page.evaluate(() => window.copiedCode)).toBe(`${longSource}\n`);
+      const body = longBlock.locator(".bd-code-block__body");
+      await body.evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+      expect(await body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+      await expect(longBlock.getByRole("button", { name: "复制代码" })).toBeVisible();
+      await longBlock.getByRole("button", { name: "收起代码" }).click();
+      await longBlock.getByRole("button", { name: "展开代码" }).click();
+      await assertHeight(longBlock, 120);
+      await tabs.getByRole("tab").nth(1).click();
+      await assertHeight(panels.nth(1).locator(".bd-code-block"), 31);
+      await tabs.getByRole("tab").first().click();
+      await assertHeight(longBlock, 120);
+      expect(
+        await blocks
+          .last()
+          .locator(".bd-code-block__body")
+          .evaluate((element) => element.scrollWidth > element.clientWidth),
+      ).toBe(true);
+    } finally {
+      await deleteDraft(page, paths.editPath);
+    }
+  });
+
   test("所有顶层代码块统一渲染并保持各自交互状态", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "代码块交互验收在桌面 Chromium 执行");
     test.skip(!adminUsername || !adminPassword, "需要 E2E_ADMIN_USERNAME/E2E_ADMIN_PASSWORD 才能执行真实文章 E2E");

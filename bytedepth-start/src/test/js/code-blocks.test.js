@@ -25,6 +25,21 @@ test("code block CSS is scoped to enhanced markup", () => {
   expect(codeBlocksCss).not.toMatch(/\.content pre\s*\{/);
 });
 
+test("code bodies cap their shared scroll area at thirty code lines", () => {
+  document.body.innerHTML = `<style>${codeBlocksCss}</style><div class="content">
+    <div class="bd-code-block"><div class="bd-code-block__body">
+      <div class="bd-code-block__code"><div class="bd-code-block__lines"></div><pre><code>code</code></pre></div>
+    </div></div></div>`;
+  const bodyStyle = getComputedStyle(document.querySelector(".bd-code-block__body"));
+  expect(bodyStyle.maxHeight).toBe("calc(30 * 27.2px + 34px)");
+  expect(bodyStyle.overflowY).toBe("auto");
+  expect(bodyStyle.overflowX).toBe("auto");
+  expect(bodyStyle.lineHeight).toBe("1.7");
+  expect(getComputedStyle(document.querySelector("pre")).fontSize).toBe(
+    getComputedStyle(document.querySelector(".bd-code-block__lines")).fontSize,
+  );
+});
+
 test("ordinary and unmarked code blocks use the unified component behavior", async () => {
   document.body.innerHTML = `
         <article id="post-article"><div class="content">
