@@ -56,6 +56,59 @@ async function deleteDraft(page, editPath) {
 }
 
 test.describe("代码块增强兼容性", () => {
+  test("常用语言高亮具有实际颜色并保留原始代码与未知语言", async ({ page }) => {
+    test.skip(!adminUsername || !adminPassword, "需要真实管理员凭据");
+    await loginAsAdmin(page);
+    const examples = [
+      ["c", "#include <stdint.h>\nuint64_t read_value(const unsigned char *bytes) { return bytes[0]; }"],
+      ["rust", "fn main() { let value: u64 = 42; }"],
+      ["go", 'package main\nfunc main() { println("go") }'],
+      ["yaml", "enabled: true"],
+      ["unknown-example", "value < 5 && value > 1"],
+    ];
+    const content = examples.map(([language, source]) => `\`\`\`${language}\n${source}\n\`\`\``).join("\n\n");
+    const paths = await createDraft(page, `syntax-languages-e2e-${Date.now()}`, content);
+    try {
+      await page.goto(paths.postPath, { waitUntil: "domcontentloaded" });
+      await expect(page.locator('script[src*="/vendor/prism/"]')).toHaveCount(1);
+      const blocks = page.locator(".bd-code-block");
+      await expect(blocks).toHaveCount(examples.length);
+      for (const [index, [, source]] of examples.entries()) {
+        await expect(blocks.nth(index).locator("pre code")).toHaveText(`${source}\n`);
+      }
+      for (const theme of ["paper", "blue", "midnight"]) {
+        await page.evaluate((value) => {
+          document.documentElement.dataset.theme = value;
+        }, theme);
+        for (const index of [0, 1, 2]) {
+          const code = blocks.nth(index).locator("pre code");
+          const token = code.locator(".token.keyword").first();
+          await expect(token).toBeVisible();
+          expect(await token.evaluate((element) => getComputedStyle(element).color)).not.toBe(
+            await code.evaluate((element) => getComputedStyle(element).color),
+          );
+        }
+      }
+      await expect(blocks.nth(3).locator(".token.boolean")).toHaveText("true");
+      await expect(blocks.last().locator(".token")).toHaveCount(0);
+      await page.evaluate(() => {
+        window.copiedCode = null;
+        Object.defineProperty(navigator, "clipboard", {
+          configurable: true,
+          value: {
+            writeText: async (text) => {
+              window.copiedCode = text;
+            },
+          },
+        });
+      });
+      await blocks.first().getByRole("button", { name: "复制代码" }).click();
+      await expect.poll(() => page.evaluate(() => window.copiedCode)).toBe(`${examples[0][1]}\n`);
+    } finally {
+      await deleteDraft(page, paths.editPath);
+    }
+  });
+
   test("代码内容最多展示三十行并保留完整内容与独立状态", async ({ page }) => {
     test.skip(!adminUsername || !adminPassword, "需要 E2E_ADMIN_USERNAME/E2E_ADMIN_PASSWORD 才能执行真实文章 E2E");
     await loginAsAdmin(page);

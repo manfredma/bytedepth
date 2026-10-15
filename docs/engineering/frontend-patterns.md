@@ -98,3 +98,15 @@ filterBar(action, fields)
 专栏文章选择器和文章详情元信息统一显示预计阅读时长。时长由正文可见字符数计算，每分钟 500 字，向上取整且至少为 1 分钟；不新增持久化字段，避免文章内容更新后元数据过期。
 
 专栏边界使用明确动作：第一篇左侧返回专栏，最后一篇右侧查看专栏目录，单篇文章两侧均显示边界动作；不属于专栏的文章才使用全站上一篇/下一篇。桌面端导航为紧凑横条（目标高度约 62px），移动端保留至少 76px 的触控高度。样式统一使用 `series-*` 命名空间，禁止恢复会覆盖正文的 fixed 侧栏。
+
+## 代码语言高亮包
+
+文章统一加载本地 `vendor/prism/prism-common.min.js`，然后初始化代码块交互。高亮包由 lockfile 固定的 Prism 1.29.0 构建，语言清单和自定义别名唯一来源是 `scripts/prism-languages.json`；使用 Prism 自带的依赖解析器确定加载顺序，不能手工拼接依赖或只增加语言标签。
+
+更新方法：先执行 `npm ci --ignore-scripts --no-audit --no-fund`，修改语言清单后执行 `npm run build:prism`，将生成物一并提交。`node scripts/build-prism.mjs --check` 校验生成物与固定依赖一致，已由 `prism-bundle.test.js` 纳入本地质量门禁。浏览器无需访问 CDN 或按文章请求语言模块；Spring 静态资源指纹随内容更新。
+
+2026-10-15 扫描 Obsidian 笔记库的围栏代码块后，除现有 Java、Go、Python、JavaScript/TypeScript 等语言外，补齐 C/C++、Rust、Coq、Scheme/Racket、YAML、Dockerfile、Kotlin 等已使用且 Prism 支持的语言。扫描中 C 为 1878 块、Go 为 319 块、Rust 为 55 块；清单包含 48 种显式语言，连同自动依赖共 50 个语法模块。Prism 原生别名保留，额外兼容 `make` → `makefile` 和 `proto` → `protobuf`。
+
+`text`、未标记及未知语言保留纯文本。笔记中的 `asm` 混用 x86、RISC-V 和 Hack，不能统一冒充 NASM；明确标记 `nasm` 时提供高亮。当前 Prism 不支持的 Forth、TLA、Cython、BibTeX 及教学用 `jack`/`vm`/`hdl`/`pseudo` 不做猜测映射。Mermaid 继续走图表渲染。新增语言先核对固定 Prism 的组件和别名，再补真实 token 输出回归，避免“标签正常但内容无高亮”复发。
+
+验证入口：`prism-bundle.test.js` 执行页面实际引用的高亮资源，检查 C、Rust、Go 等 token 和未知语言回退；staging 的 `tests/e2e/code-blocks.spec.js` 用临时草稿检查桌面/手机、三种主题的实际颜色、代码文本和复制完整性，并清理草稿。
