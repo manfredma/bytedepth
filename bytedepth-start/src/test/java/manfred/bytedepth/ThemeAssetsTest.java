@@ -117,7 +117,7 @@ class ThemeAssetsTest {
         assertThat(nav)
                 .contains("nav-brand-copy")
                 .contains("nav-brand-subtitle")
-                .contains("深入字节，理解系统")
+                .contains("复杂之下，皆有脉路")
                 .contains("/login")
                 .contains("/register")
                 .contains("/network");
