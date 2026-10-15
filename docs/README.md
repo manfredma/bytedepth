@@ -14,7 +14,7 @@
 - 修改分页：读 [前端模式](engineering/frontend-patterns.md)。
 - 查询所有路由：读 [路由一览](architecture/routes.md)。
 - 搜索索引同步、残留清理与失败恢复：读 [搜索索引同步](engineering/search-indexing.md)。
-- 排查已知问题：读 [工程陷阱](engineering/gotchas.md)。
+- 排查已知问题、同类失败再次出现或准备重试：读 [工程陷阱](engineering/gotchas.md)。
 - 管理尚未处理的技术债：读 [技术债清单](engineering/technical-debt.md)。
 - 修改访问日志、阅读统计或首页排序：读 [访问日志与统计](engineering/view-log-and-analytics.md)。
 - 修改登录、表单或 CSRF：读 [CSRF 决策记录](security/csrf-session-repository.md)。
@@ -22,7 +22,7 @@
 - 新增后台权限或调整授权分层：读 [角色与权限模型](security/rbac.md)。
 - 批注与划线写操作的权限管理：读 [批注写操作权限管理](security/annotation-write-permissions.md)。
 - 构建、测试、覆盖率：读 [Maven 指南](agent-guides/maven.md)。
-- 收到开发任务、准备交付、判断何时停下或用户明确免人工验收：读 [人与 Agent 的职责边界](agent-guides/agent-responsibility-boundary.md)。
+- 收到开发任务、跨会话接手、调整需求范围、准备交付或判断何时停下：读 [人与 Agent 的职责边界](agent-guides/agent-responsibility-boundary.md)。
 - 创建 worktree、分支、PR 与受控发布：读 [Git 工作流](engineering/git-workflow.md)。
 - 新项目接入与执行共同质量、staging、Tag 和生产流程：读 [统一发布流程](engineering/unified-release-pipeline.md)。
 - 同步 Obsidian 笔记：读 [同步指南](agent-guides/obsidian-sync.md)。
