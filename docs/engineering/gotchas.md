@@ -10,6 +10,15 @@
 
 合并脚本在 fetch 分支后必须显式更新 `refs/remotes/origin/<branch>`；只写 `git fetch origin <branch> main` 可能只更新 `FETCH_HEAD`，随后 `git rev-parse origin/<branch>` 会失败。该 refspec 由 `test-merge-main-after-quality.sh` 固定检查。
 
+## 诊断与重试
+
+同类失败再次出现，或排查需要跨会话交接时，在[任务记录](../agent-guides/agent-responsibility-boundary.md#任务追踪与范围变更)中保留当前假设、支持证据、反证、已排除方向，以及下一步验证；简单且已定位的单次失败无需另建调查记录。
+
+1. 修改前核实实际执行的提交、入口、配置来源与失败阶段；涉及平台任务时，同时核实运行 Agent 身份和 attempt。事实未知时先采集证据，明确区分观察与推断。
+2. 重试前写明新增证据、此次操作验证的假设、预期可观察结果及停止条件；有证据的瞬时故障按既有幂等和重试规则处理。
+3. 没有新证据时停止重复执行同一方法，改为读取实际路径、缩小复现或补充观测。耗时操作再次执行前，说明上次获得的信息，以及本次为何能减少剩余不确定性。
+4. 修复后用原失败路径验证假设，记录结果及适用范围，再更新清单；局部 fixture 或静态检查的通过只证明其覆盖范围。
+
 ## 构建与测试
 
 - 所有 Maven 命令都显式使用 Java 25，并带 `-Dsort.skip=true`；完整命令见 [Maven 指南](../agent-guides/maven.md)。

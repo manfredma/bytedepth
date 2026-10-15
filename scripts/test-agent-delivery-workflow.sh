@@ -29,6 +29,18 @@ require_text '**真实阻塞**' "$GUIDE"
 require_text '**明确限制范围**' "$GUIDE"
 require_text 'CI/CD 是构建、部署和验证的执行工具，不是 Agent 开发流程的授权来源' "$GUIDE"
 
+# These checks preserve discoverability and required instructions, not Agent behavior.
+require_text '#任务追踪与范围变更' "$SOURCE_ROOT/AGENTS.md"
+require_text '#诊断与重试' "$SOURCE_ROOT/AGENTS.md"
+require_text '单步且可当场验证的修改无需另建清单' "$GUIDE"
+require_text '用户目标、可观察的验收条件、当前状态、证据位置' "$GUIDE"
+require_text '上下文压缩后，先读取清单和最新用户指令' "$GUIDE"
+require_text '追加本轮、替换旧要求或延后' "$GUIDE"
+require_text '当前假设、支持证据、反证、已排除方向' "$SOURCE_ROOT/docs/engineering/gotchas.md"
+require_text '没有新证据时停止重复执行同一方法' "$SOURCE_ROOT/docs/engineering/gotchas.md"
+require_text '#任务追踪与范围变更' "$SOURCE_ROOT/docs/engineering/gotchas.md"
+require_text '#诊断与重试' "$GUIDE"
+
 for file in \
   "$SOURCE_ROOT/docs/README.md" \
   "$SOURCE_ROOT/docs/engineering/git-workflow.md" \
