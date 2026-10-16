@@ -44,6 +44,8 @@ bash scripts/prepare-release.sh --version v2.27.0  # 初始化或纠正版本
 
 创建 PR 候选时 `sourceRef` 必须使用 `refs/pull/<PR编号>/head`，并绑定该 PR head 的完整 SHA。平台依据 pull ref 在验收后将同一 SHA fast-forward 到默认分支；不能以 feature branch ref 替代。候选按 project + SHA 唯一，错误 ref 的候选不能改写或用于验收，应保留记录并以新的 PR head 正式验证。
 
+创建 candidate 前先执行 `bash scripts/check-candidate-source.sh <PR编号> <完整SHA>`，要求交接 SHA 同时等于本 worktree 的 `git rev-parse HEAD` 与 GitHub PR head。禁止手写补全短 SHA；候选创建后再次核对返回 SHA。该检查只读取 Git/GitHub，不创建候选或部署；本地质量门禁通过隔离的假命令用例验证短 SHA、错误 SHA 和 PR head 变化均被拒绝。
+
 发布完成的依据是 release-platform 返回的 candidate、完整 commit SHA、artifact digest、task/evidence 和 request ID；本仓库的本地命令输出不能替代平台发布回执。
 
 ## Agent 验收授权与 production 晋级

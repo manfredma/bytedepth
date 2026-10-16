@@ -37,3 +37,5 @@ if rg -n \
 fi
 
 printf 'release-platform-only contract passed\n'
+
+bash "$ROOT/scripts/test-candidate-source.sh"
