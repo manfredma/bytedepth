@@ -51,8 +51,8 @@ MUTATIONS = [
         '// UNSAFE MUTANT: accept stale page', 'AnnotationCommandProtocolTest',
         'U33_U36_lockedLatestVersionRejectsStaleAndWritesNothing', True),
     Mutation('accept-old-generation', JS+'annotation.js',
-        '.then((saved) => {\n        if (!active || !content.isConnected) {\n          return;\n        }\n        storeAnnotation(saved);\n        renderMarks();\n        closeComposer();',
-        '.then((saved) => {\n        storeAnnotation(saved);\n        renderMarks();\n        closeComposer();', TEST_JS+'annotation.test.js',
+        '.then((saved) => {\n        if (!active || !content.isConnected) {\n          return;\n        }\n        storeAnnotation(saved);\n        renderMarks();\n        if (session === composerSession) {',
+        '.then((saved) => {\n        storeAnnotation(saved);\n        renderMarks();\n        if (session === composerSession) {', TEST_JS+'annotation.test.js',
         'U19_U30_oldcommentSuccessCannotChangeReinitializedUi'),
 ]
 
