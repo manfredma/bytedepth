@@ -24,10 +24,29 @@ class DeleteAnnotationCmdExeTest {
     private AnnotationRepositoryPort annotationRepository;
 
     private DeleteAnnotationCmdExe exe;
+    private final AnnotationRequestPort requests = org.mockito.Mockito.mock(AnnotationRequestPort.class);
+    private final manfred.bytedepth.app.post.PostWriteTransaction tx =
+            new manfred.bytedepth.app.post.PostWriteTransaction() {
+                public <T> T withLockedPost(
+                        Long id, java.util.function.Function<manfred.bytedepth.domain.post.Post, T> action) {
+                    return action.apply(null);
+                }
+            };
 
     @BeforeEach
     void setUp() {
-        exe = new DeleteAnnotationCmdExe(annotationRepository);
+        exe = new DeleteAnnotationCmdExe(annotationRepository, tx, requests);
+    }
+
+    @Test
+    void U40_deletedRequestTombstoneIsAtomicAndFailureNeverDeletes() {
+        when(annotationRepository.findById(10L)).thenReturn(Optional.of(annotation(10L, 2L)));
+        org.mockito.Mockito.doThrow(new IllegalStateException("ledger failed"))
+                .when(requests)
+                .markDeleted(10);
+        org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalStateException.class, () -> exe.execute(10L, 1L, 2L, null));
+        verify(annotationRepository, never()).delete(any());
     }
 
     private static PostAnnotation annotation(Long id, Long userId) {
@@ -53,6 +72,7 @@ class DeleteAnnotationCmdExeTest {
         exe.execute(10L, 1L, 2L, null);
 
         verify(annotationRepository).delete(10L);
+        verify(requests).markDeleted(10L);
     }
 
     @Test
@@ -93,6 +113,7 @@ class DeleteAnnotationCmdExeTest {
         when(annotationRepository.findById(10L)).thenReturn(Optional.of(annotation));
         exe.execute(10L, 1L, null, "hash");
         verify(annotationRepository).delete(10L);
+        verify(requests).markDeleted(10L);
     }
 
     @Test
@@ -108,5 +129,6 @@ class DeleteAnnotationCmdExeTest {
         when(annotationRepository.findById(10L)).thenReturn(Optional.of(annotation(10L, 2L)));
         exe.execute(10L, 1L, 2L, "other-hash");
         verify(annotationRepository).delete(10L);
+        verify(requests).markDeleted(10L);
     }
 }

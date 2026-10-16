@@ -1,164 +1,77 @@
 package manfred.bytedepth.app.annotation;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import manfred.bytedepth.domain.annotation.AnnotationVisibility;
-import manfred.bytedepth.domain.annotation.PostAnnotation;
 import manfred.bytedepth.domain.common.DomainException;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
 class CreateAnnotationCmdExeTest {
-
-    @Mock
-    private AnnotationRepositoryPort annotationRepository;
-
-    private CreateAnnotationCmdExe exe;
-
-    @BeforeEach
-    void setUp() {
-        exe = new CreateAnnotationCmdExe(annotationRepository);
+    @Test
+    void U09_invalidMetadataNeverWrites() {
+        Object[][] cases = {
+            {null, 2L, null, "文本", null, "yellow", AnnotationVisibility.PUBLIC, 0, 2},
+            {1L, null, null, "文本", null, "yellow", AnnotationVisibility.PUBLIC, 0, 2},
+            {1L, null, " ", "文本", null, "yellow", AnnotationVisibility.PUBLIC, 0, 2},
+            {1L, 2L, null, null, null, "yellow", AnnotationVisibility.PUBLIC, 0, 2},
+            {1L, 2L, null, " ", null, "yellow", AnnotationVisibility.PUBLIC, 0, 2},
+            {1L, 2L, null, "a".repeat(501), null, "yellow", AnnotationVisibility.PUBLIC, 0, 2},
+            {1L, 2L, null, "文本", "a".repeat(2001), "yellow", AnnotationVisibility.PUBLIC, 0, 2},
+            {1L, 2L, null, "文本", null, null, AnnotationVisibility.PUBLIC, 0, 2},
+            {1L, 2L, null, "文本", null, "pink", AnnotationVisibility.PUBLIC, 0, 2},
+            {1L, 2L, null, "文本", null, "yellow", null, 0, 2},
+            {1L, 2L, null, "文本", null, "yellow", AnnotationVisibility.PUBLIC, -1, 2},
+            {1L, 2L, null, "文本", null, "yellow", AnnotationVisibility.PUBLIC, 2, 2},
+            {1L, 2L, null, "文本", null, "yellow", AnnotationVisibility.PUBLIC, 0, 1000001}
+        };
+        for (var c : cases)
+            assertThrows(
+                    DomainException.class,
+                    () -> CreateAnnotationCmdExe.validate(
+                            (Long) c[0],
+                            (Long) c[1],
+                            (String) c[2],
+                            (String) c[3],
+                            (String) c[4],
+                            (String) c[5],
+                            (AnnotationVisibility) c[6],
+                            (int) c[7],
+                            (int) c[8]));
+        assertDoesNotThrow(() -> CreateAnnotationCmdExe.validate(
+                1L, null, "hash", "😀".repeat(500), null, "yellow", AnnotationVisibility.PRIVATE, 0, 500));
     }
 
     @Test
-    void execute_validInput_savesAndReturns() {
-        when(annotationRepository.save(any(PostAnnotation.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        PostAnnotation result =
-                exe.execute(1L, 2L, null, "被批注文本", "批注内容", AnnotationColor.YELLOW, AnnotationVisibility.PUBLIC, 10, 20);
-
-        assertThat(result.postId()).isEqualTo(1L);
-        assertThat(result.userId()).isEqualTo(2L);
-        assertThat(result.selectedText()).isEqualTo("被批注文本");
-        assertThat(result.annotationText()).isEqualTo("批注内容");
-        assertThat(result.color()).isEqualTo("yellow");
-        assertThat(result.startOffset()).isEqualTo(10);
-        assertThat(result.endOffset()).isEqualTo(20);
-        verify(annotationRepository).save(any(PostAnnotation.class));
+    void U38_colorsAnonymousPrivateAndEmptyCommentsStaySupported() {
+        for (var color : java.util.List.of("yellow", "green", "blue", "red")) {
+            var f = new AnnotationCommandProtocolTest();
+            f.save();
+            for (String comment : new String[] {null, "  ", "  内容  "}) {
+                var result = f.create
+                        .execute(
+                                1L,
+                                null,
+                                "a".repeat(64),
+                                new CreateAnnotationRequest(f.anchor, comment, color, AnnotationVisibility.PRIVATE))
+                        .annotation();
+                assertEquals("a".repeat(64), result.ownerTokenHash());
+                assertEquals(color, result.color());
+                assertEquals(AnnotationVisibility.PRIVATE, result.visibility());
+                assertEquals(comment == null || comment.isBlank() ? null : "内容", result.annotationText());
+            }
+        }
     }
 
     @Test
-    void execute_nullPostId_throws() {
-        assertThatThrownBy(() -> exe.execute(null, 2L, null, "文本", "批注", "yellow", AnnotationVisibility.PUBLIC, 0, 1))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("文章与批注身份不能为空");
-    }
-
-    @Test
-    void execute_anonymousVisitorToken_isAccepted() {
-        when(annotationRepository.save(any(PostAnnotation.class))).thenAnswer(inv -> inv.getArgument(0));
-        assertThat(exe.execute(1L, null, "a".repeat(64), "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 1)
-                        .ownerTokenHash())
-                .hasSize(64);
-    }
-
-    @Test
-    void execute_missingIdentity_throws() {
-        assertThatThrownBy(() -> exe.execute(1L, null, null, "文本", "批注", "yellow", AnnotationVisibility.PUBLIC, 0, 1))
-                .isInstanceOf(DomainException.class);
-    }
-
-    @Test
-    void execute_blankAnonymousToken_throws() {
-        assertThatThrownBy(() -> exe.execute(1L, null, " ", "文本", null, "yellow", AnnotationVisibility.PRIVATE, 0, 1))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("批注身份不能为空");
-    }
-
-    @Test
-    void execute_blankAnnotation_createsPrivateHighlightWithoutComment() {
-        when(annotationRepository.save(any(PostAnnotation.class))).thenAnswer(inv -> inv.getArgument(0));
-        PostAnnotation result = exe.execute(1L, 2L, null, "文本", "  ", "yellow", AnnotationVisibility.PRIVATE, 0, 1);
-        assertThat(result.annotationText()).isNull();
-        assertThat(result.visibility()).isEqualTo(AnnotationVisibility.PRIVATE);
-    }
-
-    @Test
-    void execute_nullVisibility_throws() {
-        assertThatThrownBy(() -> exe.execute(1L, 2L, null, "文本", null, "yellow", null, 0, 1))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("可见范围不能为空");
-    }
-
-    @Test
-    void execute_nullSelectedText_throws() {
-        assertThatThrownBy(() -> exe.execute(1L, 2L, null, null, "批注", "yellow", AnnotationVisibility.PUBLIC, 0, 1))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("批注文本不能为空");
-    }
-
-    @Test
-    void execute_blankSelectedText_throws() {
-        assertThatThrownBy(() -> exe.execute(1L, 2L, null, "  ", "批注", "yellow", AnnotationVisibility.PUBLIC, 0, 1))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("批注文本不能为空");
-    }
-
-    @Test
-    void execute_selectedTextTooLong_throws() {
-        String tooLong = "a".repeat(CreateAnnotationCmdExe.MAX_SELECTED_TEXT_LENGTH + 1);
-        assertThatThrownBy(() -> exe.execute(1L, 2L, null, tooLong, "批注", "yellow", AnnotationVisibility.PUBLIC, 0, 1))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("批注文本不能为空且不超过");
-    }
-
-    @Test
-    void execute_annotationTooLong_throws() {
-        String tooLong = "b".repeat(CreateAnnotationCmdExe.MAX_ANNOTATION_TEXT_LENGTH + 1);
-        assertThatThrownBy(() -> exe.execute(1L, 2L, null, "文本", tooLong, "yellow", AnnotationVisibility.PUBLIC, 0, 1))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("批注内容不超过");
-    }
-
-    @Test
-    void execute_nullColor_throws() {
-        assertThatThrownBy(() -> exe.execute(1L, 2L, null, "文本", "批注", null, AnnotationVisibility.PUBLIC, 0, 1))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("不支持的批注颜色");
-    }
-
-    @Test
-    void execute_unsupportedColor_throws() {
-        assertThatThrownBy(() -> exe.execute(1L, 2L, null, "文本", "批注", "pink", AnnotationVisibility.PUBLIC, 0, 1))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("不支持的批注颜色");
-    }
-
-    @Test
-    void execute_negativeStartOffset_throws() {
-        assertThatThrownBy(() -> exe.execute(1L, 2L, null, "文本", "批注", "yellow", AnnotationVisibility.PUBLIC, -1, 1))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("批注偏移越界");
-    }
-
-    @Test
-    void execute_endNotAfterStart_throws() {
-        assertThatThrownBy(() -> exe.execute(1L, 2L, null, "文本", "批注", "yellow", AnnotationVisibility.PUBLIC, 10, 10))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("批注偏移越界");
-    }
-
-    @Test
-    void execute_offsetBeyondMax_throws() {
-        assertThatThrownBy(() -> exe.execute(
-                        1L,
-                        2L,
-                        null,
-                        "文本",
-                        "批注",
-                        "yellow",
-                        AnnotationVisibility.PUBLIC,
-                        CreateAnnotationCmdExe.MAX_OFFSET + 1,
-                        CreateAnnotationCmdExe.MAX_OFFSET + 2))
-                .isInstanceOf(DomainException.class)
-                .hasMessageContaining("批注偏移越界");
+    void U12_oldProtocolFailsClosed() {
+        var f = new AnnotationCommandProtocolTest();
+        assertThrows(
+                InvalidAnchorException.class,
+                () -> f.create.execute(
+                        1L, 2L, null, new CreateAnnotationRequest(null, null, "yellow", AnnotationVisibility.PUBLIC)));
+        verify(f.annotations, never()).save(any());
+        assertThrows(
+                InvalidAnchorException.class, () -> f.create.execute(1L, 2L, null, (CreateAnnotationRequest) null));
     }
 }

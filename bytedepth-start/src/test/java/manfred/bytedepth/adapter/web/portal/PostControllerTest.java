@@ -80,6 +80,9 @@ class PostControllerTest {
     private AnnotationVisitorIdentity annotationVisitorIdentity;
 
     @MockitoBean
+    private manfred.bytedepth.app.post.document.ArticleRevisionService articleRevisions;
+
+    @MockitoBean
     private GetPostQryExe getPostQryExe;
 
     @MockitoBean
@@ -188,6 +191,7 @@ class PostControllerTest {
         when(postRepository.findPrevPublished(1L)).thenReturn(Optional.empty());
         when(postRepository.findNextPublished(1L)).thenReturn(Optional.empty());
         when(getPostQryExe.executeBySlug("test-post")).thenReturn(dto);
+        when(articleRevisions.current(dto.getId())).thenReturn(ArticleRevisionFixture.from(dto));
         when(listTagsQryExe.findByPostId(1L)).thenReturn(List.of());
         when(listCommentsQryExe.findApprovedByPostId(1L)).thenReturn(List.of());
         when(markdownRenderer.render(dto.getContent())).thenReturn("<h1>标题</h1><p>正文内容</p>");
@@ -233,12 +237,16 @@ class PostControllerTest {
         when(postRepository.findPrevPublished(3L)).thenReturn(Optional.empty());
         when(postRepository.findNextPublished(3L)).thenReturn(Optional.empty());
         when(getPostQryExe.executeBySlug("annotated-post")).thenReturn(dto);
+        when(articleRevisions.current(dto.getId())).thenReturn(ArticleRevisionFixture.from(dto));
         when(markdownRenderer.render(dto.getContent())).thenReturn("<p>正文内容</p>");
         when(markdownRenderer.render("这是一条评论")).thenReturn("<p><strong>这是一条评论</strong></p>");
         when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
         when(postViewCounter.getCount(3L)).thenReturn(0L);
-        when(listAnnotationsQryExe.execute(3L, null, null))
-                .thenReturn(List.of(new PostAnnotation(
+        when(listAnnotationsQryExe.viewsFor(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.eq(null),
+                        org.mockito.ArgumentMatchers.eq(null)))
+                .thenReturn(ArticleRevisionFixture.views(List.of(new PostAnnotation(
                         9L,
                         3L,
                         null,
@@ -250,7 +258,7 @@ class PostControllerTest {
                         0,
                         2,
                         LocalDateTime.of(2026, 8, 20, 17, 6),
-                        false)));
+                        false))));
 
         mockMvc.perform(get("/posts/annotated-post"))
                 .andExpect(status().isOk())
@@ -288,15 +296,19 @@ class PostControllerTest {
         when(postRepository.findPrevPublished(4L)).thenReturn(Optional.empty());
         when(postRepository.findNextPublished(4L)).thenReturn(Optional.empty());
         when(getPostQryExe.executeBySlug("annotation-owner")).thenReturn(dto);
+        when(articleRevisions.current(dto.getId())).thenReturn(ArticleRevisionFixture.from(dto));
         when(markdownRenderer.render(dto.getContent())).thenReturn("<p>正文内容</p>");
         when(markdownRenderer.countVisibleCharacters(dto.getContent())).thenReturn(4);
         when(postViewCounter.getCount(4L)).thenReturn(0L);
         when(annotationVisitorIdentity.existingHash(any())).thenReturn("visitor-hash");
-        when(listAnnotationsQryExe.execute(4L, 7L, "visitor-hash"))
-                .thenReturn(List.of(
+        when(listAnnotationsQryExe.viewsFor(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.eq(7L),
+                        org.mockito.ArgumentMatchers.eq("visitor-hash")))
+                .thenReturn(ArticleRevisionFixture.views(List.of(
                         annotation(11L, 7L, "other-hash"),
                         annotation(12L, 8L, "visitor-hash"),
-                        annotation(13L, 8L, "other-hash")));
+                        annotation(13L, 8L, "other-hash"))));
         SiteUserDetails reader = new SiteUserDetails(7L, "reader", "", List.of());
         SecurityContextHolder.getContext()
                 .setAuthentication(new UsernamePasswordAuthenticationToken(reader, null, reader.getAuthorities()));
@@ -308,13 +320,13 @@ class PostControllerTest {
                                     .getModel()
                                     .get("annotations")
                                     .toString())
-                            .contains("id=11, selectedText=正文, annotationText=评论11, annotationHtml=null,"
+                            .contains("id=11, postId=4, selectedText=正文, annotationText=评论11, annotationHtml=null,"
                                     + " color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2,"
                                     + " createdAt=")
-                            .contains("id=12, selectedText=正文, annotationText=评论12, annotationHtml=null,"
+                            .contains("id=12, postId=4, selectedText=正文, annotationText=评论12, annotationHtml=null,"
                                     + " color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2,"
                                     + " createdAt=")
-                            .contains("id=13, selectedText=正文, annotationText=评论13, annotationHtml=null,"
+                            .contains("id=13, postId=4, selectedText=正文, annotationText=评论13, annotationHtml=null,"
                                     + " color=yellow, visibility=PUBLIC, startOffset=0, endOffset=2,"
                                     + " createdAt=")
                             .contains("ownedByCurrentVisitor=true")
@@ -388,6 +400,7 @@ class PostControllerTest {
         when(postRepository.findPrevPublished(2L)).thenReturn(Optional.empty());
         when(postRepository.findNextPublished(2L)).thenReturn(Optional.empty());
         when(getPostQryExe.executeBySlug("another-post")).thenReturn(dto);
+        when(articleRevisions.current(dto.getId())).thenReturn(ArticleRevisionFixture.from(dto));
         when(listTagsQryExe.findByPostId(anyLong())).thenReturn(List.of());
         when(listCommentsQryExe.findApprovedByPostId(anyLong())).thenReturn(List.of());
         when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");
@@ -423,6 +436,7 @@ class PostControllerTest {
         when(postRepository.findPrevPublished(3L)).thenReturn(Optional.empty());
         when(postRepository.findNextPublished(3L)).thenReturn(Optional.empty());
         when(getPostQryExe.executeBySlug("event-test")).thenReturn(dto);
+        when(articleRevisions.current(dto.getId())).thenReturn(ArticleRevisionFixture.from(dto));
         when(listTagsQryExe.findByPostId(3L)).thenReturn(List.of());
         when(listCommentsQryExe.findApprovedByPostId(3L)).thenReturn(List.of());
         when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");
@@ -462,6 +476,7 @@ class PostControllerTest {
         when(postRepository.findPrevPublished(4L)).thenReturn(Optional.empty());
         when(postRepository.findNextPublished(4L)).thenReturn(Optional.empty());
         when(getPostQryExe.executeBySlug("filtered-visitor")).thenReturn(dto);
+        when(articleRevisions.current(dto.getId())).thenReturn(ArticleRevisionFixture.from(dto));
         when(listTagsQryExe.findByPostId(4L)).thenReturn(List.of());
         when(listCommentsQryExe.findApprovedByPostId(4L)).thenReturn(List.of());
         when(markdownRenderer.render("内容")).thenReturn("<p>内容</p>");

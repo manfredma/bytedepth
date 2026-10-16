@@ -51,7 +51,7 @@ class SearchLifecycleTest {
         add(1, PostStatus.PUBLISHED);
         index.execute(1L);
         assertEquals(1, search.search("Java", 1, 10).getTotalHits());
-        new DeletePostCmdExe(posts, index).execute(1L);
+        new DeletePostCmdExe(posts, manfred.bytedepth.app.post.LockedPostFixture.from(posts), index).execute(1L);
         assertEquals(PostStatus.DELETED, records.get(1L).getStatus());
         assertTrue(search.search("Java", 1, 10).getHits().isEmpty());
     }
@@ -142,7 +142,9 @@ class SearchLifecycleTest {
         try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
             var writing = executor.submit(() -> serialIndex.execute(1L));
             assertTrue(writeStarted.await(5, java.util.concurrent.TimeUnit.SECONDS));
-            var deleting = executor.submit(() -> new DeletePostCmdExe(posts, serialIndex).execute(1L));
+            var deleting = executor.submit(() -> new DeletePostCmdExe(
+                            posts, manfred.bytedepth.app.post.LockedPostFixture.from(posts), serialIndex)
+                    .execute(1L));
             writing.get(5, java.util.concurrent.TimeUnit.SECONDS);
             deleting.get(5, java.util.concurrent.TimeUnit.SECONDS);
         }

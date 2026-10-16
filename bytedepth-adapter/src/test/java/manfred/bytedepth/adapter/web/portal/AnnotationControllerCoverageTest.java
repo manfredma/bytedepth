@@ -3,7 +3,6 @@ package manfred.bytedepth.adapter.web.portal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -43,13 +42,14 @@ class AnnotationControllerCoverageTest {
                 visitorIdentity,
                 mock(MarkdownRenderer.class));
         when(posts.findBySlug("post")).thenReturn(Optional.of(post()));
-        when(create.execute(eq(1L), eq(7L), eq(null), any(), any(), any(), any(), anyInt(), anyInt()))
-                .thenReturn(annotation());
+        when(create.execute(
+                        eq(1L), eq(7L), eq(null), any(manfred.bytedepth.app.annotation.CreateAnnotationRequest.class)))
+                .thenReturn(new manfred.bytedepth.app.annotation.AnnotationView(annotation(), null, "digest"));
 
         var result = controller.create(
                 "post",
-                new AnnotationController.CreateAnnotationRequest(
-                        "文字", "评论", "yellow", AnnotationVisibility.PUBLIC, 0, 2),
+                new manfred.bytedepth.app.annotation.CreateAnnotationRequest(
+                        null, "评论", "yellow", AnnotationVisibility.PUBLIC),
                 new SiteUserDetails(7L, "reader", "", List.of(new SimpleGrantedAuthority("blog:post:create"))),
                 new MockHttpServletRequest(),
                 new MockHttpServletResponse());

@@ -1,7 +1,6 @@
 package manfred.bytedepth.adapter.web.portal;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -109,7 +108,8 @@ class AnnotationControllerTest {
     @Test
     void listReturnsOnlySafeDtoFields() throws Exception {
         when(visitorIdentity.existingHash(any())).thenReturn("hash");
-        when(listAnnotationsQryExe.execute(1L, null, "hash")).thenReturn(List.of(annotation()));
+        when(listAnnotationsQryExe.views(1L, null, "hash"))
+                .thenReturn(List.of(ArticleRevisionFixture.view(annotation())));
         when(markdownRenderer.render("评论")).thenReturn("<p><strong>评论</strong></p>");
         mockMvc.perform(get("/posts/test-post/annotations"))
                 .andExpect(status().isOk())
@@ -117,22 +117,24 @@ class AnnotationControllerTest {
                 .andExpect(jsonPath("$[0].annotationHtml").value("<p><strong>评论</strong></p>"))
                 .andExpect(jsonPath("$[0].createdAt").value("2026-08-22 07:42"))
                 .andExpect(jsonPath("$[0].ownedByCurrentVisitor").value(false))
-                .andExpect(jsonPath("$[0].userId").doesNotExist());
+                .andExpect(jsonPath("$[0].userId").doesNotExist())
+                .andExpect(jsonPath("$[0].ownerTokenHash").doesNotExist());
     }
 
     @Test
     void anonymousCreateGetsCookieIdentityAndReturnsOwnership() throws Exception {
         when(visitorIdentity.getOrCreateHash(any(), any())).thenReturn("hash");
         when(createAnnotationCmdExe.execute(
-                        eq(1L), eq(null), eq("hash"), any(), any(), any(), any(), anyInt(), anyInt()))
-                .thenReturn(anonymousAnnotation());
+                        eq(1L),
+                        eq(null),
+                        eq("hash"),
+                        any(manfred.bytedepth.app.annotation.CreateAnnotationRequest.class)))
+                .thenReturn(ArticleRevisionFixture.view(anonymousAnnotation()));
         when(markdownRenderer.render(null)).thenReturn("");
-        mockMvc.perform(
-                        post("/posts/test-post/annotations")
-                                .with(csrf())
-                                .contentType("application/json")
-                                .content(
-                                        "{\"selectedText\":\"文本\",\"annotationText\":null,\"color\":\"yellow\",\"visibility\":\"PRIVATE\",\"startOffset\":0,\"endOffset\":2}"))
+        mockMvc.perform(post("/posts/test-post/annotations")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content(validRequest()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ownedByCurrentVisitor").value(true))
                 .andExpect(jsonPath("$.createdAt").value("2026-08-22 07:42"))
@@ -142,12 +144,7 @@ class AnnotationControllerTest {
                         eq(1L),
                         eq(null),
                         eq("hash"),
-                        eq("文本"),
-                        eq(null),
-                        eq("yellow"),
-                        eq(AnnotationVisibility.PRIVATE),
-                        eq(0),
-                        eq(2));
+                        any(manfred.bytedepth.app.annotation.CreateAnnotationRequest.class));
     }
 
     @Test
@@ -155,7 +152,7 @@ class AnnotationControllerTest {
         when(visitorIdentity.getOrCreateHash(any(), any())).thenReturn("hash");
         doThrow(new DomainException("批注偏移越界"))
                 .when(createAnnotationCmdExe)
-                .execute(any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt());
+                .execute(any(), any(), any(), any(manfred.bytedepth.app.annotation.CreateAnnotationRequest.class));
         mockMvc.perform(
                         post("/posts/test-post/annotations")
                                 .with(csrf())
@@ -170,6 +167,7 @@ class AnnotationControllerTest {
         when(visitorIdentity.existingHash(any())).thenReturn("hash");
         when(updateAnnotationCmdExe.execute(10L, 1L, null, "hash", "新评论", AnnotationVisibility.PRIVATE))
                 .thenReturn(anonymousAnnotation());
+        when(listAnnotationsQryExe.viewCurrent(any())).thenReturn(ArticleRevisionFixture.view(anonymousAnnotation()));
         when(markdownRenderer.render(null)).thenReturn("");
         mockMvc.perform(delete("/posts/test-post/annotations/10").with(csrf())).andExpect(status().isNoContent());
         verify(deleteAnnotationCmdExe).execute(10L, 1L, null, "hash");
@@ -181,6 +179,51 @@ class AnnotationControllerTest {
                 .andExpect(jsonPath("$.visibility").value("PRIVATE"))
                 .andExpect(jsonPath("$.createdAt").value("2026-08-22 07:42"))
                 .andExpect(jsonPath("$.annotationHtml").value(""));
+    }
+
+    @Test
+    void U33_U35_conflictsDeletedReplayAndInvalidPayloadHaveExplicitStatus() throws Exception {
+        var endpoint = "/posts/test-post/annotations";
+        for (var kind : manfred.bytedepth.app.annotation.AnnotationWriteConflictException.Kind.values()) {
+            org.mockito.Mockito.doThrow(new manfred.bytedepth.app.annotation.AnnotationWriteConflictException(kind))
+                    .when(createAnnotationCmdExe)
+                    .execute(any(), any(), any(), any(manfred.bytedepth.app.annotation.CreateAnnotationRequest.class));
+            mockMvc.perform(post(endpoint)
+                            .with(csrf())
+                            .contentType("application/json")
+                            .content(validRequest()))
+                    .andExpect(status().is(
+                                    kind
+                                                    == manfred.bytedepth.app.annotation.AnnotationWriteConflictException
+                                                            .Kind.DELETED_REQUEST
+                                            ? 410
+                                            : 409));
+        }
+        org.mockito.Mockito.doThrow(new manfred.bytedepth.app.annotation.InvalidAnchorException(
+                        manfred.bytedepth.domain.annotation.PlacementReason.MODEL_MISMATCH))
+                .when(createAnnotationCmdExe)
+                .execute(any(), any(), any(), any(manfred.bytedepth.app.annotation.CreateAnnotationRequest.class));
+        mockMvc.perform(post(endpoint)
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().is(422));
+        mockMvc.perform(post(endpoint)
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{\"anchor\":{}}"))
+                .andExpect(status().is(422));
+    }
+
+    private static String validRequest() {
+        return """
+                {"anchor":{"schemaVersion":1,"sourceRevision":1,"projectionVersion":1,
+                "digest":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                "exact":"文本","prefix":"","suffix":"","start":0,"end":2,
+                "spans":[{"segmentId":"s0","start":0,"end":2}],
+                "requestId":"00000000-0000-4000-8000-000000000001"},
+                "annotationText":null,"color":"yellow","visibility":"PRIVATE"}
+                """;
     }
 
     private static PostAnnotation annotation() {

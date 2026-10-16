@@ -25,7 +25,7 @@ class FeaturePostCmdExeTest {
 
     @BeforeEach
     void setUp() {
-        exe = new FeaturePostCmdExe(postRepository);
+        exe = new FeaturePostCmdExe(postRepository, manfred.bytedepth.app.post.LockedPostFixture.from(postRepository));
     }
 
     @Test

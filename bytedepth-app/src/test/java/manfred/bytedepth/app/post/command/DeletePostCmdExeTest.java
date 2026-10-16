@@ -28,7 +28,8 @@ class DeletePostCmdExeTest {
 
     @BeforeEach
     void setUp() {
-        deletePostCmdExe = new DeletePostCmdExe(postRepository, indexPostCmdExe);
+        deletePostCmdExe = new DeletePostCmdExe(
+                postRepository, manfred.bytedepth.app.post.LockedPostFixture.from(postRepository), indexPostCmdExe);
     }
 
     @Test

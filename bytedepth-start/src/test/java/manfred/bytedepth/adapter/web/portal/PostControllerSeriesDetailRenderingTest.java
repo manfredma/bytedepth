@@ -64,6 +64,9 @@ class PostControllerSeriesDetailRenderingTest {
     private ListPostsQryExe listPostsQryExe;
 
     @MockitoBean
+    private manfred.bytedepth.app.post.document.ArticleRevisionService articleRevisions;
+
+    @MockitoBean
     private GetPostQryExe getPostQryExe;
 
     @MockitoBean
@@ -125,6 +128,7 @@ class PostControllerSeriesDetailRenderingTest {
         dto.setPublishedAt(LocalDateTime.of(2026, 6, 2, 2, 27));
         dto.setUpdatedAt(LocalDateTime.of(2026, 6, 2, 2, 27));
         when(getPostQryExe.executeBySlug(dto.getSlug())).thenReturn(dto);
+        when(articleRevisions.current(dto.getId())).thenReturn(ArticleRevisionFixture.from(dto));
 
         Post post = Post.reconstruct(
                 77L,
@@ -175,6 +179,7 @@ class PostControllerSeriesDetailRenderingTest {
         dto.setPublishedAt(LocalDateTime.of(2026, 8, 1, 9, 0));
         dto.setUpdatedAt(LocalDateTime.of(2026, 8, 1, 9, 0));
         when(getPostQryExe.executeBySlug(dto.getSlug())).thenReturn(dto);
+        when(articleRevisions.current(dto.getId())).thenReturn(ArticleRevisionFixture.from(dto));
 
         Post post = Post.reconstruct(
                 77L,
@@ -230,6 +235,7 @@ class PostControllerSeriesDetailRenderingTest {
         dto.setPublishedAt(LocalDateTime.of(2026, 8, 1, 9, 0));
         dto.setUpdatedAt(dto.getPublishedAt());
         when(getPostQryExe.executeBySlug(dto.getSlug())).thenReturn(dto);
+        when(articleRevisions.current(dto.getId())).thenReturn(ArticleRevisionFixture.from(dto));
 
         Post post = Post.reconstruct(
                 77L,

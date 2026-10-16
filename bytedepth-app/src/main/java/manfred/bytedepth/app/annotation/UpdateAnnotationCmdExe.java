@@ -50,6 +50,8 @@ public class UpdateAnnotationCmdExe {
                 annotation.startOffset(),
                 annotation.endOffset(),
                 annotation.createdAt(),
-                annotation.deleted()));
+                annotation.deleted(),
+                annotation.anchor(),
+                annotation.migrationBaselineRevision()));
     }
 }

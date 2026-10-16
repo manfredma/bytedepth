@@ -29,7 +29,8 @@ class PublishPostCmdExeTest {
 
     @BeforeEach
     void setUp() {
-        publishPostCmdExe = new PublishPostCmdExe(postRepository, indexPostCmdExe);
+        publishPostCmdExe = new PublishPostCmdExe(
+                postRepository, manfred.bytedepth.app.post.LockedPostFixture.from(postRepository), indexPostCmdExe);
     }
 
     @Test

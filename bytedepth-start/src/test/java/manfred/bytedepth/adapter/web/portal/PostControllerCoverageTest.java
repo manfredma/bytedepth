@@ -52,6 +52,8 @@ import org.springframework.ui.ExtendedModelMap;
 class PostControllerCoverageTest {
 
     private final ListPostsQryExe listPosts = mock(ListPostsQryExe.class);
+    private final manfred.bytedepth.app.post.document.ArticleRevisionService articleRevisions =
+            mock(manfred.bytedepth.app.post.document.ArticleRevisionService.class);
     private final GetPostQryExe getPost = mock(GetPostQryExe.class);
     private final CreatePostCmdExe createPost = mock(CreatePostCmdExe.class);
     private final PublishPostCmdExe publishPost = mock(PublishPostCmdExe.class);
@@ -67,6 +69,7 @@ class PostControllerCoverageTest {
     private final PostController controller = new PostController(
             listPosts,
             getPost,
+            articleRevisions,
             createPost,
             publishPost,
             mock(MarkdownRenderer.class),
@@ -151,6 +154,7 @@ class PostControllerCoverageTest {
     void publishAllowsOwnerAndManagerButRejectsOtherUsers() {
         PostDTO draft = dto(8L, "draft", "DRAFT", 7L);
         when(getPost.executeBySlug("draft")).thenReturn(draft);
+        when(articleRevisions.current(draft.getId())).thenReturn(ArticleRevisionFixture.from(draft));
 
         authenticate(user(7L, "owner"));
         assertThat(controller.publish("draft")).isEqualTo("redirect:/posts/draft");
@@ -167,6 +171,7 @@ class PostControllerCoverageTest {
     void draftVisibilityAllowsOwnerAndManagerButHidesItFromOtherUsers() {
         PostDTO draft = dto(10L, "private-post", "DRAFT", 7L);
         when(getPost.executeBySlug("private-post")).thenReturn(draft);
+        when(articleRevisions.current(draft.getId())).thenReturn(ArticleRevisionFixture.from(draft));
         when(posts.findById(10L)).thenReturn(Optional.of(post(10L, "private-post", PostStatus.DRAFT, 7L)));
         when(posts.findPrevPublished(10L)).thenReturn(Optional.empty());
         when(posts.findNextPublished(10L)).thenReturn(Optional.empty());
@@ -199,12 +204,16 @@ class PostControllerCoverageTest {
     void detailMapsAnnotationsForTheCurrentReader() {
         PostDTO published = dto(11L, "annotated", "PUBLISHED", 7L);
         when(getPost.executeBySlug("annotated")).thenReturn(published);
+        when(articleRevisions.current(published.getId())).thenReturn(ArticleRevisionFixture.from(published));
         when(posts.findById(11L)).thenReturn(Optional.of(post(11L, "annotated", PostStatus.PUBLISHED, 7L)));
         when(posts.findPrevPublished(11L)).thenReturn(Optional.empty());
         when(posts.findNextPublished(11L)).thenReturn(Optional.empty());
         when(visitFilter.shouldRecord(any())).thenReturn(false);
-        when(annotations.execute(11L, null, null))
-                .thenReturn(List.of(new PostAnnotation(
+        when(annotations.viewsFor(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.eq(null),
+                        org.mockito.ArgumentMatchers.eq(null)))
+                .thenReturn(ArticleRevisionFixture.views(List.of(new PostAnnotation(
                         5L,
                         11L,
                         null,
@@ -216,7 +225,7 @@ class PostControllerCoverageTest {
                         0,
                         4,
                         LocalDateTime.now(),
-                        false)));
+                        false))));
 
         ExtendedModelMap model = new ExtendedModelMap();
 
@@ -228,6 +237,7 @@ class PostControllerCoverageTest {
     void detailBuildsSeriesNavigationForSeriesPosts() {
         PostDTO published = dto(12L, "series-post", "PUBLISHED", 7L);
         when(getPost.executeBySlug("series-post")).thenReturn(published);
+        when(articleRevisions.current(published.getId())).thenReturn(ArticleRevisionFixture.from(published));
         Post seriesPost = post(12L, "series-post", PostStatus.PUBLISHED, 7L);
         seriesPost.assignSeries(3L, 2);
         when(posts.findById(12L)).thenReturn(Optional.of(seriesPost));
@@ -255,6 +265,7 @@ class PostControllerCoverageTest {
     void detailFallsBackToGlobalNavigationWhenSeriesWasRemoved() {
         PostDTO published = dto(13L, "orphaned-series-post", "PUBLISHED", 7L);
         when(getPost.executeBySlug("orphaned-series-post")).thenReturn(published);
+        when(articleRevisions.current(published.getId())).thenReturn(ArticleRevisionFixture.from(published));
         Post orphaned = post(13L, "orphaned-series-post", PostStatus.PUBLISHED, 7L);
         orphaned.assignSeries(404L, 1);
         when(posts.findById(13L)).thenReturn(Optional.of(orphaned));

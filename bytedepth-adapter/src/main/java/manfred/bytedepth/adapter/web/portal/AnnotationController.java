@@ -8,8 +8,12 @@ import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import manfred.bytedepth.adapter.web.util.MarkdownRenderer;
 import manfred.bytedepth.adapter.web.util.SecurityUtils;
+import manfred.bytedepth.app.annotation.AnnotationView;
+import manfred.bytedepth.app.annotation.AnnotationWriteConflictException;
 import manfred.bytedepth.app.annotation.CreateAnnotationCmdExe;
+import manfred.bytedepth.app.annotation.CreateAnnotationRequest;
 import manfred.bytedepth.app.annotation.DeleteAnnotationCmdExe;
+import manfred.bytedepth.app.annotation.InvalidAnchorException;
 import manfred.bytedepth.app.annotation.ListAnnotationsQryExe;
 import manfred.bytedepth.app.annotation.PostAnnotationDTO;
 import manfred.bytedepth.app.annotation.UpdateAnnotationCmdExe;
@@ -50,11 +54,11 @@ public class AnnotationController {
             @PathVariable("postSlug") String postSlug,
             @AuthenticationPrincipal UserDetails currentUser,
             HttpServletRequest request) {
-        Long postId = resolvePostId(postSlug);
+        Long postId = resolvePostId(postSlug, currentUser);
         Long userId = SecurityUtils.extractUserId(currentUser);
         String ownerTokenHash = visitorIdentity.existingHash(request);
-        return listAnnotationsQryExe.execute(postId, userId, ownerTokenHash).stream()
-                .map(annotation -> toResponse(PostAnnotationDTO.from(annotation, userId, ownerTokenHash)))
+        return listAnnotationsQryExe.views(postId, userId, ownerTokenHash).stream()
+                .map(view -> response(view, userId, ownerTokenHash, markdownRenderer))
                 .toList();
     }
 
@@ -67,21 +71,12 @@ public class AnnotationController {
             @AuthenticationPrincipal UserDetails currentUser,
             HttpServletRequest servletRequest,
             HttpServletResponse servletResponse) {
-        Long postId = resolvePostId(postSlug);
+        Long postId = resolvePostId(postSlug, currentUser);
         Long userId = SecurityUtils.extractUserId(currentUser);
         String ownerTokenHash =
                 userId == null ? visitorIdentity.getOrCreateHash(servletRequest, servletResponse) : null;
-        var created = createAnnotationCmdExe.execute(
-                postId,
-                userId,
-                ownerTokenHash,
-                request.selectedText(),
-                request.annotationText(),
-                request.color(),
-                request.visibility(),
-                request.startOffset(),
-                request.endOffset());
-        return toResponse(PostAnnotationDTO.from(created, userId, ownerTokenHash));
+        var created = createAnnotationCmdExe.execute(postId, userId, ownerTokenHash, request);
+        return response(created, userId, ownerTokenHash, markdownRenderer);
     }
 
     /** 删除批注（仅当前登录用户或当前匿名浏览器身份）。 */
@@ -94,7 +89,7 @@ public class AnnotationController {
             HttpServletRequest request) {
         deleteAnnotationCmdExe.execute(
                 id,
-                resolvePostId(postSlug),
+                resolvePostId(postSlug, currentUser),
                 SecurityUtils.extractUserId(currentUser),
                 visitorIdentity.existingHash(request));
         return ResponseEntity.noContent().build();
@@ -108,32 +103,44 @@ public class AnnotationController {
             @RequestBody UpdateAnnotationRequest request,
             @AuthenticationPrincipal UserDetails currentUser,
             HttpServletRequest servletRequest) {
-        Long postId = resolvePostId(postSlug);
+        Long postId = resolvePostId(postSlug, currentUser);
         Long userId = SecurityUtils.extractUserId(currentUser);
         String ownerTokenHash = visitorIdentity.existingHash(servletRequest);
         var updated = updateAnnotationCmdExe.execute(
                 id, postId, userId, ownerTokenHash, request.annotationText(), request.visibility());
-        return toResponse(PostAnnotationDTO.from(updated, userId, ownerTokenHash));
+        return response(listAnnotationsQryExe.viewCurrent(updated), userId, ownerTokenHash, markdownRenderer);
     }
 
-    private Long resolvePostId(String postSlug) {
-        return postRepository
-                .findBySlug(postSlug)
-                .orElseThrow(() -> new NoSuchElementException("文章不存在：" + postSlug))
-                .getId();
+    private Long resolvePostId(String postSlug, UserDetails currentUser) {
+        var post =
+                postRepository.findBySlug(postSlug).orElseThrow(() -> new NoSuchElementException("文章不存在：" + postSlug));
+        if (post.getStatus() == manfred.bytedepth.domain.post.PostStatus.DELETED
+                || (post.getStatus() != manfred.bytedepth.domain.post.PostStatus.PUBLISHED
+                        && !SecurityUtils.isOwner(currentUser, post.getAuthorId())
+                        && !SecurityUtils.hasAuthority(currentUser, "blog:post:manage")))
+            throw new NoSuchElementException("文章不存在：" + postSlug);
+        return post.getId();
     }
 
-    private AnnotationResponse toResponse(PostAnnotationDTO annotation) {
-        return AnnotationResponse.from(annotation, markdownRenderer.render(annotation.annotationText()));
+    @org.springframework.web.bind.annotation.ExceptionHandler(AnnotationWriteConflictException.class)
+    public ResponseEntity<String> conflict(AnnotationWriteConflictException error) {
+        return ResponseEntity.status(error.kind() == AnnotationWriteConflictException.Kind.DELETED_REQUEST ? 410 : 409)
+                .body(error.kind().name());
     }
 
-    public record CreateAnnotationRequest(
-            String selectedText,
-            String annotationText,
-            String color,
-            AnnotationVisibility visibility,
-            int startOffset,
-            int endOffset) {}
+    @org.springframework.web.bind.annotation.ExceptionHandler({
+        InvalidAnchorException.class,
+        org.springframework.http.converter.HttpMessageNotReadableException.class
+    })
+    public ResponseEntity<String> invalidSelector(Exception error) {
+        return ResponseEntity.status(422).body("批注定位信息无效，请刷新文章后重新选择；已输入的评论可以保留。");
+    }
+
+    static AnnotationResponse response(
+            AnnotationView view, Long userId, String ownerTokenHash, MarkdownRenderer renderer) {
+        var annotation = PostAnnotationDTO.from(view.annotation(), userId, ownerTokenHash);
+        return AnnotationResponse.from(annotation, renderer.render(annotation.annotationText()), view);
+    }
 
     public record UpdateAnnotationRequest(String annotationText, AnnotationVisibility visibility) {}
 
@@ -148,8 +155,13 @@ public class AnnotationController {
             int startOffset,
             int endOffset,
             String createdAt,
-            boolean ownedByCurrentVisitor) {
-        private static AnnotationResponse from(PostAnnotationDTO annotation, String annotationHtml) {
+            boolean ownedByCurrentVisitor,
+            manfred.bytedepth.domain.annotation.AnnotationAnchor anchor,
+            manfred.bytedepth.domain.annotation.AnnotationPlacement placement,
+            String targetDigest,
+            Long migrationBaselineRevision) {
+        private static AnnotationResponse from(
+                PostAnnotationDTO annotation, String annotationHtml, AnnotationView view) {
             return new AnnotationResponse(
                     annotation.id(),
                     annotation.postId(),
@@ -161,7 +173,11 @@ public class AnnotationController {
                     annotation.startOffset(),
                     annotation.endOffset(),
                     annotation.createdAt().format(ANNOTATION_TIME_FORMAT),
-                    annotation.ownedByCurrentVisitor());
+                    annotation.ownedByCurrentVisitor(),
+                    view.annotation().anchor(),
+                    view.placement(),
+                    view.targetDigest(),
+                    view.annotation().migrationBaselineRevision());
         }
     }
 }

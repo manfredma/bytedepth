@@ -24,7 +24,7 @@ class ListAnnotationsQryExeTest {
 
     @BeforeEach
     void setUp() {
-        qry = new ListAnnotationsQryExe(annotationRepository);
+        qry = new ListAnnotationsQryExe(annotationRepository, null, null, null, null);
     }
 
     private static PostAnnotation annotation(long id, int start) {

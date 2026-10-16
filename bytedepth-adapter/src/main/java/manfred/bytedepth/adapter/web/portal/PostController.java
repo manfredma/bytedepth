@@ -2,7 +2,6 @@ package manfred.bytedepth.adapter.web.portal;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +25,6 @@ import manfred.bytedepth.app.reading.GetReadingSummaryQryExe;
 import manfred.bytedepth.app.series.GetSeriesPostsQryExe;
 import manfred.bytedepth.app.series.SeriesNavigationQryExe;
 import manfred.bytedepth.app.tag.ListTagsQryExe;
-import manfred.bytedepth.domain.annotation.AnnotationVisibility;
-import manfred.bytedepth.domain.annotation.PostAnnotation;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.SeriesRepository;
 import manfred.bytedepth.domain.stats.PostViewCounter;
@@ -57,6 +54,7 @@ public class PostController {
 
     private final ListPostsQryExe listPostsQryExe;
     private final GetPostQryExe getPostQryExe;
+    private final manfred.bytedepth.app.post.document.ArticleRevisionService articleRevisions;
     private final CreatePostCmdExe createPostCmdExe;
     private final PublishPostCmdExe publishPostCmdExe;
     private final MarkdownRenderer markdownRenderer;
@@ -125,20 +123,36 @@ public class PostController {
 
         var post = getPostQryExe.executeBySlug(identifier);
         Long id = post.getId();
+        var article = articleRevisions.current(id);
+        var lockedPost = article.post();
+        post.setTitle(lockedPost.getTitle());
+        post.setContent(lockedPost.getContent());
+        post.setContentVersion(lockedPost.getContentVersion());
+        post.setAuthorId(lockedPost.getAuthorId());
+        post.setStatus(lockedPost.getStatus().name());
+        post.setUpdatedAt(lockedPost.getUpdatedAt());
         UserDetails currentUser = SecurityUtils.currentUser();
         boolean isAdmin = SecurityUtils.hasAuthority(currentUser, "blog:post:manage");
         boolean isOwner = SecurityUtils.isOwner(currentUser, post.getAuthorId());
         boolean isDraft = "DRAFT".equals(post.getStatus());
 
         // 草稿仅作者或管理员可查看
-        if (!"PUBLISHED".equals(post.getStatus()) && !isOwner && !isAdmin) {
+        if ("DELETED".equals(post.getStatus()) || (!"PUBLISHED".equals(post.getStatus()) && !isOwner && !isAdmin)) {
             throw new NoSuchElementException();
         }
 
         model.addAttribute("post", post);
         model.addAttribute("metaDescription", SeoUtils.excerpt(post.getContent()));
         model.addAttribute("canonicalUrl", siteUrl + "/posts/" + post.getSlug());
-        model.addAttribute("renderedContent", markdownRenderer.render(post.getContent()));
+        model.addAttribute("renderedContent", article.rendered().html());
+        model.addAttribute(
+                "annotationDocument",
+                new AnnotationDocumentBootstrap(
+                        article.revision().contentVersion(),
+                        article.rendered().document().projectionVersion(),
+                        article.rendered().document().digest(),
+                        article.rendered().document().text(),
+                        article.rendered().document().segments()));
         model.addAttribute("wordCount", markdownRenderer.countVisibleCharacters(post.getContent()));
         model.addAttribute("estimatedReadingMinutes", MarkdownTextExtractor.estimatedReadingMinutes(post.getContent()));
         model.addAttribute("tags", listTagsQryExe.findByPostId(id));
@@ -148,11 +162,9 @@ public class PostController {
         String annotationOwnerTokenHash = annotationVisitorIdentity.existingHash(request);
         model.addAttribute(
                 "annotations",
-                listAnnotationsQryExe.execute(id, currentUserId, annotationOwnerTokenHash).stream()
-                        // Thymeleaf 为内联 JavaScript 使用独立的 ObjectMapper，不能序列化 LocalDateTime。
-                        // 阅读页脚本也不使用 createdAt，因此只传递渲染和交互所需字段。
-                        .map(annotation -> AnnotationBootstrapDTO.from(
-                                annotation, currentUserId, annotationOwnerTokenHash, markdownRenderer))
+                listAnnotationsQryExe.viewsFor(article.revision(), currentUserId, annotationOwnerTokenHash).stream()
+                        .map(view -> AnnotationController.response(
+                                view, currentUserId, annotationOwnerTokenHash, markdownRenderer))
                         .toList());
         model.addAttribute("currentUserId", currentUserId);
         model.addAttribute(
@@ -199,37 +211,12 @@ public class PostController {
         return "public/posts/detail";
     }
 
-    private record AnnotationBootstrapDTO(
-            Long id,
-            String selectedText,
-            String annotationText,
-            String annotationHtml,
-            String color,
-            AnnotationVisibility visibility,
-            int startOffset,
-            int endOffset,
-            String createdAt,
-            boolean ownedByCurrentVisitor) {
-        private static AnnotationBootstrapDTO from(
-                PostAnnotation annotation,
-                Long currentUserId,
-                String ownerTokenHash,
-                MarkdownRenderer markdownRenderer) {
-            boolean ownedByCurrentVisitor = (currentUserId != null && currentUserId.equals(annotation.userId()))
-                    || (ownerTokenHash != null && ownerTokenHash.equals(annotation.ownerTokenHash()));
-            return new AnnotationBootstrapDTO(
-                    annotation.id(),
-                    annotation.selectedText(),
-                    annotation.annotationText(),
-                    markdownRenderer.render(annotation.annotationText()),
-                    annotation.color(),
-                    annotation.visibility(),
-                    annotation.startOffset(),
-                    annotation.endOffset(),
-                    annotation.createdAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
-                    ownedByCurrentVisitor);
-        }
-    }
+    record AnnotationDocumentBootstrap(
+            long revision,
+            int projectionVersion,
+            String digest,
+            String text,
+            java.util.List<manfred.bytedepth.domain.post.document.DocumentSegment> segments) {}
 
     private manfred.bytedepth.domain.reading.ReadingSummary readingSummary(Long userId, Long postId) {
         if (userId == null || getReadingSummaryQryExe == null) {
