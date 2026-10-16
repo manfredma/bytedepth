@@ -9,6 +9,8 @@ readonly IT_TESTS=(
   "$SOURCE_ROOT/bytedepth-start/src/test/java/manfred/bytedepth/integration/PostRepositoryIT.java"
   "$SOURCE_ROOT/bytedepth-start/src/test/java/manfred/bytedepth/integration/AnnotationContentUpdateIT.java"
   "$SOURCE_ROOT/bytedepth-infrastructure/src/test/java/manfred/bytedepth/infrastructure/ratelimit/RedisRateLimitAdapterIT.java"
+  "$SOURCE_ROOT/bytedepth-start/src/test/java/manfred/bytedepth/integration/AnnotationITSupport.java"
+  "$SOURCE_ROOT/bytedepth-start/src/test/java/manfred/bytedepth/integration/AnnotationRevisionTransactionIT.java"
 )
 
 [[ -x "$RUNNER" ]] || {
@@ -35,9 +37,15 @@ assert_no_docker_or_testcontainers() {
 assert_it_tests_use_external_profile() {
   local file
 
-  for file in "${IT_TESTS[0]}" "${IT_TESTS[1]}"; do
+  for file in "${IT_TESTS[0]}" "${IT_TESTS[3]}"; do
     rg -q 'SpringBootTest' "$file" || {
       printf 'Integration test must remain a Spring Boot test: %s\n' "$file" >&2
+      exit 1
+    }
+  done
+  for file in "${IT_TESTS[1]}" "${IT_TESTS[4]}"; do
+    rg -q 'extends AnnotationITSupport' "$file" || {
+      printf 'Annotation IT must inherit the Spring Boot fixture: %s\n' "$file" >&2
       exit 1
     }
   done

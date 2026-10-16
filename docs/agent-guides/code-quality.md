@@ -28,3 +28,5 @@ Maven、Java 25、完整测试与变更覆盖率的唯一说明见 [maven.md](ma
 跨进程补充入口为 `AnnotationContentUpdateIT`、`AnnotationRevisionTransactionIT` 和 `tests/e2e/annotation*.spec.js`，仅由 staging Host Agent 执行。数据库测试在 run 隔离 schema 内，以独立表名前缀和独立 Flyway history 复现旧批注表升级，不清理应用的历史表；正常启动仍执行完整迁移。浏览器用例为每次执行新建自有文章并追踪读者身份，不能依赖固定文章 ID 或已有批注。测试发现、编译或本机 DOM 模拟不能替代这两类 staging evidence。
 
 本地入口可以执行名称含 staging 的**静态契约检查**，但不得直接执行 Host runner、跨进程 IT/E2E 或主机命令。`test-run-local-quality.sh` 用显式失败分支执行该边界检查；不能仅依赖 `set -e` 与 `! command`，因为取反命令不触发自动退出。`test-local-quality-runner-boundary.sh` 向完整入口副本注入远程命令、Host runner、IT profile 和 E2E 命令，逐项要求拒绝，防止检查器假通过。
+
+批注 staging IT 共用 `AnnotationITSupport` 的 Spring Boot 上下文；静态边界检查同时检查基类注解和两个具体用例的继承关系，不要求重复注解。
