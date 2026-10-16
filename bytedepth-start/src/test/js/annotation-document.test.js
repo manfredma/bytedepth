@@ -136,7 +136,7 @@ describe("canonical annotation DOM mapping", () => {
     ]) {
       expect(map.ranges(spans)).toHaveProperty("error");
     }
-    expect(map.verify(view(model, "错误文字", [{ segmentId: "s1", start: 0, end: 2 }]))).toHaveProperty("error");
+    expect(map.verify(view(model, "错误文字", [{ segmentId: "s1", start: 0, end: 2 }])).error).toBe("INVALID_MAPPING");
     expect(
       map.verify(view(model, "前文", [{ segmentId: "s1", start: 0, end: 2 }], { targetDigest: "0".repeat(64) })),
     ).toHaveProperty("error");

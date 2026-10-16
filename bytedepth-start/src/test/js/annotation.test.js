@@ -373,6 +373,450 @@ describe("annotation sidebar", () => {
     expect(content.querySelector("pre code").textContent).toBe("int anchorProbe = 1;\n");
   });
 
+  function chooseText(start = 0, end = 3) {
+    const root = document.querySelector('[data-annotation-segment="s0"]');
+    const range = document.createRange();
+    const node = document.createTreeWalker(root, NodeFilter.SHOW_TEXT).nextNode();
+    range.setStart(node, start);
+    range.setEnd(node, end);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    return range;
+  }
+  function savedComment(extra = {}) {
+    return {
+      id: 1,
+      selectedText: "可批注",
+      startOffset: 0,
+      endOffset: 3,
+      color: "blue",
+      visibility: "PUBLIC",
+      annotationText: "评论",
+      ownedByCurrentVisitor: true,
+      ...extra,
+    };
+  }
+  test("U28_invalidSelectionAndEmptyComposerCannotSubmit", () => {
+    document.querySelector(".bd-annotation-composer-save").click();
+    expect(window.fetch).not.toHaveBeenCalled();
+    const root = document.querySelector('[data-annotation-segment="s0"]');
+    root.textContent = "篡改文本";
+    chooseText();
+    expect(document.querySelector(".bd-annotation-popup-open")).toBeNull();
+    expect(window.fetch).not.toHaveBeenCalled();
+    window.getSelection().removeAllRanges();
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  });
+  test("U42_manyUnresolvedCommentsRetainCountAndOriginalQuoteWhenFocused", () => {
+    window.__ANNOTATIONS__ = Array.from({ length: 100 }, (_, i) => ({
+      ...savedComment({ id: i + 1, color: "unknown", createdAt: "2026-10-17" }),
+      placement: { status: "UNRESOLVED" },
+    }));
+    bootAnnotations();
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    expect(document.querySelector(".bd-annotation-toolbar-count").textContent).toBe("99+");
+    const item = document.querySelector(".bd-annotation-unresolved-item");
+    item.click();
+    expect(item.classList.contains("bd-annotation-feed-item-active")).toBe(true);
+    expect(document.querySelector("mark")).toBeNull();
+  });
+  test("U31_contentEventsRebuildOpenFeedAndGeometryUpdatesActualOutline", async () => {
+    window.__ANNOTATIONS__ = [savedComment()];
+    bootAnnotations();
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    const content = document.querySelector(".content");
+    Range.prototype.getClientRects = () => [{ left: 20, right: 100, top: 120, bottom: 140, width: 80, height: 20 }];
+    content.dispatchEvent(new CustomEvent("bd:content-geometry"));
+    await vi.waitFor(() =>
+      expect(document.querySelector(".bd-annotation-comment-outline").dataset.textTop).toBe("120"),
+    );
+    content.querySelector("[data-annotation-segment]").innerHTML = "<em>可批注文本</em>";
+    await vi.waitFor(() => expect(content.querySelector("mark").textContent).toBe("可批注"));
+    expect(document.querySelectorAll(".bd-annotation-feed-item")).toHaveLength(1);
+  });
+  test("U31_fixedFollowLayoutClipsAboveViewportAndFallsBackWhenMarkMissing", () => {
+    window.__ANNOTATIONS__ = [savedComment()];
+    const sidebar = document.querySelector("#bd-annotation-sidebar");
+    sidebar.style.position = "fixed";
+    const queue = [];
+    const frame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      queue.push(callback);
+      return queue.length;
+    });
+    const flush = () => {
+      const batch = queue.splice(0);
+      batch.forEach((f) => f(0));
+    };
+    bootAnnotations();
+    const mark = document.querySelector("mark");
+    mark.getBoundingClientRect = () => ({ left: 10, right: 90, top: -30, bottom: -10, width: 80, height: 20 });
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    flush();
+    const item = document.querySelector(".bd-annotation-feed-item");
+    expect(item.hidden).toBe(true);
+    expect(item.style.transform).toContain("-30px");
+    mark.remove();
+    window.dispatchEvent(new Event("scroll"));
+    flush();
+    expect(item.hidden).toBe(false);
+    expect(item.style.transform).toBe("");
+    frame.mockRestore();
+  });
+  test("U42_unresolvedHighlightDeletionFailureKeepsQuoteAndExposesStatus", async () => {
+    window.__ANNOTATIONS__ = [{ ...savedComment({ annotationText: null }), placement: { status: "UNRESOLVED" } }];
+    bootAnnotations();
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    window.fetch.mockRejectedValueOnce(new Error("offline"));
+    document.querySelector(".bd-annotation-unresolved-highlight button").click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(document.querySelector(".bd-annotation-unresolved-highlight blockquote").textContent).toBe("可批注");
+    expect(document.querySelector(".bd-annotation-unresolved-highlight button").dataset.status).toBe("0");
+  });
+  test("U30_pendingFontAndCopyCallbacksCannotChangeDisposedPage", async () => {
+    let fontDone, copyDone;
+    const fonts = Object.getOwnPropertyDescriptor(document, "fonts");
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: {
+        ready: new Promise((resolve) => {
+          fontDone = resolve;
+        }),
+      },
+    });
+    bootAnnotations();
+    navigator.clipboard = {
+      writeText: () =>
+        new Promise((resolve) => {
+          copyDone = resolve;
+        }),
+    };
+    chooseText();
+    document.querySelector("[data-copy]").click();
+    window._bdAnnotationCleanup();
+    const snapshot = document.body.innerHTML;
+    copyDone();
+    fontDone();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe(snapshot);
+    if (fonts) Object.defineProperty(document, "fonts", fonts);
+    else delete document.fonts;
+  });
+  test("U14_clipboardFallbackReportsFailureAndDismissesAfterTimeout", async () => {
+    vi.useFakeTimers();
+    chooseText();
+    document.execCommand = () => {
+      throw new Error("denied");
+    };
+    document.querySelector("[data-copy]").click();
+    await Promise.resolve();
+    expect(document.querySelector(".bd-annotation-copy-result").textContent).toContain("复制失败");
+    await vi.advanceTimersByTimeAsync(1200);
+    expect(document.querySelector(".bd-annotation-popup-open")).toBeNull();
+    vi.useRealTimers();
+  });
+  test("U19_missingOptionalBootstrapAndCountersStillInitializeSafely", () => {
+    window._bdAnnotationCleanup();
+    delete window.__ANNOTATIONS__;
+    delete window.matchMedia;
+    document.querySelector(".bd-annotation-comment-count").remove();
+    document.querySelector(".bd-annotation-toolbar-count").remove();
+    document.querySelector("meta").remove();
+    window.initAnnotations();
+    expect(document.querySelector("#post-article").dataset.bdAnnotationReady).toBe("true");
+    chooseText();
+    expect(document.querySelector("[data-comment]")).not.toBeNull();
+  });
+  test("U42_layoutInvalidControlDoesNotChangeModeAndUnknownColorUsesFallback", () => {
+    window.__ANNOTATIONS__ = [savedComment({ color: "unknown" })];
+    document
+      .querySelector("#bd-annotation-sidebar")
+      .insertAdjacentHTML("afterbegin", '<button data-bd-layout="invalid">invalid</button>');
+    bootAnnotations();
+    document.querySelector("[data-bd-layout]").click();
+    expect(document.querySelector("#bd-annotation-sidebar").classList.contains("bd-annotation-feed-follow")).toBe(true);
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    expect(document.querySelector(".bd-annotation-feed-type").textContent).toBe("补充说明");
+  });
+
+  test("U19_detachedPendingSaveCannotModifyComposer", async () => {
+    chooseText();
+    document.querySelector("[data-comment]").click();
+    let done;
+    window.fetch.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          done = r;
+        }),
+    );
+    document.querySelector(".bd-annotation-composer-save").click();
+    const article = document.querySelector("#post-article");
+    article.remove();
+    done({ ok: false, status: 422 });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(article.querySelector(".bd-annotation-composer-save").textContent).toBe("保存");
+  });
+  test("U30_queuedLayoutAfterCleanupAndStaleMenuButtonsAreInert", () => {
+    const queue = [];
+    const frame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+      queue.push(cb);
+      return queue.length;
+    });
+    window.__ANNOTATIONS__ = [savedComment()];
+    bootAnnotations();
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    document.querySelector(".bd-annotation-feed-actions button").click();
+    window._bdAnnotationCleanup();
+    queue.splice(0).forEach((f) => f(0));
+    expect(document.querySelector("mark")).toBeNull();
+    frame.mockRestore();
+    bootAnnotations();
+    chooseText();
+    document.querySelector("[data-highlight]").click();
+    const colorButton = document.querySelector(".bd-annotation-popup [data-color]");
+    // A detached, stale menu callback after cancelling the composer has no selection.
+    document.querySelector(".bd-annotation-composer-cancel").click();
+    colorButton.click();
+    expect(window.fetch).not.toHaveBeenCalled();
+  });
+  test("U42_anchoredInlineEditorSurvivesRendererRebuild", async () => {
+    window.__ANNOTATIONS__ = [savedComment()];
+    bootAnnotations();
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    document.querySelector(".bd-annotation-feed-actions button").click();
+    document.querySelector(".bd-annotation-composer-text").value = "未提交输入";
+    const oldItem = document.querySelector(".bd-annotation-feed-item-editing");
+    document.querySelector(".content").dispatchEvent(new CustomEvent("bd:content-rendered"));
+    await vi.waitFor(() => expect(oldItem.isConnected).toBe(false));
+    expect(document.querySelector(".bd-annotation-feed-item-editing")).not.toBeNull();
+    expect(document.querySelector(".bd-annotation-composer-text").value).toBe("未提交输入");
+  });
+  test("U14_selectionCopyTimeoutDoesNotCloseAReplacedMenu", async () => {
+    vi.useFakeTimers();
+    navigator.clipboard = { writeText: vi.fn().mockResolvedValue(undefined) };
+    chooseText();
+    document.querySelector("[data-copy]").click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(document.querySelector(".bd-annotation-copy-result")).not.toBeNull();
+    chooseText();
+    expect(document.querySelector("[data-copy]")).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(1200);
+    expect(document.querySelector(".bd-annotation-popup-open")).not.toBeNull();
+    vi.useRealTimers();
+  });
+  test("U42_cardDeleteFailureResetsButtonAndKeepsOriginal", async () => {
+    vi.useFakeTimers();
+    window.__ANNOTATIONS__ = [savedComment()];
+    bootAnnotations();
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    window.confirm = vi.fn(() => true);
+    window.fetch.mockRejectedValueOnce(null);
+    const button = document.querySelector(".bd-annotation-feed-actions button:last-child");
+    button.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(button.dataset.status).toBe("0");
+    expect(document.querySelector("mark").textContent).toBe("可批注");
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(button.textContent).toBe("删除");
+    vi.useRealTimers();
+  });
+  test("U40_pureHighlightDeleteFailureKeepsMarkAndClosesFeedback", async () => {
+    vi.useFakeTimers();
+    window.__ANNOTATIONS__ = [savedComment({ annotationText: null })];
+    bootAnnotations();
+    document.querySelector("mark").click();
+    window.fetch.mockResolvedValueOnce({ ok: false, status: 500 });
+    document.querySelector("[data-delete-annotation]").click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(document.querySelector(".bd-annotation-copy-result").dataset.status).toBe("500");
+    expect(document.querySelector("mark").textContent).toBe("可批注");
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(document.querySelector(".bd-annotation-popup-open")).toBeNull();
+    vi.useRealTimers();
+  });
+  test("U35_highlightFailureWithoutErrorStatusRetainsSelectionAndAllowsRetry", async () => {
+    chooseText();
+    document.querySelector("[data-highlight]").click();
+    window.fetch.mockRejectedValueOnce(null);
+    document.querySelector("[data-color]").click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(document.querySelector(".bd-annotation-copy-result").dataset.status).toBe("0");
+    expect(document.querySelector("mark")).toBeNull();
+  });
+  test("U14_mobileMenuBackAndCancelAndEmptyNotesDoNotSubmit", () => {
+    window.matchMedia = () => ({ matches: true });
+    window.__ANNOTATIONS__ = [savedComment({ annotationText: " " })];
+    bootAnnotations();
+    document.querySelector("mark").click();
+    expect(document.querySelector(".bd-annotation-mobile-note")).toBeNull();
+    window.__ANNOTATIONS__ = [];
+    bootAnnotations();
+    chooseText();
+    document.querySelector("[data-highlight]").click();
+    document.querySelector("[data-back]").click();
+    expect(document.querySelector("[data-copy]")).toBeNull();
+    document.querySelector("[data-highlight]").click();
+    document.querySelector("[data-cancel]").click();
+    expect(document.querySelector(".bd-annotation-popup-open")).toBeNull();
+  });
+  test("U28_popupIgnoresSidebarClicksAndClosesAfterSelectionCleared", () => {
+    chooseText();
+    const popup = document.querySelector(".bd-annotation-popup");
+    document.querySelector("#bd-annotation-sidebar").dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    popup.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    popup.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    document.querySelector("#bd-annotation-sidebar").dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    expect(popup.classList.contains("bd-annotation-popup-open")).toBe(true);
+    window.getSelection().removeAllRanges();
+    document.body.click();
+    expect(popup.classList.contains("bd-annotation-popup-open")).toBe(false);
+  });
+  test("U31_mobileNoteHidesBelowViewportAndIgnoresClicksWithinIt", () => {
+    window.matchMedia = () => ({ matches: true });
+    window.__ANNOTATIONS__ = [savedComment()];
+    bootAnnotations();
+    const mark = document.querySelector("mark");
+    mark.getBoundingClientRect = () => ({ left: 12, top: 20, bottom: 40 });
+    mark.click();
+    const note = document.querySelector(".bd-annotation-mobile-note");
+    note.click();
+    expect(note.hidden).toBe(false);
+    mark.getBoundingClientRect = () => ({ left: 12, top: window.innerHeight + 1, bottom: window.innerHeight + 21 });
+    window.dispatchEvent(new Event("scroll"));
+    // Flush with resize's direct layout path plus the next actual frame.
+    return vi.waitFor(() => expect(note.hidden).toBe(true));
+  });
+
+  test("U35_emptyCommentSubmissionAndExplicitVisibilityStayConsistent", async () => {
+    chooseText();
+    document.querySelector("[data-comment]").click();
+    const picker = document.querySelector(".bd-annotation-type-trigger");
+    picker.click();
+    expect(document.querySelector(".bd-annotation-type-menu").hidden).toBe(false);
+    document.querySelector('[data-bd-annotation-type="red"]').click();
+    expect(picker.dataset.color).toBe("red");
+    const visibility = document.querySelector(".bd-annotation-visibility");
+    visibility.value = "PUBLIC";
+    visibility.dispatchEvent(new Event("change"));
+    const input = document.querySelector(".bd-annotation-composer-text");
+    input.value = "";
+    input.dispatchEvent(new Event("input"));
+    expect(visibility.value).toBe("PUBLIC");
+    document.querySelector(".bd-annotation-composer-save").click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toMatchObject({
+      annotationText: null,
+      visibility: "PUBLIC",
+      color: "red",
+    });
+  });
+  test("U28_selectionOutsideArticleIsIgnoredAndSyntheticUnknownMarkDoesNotCrash", () => {
+    chooseText();
+    const popup = document.querySelector(".bd-annotation-popup");
+    const outside = document.createTextNode("外部");
+    document.body.append(outside);
+    const range = document.createRange();
+    range.selectNodeContents(outside);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    document.body.click();
+    expect(popup.classList.contains("bd-annotation-popup-open")).toBe(false);
+    const content = document.querySelector(".content");
+    content.insertAdjacentHTML("beforeend", '<mark class="bd-annotation-highlight" data-id="999">未知</mark>');
+    window.matchMedia = () => ({ matches: true });
+    content.querySelector("mark").click();
+    expect(document.querySelector(".bd-annotation-mobile-note")).toBeNull();
+    window.matchMedia = () => ({ matches: false });
+    content.querySelector("mark").click();
+    expect(document.querySelector("[data-delete-annotation]")).toBeNull();
+    content.firstChild.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    content.dispatchEvent(new CustomEvent("bd:annotation-focus", { detail: 999 }));
+    expect(document.querySelector(".bd-annotation-feed-item-active")).toBeNull();
+  });
+  test("U14_mobileNoteCanReturnToSameGeometryAfterDismissal", async () => {
+    window.matchMedia = () => ({ matches: true });
+    window.__ANNOTATIONS__ = [savedComment()];
+    bootAnnotations();
+    const mark = document.querySelector("mark");
+    mark.getBoundingClientRect = () => ({ left: 12, top: 20, bottom: 40 });
+    mark.click();
+    const note = document.querySelector(".bd-annotation-mobile-note");
+    const transform = note.style.transform;
+    document.body.click();
+    mark.click();
+    expect(note.hidden).toBe(false);
+    expect(note.style.transform).toBe(transform);
+    document.body.click();
+    window.dispatchEvent(new Event("scroll"));
+    await new Promise((r) => setTimeout(r, 25));
+    expect(note.hidden).toBe(true);
+  });
+
+  test("U40_oldDeleteFeedbackTimeoutCannotDismissANewerFailure", async () => {
+    vi.useFakeTimers();
+    window.__ANNOTATIONS__ = [savedComment({ annotationText: null })];
+    bootAnnotations();
+    const mark = document.querySelector("mark");
+    window.fetch.mockResolvedValue({ ok: false, status: 500 });
+    mark.click();
+    document.querySelector("[data-delete-annotation]").click();
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(800);
+    mark.click();
+    document.querySelector("[data-delete-annotation]").click();
+    await vi.advanceTimersByTimeAsync(0);
+    const current = document.querySelector(".bd-annotation-copy-result");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(current.isConnected).toBe(true);
+    expect(document.querySelector(".bd-annotation-popup-open")).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(800);
+    expect(document.querySelector(".bd-annotation-popup-open")).toBeNull();
+    vi.useRealTimers();
+  });
+  test("U42_clearingAnExistingCommentUsesNullAndKeepsItsOriginalAnchor", async () => {
+    window.__ANNOTATIONS__ = [savedComment()];
+    bootAnnotations();
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    document.querySelector(".bd-annotation-feed-actions button").click();
+    document.querySelector(".bd-annotation-composer-text").value = "";
+    document.querySelector(".bd-annotation-composer-save").click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toEqual({ annotationText: null, visibility: "PUBLIC" });
+  });
+  test("U14_desktopBackRestoresActionsAndWhitespaceInputDefaultsPrivate", () => {
+    window.dispatchEvent(new Event("resize"));
+    chooseText();
+    document.querySelector("[data-highlight]").click();
+    document.querySelector("[data-back]").click();
+    expect(document.querySelector("[data-copy]")).not.toBeNull();
+    document.querySelector("[data-comment]").click();
+    const input = document.querySelector(".bd-annotation-composer-text");
+    input.value = " ";
+    input.dispatchEvent(new Event("input"));
+    expect(document.querySelector(".bd-annotation-visibility").value).toBe("PRIVATE");
+  });
+
+  test("U19_U35_disposedInstanceCannotReplayAfterPendingCsrfRefresh", async () => {
+    let finish;
+    window.fetch.mockResolvedValueOnce({ ok: false, status: 403 }).mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          finish = r;
+        }),
+    );
+    chooseText();
+    document.querySelector("[data-highlight]").click();
+    document.querySelector(".bd-annotation-popup [data-color]").click();
+    await vi.waitFor(() => expect(window.fetch).toHaveBeenCalledTimes(2));
+    bootAnnotations();
+    finish({ ok: true, text: () => Promise.resolve('<meta name="_csrf" content="next">') });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(window.fetch).toHaveBeenCalledTimes(2);
+    expect(document.querySelector("mark")).toBeNull();
+  });
+
   test("sidebar is closed on first visit and toggling remains a per-session choice", () => {
     // 默认关闭：不再读取 localStorage 偏好，首屏阅读区保持完整。
     expect(document.querySelector("#bd-annotation-sidebar").classList.contains("bd-annotation-sidebar-open")).toBe(

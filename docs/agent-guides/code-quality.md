@@ -16,3 +16,11 @@ Maven、Java 25、完整测试与变更覆盖率的唯一说明见 [maven.md](ma
 ### 文章版本与批注写入
 
 所有会整行保存既有文章的操作（正文更新、发布、删除、置顶）必须经 `PostWriteTransaction` 读取锁内最新文章，外部搜索索引在事务提交后更新。不能因为操作只改元数据，就在锁外读取整篇文章并回写旧正文。`PostMetadataWriteTest` 与 `UpdatePostCmdExeTest` 检查新版本保留及索引边界，`TransactionalPostWriterTest` 检查真实事务回滚；MySQL 并发证据仍由 staging 提供。
+
+### 批注单测证据与反例
+
+严重锚定错误必须在无远程凭据的单测环节失败，staging IT/E2E 只补充数据库与浏览器事实。`scripts/test-fixtures/annotation/unit-cases.json` 将 U01–U46 映射到实际 Vitest/Surefire 完整测试名；变更测试名时同步维护该清单，不能把源码字符串断言当成行为用例。
+
+`npm test` 统计 `annotation.js`、映射、显示、渲染生命周期和 Mermaid 适配器的真实执行，输出 JSON 测试与覆盖报告；自有模块不得放入 vendor、改用 eval 或缩小 include 逃避 100% 门禁。`run-local-quality.sh` 为本次测试建立 runId/时间上下文，清理自有前端报告，执行 Java 与前端完整门禁后对报告集合记录摘要并校验。`verify-annotation-unit-evidence.py` 拒绝缺失场景、零执行、skip/todo/失败、无覆盖模块、未覆盖分支、陈旧或被替换的报告。旧报告、旧 runId 和仅有成功退出码均不能证明通过；检查器自身用 `test-annotation-unit-evidence.sh` 回归。
+
+`test-annotation-mutations.py` 在临时副本中依次移除引用核验、恢复整页 textContent、歧义取首项、未定位删除、忽略版本和接受旧实例结果。每项必须得到“原版通过 → 正式断言失败 → 恢复通过”；语法、编译或非断言运行时异常不能计为拦截。脚本按 lockfile 为该副本单独安装前端依赖，不污染工作区，也不连接 staging。若变异点因重构失配，门禁失败并要求审阅更新，不允许静默跳过。

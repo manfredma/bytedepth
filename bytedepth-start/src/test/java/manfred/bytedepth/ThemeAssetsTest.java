@@ -221,7 +221,7 @@ class ThemeAssetsTest {
         assertThat(postDetail)
                 .contains("@{/vendor/mermaid/mermaid.min.js}\" defer")
                 .doesNotContain("cdn.jsdelivr.net/npm/mermaid")
-                .contains("if (typeof mermaid === 'undefined')");
+                .contains("@{/js/post-mermaid.js}\" defer");
         assertThat(getClass().getResource("/static/vendor/echarts/echarts.min.js"))
                 .isNotNull();
         assertThat(getClass().getResource("/static/vendor/mermaid/mermaid.min.js"))

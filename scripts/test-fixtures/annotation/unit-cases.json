@@ -1,0 +1,1137 @@
+{
+  "schemaVersion": 1,
+  "cases": {
+    "U01": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U01_U35_sameRequestCreatesOnlyOnceAndNeverChangesOriginal"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U01_sameRevisionReconstructsExactSpansWithoutChangingSource"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U01_U10_overlappingAndCrossBlockViewsPaintOnlyVerifiedPureText"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U01_U10_crossBlockAndInlineSelectionsUseSeparatePureRanges"
+      }
+    ],
+    "U02": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U02_U03_prefixInsertionUnrelatedDeletionAndUniqueBlockMoveKeepIdentity"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.command.UpdatePostCmdExeTest",
+        "name": "U02_U04_U37_bodyAndSnapshotsSavedInsideLockIndexOutsideAndNoAnnotationRewrite"
+      }
+    ],
+    "U03": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U02_U03_prefixInsertionUnrelatedDeletionAndUniqueBlockMoveKeepIdentity"
+      }
+    ],
+    "U04": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U04_U11_resolveDeletedTextKeepsCommentAndOriginalAnchor"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U04_U05_internalInsertDeleteReplaceAndMissingTargetNeverRewriteQuote"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.command.UpdatePostCmdExeTest",
+        "name": "U02_U04_U37_bodyAndSnapshotsSavedInsideLockIndexOutsideAndNoAnnotationRewrite"
+      }
+    ],
+    "U05": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U04_U05_internalInsertDeleteReplaceAndMissingTargetNeverRewriteQuote"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U05_U10_selectedBlocksCannotBeReorderedOrHaveAnotherBlockInsertedBetween"
+      }
+    ],
+    "U06": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U06_deletedOriginalMustNotJumpToRemainingIdenticalOccurrence"
+      }
+    ],
+    "U07": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U07_oldOffsetsAndFirstCandidateCannotResolveEquivalentDuplicates"
+      }
+    ],
+    "U08": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U08_U25_approximateAndNormalizedUnicodeMatchesAreRejected"
+      }
+    ],
+    "U09": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U09_U12_U34_missingMalformedAndVirtualSeparatorBoundsAreRejected"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U09_U17_U24_corruptedSnapshotAndEmojiAndMermaidNeighborBoundaries"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U09_U34_invalidQuoteContextDigestAndSpansAreRejected"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.CreateAnnotationCmdExeTest",
+        "name": "U09_invalidMetadataNeverWrites"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U09_U11_mismatchedQuotesRevisionsAndIncompleteMappingsNeverPaintPartialRanges"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U09_U30_duplicateIdentityBadColorsAndDetachedRootsFailClosed"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U09_U10_incompleteReorderedOrNoncontiguousSpansAreRejected"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U09_U12_corruptedProjectionShapesNeverBecomeUsableMappings"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U09_U23_U30_missingDuplicatedAndChangedRootsCannotBeMapped"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U09_U26_optionalSelectionTrimPreservesCanonicalWhitespaceOutsideTheQuote"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U09_emptyCodeRootsContributeNoSelectableText"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U09_U12_invalidRangesModelsAndUnknownRulesFailClosed"
+      }
+    ],
+    "U10": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U05_U10_selectedBlocksCannotBeReorderedOrHaveAnotherBlockInsertedBetween"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U10_crossBlockInlineWrappingMaintainsEveryRange"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U01_U10_overlappingAndCrossBlockViewsPaintOnlyVerifiedPureText"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U09_U10_incompleteReorderedOrNoncontiguousSpansAreRejected"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U01_U10_crossBlockAndInlineSelectionsUseSeparatePureRanges"
+      }
+    ],
+    "U11": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U04_U11_resolveDeletedTextKeepsCommentAndOriginalAnchor"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U11_placementCacheNeverCrossesTargetRevisionAndLegacyIsExplicit"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U11_eachTargetVersionHasIndependentPlacementAndOriginalAnchorStaysImmutable"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U11_titleOnlyRevisionWithIdenticalModelKeepsDuplicatePositionsVerified"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.infrastructure.annotation.AnnotationPersistenceTest",
+        "name": "U11_U37_revisionsAreImmutableAndPlacementsCannotCrossCacheKeys"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U09_U11_mismatchedQuotesRevisionsAndIncompleteMappingsNeverPaintPartialRanges"
+      }
+    ],
+    "U12": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U09_U12_U34_missingMalformedAndVirtualSeparatorBoundsAreRejected"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U12_U34_invalidSelectorAndOldClientsWriteNothing"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U12_invalidSavedAnchorAndInvalidTargetNeverThrowAwayTheRecord"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U12_missingOrConflictingRevisionModelsFailClosed"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.CreateAnnotationCmdExeTest",
+        "name": "U12_oldProtocolFailsClosed"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleRevisionServiceTest",
+        "name": "U12_existingRevisionCannotSilentlyChange"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U09_U12_corruptedProjectionShapesNeverBecomeUsableMappings"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U09_U12_invalidRangesModelsAndUnknownRulesFailClosed"
+      }
+    ],
+    "U13": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.adapter.web.util.MarkdownRendererTest",
+        "name": "U13_generatedCodeSourceHasAnIsolatedAnnotationRoot"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U13_codeControlsNeverEnterProjection"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U13_U14_copyLabelsLanguageAndLineNumbersCannotShiftCodeCoordinates"
+      }
+    ],
+    "U14": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U13_U14_copyLabelsLanguageAndLineNumbersCannotShiftCodeCoordinates"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-render-lifecycle.test.js",
+        "name": "U14_U31_imageAndToolbarChangesOnlyRelayoutAndUnknownReplacementRebuilds"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U14_clipboardFallbackReportsFailureAndDismissesAfterTimeout"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U14_desktopBackRestoresActionsAndWhitespaceInputDefaultsPrivate"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U14_mobileMenuBackAndCancelAndEmptyNotesDoNotSubmit"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U14_mobileNoteCanReturnToSameGeometryAfterDismissal"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U14_selectionCopyTimeoutDoesNotCloseAReplacedMenu"
+      }
+    ],
+    "U15": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U15_U16_realPrismTokenSplitsAndRepeatedPaintKeepCodeAndCopyTextExact"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U15_U16_actualPrismAndCodeBlocksKeepBidirectionalMapping"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U15_U16_actualPrismAndCodeBlocksRebuildTheSameSavedCodeAnnotation"
+      }
+    ],
+    "U16": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U15_U16_realPrismTokenSplitsAndRepeatedPaintKeepCodeAndCopyTextExact"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U15_U16_actualPrismAndCodeBlocksKeepBidirectionalMapping"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U15_U16_actualPrismAndCodeBlocksRebuildTheSameSavedCodeAnnotation"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/hypothesis-anchoring.test.js",
+        "name": "U16_upstreamPureRootOffsetsSurviveWrappingAndTrimming"
+      }
+    ],
+    "U17": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U09_U17_U24_corruptedSnapshotAndEmojiAndMermaidNeighborBoundaries"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U17_generatedMermaidTextCannotBeCreatedAsATextAnchor"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U17_mermaidSourceIsTypedSeparatelyFromSelectableCode"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U17_U18_pendingAndSuccessfulMermaidNeverBlockProseOrExposeSvgTextAsAnAnchor"
+      }
+    ],
+    "U18": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/code-blocks.test.js",
+        "name": "U18_failedPrismRestoresSourceAndNotifiesRendererCompletion"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U17_U18_pendingAndSuccessfulMermaidNeverBlockProseOrExposeSvgTextAsAnAnchor"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U18_U19_outOfOrderSuccessFailureAndRepeatRenderKeepIndependentBlocks"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U18_initializationFailureRestoresPlainSourceAndReportsCompletion"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U18_loadingPageWaitsForDomReadyExactlyOnce"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U18_pageInitializerUsesCurrentRootAndDisposesPreviousGeneration"
+      }
+    ],
+    "U19": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-render-lifecycle.test.js",
+        "name": "U19_U30_disposeDuringPendingRenderDropsCancelledCallbacksAndDetachedRoots"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_oldcommentFailureCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_oldcommentSuccessCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_olddeleteFailureCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_olddeleteSuccessCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_oldhighlightFailureCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_oldhighlightSuccessCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U35_disposedInstanceCannotReplayAfterPendingCsrfRefresh"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_detachedPendingSaveCannotModifyComposer"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_missingOptionalBootstrapAndCountersStillInitializeSafely"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U18_U19_outOfOrderSuccessFailureAndRepeatRenderKeepIndependentBlocks"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U19_detachbeforeRunPreventsLateNotifications"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U19_detachfailurePreventsLateNotifications"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U19_detachsuccessPreventsLateNotifications"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U19_disposeBeforeRunAndLateFailureAreInert"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/post-mermaid.test.js",
+        "name": "U19_disposeDuringPendingRenderCannotCommitIntoTheNextGeneration"
+      }
+    ],
+    "U20": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U20_inlineMarkupAndImageAltDoNotPolluteText"
+      }
+    ],
+    "U21": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U21_blocksTablesListsAndBreaksHaveExplicitSeparators"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U21_emptyAndIndentedCodeKeepExactSourceWithoutInventingLeadingText"
+      }
+    ],
+    "U22": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U22_footnoteNavigationAndUnusedDefinitionsAreExcluded"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U22_undefinedFootnoteReferencesRemainSelectableLiteralText"
+      }
+    ],
+    "U23": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U09_U23_U30_missingDuplicatedAndChangedRootsCannotBeMapped"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U23_U30_unknownReplacementDetachedRootsAndDisposeDoNotPaintPartialRanges"
+      }
+    ],
+    "U24": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U09_U17_U24_corruptedSnapshotAndEmojiAndMermaidNeighborBoundaries"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U24_U25_U26_128CodepointContextPreservesSurrogatesCombiningMarksAndSpaces"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U24_U25_U26_unicodeIsCodepointExactAndOnlyLineEndingsNormalize"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U24_contextIs128CodepointsAndWhitespaceOnlySelectionIsRejected"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U24_U25_surrogateBoundariesNfdZwjAndNbspAreExact"
+      }
+    ],
+    "U25": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U24_U25_U26_128CodepointContextPreservesSurrogatesCombiningMarksAndSpaces"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U08_U25_approximateAndNormalizedUnicodeMatchesAreRejected"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U24_U25_U26_unicodeIsCodepointExactAndOnlyLineEndingsNormalize"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U24_U25_surrogateBoundariesNfdZwjAndNbspAreExact"
+      }
+    ],
+    "U26": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U24_U25_U26_128CodepointContextPreservesSurrogatesCombiningMarksAndSpaces"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U24_U25_U26_unicodeIsCodepointExactAndOnlyLineEndingsNormalize"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U09_U26_optionalSelectionTrimPreservesCanonicalWhitespaceOutsideTheQuote"
+      }
+    ],
+    "U27": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U27_escapedHtmlCannotInjectInternalMappingOrScripts"
+      }
+    ],
+    "U28": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.adapter.web.portal.PostControllerTest",
+        "name": "U28_bootstrapJsonMatchesTheRenderedRevisionAndEscapesScriptClosers"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U28_digestFailureAbortsModelInsteadOfPublishingUnverifiableIdentity"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U28_modelIsDeterministicAndCollectionsCannotBeMutated"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleDocumentServiceTest",
+        "name": "U28_renderedModelAndHtmlMatchReviewedCrossLanguageGoldens"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U28_duplicates_everyActualSanitizedSegmentMatchesTheReviewedModel"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U28_footnotes_everyActualSanitizedSegmentMatchesTheReviewedModel"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U28_rich_everyActualSanitizedSegmentMatchesTheReviewedModel"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U28_unicode_everyActualSanitizedSegmentMatchesTheReviewedModel"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U28_invalidSelectionAndEmptyComposerCannotSubmit"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U28_popupIgnoresSidebarClicksAndClosesAfterSelectionCleared"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U28_selectionOutsideArticleIsIgnoredAndSyntheticUnknownMarkDoesNotCrash"
+      }
+    ],
+    "U29": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U29_U31_commentGeometryRelayoutAndFocusAreSeparateFromAnchorIdentity"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-render-lifecycle.test.js",
+        "name": "U29_U32_batchesContentAndIgnoresItsOwnPaintMutationsWithoutAnObserverLoop"
+      }
+    ],
+    "U30": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U09_U30_duplicateIdentityBadColorsAndDetachedRootsFailClosed"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U09_U23_U30_missingDuplicatedAndChangedRootsCannotBeMapped"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U30_dependencyReturningAWrongDomRangeIsRejectedBeforeDisplay"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "U30_reorderedContentRootsMustNotSilentlyRewriteSelectionOrder"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-document.test.js",
+        "name": "canonical annotation DOM mapping U23_U30_unknownReplacementDetachedRootsAndDisposeDoNotPaintPartialRanges"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-render-lifecycle.test.js",
+        "name": "U19_U30_disposeDuringPendingRenderDropsCancelledCallbacksAndDetachedRoots"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-render-lifecycle.test.js",
+        "name": "U30_disposeReleasesAllListenersAndNestedMutationCanDisposeOrThrow"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_oldcommentFailureCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_oldcommentSuccessCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_olddeleteFailureCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_olddeleteSuccessCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_oldhighlightFailureCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U30_oldhighlightSuccessCannotChangeReinitializedUi"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U30_pendingFontAndCopyCallbacksCannotChangeDisposedPage"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U30_queuedLayoutAfterCleanupAndStaleMenuButtonsAreInert"
+      }
+    ],
+    "U31": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U29_U31_commentGeometryRelayoutAndFocusAreSeparateFromAnchorIdentity"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
+        "name": "U31_realRangeRectsMergeOnlyMatchingRowsAndUseMeasuredFallback"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-render-lifecycle.test.js",
+        "name": "U14_U31_imageAndToolbarChangesOnlyRelayoutAndUnknownReplacementRebuilds"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-render-lifecycle.test.js",
+        "name": "U31_geometryEventsOnlyRelayoutAndPendingExternalMutationsAreNotDiscarded"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U31_contentEventsRebuildOpenFeedAndGeometryUpdatesActualOutline"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U31_fixedFollowLayoutClipsAboveViewportAndFallsBackWhenMarkMissing"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U31_mobileNoteHidesBelowViewportAndIgnoresClicksWithinIt"
+      }
+    ],
+    "U32": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-render-lifecycle.test.js",
+        "name": "U29_U32_batchesContentAndIgnoresItsOwnPaintMutationsWithoutAnObserverLoop"
+      }
+    ],
+    "U33": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.adapter.web.portal.AnnotationControllerTest",
+        "name": "U33_U35_conflictsDeletedReplayAndInvalidPayloadHaveExplicitStatus"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U33_U36_lockedLatestVersionRejectsStaleAndWritesNothing"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U33_U35_failure0RetainsCommentAndRequestIdentityUntilSuccessfulRetry"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U33_U35_failure409RetainsCommentAndRequestIdentityUntilSuccessfulRetry"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U33_U35_failure422RetainsCommentAndRequestIdentityUntilSuccessfulRetry"
+      }
+    ],
+    "U34": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U09_U12_U34_missingMalformedAndVirtualSeparatorBoundsAreRejected"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnchorValidatorTest",
+        "name": "U09_U34_invalidQuoteContextDigestAndSpansAreRejected"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U12_U34_invalidSelectorAndOldClientsWriteNothing"
+      }
+    ],
+    "U35": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.adapter.web.portal.AnnotationControllerTest",
+        "name": "U33_U35_conflictsDeletedReplayAndInvalidPayloadHaveExplicitStatus"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U01_U35_sameRequestCreatesOnlyOnceAndNeverChangesOriginal"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U35_changedPayloadCannotCollideThroughInvalidUnicodeEncoding"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U35_missingReplayRowNeverRecreatesAndUnavailableHashFailsClosed"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.infrastructure.annotation.AnnotationPersistenceTest",
+        "name": "U35_U40_sameRequestDifferentPayloadRejectedAndDeletedRequestReplayReturnsGone"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U19_U35_disposedInstanceCannotReplayAfterPendingCsrfRefresh"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U33_U35_failure0RetainsCommentAndRequestIdentityUntilSuccessfulRetry"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U33_U35_failure409RetainsCommentAndRequestIdentityUntilSuccessfulRetry"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U33_U35_failure422RetainsCommentAndRequestIdentityUntilSuccessfulRetry"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U35_emptyCommentSubmissionAndExplicitVisibilityStayConsistent"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U35_highlightFailureWithoutErrorStatusRetainsSelectionAndAllowsRetry"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U35_twoPendingRetriesOfOneHighlightCannotDuplicateOrEraseTheVisibleRecord"
+      }
+    ],
+    "U36": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.adapter.web.portal.PostControllerCoverageTest",
+        "name": "U36_pageUsesLockedRevisionForHtmlModelTitleAndPlacements"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U33_U36_lockedLatestVersionRejectsStaleAndWritesNothing"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.command.PostMetadataWriteTest",
+        "name": "U36_deleteNeverOverwritesNewContentWithStaleMetadataRead"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.command.PostMetadataWriteTest",
+        "name": "U36_featureNeverOverwritesNewContentWithStaleMetadataRead"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.command.PostMetadataWriteTest",
+        "name": "U36_publishNeverOverwritesNewContentWithStaleMetadataRead"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.command.UpdatePostCmdExeTest",
+        "name": "U36_titleOnlyRevisionAndUnchangedSave"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleRevisionServiceTest",
+        "name": "U36_titleOnlyRevisionAndBaselineRace"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.infrastructure.post.TransactionalPostWriterTest",
+        "name": "U36_lockReturnsTheFreshPostInsideAnActiveTransaction"
+      }
+    ],
+    "U37": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.command.UpdatePostCmdExeTest",
+        "name": "U02_U04_U37_bodyAndSnapshotsSavedInsideLockIndexOutsideAndNoAnnotationRewrite"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.command.UpdatePostCmdExeTest",
+        "name": "U37_snapshotFailureNeverIndexes"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.infrastructure.annotation.AnnotationPersistenceTest",
+        "name": "U11_U37_revisionsAreImmutableAndPlacementsCannotCrossCacheKeys"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.infrastructure.post.TransactionalPostWriterTest",
+        "name": "U37_snapshotWriteFailureRollsBackTheWholePostChange"
+      }
+    ],
+    "U38": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.CreateAnnotationCmdExeTest",
+        "name": "U38_colorsAnonymousPrivateAndEmptyCommentsStaySupported"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.infrastructure.annotation.AnnotationPersistenceTest",
+        "name": "U38_U41_legacyUnverifiedRowsAreOwnerOnlyAndNormalEditsCannotChangeOriginalAnchors"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.infrastructure.annotation.AnnotationPersistenceTest",
+        "name": "U38_protocolPublicPrivateAndAnonymousVisibilityMatrixUsesRealSql"
+      }
+    ],
+    "U39": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.adapter.web.portal.AnnotationProtocolTest",
+        "name": "U39_draftAndForeignRevisionStayPrivateOnEveryRoute"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U39_postDeletedBeforeLockCannotAcceptNewAnnotations"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.LegacyAnchorMigratorTest",
+        "name": "U39_migrationCannotBorrowAnotherArticlesRevision"
+      }
+    ],
+    "U40": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.DeleteAnnotationCmdExeTest",
+        "name": "U40_deletedRequestTombstoneIsAtomicAndFailureNeverDeletes"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.infrastructure.annotation.AnnotationPersistenceTest",
+        "name": "U35_U40_sameRequestDifferentPayloadRejectedAndDeletedRequestReplayReturnsGone"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U40_oldDeleteFeedbackTimeoutCannotDismissANewerFailure"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U40_pureHighlightDeleteFailureKeepsMarkAndClosesFeedback"
+      }
+    ],
+    "U41": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.LegacyAnchorMigratorTest",
+        "name": "U41_invalidLegacyAndUnsupportedSourceAreQuarantinedWithoutLosingComments"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.LegacyAnchorMigratorTest",
+        "name": "U41_missingEvidenceDuplicateWrongCoordinatesAndAutoHiddenNeverBecomePublicAgain"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.LegacyAnchorMigratorTest",
+        "name": "U41_verifiedLegacyCoordinatesUseAnExplicitMigrationBaselineNotFabricatedCreationHistory"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.document.ArticleRevisionServiceTest",
+        "name": "U41_initialReadClassifiesOnceWithoutRewritingOriginalFields"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.infrastructure.annotation.AnnotationPersistenceTest",
+        "name": "U38_U41_legacyUnverifiedRowsAreOwnerOnlyAndNormalEditsCannotChangeOriginalAnchors"
+      }
+    ],
+    "U42": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U42_anchoredInlineEditorSurvivesRendererRebuild"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U42_cardDeleteFailureResetsButtonAndKeepsOriginal"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U42_clearingAnExistingCommentUsesNullAndKeepsItsOriginalAnchor"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U42_editingAnUnresolvedCommentStaysInItsSectionAcrossRelayout"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U42_layoutInvalidControlDoesNotChangeModeAndUnknownColorUsesFallback"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U42_manyUnresolvedCommentsRetainCountAndOriginalQuoteWhenFocused"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U42_unresolvedCommentsAndCollapsedHighlightsRetainOriginalQuotesAndOwnership"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U42_unresolvedHighlightDeletionFailureKeepsQuoteAndExposesStatus"
+      }
+    ],
+    "U43": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest",
+        "name": "U43_articleCommentsAndSelectionCommentsRemainIndependentAcrossBodyUpdates"
+      }
+    ],
+    "U44": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationTransformTest",
+        "name": "U44_seededTransformationsRecoverTheUniqueSurvivingTargetIdentity"
+      }
+    ],
+    "U45": [
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U45_candidateBudgetExhaustionKeepsRecordAndNoCandidateRange"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.annotation.AnnotationResolverTest",
+        "name": "U45_textAndCandidateBudgetsFailClosedAndPlacementsAreImmutable"
+      }
+    ],
+    "U46": [
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/hypothesis-anchoring.test.js",
+        "name": "U46_changedGeneratorClaimsAndHiddenAlgorithmPatchesAreRejected"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/hypothesis-anchoring.test.js",
+        "name": "U46_pinnedSourcesLicenseAndAdaptedFilesAreIntegrityChecked"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/hypothesis-anchoring.test.js",
+        "name": "U46_rehashingAnUnreviewedSourceOrRuntimeCannotBypassProvenance"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/hypothesis-anchoring.test.js",
+        "name": "U46_tamperedLicenseSourceRuntimeHashAndPatchAreRejected"
+      }
+    ]
+  }
+}

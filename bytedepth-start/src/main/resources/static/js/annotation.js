@@ -103,7 +103,12 @@ window.initAnnotations = function () {
       if (response.status === 403) {
         // CSRF token 失效（session 过期）：刷新一次 token 后重试，仍失败则按重试状态码报错。
         return refreshCsrfToken()
-          .then(() => sendAnnotationRequest(path, method, payload))
+          .then(() => {
+            if (!active || !content.isConnected) {
+              throw new Error("annotation instance disposed");
+            }
+            return sendAnnotationRequest(path, method, payload);
+          })
           .then((retry) => {
             if (!retry.ok) {
               const err = new Error("annotation request failed");
@@ -303,9 +308,6 @@ window.initAnnotations = function () {
   }
 
   function renderFeed() {
-    if (!active) {
-      return;
-    }
     feed.replaceChildren();
     const commentItems = comments();
     updateCommentCount();
@@ -526,7 +528,7 @@ window.initAnnotations = function () {
     selected = data;
     composer.dataset.editId = existing ? existing.id : "";
     composer.querySelector(".bd-annotation-composer-quote").textContent = data.selectedText;
-    composer.querySelector(".bd-annotation-composer-text").value = existing ? existing.annotationText || "" : "";
+    composer.querySelector(".bd-annotation-composer-text").value = existing ? existing.annotationText : "";
     composer.querySelector(".bd-annotation-visibility").value = existing ? existing.visibility : "PRIVATE";
     visibilityChanged = Boolean(existing);
     selectColor(existing ? existing.color : "blue");
@@ -604,16 +606,12 @@ window.initAnnotations = function () {
           return;
         }
         // 删除失败时不移除本地标记，避免与服务端不一致；向用户反馈。
-        if (typeof onFailure === "function") {
-          onFailure(err && err.status ? String(err.status) : "0");
-        }
+        onFailure(err && err.status ? String(err.status) : "0");
       });
   }
 
   function hidePopup() {
-    if (popup) {
-      popup.classList.remove("bd-annotation-popup-open");
-    }
+    popup.classList.remove("bd-annotation-popup-open");
   }
 
   function eventOccurredInside(event, element) {
@@ -696,9 +694,7 @@ window.initAnnotations = function () {
   }
 
   function dismissMobileComment() {
-    if (mobileNote) {
-      mobileNote.hidden = true;
-    }
+    mobileNote.hidden = true;
     mobileAnnotation = null;
     mobileMark = null;
   }
@@ -777,9 +773,6 @@ window.initAnnotations = function () {
     popup.querySelector("[data-delete-annotation]").addEventListener("click", () => {
       hidePopup();
       removeAnnotation(annotation.id, (status) => {
-        if (!popup) {
-          buildPopup();
-        }
         popup.classList.add("bd-annotation-popup-open");
         const rect = mark.getBoundingClientRect();
         popup.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8))}px`;
@@ -790,7 +783,7 @@ window.initAnnotations = function () {
         result.setAttribute("data-status", status);
         popup.replaceChildren(result);
         window.setTimeout(() => {
-          if (popup.contains(popup.querySelector(".bd-annotation-copy-result"))) {
+          if (popup.contains(result)) {
             hidePopup();
           }
         }, 1600);
@@ -828,9 +821,6 @@ window.initAnnotations = function () {
       })
       .catch((err) => {
         if (!active || !content.isConnected) {
-          return;
-        }
-        if (!popup) {
           return;
         }
         const result = document.createElement("span");

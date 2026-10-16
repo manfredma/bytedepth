@@ -2,9 +2,12 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    reporters: ['default', 'json'],
+    outputFile: {json: 'target/annotation-unit-evidence/vitest.json'},
     coverage: {
       include: [
         'bytedepth-start/src/main/resources/static/js/post-image-lightbox.js',
+        'bytedepth-start/src/main/resources/static/js/annotation.js',
         'bytedepth-start/src/main/resources/static/js/annotation-document.js',
         'bytedepth-start/src/main/resources/static/js/annotation-display.js',
         'bytedepth-start/src/main/resources/static/js/annotation-render-lifecycle.js',
@@ -14,7 +17,7 @@ export default defineConfig({
         'bytedepth-start/src/main/resources/static/js/reading-history-page.js'
       ],
       provider: 'v8',
-      reporter: ['text'],
+      reporter: ['text', 'json'],
       thresholds: {
         branches: 100,
         functions: 100,

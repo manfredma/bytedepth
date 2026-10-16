@@ -165,7 +165,7 @@ JavaScript 的 DOM 单测消费上述同批输入/输出，执行产品选择器
 
 确定性变换测试以 fixture 中独立维护的目标身份为 oracle，不以被测 resolver 的输出反推答案。安全性与恢复率同时检查：不能通过“全部返回未定位”来满足不误挂。关键 mutation 反例包括移除 quote 校验、恢复裸 `textContent` 计数、把歧义改成选第一项、定位失败执行删除、忽略正文版本、接受旧 generation；每个反例都必须使对应单测失败。
 
-门禁接入现有 `npm test`、Maven Wrapper 单测和 `bash scripts/run-local-quality.sh`，无远程凭据也能执行；新增套件零执行或被 skip 不算通过。当前 Vitest 覆盖率 include 未包含 `annotation.js`，实施时必须显式加入该脚本与新定位/映射/生命周期适配模块，不能只让已有四个前端文件的覆盖率继续为 100%。JavaScript 门禁读取覆盖报告，确认这些模块确实有语句和分支被统计。可按组运行快速反馈，但最终仍跑完整门禁。测试失败必须先保留最小 fixture，再修复；不能删断言或调整覆盖范围来通过。
+门禁接入现有 `npm test`、Maven Wrapper 单测和 `bash scripts/run-local-quality.sh`，无远程凭据也能执行；新增套件零执行或被 skip 不算通过。Vitest 覆盖率 include 显式包含 `annotation.js` 与定位、映射、生命周期适配模块；不能只让其他前端文件的覆盖率继续为 100%。JavaScript 门禁读取覆盖报告，确认这些模块确实有语句和分支被统计。可按组运行快速反馈，但最终仍跑完整门禁。测试失败必须先保留最小 fixture，再修复；不能删断言或调整覆盖范围来通过。
 
 ## 集成与 staging 浏览器补充
 

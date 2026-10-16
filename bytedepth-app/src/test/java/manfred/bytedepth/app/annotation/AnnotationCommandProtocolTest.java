@@ -85,6 +85,50 @@ class AnnotationCommandProtocolTest {
     }
 
     @Test
+    void U43_articleCommentsAndSelectionCommentsRemainIndependentAcrossBodyUpdates() {
+        save();
+        var annotation = create.execute(1L, 2L, null, request(anchor)).annotation();
+        var comments = mock(manfred.bytedepth.domain.comment.CommentRepository.class);
+        var users = mock(manfred.bytedepth.domain.user.UserRepository.class);
+        var user = manfred.bytedepth.domain.user.User.register("reader", "hash");
+        when(users.findByUsername("reader")).thenReturn(Optional.of(user));
+        var stored = new java.util.ArrayList<manfred.bytedepth.domain.comment.Comment>();
+        when(comments.save(any())).thenAnswer(invocation -> {
+            var comment = invocation.<manfred.bytedepth.domain.comment.Comment>getArgument(0);
+            stored.add(comment);
+            return comment;
+        });
+        when(comments.findApprovedByPostId(1L)).thenAnswer(invocation -> java.util.List.copyOf(stored));
+        var submit = new manfred.bytedepth.app.comment.SubmitCommentCmdExe(comments, users);
+        var posts = mock(PostRepository.class);
+        var list = new manfred.bytedepth.app.comment.ListCommentsQryExe(comments, posts);
+        submit.execute(1L, "reader", "整篇文章评论");
+        new manfred.bytedepth.app.post.command.UpdatePostCmdExe(
+                        posts, mock(manfred.bytedepth.app.search.IndexPostCmdExe.class), tx, current)
+                .execute(1L, "title", "完全替换正文");
+        var target = new PostContentRevision(
+                1,
+                post.getContentVersion(),
+                post.getContent(),
+                documents.render(post.getContent()).document(),
+                false);
+        var view = query.view(annotation, target);
+        assertEquals(PlacementStatus.UNRESOLVED, view.placement().status());
+        assertEquals("评论", view.annotation().annotationText());
+        assertEquals("😀原文", view.annotation().selectedText());
+        assertEquals(
+                java.util.List.of("整篇文章评论"),
+                list.findApprovedByPostId(1L).stream()
+                        .map(manfred.bytedepth.app.comment.CommentDTO::getContent)
+                        .toList());
+        submit.execute(1L, "reader", "正文更新后的整篇评论");
+        assertEquals(2, list.findApprovedByPostId(1L).size());
+        assertEquals(annotation.anchor(), view.annotation().anchor());
+        verify(annotations, never()).delete(any());
+        verify(comments, never()).deleteById(any());
+    }
+
+    @Test
     void U01_U35_sameRequestCreatesOnlyOnceAndNeverChangesOriginal() {
         save();
         var result = create.execute(1L, 2L, null, request(anchor));
@@ -153,13 +197,15 @@ class AnnotationCommandProtocolTest {
 
     @Test
     void U33_U36_lockedLatestVersionRejectsStaleAndWritesNothing() {
-        post.updateContent("new", "新正文");
-        assertEquals(
-                AnnotationWriteConflictException.Kind.STALE_REVISION,
-                assertThrows(
-                                AnnotationWriteConflictException.class,
-                                () -> create.execute(1L, 2L, null, request(anchor)))
-                        .kind());
+        for (String content : java.util.List.of("😀原文", "新正文")) {
+            post.updateContent("new", content);
+            assertEquals(
+                    AnnotationWriteConflictException.Kind.STALE_REVISION,
+                    assertThrows(
+                                    AnnotationWriteConflictException.class,
+                                    () -> create.execute(1L, 2L, null, request(anchor)))
+                            .kind());
+        }
         verifyNoInteractions(annotations, revisions);
         verify(requests, never()).insert(any(), any(), anyLong());
     }

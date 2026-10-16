@@ -78,10 +78,11 @@ class PostReadingAssetsTest {
     void mermaidRenderingPreservesEnhancedCodeSourceForCopying() throws IOException {
         String template = classpathText("/templates/public/posts/detail.html");
 
-        assertThat(template)
-                .contains("if (pre.closest('.bd-code-block'))")
-                .contains("pre.hidden = true")
-                .contains("pre.replaceWith(div)");
+        assertThat(template).contains("@{/js/post-mermaid.js}\" defer");
+        assertThat(template.indexOf("@{/vendor/mermaid/mermaid.min.js}"))
+                .isLessThan(template.indexOf("@{/js/post-mermaid.js}"));
+        assertThat(getClass().getResource("/static/js/post-mermaid.js")).isNotNull();
+        // Source preservation and asynchronous failure are exercised by post-mermaid.test.js.
     }
 
     @Test
