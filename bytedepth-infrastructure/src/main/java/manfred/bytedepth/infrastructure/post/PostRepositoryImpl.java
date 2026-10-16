@@ -31,7 +31,7 @@ public class PostRepositoryImpl implements PostRepository {
 
     @Override
     public Optional<Post> findById(Long id) {
-        return Optional.ofNullable(postMapper.selectById(id)).map(this::toEntity);
+        return Optional.ofNullable(postMapper.selectById(id)).map(PostRepositoryImpl::toEntity);
     }
 
     @Override
@@ -42,7 +42,7 @@ public class PostRepositoryImpl implements PostRepository {
                 .orderByDesc(PostDO::getUpdatedAt)
                 .orderByDesc(PostDO::getId);
         return postMapper.selectPage(pageParam, wrapper).getRecords().stream()
-                .map(this::toEntity)
+                .map(PostRepositoryImpl::toEntity)
                 .collect(Collectors.toList());
     }
 
@@ -70,13 +70,15 @@ public class PostRepositoryImpl implements PostRepository {
     @Override
     public List<Post> findLatestPublishedExcluding(List<Long> excludedIds, int limit) {
         return postMapper.findLatestPublishedExcluding(excludedIds, limit).stream()
-                .map(this::toEntity)
+                .map(PostRepositoryImpl::toEntity)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<Post> findFeaturedPublished() {
-        return postMapper.findFeaturedPublished().stream().map(this::toEntity).collect(Collectors.toList());
+        return postMapper.findFeaturedPublished().stream()
+                .map(PostRepositoryImpl::toEntity)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -89,7 +91,7 @@ public class PostRepositoryImpl implements PostRepository {
     public List<Post> findPublishedByTag(String tagSlug, int page, int size) {
         int offset = (page - 1) * size;
         return postMapper.findPublishedByTagSlug(tagSlug, offset, size).stream()
-                .map(this::toEntity)
+                .map(PostRepositoryImpl::toEntity)
                 .collect(Collectors.toList());
     }
 
@@ -107,7 +109,7 @@ public class PostRepositoryImpl implements PostRepository {
                 .orderByDesc(PostDO::getUpdatedAt)
                 .orderByDesc(PostDO::getId);
         return postMapper.selectPage(pageParam, wrapper).getRecords().stream()
-                .map(this::toEntity)
+                .map(PostRepositoryImpl::toEntity)
                 .collect(Collectors.toList());
     }
 
@@ -125,7 +127,7 @@ public class PostRepositoryImpl implements PostRepository {
                 .ne(PostDO::getStatus, PostStatus.DELETED.name())
                 .orderByDesc(PostDO::getCreatedAt);
         return postMapper.selectPage(pageParam, wrapper).getRecords().stream()
-                .map(this::toEntity)
+                .map(PostRepositoryImpl::toEntity)
                 .collect(Collectors.toList());
     }
 
@@ -142,7 +144,7 @@ public class PostRepositoryImpl implements PostRepository {
                 .selectPage(pageParam, filteredWrapper(title, status, seriesId, categoryId))
                 .getRecords()
                 .stream()
-                .map(this::toEntity)
+                .map(PostRepositoryImpl::toEntity)
                 .collect(Collectors.toList());
     }
 
@@ -172,12 +174,12 @@ public class PostRepositoryImpl implements PostRepository {
 
     @Override
     public Optional<Post> findPrevPublished(Long id) {
-        return Optional.ofNullable(postMapper.findPrevPublished(id)).map(this::toEntity);
+        return Optional.ofNullable(postMapper.findPrevPublished(id)).map(PostRepositoryImpl::toEntity);
     }
 
     @Override
     public Optional<Post> findNextPublished(Long id) {
-        return Optional.ofNullable(postMapper.findNextPublished(id)).map(this::toEntity);
+        return Optional.ofNullable(postMapper.findNextPublished(id)).map(PostRepositoryImpl::toEntity);
     }
 
     @Override
@@ -207,7 +209,7 @@ public class PostRepositoryImpl implements PostRepository {
                                 .orderByDesc(PostDO::getId))
                 .getRecords()
                 .stream()
-                .map(this::toEntity)
+                .map(PostRepositoryImpl::toEntity)
                 .collect(Collectors.toList());
     }
 
@@ -221,7 +223,7 @@ public class PostRepositoryImpl implements PostRepository {
     @Override
     public Optional<Post> findBySlug(String slug) {
         return Optional.ofNullable(postMapper.selectOne(new LambdaQueryWrapper<PostDO>().eq(PostDO::getSlug, slug)))
-                .map(this::toEntity);
+                .map(PostRepositoryImpl::toEntity);
     }
 
     @Override
@@ -237,7 +239,7 @@ public class PostRepositoryImpl implements PostRepository {
                         .orderByDesc(PostDO::getUpdatedAt)
                         .orderByDesc(PostDO::getId))
                 .stream()
-                .map(this::toEntity)
+                .map(PostRepositoryImpl::toEntity)
                 .collect(Collectors.toList());
     }
 
@@ -262,7 +264,7 @@ public class PostRepositoryImpl implements PostRepository {
         return d;
     }
 
-    private Post toEntity(PostDO d) {
+    static Post toEntity(PostDO d) {
         Post post = Post.reconstruct(
                 d.getId(),
                 d.getSlug(),

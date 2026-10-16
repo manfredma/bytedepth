@@ -148,7 +148,7 @@ class MyBatisAnnotationRepositoryTest {
     }
 
     @Test
-    void update_mapsAndDelegates() {
+    void update_missingRecordNeverReturnsFabricatedSuccess() {
         PostAnnotation annotation = new PostAnnotation(
                 5L,
                 1L,
@@ -162,7 +162,7 @@ class MyBatisAnnotationRepositoryTest {
                 5,
                 LocalDateTime.now(),
                 false);
-        assertThat(repository.update(annotation).visibility()).isEqualTo(AnnotationVisibility.PRIVATE);
-        verify(mapper).updateById(any(PostAnnotationDO.class));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> repository.update(annotation))
+                .isInstanceOf(manfred.bytedepth.domain.common.DomainException.class);
     }
 }

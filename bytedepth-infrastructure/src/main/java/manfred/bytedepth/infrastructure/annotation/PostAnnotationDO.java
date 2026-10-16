@@ -24,4 +24,6 @@ public class PostAnnotationDO {
     private Integer endOffset;
     private LocalDateTime createdAt;
     private Boolean deleted;
+    private String anchorJson;
+    private Long migrationBaselineVersion;
 }

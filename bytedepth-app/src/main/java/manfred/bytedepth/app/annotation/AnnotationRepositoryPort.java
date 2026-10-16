@@ -11,6 +11,9 @@ public interface AnnotationRepositoryPort {
 
     PostAnnotation update(PostAnnotation annotation);
 
+    void initializeAnchor(
+            long id, manfred.bytedepth.domain.annotation.AnnotationAnchor anchor, long migrationBaselineRevision);
+
     List<PostAnnotation> findVisibleByPostId(Long postId, Long userId, String ownerTokenHash);
 
     Optional<PostAnnotation> findById(Long id);

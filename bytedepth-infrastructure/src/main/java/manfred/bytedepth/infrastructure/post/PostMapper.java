@@ -10,6 +10,9 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface PostMapper extends BaseMapper<PostDO> {
 
+    @Select("SELECT * FROM post WHERE id = #{id} FOR UPDATE")
+    PostDO selectForUpdate(@Param("id") Long id);
+
     @Select("SELECT p.*, COALESCE(ps.pv_count, 0) AS view_count "
             + "FROM post p "
             + "LEFT JOIN page_stats ps ON ps.path = CONCAT('/posts/', p.id) "

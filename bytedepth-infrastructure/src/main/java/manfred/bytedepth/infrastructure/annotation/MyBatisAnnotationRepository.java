@@ -24,9 +24,20 @@ public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
 
     @Override
     public PostAnnotation update(PostAnnotation annotation) {
-        PostAnnotationDO data = toDO(annotation);
-        mapper.updateById(data);
-        return toDomain(data);
+        mapper.updateMutableFields(
+                annotation.id(),
+                annotation.annotationText(),
+                annotation.color(),
+                annotation.visibility().name());
+        return findById(annotation.id())
+                .orElseThrow(() -> new manfred.bytedepth.domain.common.DomainException("批注不存在"));
+    }
+
+    @Override
+    public void initializeAnchor(
+            long id, manfred.bytedepth.domain.annotation.AnnotationAnchor anchor, long migrationBaselineRevision) {
+        if (mapper.initializeAnchor(id, anchor == null ? null : AnnotationJson.write(anchor), migrationBaselineRevision)
+                != 1) throw new IllegalStateException("Annotation anchor already classified");
     }
 
     @Override
@@ -69,6 +80,8 @@ public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
         data.setEndOffset(annotation.endOffset());
         data.setCreatedAt(annotation.createdAt());
         data.setDeleted(annotation.deleted());
+        data.setAnchorJson(annotation.anchor() == null ? null : AnnotationJson.write(annotation.anchor()));
+        data.setMigrationBaselineVersion(annotation.migrationBaselineRevision());
         return data;
     }
 
@@ -85,6 +98,11 @@ public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
                 data.getStartOffset(),
                 data.getEndOffset(),
                 data.getCreatedAt(),
-                data.getDeleted() != null && data.getDeleted());
+                data.getDeleted() != null && data.getDeleted(),
+                data.getAnchorJson() == null
+                        ? null
+                        : AnnotationJson.read(
+                                data.getAnchorJson(), manfred.bytedepth.domain.annotation.AnnotationAnchor.class),
+                data.getMigrationBaselineVersion());
     }
 }
