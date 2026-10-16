@@ -33,10 +33,24 @@
     }
   };
 
+  const contentRendered = (code) => {
+    const id = code.dataset.annotationSegment;
+    article.dispatchEvent(new CustomEvent("bd:content-rendered", { detail: { segmentIds: id ? [id] : [] } }));
+  };
+  const geometryChanged = () => article.dispatchEvent(new CustomEvent("bd:content-geometry"));
   const highlightCode = (code) => {
+    const source = code.textContent;
     const prism = window.Prism;
-    if (prism && typeof prism.highlightElement === "function") {
-      prism.highlightElement(code);
+    try {
+      if (prism && typeof prism.highlightElement === "function") {
+        prism.highlightElement(code);
+      }
+    } catch {
+      // A failed renderer can leave half-written tokens. Restore the pure source
+      // before notifying annotations, so other content never waits for this block.
+      code.textContent = source;
+    } finally {
+      contentRendered(code);
     }
   };
 
@@ -64,6 +78,7 @@
         if (body) {
           body.hidden = !expanded;
         }
+        geometryChanged();
       };
       setExpanded(toggleButton.getAttribute("aria-expanded") === "true");
       toggleButton.addEventListener("click", () => {
@@ -85,6 +100,7 @@
         panel.setAttribute("aria-hidden", String(!active));
         panel.hidden = !active;
       });
+      geometryChanged();
     };
     buttons.forEach((button, index) => {
       button.addEventListener("click", () => activate(index));

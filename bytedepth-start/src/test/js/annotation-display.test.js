@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { JSDOM } from "jsdom";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import "../../main/resources/static/js/annotation-document.js";
 import "../../main/resources/static/js/annotation-display.js";
 const mapper = window.AnnotationDocument;
@@ -12,7 +12,7 @@ function boot() {
     revision: 7,
   };
   const dom = new JSDOM(
-    `<article>${fs.readFileSync("scripts/test-fixtures/annotation/rich-page.html", "utf8")}</article>`,
+    `<article id="post-article"><div class="content">${fs.readFileSync("scripts/test-fixtures/annotation/rich-page.html", "utf8")}</div></article>`,
     { runScripts: "outside-only" },
   );
   instances.push(dom.window);
@@ -20,7 +20,7 @@ function boot() {
     dom.window.eval(
       fs.readFileSync(`bytedepth-start/src/main/resources/static/vendor/hypothesis-anchoring/${f}.js`, "utf8"),
     );
-  const root = dom.window.document.querySelector("article");
+  const root = dom.window.document.querySelector(".content");
   dom.window.Range.prototype.getClientRects = () => [
     { left: 10, right: 90, top: 20, bottom: 40, width: 80, height: 20 },
   ];
@@ -142,9 +142,9 @@ test("U09_U30_duplicateIdentityBadColorsAndDetachedRootsFailClosed", () => {
   expect(root.querySelector('mark[data-id="2"]').textContent).toBe("前文");
 });
 
-test("U15_U16_realPrismTokenSplitsAndRepeatedPaintKeepCodeAndCopyTextExact", () => {
+test("U15_U16_realPrismTokenSplitsAndRepeatedPaintKeepCodeAndCopyTextExact", async () => {
   const { w, root, model, display } = boot();
-  const original = root.querySelector("code").textContent;
+  const original = root.querySelector("pre code").textContent;
   for (const file of ["vendor/prism/prism-common.min.js", "js/code-blocks.js"])
     w.eval(fs.readFileSync(`bytedepth-start/src/main/resources/static/${file}`, "utf8"));
   w.document.dispatchEvent(new w.Event("DOMContentLoaded"));
@@ -155,9 +155,14 @@ test("U15_U16_realPrismTokenSplitsAndRepeatedPaintKeepCodeAndCopyTextExact", () 
     expect([...root.querySelectorAll('mark[data-id="1"]')].map((m) => m.textContent).join("")).toBe(
       "int anchorProbe = 1;",
     );
-    expect(root.querySelector("code").textContent).toBe(original);
+    expect(root.querySelector("pre code").textContent).toBe(original);
     w.Prism.highlightAllUnder(root);
   }
+  const copied = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(w.navigator, "clipboard", { configurable: true, value: { writeText: copied } });
+  root.querySelector(".bd-code-block__copy").click();
+  await Promise.resolve();
+  expect(copied).toHaveBeenCalledWith("int anchorProbe = 1;\n");
 });
 
 test("U31_realRangeRectsMergeOnlyMatchingRowsAndUseMeasuredFallback", () => {

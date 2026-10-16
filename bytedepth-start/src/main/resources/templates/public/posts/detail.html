@@ -1237,6 +1237,7 @@
 <script th:src="@{/vendor/hypothesis-anchoring/text-range.js}"></script>
 <script th:src="@{/js/annotation-document.js}"></script>
 <script th:src="@{/js/annotation-display.js}"></script>
+<script th:src="@{/js/annotation-render-lifecycle.js}"></script>
 <script th:src="@{/js/annotation.js}"></script>
 <script th:src="@{/js/post-image-lightbox.js}"></script>
 <script th:src="@{/vendor/prism/prism-common.min.js}"></script>
@@ -1245,55 +1246,7 @@
 </div>
 <!-- Mermaid 图表渲染 -->
 <script th:src="@{/vendor/mermaid/mermaid.min.js}" defer></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (typeof mermaid === 'undefined') {
-        return;
-    }
-    mermaid.initialize({
-        startOnLoad: false,
-        theme: 'base',
-        themeVariables: {
-            primaryColor:       '#dae8fc',
-            primaryTextColor:   '#1c1917',
-            primaryBorderColor: '#6c8ebf',
-            lineColor:          '#57534e',
-            secondaryColor:     '#f7f5f0',
-            tertiaryColor:      '#fff',
-            background:         '#ffffff',
-            mainBkg:            '#dae8fc',
-            nodeBorder:         '#6c8ebf',
-            clusterBkg:         '#f7f5f0',
-            titleColor:         '#1c1917',
-            edgeLabelBackground:'#ffffff',
-            activeTaskBkgColor: '#e94560',
-            activeTaskBorderColor: '#c73652',
-            fontFamily:         "'JetBrains Mono', monospace",
-            fontSize:           '13px',
-        },
-        flowchart:  { useMaxWidth: true, htmlLabels: true },
-        sequence:   { useMaxWidth: true },
-        gantt:      { useMaxWidth: true },
-    });
-    document.querySelectorAll('pre code.language-mermaid').forEach(function (codeEl) {
-        var pre = codeEl.parentElement;
-        var div = document.createElement('div');
-        div.className = 'mermaid';
-        // textContent 自动解码 HTML 实体（&gt; → > 等）
-        div.textContent = codeEl.textContent;
-        div.style.cssText = 'background:var(--card);padding:16px 0;text-align:center;';
-        // 增强代码块需要保留原始 code 节点，复制按钮才能读取 Mermaid 源码。
-        // 普通 Mermaid 代码块继续沿用原有的 pre 替换行为。
-        if (pre.closest('.bd-code-block')) {
-            pre.hidden = true;
-            pre.parentElement.appendChild(div);
-        } else {
-            pre.replaceWith(div);
-        }
-    });
-    mermaid.run();
-});
-</script>
+<script th:src="@{/js/post-mermaid.js}" defer></script>
 <!-- Schema.org 结构化数据：让 Google 展示发布时间、作者等富文本摘要 -->
 <script type="application/ld+json" th:inline="javascript">
 {

@@ -14,6 +14,7 @@ window.initAnnotations = function () {
   if (!content || !sidebar || !toggle) {
     return;
   }
+  let active = true;
   const events = new window.AbortController();
   function listen(target, type, listener, options) {
     const settings = typeof options === "boolean" ? { capture: options } : options;
@@ -48,6 +49,19 @@ window.initAnnotations = function () {
   const typeTrigger = composer.querySelector(".bd-annotation-type-trigger");
   const typeLabel = composer.querySelector(".bd-annotation-type-label");
   const typeMenu = composer.querySelector(".bd-annotation-type-menu");
+
+  const lifecycle = window.AnnotationRenderLifecycle.create(content, {
+    rebuild() {
+      renderMarks();
+      if (isOpen()) {
+        renderFeed();
+      }
+    },
+    relayout() {
+      display.relayout(activeAnnotationId);
+      scheduleAnnotationPositionUpdate();
+    },
+  });
 
   function annotationTypeLabel(annotationColor) {
     return { blue: "补充说明", yellow: "重点摘录", green: "实践结论", red: "疑问待办" }[annotationColor] || "补充说明";
@@ -216,11 +230,13 @@ window.initAnnotations = function () {
   }
 
   function renderCommentOutlines() {
-    display.relayout(activeAnnotationId);
+    lifecycle.mutate(() => display.relayout(activeAnnotationId));
   }
 
   function renderMarks() {
-    paintedIds = display.render(annotations);
+    lifecycle.mutate(() => {
+      paintedIds = display.render(annotations);
+    });
   }
 
   function onAnnotationFocus(event) {
@@ -230,6 +246,9 @@ window.initAnnotations = function () {
   listen(content, "bd:annotation-focus", onAnnotationFocus);
 
   function layoutFeed(updateSpacer = false) {
+    if (!active) {
+      return;
+    }
     const items = Array.from(feed.querySelectorAll(".bd-annotation-feed-item"));
     const spacer = feed.querySelector(".bd-annotation-feed-spacer");
 
@@ -284,6 +303,9 @@ window.initAnnotations = function () {
   }
 
   function renderFeed() {
+    if (!active) {
+      return;
+    }
     feed.replaceChildren();
     const commentItems = comments();
     updateCommentCount();
@@ -548,6 +570,9 @@ window.initAnnotations = function () {
         });
     request
       .then((saved) => {
+        if (!active || !content.isConnected) {
+          return;
+        }
         storeAnnotation(saved);
         renderMarks();
         closeComposer();
@@ -555,6 +580,9 @@ window.initAnnotations = function () {
         updateCommentCount();
       })
       .catch((err) => {
+        if (!active || !content.isConnected) {
+          return;
+        }
         const saveButton = composer.querySelector(".bd-annotation-composer-save");
         saveButton.textContent = "保存失败，请重试";
         saveButton.setAttribute("data-status", err && err.status ? String(err.status) : "0");
@@ -564,11 +592,17 @@ window.initAnnotations = function () {
   function removeAnnotation(id, onFailure) {
     api(`/${id}`, "DELETE")
       .then(() => {
+        if (!active || !content.isConnected) {
+          return;
+        }
         annotations = annotations.filter((annotation) => String(annotation.id) !== String(id));
         renderMarks();
         renderFeed();
       })
       .catch((err) => {
+        if (!active || !content.isConnected) {
+          return;
+        }
         // 删除失败时不移除本地标记，避免与服务端不一致；向用户反馈。
         if (typeof onFailure === "function") {
           onFailure(err && err.status ? String(err.status) : "0");
@@ -613,6 +647,9 @@ window.initAnnotations = function () {
   }
 
   function showCopyResult(copied) {
+    if (!active) {
+      return;
+    }
     const result = document.createElement("span");
     result.className = "bd-annotation-copy-result";
     result.textContent = copied ? "已复制到剪贴板" : "复制失败，请手动复制";
@@ -777,6 +814,9 @@ window.initAnnotations = function () {
       visibility: "PRIVATE",
     })
       .then((saved) => {
+        if (!active || !content.isConnected) {
+          return;
+        }
         storeAnnotation(saved);
         renderMarks();
         restoreSelection(highlighted);
@@ -787,6 +827,9 @@ window.initAnnotations = function () {
         hidePopup();
       })
       .catch((err) => {
+        if (!active || !content.isConnected) {
+          return;
+        }
         if (!popup) {
           return;
         }
@@ -938,6 +981,11 @@ window.initAnnotations = function () {
 
   // 清理函数：专栏切换文章重新初始化前移除全局监听器，避免重复绑定
   window._bdAnnotationCleanup = function () {
+    if (!active) {
+      return;
+    }
+    active = false;
+    lifecycle.dispose();
     events.abort();
     popup?.remove();
     mobileNote?.remove();

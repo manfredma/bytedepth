@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 const fs = require("fs");
 const path = require("path");
 
@@ -279,4 +280,26 @@ test("tab groups without a selected tab activate the first panel", async () => {
 
   expect(document.querySelectorAll(".bd-code-tabs__tab")[0].getAttribute("aria-selected")).toBe("true");
   expect(document.querySelectorAll(".bd-code-tabs__panel")[0].hidden).toBe(false);
+});
+
+test("U18_failedPrismRestoresSourceAndNotifiesRendererCompletion", async () => {
+  document.body.innerHTML =
+    '<article id="post-article"><div class="content"><div class="bd-code-block"><pre><code data-annotation-segment="s0">int anchorProbe = 1;</code></pre></div></div></article>';
+  const root = document.querySelector(".content");
+  const completed = vi.fn();
+  root.addEventListener("bd:content-rendered", completed);
+  window.Prism = {
+    highlightElement(code) {
+      code.textContent = "半成品";
+      throw new Error("renderer failed");
+    },
+  };
+  try {
+    await loadCodeBlocks();
+    expect(root.querySelector("code").textContent).toBe("int anchorProbe = 1;");
+    expect(completed).toHaveBeenCalledTimes(1);
+    expect(completed.mock.calls[0][0].detail.segmentIds).toEqual(["s0"]);
+  } finally {
+    delete window.Prism;
+  }
 });

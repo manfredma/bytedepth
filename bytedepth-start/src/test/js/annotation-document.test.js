@@ -11,9 +11,12 @@ const windows = [];
 const read = (name) => fs.readFileSync(name, "utf8");
 function boot(name = "rich", modify = (model) => model) {
   const model = modify({ ...JSON.parse(read(`${fixtureRoot}${name}-document.json`)), revision: 7 });
-  const dom = new JSDOM(`<article>${read(`${fixtureRoot}${name}-page.html`)}</article>`, {
-    runScripts: "outside-only",
-  });
+  const dom = new JSDOM(
+    `<article id="post-article"><div class="content">${read(`${fixtureRoot}${name}-page.html`)}</div></article>`,
+    {
+      runScripts: "outside-only",
+    },
+  );
   windows.push(dom.window);
   for (const script of ["vendor/hypothesis-anchoring/trim-range.js", "vendor/hypothesis-anchoring/text-range.js"]) {
     if (fs.existsSync(base + script))
@@ -21,7 +24,7 @@ function boot(name = "rich", modify = (model) => model) {
   }
   dom.window.AnnotationDocument = mappingAPI;
   expect(dom.window.AnnotationDocument, "versioned pure-content mapping API").toBeDefined();
-  const root = dom.window.document.querySelector("article");
+  const root = dom.window.document.querySelector(".content");
   return { w: dom.window, root, model, map: dom.window.AnnotationDocument.create(root, model) };
 }
 function range(w, node, start, end) {

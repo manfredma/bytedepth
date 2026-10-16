@@ -7,6 +7,8 @@ export default defineConfig({
         'bytedepth-start/src/main/resources/static/js/post-image-lightbox.js',
         'bytedepth-start/src/main/resources/static/js/annotation-document.js',
         'bytedepth-start/src/main/resources/static/js/annotation-display.js',
+        'bytedepth-start/src/main/resources/static/js/annotation-render-lifecycle.js',
+        'bytedepth-start/src/main/resources/static/js/post-mermaid.js',
         'bytedepth-start/src/main/resources/static/js/code-blocks.js',
         'bytedepth-start/src/main/resources/static/js/nav-menu.js',
         'bytedepth-start/src/main/resources/static/js/reading-history-page.js'

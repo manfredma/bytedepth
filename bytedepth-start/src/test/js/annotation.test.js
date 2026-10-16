@@ -1,5 +1,7 @@
+import { vi } from "vitest";
 import "../../main/resources/static/js/annotation-document.js";
 import "../../main/resources/static/js/annotation-display.js";
+import "../../main/resources/static/js/annotation-render-lifecycle.js";
 import "../../main/resources/static/js/annotation.js";
 /** @jest-environment jsdom */
 import fs from "node:fs";
@@ -103,6 +105,7 @@ describe("annotation sidebar", () => {
     delete window.__ANNOTATIONS__;
     delete window.fetch;
     delete navigator.clipboard;
+    delete window.Prism;
     delete document.execCommand;
   });
 
@@ -263,6 +266,111 @@ describe("annotation sidebar", () => {
     });
     expect(document.querySelector(".bd-annotation-unresolved-comments blockquote").textContent).toBe("原引用");
     expect(document.querySelector(".bd-annotation-unresolved-comments").textContent).toContain("修改后的评论");
+  });
+
+  for (const operation of ["comment", "highlight", "delete"]) {
+    for (const succeeds of [true, false]) {
+      test(`U19_U30_old${operation}${succeeds ? "Success" : "Failure"}CannotChangeReinitializedUi`, async () => {
+        let complete;
+        window.fetch.mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              complete = resolve;
+            }),
+        );
+        const saved = protocolView({
+          id: 93,
+          color: "yellow",
+          selectedText: "可批注",
+          annotationText: "旧评论",
+          startOffset: 0,
+          endOffset: 3,
+          ownedByCurrentVisitor: true,
+        });
+        if (operation === "delete") {
+          window.__ANNOTATIONS__ = [saved];
+          bootAnnotations();
+          document.querySelector("#bd-annotation-sidebar-toggle").click();
+          window.confirm = jest.fn(() => true);
+          const actions = document.querySelectorAll(".bd-annotation-feed-actions button");
+          actions[actions.length - 1].click();
+        } else {
+          const node = document.querySelector('[data-annotation-segment="s0"]').firstChild;
+          const range = document.createRange();
+          range.setStart(node, 0);
+          range.setEnd(node, 3);
+          window.getSelection().removeAllRanges();
+          window.getSelection().addRange(range);
+          document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+          if (operation === "comment") {
+            document.querySelector("[data-comment]").click();
+            document.querySelector(".bd-annotation-composer-text").value = "旧评论";
+            document.querySelector(".bd-annotation-composer-save").click();
+          } else {
+            document.querySelector("[data-highlight]").click();
+            document.querySelector('[data-color="yellow"]').click();
+          }
+        }
+        expect(window.fetch).toHaveBeenCalledTimes(1);
+        window.__ANNOTATIONS__ = [];
+        bootAnnotations();
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        const snapshot = document.querySelector("#post-article").innerHTML;
+        complete(
+          succeeds
+            ? { ok: true, status: operation === "delete" ? 204 : 200, json: () => Promise.resolve(saved) }
+            : { ok: false, status: 422 },
+        );
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        expect(document.querySelector("#post-article").innerHTML).toBe(snapshot);
+        expect(document.querySelector("mark")).toBeNull();
+      });
+    }
+  }
+
+  test("U15_U16_actualPrismAndCodeBlocksRebuildTheSameSavedCodeAnnotation", async () => {
+    const content = document.querySelector("#post-article .content");
+    window._bdAnnotationCleanup();
+    content.innerHTML = fs.readFileSync("scripts/test-fixtures/annotation/rich-page.html", "utf8");
+    const model = {
+      ...JSON.parse(fs.readFileSync("scripts/test-fixtures/annotation/rich-document.json", "utf8")),
+      revision: 7,
+    };
+    window.__ANNOTATION_DOCUMENT__ = model;
+    window.__ANNOTATIONS__ = [
+      {
+        id: 81,
+        color: "blue",
+        visibility: "PUBLIC",
+        selectedText: "anchorProbe",
+        annotationText: "代码评论",
+        ownedByCurrentVisitor: true,
+        anchor: { exact: "anchorProbe" },
+        targetDigest: model.digest,
+        placement: {
+          status: "ANCHORED",
+          targetRevision: 7,
+          projectionVersion: 1,
+          resolverVersion: 1,
+          spans: [{ segmentId: "s6", start: 4, end: 15 }],
+        },
+      },
+    ];
+    window.initAnnotations();
+    expect(content.querySelector('mark[data-id="81"]').textContent).toBe("anchorProbe");
+    window.Prism = { manual: true };
+    window.eval(fs.readFileSync("bytedepth-start/src/main/resources/static/vendor/prism/prism-common.min.js", "utf8"));
+    vi.resetModules();
+    await import("../../main/resources/static/js/code-blocks.js");
+    await vi.waitFor(() => expect(content.querySelector('mark[data-id="81"]')?.textContent).toBe("anchorProbe"));
+    window.Prism.highlightAllUnder(content);
+    await vi.waitFor(() => expect(content.querySelectorAll('mark[data-id="81"]')).toHaveLength(1));
+    const copy = jest.fn().mockResolvedValue(undefined);
+    navigator.clipboard = { writeText: copy };
+    content.querySelector(".bd-code-block__copy").click();
+    await Promise.resolve();
+    expect(copy).toHaveBeenCalledWith("int anchorProbe = 1;\n");
+    expect(content.querySelector("pre code").textContent).toBe("int anchorProbe = 1;\n");
   });
 
   test("sidebar is closed on first visit and toggling remains a per-session choice", () => {

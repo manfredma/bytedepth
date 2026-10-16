@@ -110,3 +110,9 @@ filterBar(action, fields)
 `text`、未标记及未知语言保留纯文本。笔记中的 `asm` 混用 x86、RISC-V 和 Hack，不能统一冒充 NASM；明确标记 `nasm` 时提供高亮。当前 Prism 不支持的 Forth、TLA、Cython、BibTeX 及教学用 `jack`/`vm`/`hdl`/`pseudo` 不做猜测映射。Mermaid 继续走图表渲染。新增语言先核对固定 Prism 的组件和别名，再补真实 token 输出回归，避免“标签正常但内容无高亮”复发。
 
 验证入口：`prism-bundle.test.js` 执行页面实际引用的高亮资源，检查 C、Rust、Go 等 token 和未知语言回退；staging 的 `tests/e2e/code-blocks.spec.js` 用临时草稿检查桌面/手机、三种主题的实际颜色、代码文本和复制完整性，并清理草稿。
+
+## 批注与正文渲染
+
+定位协议以[版本化批注设计](../architecture/annotation-anchoring.md)为准。代码渲染完成发送 `bd:content-rendered`（`detail.segmentIds`）；折叠、tab 等仅改变布局时发送 `bd:content-geometry`。批注观察器批量重核验纯内容片段，不缓存原生 Range；自身绘制通过 `mutate` 暂停观察并先保留待处理的外部记录，避免循环或吞掉渲染变化。实例销毁后，旧请求及渲染回调不得写回当前页面。
+
+`post-mermaid.js` 保留源码并逐块处理成功与失败，不让一张图阻塞正文；失败显示源码提示。图形文字不属于可提交选区。`annotation.test.js`、`annotation-render-lifecycle.test.js` 和 `post-mermaid.test.js` 覆盖渲染、异步乱序及销毁。Prism 接缝测试必须使用真正的 `#post-article .content` 与代码复制按钮；仅导入一个提前返回的组件不能证明集成行为。单测中的 SVG 结构样本只证明替换与排除规则，实际 SVG 几何仍由 staging 浏览器验证。
