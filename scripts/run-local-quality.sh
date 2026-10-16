@@ -14,6 +14,9 @@ bash scripts/format-check.sh --all
 bash scripts/test-format-code.sh
 bash scripts/test-agent-delivery-workflow.sh
 bash scripts/test-handoff-documentation.sh
+bash scripts/test-run-local-quality.sh
+bash scripts/test-local-quality-runner-boundary.sh
+bash scripts/test-release-platform-only.sh
 bash scripts/test-staging-platform-contract.sh
 bash scripts/test-staging-runtime-preparation.sh
 bash scripts/test-staging-test-config.sh

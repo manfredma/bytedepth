@@ -6,11 +6,11 @@
 
 ## 上下文
 
-当前 [ADR-0011](0011-rendered-text-annotation-anchors.md) 依赖浏览器正文 `textContent` 与服务端 Markdown 文本投影一致。增强代码块增加工具栏和行号、Prism 重建文本节点、Mermaid 异步增加或替换节点后，该假设不成立。服务端定位失败会设置 `deleted=true`，使仍有价值的评注退出可见列表。相关已知问题见 [TD-0005](../../engineering/technical-debt.md#td-0005增强代码块与服务端批注文本的表示不同)。
+原有 [ADR-0011](0011-rendered-text-annotation-anchors.md) 依赖浏览器正文 `textContent` 与服务端 Markdown 文本投影一致。增强代码块增加工具栏和行号、Prism 重建文本节点、Mermaid 异步增加或替换节点后，该假设不成立。旧服务端定位失败会设置 `deleted=true`，使仍有价值的评注退出可见列表。相关已知问题见 [TD-0005](../../engineering/technical-debt.md#td-0005增强代码块与服务端批注文本的表示不同)。
 
 项目所有者要求长期可靠的方案，并明确要求严重错误在本地单元测试阶段被拦住；集成和浏览器测试只能补充证明环境边界。
 
-本决策已接受，尚未实施，不描述已经实现的能力；当前行为仍以 ADR-0011 和实际源码为准。详细的协议、失效处理和测试验收以[批注锚定设计](../annotation-anchoring.md)为唯一来源。本决策实现完成后，再将 ADR-0011 标记为 Superseded。
+本决策已实施，替代 ADR-0011。详细协议、失效处理和测试验收以[批注锚定设计](../annotation-anchoring.md)为唯一来源；发布与环境验证状态以 release-platform 的候选 SHA、制品摘要和 evidence 为准，ADR 状态不代表已经上线。
 
 ## 决策
 

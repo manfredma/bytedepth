@@ -165,20 +165,60 @@ erDiagram
 
 ### post_annotation — 文章批注
 
-| 列               | 类型         | 约束                       | 说明                                       |
-| ---------------- | ------------ | -------------------------- | ------------------------------------------ |
-| id               | BIGINT       | PK, AUTO_INCREMENT         |                                            |
-| post_id          | BIGINT       | NOT NULL → post.id         | 文章 ID                                    |
-| user_id          | BIGINT       | NULL → user.id             | 登录批注作者（匿名时为空）                 |
-| owner_token_hash | CHAR(64)     | NULL                       | 匿名浏览器身份令牌的 SHA-256 摘要          |
-| selected_text    | VARCHAR(500) | NOT NULL                   | 被批注的文本                               |
-| annotation_text  | TEXT         | NULL                       | 批注评论（纯划线时为空）                   |
-| color            | VARCHAR(20)  | NOT NULL, DEFAULT 'yellow' | red / yellow / green / blue                |
-| visibility       | VARCHAR(16)  | NOT NULL, DEFAULT 'PUBLIC' | PRIVATE / PUBLIC                           |
-| start_offset     | INT          | NOT NULL                   | 正文 textContent 起始偏移                  |
-| end_offset       | INT          | NOT NULL                   | 正文 textContent 结束偏移                  |
-| created_at       | DATETIME     | NOT NULL                   |                                            |
-| deleted          | TINYINT(1)   | NOT NULL, DEFAULT 0        | 逻辑删除：文章内容变更后偏移无法重算时标记 |
+| 列               | 类型         | 约束                       | 说明                                 |
+| ---------------- | ------------ | -------------------------- | ------------------------------------ |
+| id               | BIGINT       | PK, AUTO_INCREMENT         |                                      |
+| post_id          | BIGINT       | NOT NULL → post.id         | 文章 ID                              |
+| user_id          | BIGINT       | NULL → user.id             | 登录批注作者（匿名时为空）           |
+| owner_token_hash | CHAR(64)     | NULL                       | 匿名浏览器身份令牌的 SHA-256 摘要    |
+| selected_text    | VARCHAR(500) | NOT NULL                   | 被批注的文本                         |
+| annotation_text  | TEXT         | NULL                       | 批注评论（纯划线时为空）             |
+| color            | VARCHAR(20)  | NOT NULL, DEFAULT 'yellow' | red / yellow / green / blue          |
+| visibility       | VARCHAR(16)  | NOT NULL, DEFAULT 'PUBLIC' | PRIVATE / PUBLIC                     |
+| start_offset     | INT          | NOT NULL                   | 历史偏移保留；新记录为创建时码点位置 |
+| end_offset       | INT          | NOT NULL                   | 历史偏移保留；不随重新定位覆盖       |
+| created_at       | DATETIME     | NOT NULL                   |                                      |
+| deleted          | TINYINT(1)   | NOT NULL, DEFAULT 0        | 旧重算器的历史标记；新定位失败不删除 |
+
+V29 新增 `anchor_json LONGTEXT NULL`（不可变原始选择器）与 `migration_baseline_version BIGINT NULL`（历史迁移分类基线，不是创建版本）。锚点为空的历史记录仅创建者可见；基线非空时不自动重新分类。普通编辑不能覆盖原文依据，用户明确删除仍物理删除批注，并保留请求 tombstone。
+
+### post_content_revision — 不可变正文版本
+
+| 列              | 类型     | 约束                                | 说明                 |
+| --------------- | -------- | ----------------------------------- | -------------------- |
+| post_id         | BIGINT   | 复合 PK                             | 文章 ID              |
+| content_version | BIGINT   | 复合 PK                             | 对应文章版本         |
+| markdown        | LONGTEXT | NOT NULL                            | 该版本原始正文       |
+| document_json   | LONGTEXT | NOT NULL                            | 版本化正文模型与摘要 |
+| baseline        | BOOLEAN  | NOT NULL                            | 是否为首次可证实基线 |
+| created_at      | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 记录创建时间         |
+
+只插入，不覆盖；页内容、模型和版本在文章行锁内取得同一快照。现有版本之前的历史不补造。
+
+### annotation_request — 批注创建请求与删除 tombstone
+
+| 列            | 类型        | 约束                    | 说明                                       |
+| ------------- | ----------- | ----------------------- | ------------------------------------------ |
+| post_id       | BIGINT      | 复合 PK                 | 文章 ID                                    |
+| owner_key     | VARCHAR(80) | 复合 PK                 | 登录用户 ID 或匿名身份摘要，不保存原 token |
+| request_id    | CHAR(36)    | 复合 PK                 | 本次创建操作标识                           |
+| payload_hash  | CHAR(64)    | NOT NULL                | 不可变请求载荷摘要                         |
+| annotation_id | BIGINT      | NOT NULL, INDEX         | 创建结果标识                               |
+| deleted       | BOOLEAN     | NOT NULL, DEFAULT FALSE | 明确删除后阻止重放复活                     |
+
+同一文章、创建者和请求标识只创建一次；同键不同载荷拒绝。用户删除后请求记录保留。
+
+### annotation_placement — 可重建的指定版本定位缓存
+
+| 列                 | 类型     | 约束     | 说明                 |
+| ------------------ | -------- | -------- | -------------------- |
+| annotation_id      | BIGINT   | 复合 PK  | 原始批注标识         |
+| target_revision    | BIGINT   | 复合 PK  | 页面目标正文版本     |
+| projection_version | INT      | 复合 PK  | 文本投影规则版本     |
+| resolver_version   | INT      | 复合 PK  | 定位规则版本         |
+| placement_json     | LONGTEXT | NOT NULL | 状态、原因及核验范围 |
+
+缓存不替代原始锚点。状态、码点与 UTF-16 转换、模型摘要和历史迁移规则见[批注锚定设计](annotation-anchoring.md)。以上关系是应用约束，V29 未新增数据库外键。
 
 ### post_rating — 文章评分
 
@@ -381,5 +421,7 @@ V10 引入统一 `user` 表后，`admin_user` 的数据已迁移到 `user`，该
 | V23  | drop_persistent_logins                  | 删除 persistent_logins                                                                               |
 | V25  | add_view_log_archive_stats              | 访问日志小时/国家聚合、归档状态、表空间维护状态                                                      |
 | V27  | add_reading_history                     | 登录阅读事件与用户-文章长期阅读历史投影                                                              |
+
+| V29 | versioned_annotation_anchors | post_annotation 原始锚点及迁移基线；post_content_revision、annotation_request、annotation_placement |
 
 V5、V7、V8、V9、V16、V17 为种子数据迁移（分类、权限），不涉及表结构变更。

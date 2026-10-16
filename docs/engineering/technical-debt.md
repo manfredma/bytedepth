@@ -45,11 +45,12 @@
 
 ## TD-0005：增强代码块与服务端批注文本的表示不同
 
-- 状态：`Open`
+- 状态：`In Progress`
 - 发现日期：2026-10-14
 - 范围：增强代码块之后的批注重定位；不是本次脚注新增的问题。
 - 复现输入：Markdown 为 ` ```java\nx\n```\n\n目标 `（`\n` 表示换行）。从基线完整 SHA `80faf9fe98616646d9de7e0b0817c4f078155b4a` 提取两侧实现，用 Java 25 渲染并去标签、解码 HTML 实体后，页面文本中“目标”的 UTF-16 起始偏移为 28，`MarkdownTextExtractor.renderedText` 中为 3；本次脚注分支结果相同。该证据是离线渲染结果，尚未作为 staging 浏览器复现。
 - 根因：adapter 的 `EnhancedCodeBlockRenderer` 添加语言名、操作按钮、行号和布局空白；app 的服务端批注文本仍使用 CommonMark 普通代码块渲染。共用扩展和 sanitizer 不能消除这一表示差异。
 - 影响：文章编辑后，增强代码块之后的已有批注可能重定位错误；脚注正文与说明的文本一致性回归不等于所有 Markdown 组件都已对齐。
-- 后续方向：统一批注所用 DOM 文本与服务端文本的契约，明确代码框操作文案、行号和布局空白是否参与偏移，再调整两侧实现；不在脚注功能中顺带迁移代码框模块。
+- 代码与单测：采用 [ADR-0024](../architecture/decisions/0024-versioned-annotation-selectors.md) 的单一正文模型、不可变版本锚点与核验显示；无法确认的批注保留原引用和评注。共享渲染 golden、真实 Prism、Mermaid 异步生命周期、U01–U46 与六类严重变异均进入本地门禁，测试入口见[代码质量](../agent-guides/code-quality.md#批注单测证据与反例)。
+- 修复边界：任意改写或重复段落缺少身份依据时不猜测；旧数据依据不足仅创建者可见。staging 与人工发布验收完成前保留 In Progress，不把本地通过称作债务关闭。
 - 验收条件：将上述最小输入沉淀为两侧文本一致性自动回归，并在 staging 桌面/手机验证增强代码块前后及脚注内的批注在编辑后仍正确定位；保持代码框复制、行号和展开/收起行为。现有 `MarkdownRendererTest` 的脚注文本一致性与 `tests/e2e/footnotes.spec.js` 继续保护本次纯正文脚注场景。

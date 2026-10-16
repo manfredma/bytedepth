@@ -23,6 +23,11 @@ grep -Fq 'Host Agent' "$ROOT/AGENTS.md"
 grep -Fq '完整 commit SHA' "$ROOT/docs/engineering/release-platform-only.md"
 grep -Fq 'scripts/prepare-release.sh' "$ROOT/docs/engineering/release-platform-only.md"
 grep -Fq '不允许从项目工作区直接发布' "$ROOT/deploy/README.md"
+grep -Fq 'Agent 使用 canonical API' "$ROOT/docs/releases/README.md"
+if rg -n '触发候选任务只允许通过 release-platform 页面|发布.*必须在 release-platform 页面完成' "$ROOT/docs/releases/README.md"; then
+  printf 'Agent delivery must follow canonical API documentation.\n' >&2
+  exit 1
+fi
 if rg -n \
   'deploy/(deploy-staging|deploy-production|deploy-production-remote)\.sh|scripts/verify-production-release\.sh' \
   "$ROOT/AGENTS.md" "$ROOT/deploy/README.md" "$ROOT/docs/engineering" "$ROOT/docs/releases" "$ROOT/docs/security" \

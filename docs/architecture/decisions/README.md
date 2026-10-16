@@ -30,7 +30,7 @@
 | [ADR-0008](0008-production-entry-and-staging-preview-route.md) | 统一生产远程部署入口与 staging 预览路由           | Proposed   | 2026-09-16 |
 | [ADR-0009](0009-tiered-view-log-retention.md)                  | 分层保留访问统计并由 Spring 定时归档              | Accepted   | 2026-09-18 |
 | [ADR-0010](0010-post-content-version.md)                       | 将文章内容版本号存储在文章主表                    | Accepted   | 2026-09-20 |
-| [ADR-0011](0011-rendered-text-annotation-anchors.md)           | 批注使用阅读页渲染文本作为锚点                    | Accepted   | 2026-09-21 |
+| [ADR-0011](0011-rendered-text-annotation-anchors.md)           | 批注使用阅读页渲染文本作为锚点                    | Superseded | 2026-09-21 |
 | [ADR-0012](0012-page-navigation-over-partial-replacement.md)   | 文章级导航使用完整页面导航而非局部替换            | Proposed   | 2026-09-22 |
 | [ADR-0013](0013-opt-in-code-block-enhancements.md)             | 代码块增强采用显式启用且保持普通代码块兼容        | Superseded | 2026-09-22 |
 | [ADR-0014](0014-unified-code-block-component.md)               | 所有顶层代码块统一使用可展开代码组件              | Accepted   | 2026-09-23 |

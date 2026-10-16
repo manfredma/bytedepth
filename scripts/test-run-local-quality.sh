@@ -24,6 +24,11 @@ grep -Fqx 'resolve_java_25() {' "$SOURCE_ROOT/scripts/lib/java-25.sh"
 readiness_line="$(grep -nF 'bash scripts/check-release-readiness.sh' "$RUNNER" | cut -d: -f1)"
 npm_ci_line="$(grep -nF 'npm ci --ignore-scripts --no-audit --no-fund' "$RUNNER" | cut -d: -f1)"
 [[ -n "$readiness_line" && -n "$npm_ci_line" && "$readiness_line" -lt "$npm_ci_line" ]]
-! rg -qi 'ssh|staging|production|deploy|release-platform-agent' "$RUNNER"
+# Static staging contract checks are local tests, not external execution.
+# An inverted command is exempt from set -e; use an explicit failing branch.
+if rg -ni '(^|[[:space:]])(ssh|scp|sftp|curl|wget|sudo)[[:space:]]|deploy/|-Pstaging-integration|npm run test:e2e|npx playwright test|release-platform-agent' "$RUNNER"; then
+  printf 'Local quality runner must not execute external service or deployment commands.\n' >&2
+  exit 1
+fi
 
 printf 'Local frontend dependency preflight contract passed.\n'

@@ -26,3 +26,5 @@ Maven、Java 25、完整测试与变更覆盖率的唯一说明见 [maven.md](ma
 `test-annotation-mutations.py` 在临时副本中依次移除引用核验、恢复整页 textContent、歧义取首项、未定位删除、忽略版本和接受旧实例结果。每项必须得到“原版通过 → 正式断言失败 → 恢复通过”；语法、编译或非断言运行时异常不能计为拦截。脚本按 lockfile 为该副本单独安装前端依赖，不污染工作区，也不连接 staging。若变异点因重构失配，门禁失败并要求审阅更新，不允许静默跳过。
 
 跨进程补充入口为 `AnnotationContentUpdateIT`、`AnnotationRevisionTransactionIT` 和 `tests/e2e/annotation*.spec.js`，仅由 staging Host Agent 执行。数据库测试在 run 隔离 schema 内，以独立表名前缀和独立 Flyway history 复现旧批注表升级，不清理应用的历史表；正常启动仍执行完整迁移。浏览器用例为每次执行新建自有文章并追踪读者身份，不能依赖固定文章 ID 或已有批注。测试发现、编译或本机 DOM 模拟不能替代这两类 staging evidence。
+
+本地入口可以执行名称含 staging 的**静态契约检查**，但不得直接执行 Host runner、跨进程 IT/E2E 或主机命令。`test-run-local-quality.sh` 用显式失败分支执行该边界检查；不能仅依赖 `set -e` 与 `! command`，因为取反命令不触发自动退出。`test-local-quality-runner-boundary.sh` 向完整入口副本注入远程命令、Host runner、IT profile 和 E2E 命令，逐项要求拒绝，防止检查器假通过。

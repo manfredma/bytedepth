@@ -1,6 +1,6 @@
 # 阅读批注锚定设计
 
-> 状态：书面设计已确认，正在实施与验证。架构取舍见 [ADR-0024](decisions/0024-versioned-annotation-selectors.md)；待本方案完成后替代 [ADR-0011](decisions/0011-rendered-text-annotation-anchors.md)。
+> 状态：协议与单测门禁已实施。架构取舍见 [ADR-0024](decisions/0024-versioned-annotation-selectors.md)，替代 [ADR-0011](decisions/0011-rendered-text-annotation-anchors.md)；环境验证和发布状态以平台 evidence 为准。
 > 导航：[项目知识库](../README.md) · [统一语言](ubiquitous-language.md) · [批注权限](../security/annotation-write-permissions.md)。
 
 ## 目标与保证
@@ -104,7 +104,7 @@ app 层是跨版本定位的唯一权威实现；浏览器只提交经过映射�
 
 ## 单测验收矩阵
 
-以下为必须实现的行为测试，不是已通过的测试结果。测试名称与用例可细分，但不得用源码包含断言、mock 核心算法或单纯覆盖率代替行为。各变更 Java 类及项目自有定位、投影、显示适配 JavaScript 达到项目要求的行、分支、方法/函数覆盖；第三方源码需保留来源并补适用行为回归，不能以放入 vendor 目录隐藏产品逻辑。
+以下为强制行为验收矩阵，正式测试映射见 `scripts/test-fixtures/annotation/unit-cases.json`；具体运行结果由本次新生成的报告证明。测试名称与用例可细分，但不得用源码包含断言、mock 核心算法或单纯覆盖率代替行为。各变更 Java 类及项目自有定位、投影、显示适配 JavaScript 达到项目要求的行、分支、方法/函数覆盖；第三方源码需保留来源并补适用行为回归，不能以放入 vendor 目录隐藏产品逻辑。
 
 | 编号 | 必测场景                                      | 必须断言的结果                                                 |
 | ---- | --------------------------------------------- | -------------------------------------------------------------- |

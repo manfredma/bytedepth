@@ -32,9 +32,9 @@ bash scripts/prepare-release.sh --version v2.27.0
 
 `buildVersion` 表示真实 Maven 坐标，可以与应用发布版本不同；`commitId` 和 `builtAt` 表示完整源码 SHA 与实际构建时间。版本展示不能替代平台 SHA/digest 校验。历史不可变 JAR 的 `unknown` 不会因平台升级自动改变，必须使用新候选正常构建和发布，不覆盖或重新构建旧 SHA 的制品。
 
-构建、发布、日志、重试、验证和回滚都必须在 release-platform 页面完成，并以页面中的候选、制品和任务记录为准。
+Agent 使用 canonical API 编排构建、发布、重试和验证，并核对平台的候选、制品、日志与任务记录；人类可在 release-platform 页面查看。鉴权与 API 的唯一操作来源为 [Agent 使用手册](https://devops.bytedepth.cn/manual/agent)。
 
-触发候选任务只允许通过 release-platform 页面或授权平台连接器完成；仓库内的 Agent 只能准备 PR、完整 commit SHA 和触发参数，不能把本地脚本执行结果当成平台触发回执。
+仓库内的 Agent 准备 PR、完整 commit SHA 和触发参数后，按手册调用平台 API 并持续跟踪；不能执行主机部署命令，也不能把本地脚本输出当成平台触发回执。
 
 Agent 触发顺序固定为：准备 changelog 版本 → PR head 创建/复用候选 → `QUALITY`/`BUILD` → 创建同 artifact 的 `RELEASE(staging)` flow → staging 集成/E2E、按项目授权规则登记验收状态 → 合并同一个 PR head SHA → 校验 `main` HEAD → 提升同一 artifact 到 production。API 细节和幂等要求见[平台发布说明](../engineering/release-platform-only.md)。
 
