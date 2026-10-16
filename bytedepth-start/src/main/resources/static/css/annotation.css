@@ -833,3 +833,27 @@
     display: none;
   }
 }
+
+/* Unresolved records follow the positioned-card spacer, never a guessed text coordinate. */
+.bd-annotation-unresolved-comments,
+.bd-annotation-unresolved-highlights {
+  position: relative;
+  margin: 16px 0;
+  color: var(--ink-2);
+}
+.bd-annotation-unresolved-comments > h3,
+.bd-annotation-unresolved-highlights > summary {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.bd-annotation-unresolved-comments .bd-annotation-unresolved-item,
+.bd-annotation-unresolved-highlight {
+  position: relative;
+  inset: auto;
+  margin: 12px 0;
+}
+.bd-annotation-unresolved-highlight blockquote {
+  margin: 8px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

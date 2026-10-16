@@ -1,6 +1,6 @@
 # 阅读批注锚定设计
 
-> 状态：书面设计已确认，尚未实施。架构取舍见 [ADR-0024](decisions/0024-versioned-annotation-selectors.md)；当前实现仍遵循 [ADR-0011](decisions/0011-rendered-text-annotation-anchors.md)。
+> 状态：书面设计已确认，正在实施与验证。架构取舍见 [ADR-0024](decisions/0024-versioned-annotation-selectors.md)；待本方案完成后替代 [ADR-0011](decisions/0011-rendered-text-annotation-anchors.md)。
 > 导航：[项目知识库](../README.md) · [统一语言](ubiquitous-language.md) · [批注权限](../security/annotation-write-permissions.md)。
 
 ## 目标与保证
@@ -83,6 +83,8 @@ app 层是跨版本定位的唯一权威实现；浏览器只提交经过映射�
 发布、删除、置顶等会整行保存文章的操作也必须持有同一文章行锁，先读取锁内最新状态，避免元数据操作把并发更新的正文与版本覆盖回旧值。幂等载荷摘要固定按 schema 1 字段顺序，以长度前缀编码原始 UTF-16 码元；null 使用长度 -1，避免非法代理字符经 UTF-8 替换后与不同载荷碰撞。此摘要只用于请求身份，不改变正文模型的 UTF-8 摘要协议。
 
 正文保存与不可变版本快照在同一事务提交。定位失败不阻断正文更新且不修改原批注；当前 placement 按指定目标版本重建。读取不得展示与页面版本不一致的 placement。失败或超时返回未定位状态，不删除评论。搜索索引更新继续使用现有职责边界，不把外部索引操作纳入持锁事务。
+
+浏览器 `AnnotationDocument.describe` 默认保留选区原始空白；创建交互使用 `{trim: true}`，仅在规范正文模型中裁掉选区两端空白并重建相应片段，不改变正文模型本身。`AnnotationDisplay.render` 只接收当前 placement，完整核验后才绘制，并返回本次成功绘制的批注 ID 集合，供侧栏把未定位记录单独展示；它不删除原记录，也不执行跨版本搜索。
 
 ## 渲染生命周期
 

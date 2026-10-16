@@ -1229,9 +1229,14 @@
 
 <!-- 批注必须先于任何外部脚本初始化，避免 CDN 阻塞阅读互动。 -->
 <script th:inline="javascript">
+    window.__ANNOTATION_DOCUMENT__ = /*[[${annotationDocument}]]*/ null;
     window.__ANNOTATIONS__ = /*[[${annotations}]]*/ [];
     window.__CURRENT_USER_ID__ = /*[[${currentUserId}]]*/ null;
 </script>
+<script th:src="@{/vendor/hypothesis-anchoring/trim-range.js}"></script>
+<script th:src="@{/vendor/hypothesis-anchoring/text-range.js}"></script>
+<script th:src="@{/js/annotation-document.js}"></script>
+<script th:src="@{/js/annotation-display.js}"></script>
 <script th:src="@{/js/annotation.js}"></script>
 <script th:src="@{/js/post-image-lightbox.js}"></script>
 <script th:src="@{/vendor/prism/prism-common.min.js}"></script>

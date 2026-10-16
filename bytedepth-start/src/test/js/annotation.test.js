@@ -1,14 +1,77 @@
+import "../../main/resources/static/js/annotation-document.js";
+import "../../main/resources/static/js/annotation-display.js";
+import "../../main/resources/static/js/annotation.js";
 /** @jest-environment jsdom */
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
 const annotationJs = fs.readFileSync(path.resolve(__dirname, "../../main/resources/static/js/annotation.js"), "utf-8");
 const annotationCss = fs.readFileSync(
   path.resolve(__dirname, "../../main/resources/static/css/annotation.css"),
   "utf-8",
 );
 
+// These existing interaction fixtures are a single plain segment. Canonical AST,
+// code/toolbars and Unicode seams use the reviewed cross-language golden suites.
+function protocolView(annotation) {
+  if (annotation.anchor || annotation.placement) return annotation;
+  const model = window.__ANNOTATION_DOCUMENT__;
+  return {
+    ...annotation,
+    anchor: {
+      schemaVersion: 1,
+      sourceRevision: 7,
+      projectionVersion: 1,
+      digest: model.digest,
+      exact: annotation.selectedText,
+      prefix: model.text.slice(0, annotation.startOffset),
+      suffix: model.text.slice(annotation.endOffset),
+      start: annotation.startOffset,
+      end: annotation.endOffset,
+      spans: [{ segmentId: "s0", start: annotation.startOffset, end: annotation.endOffset }],
+      requestId: "00000000-0000-4000-8000-000000000001",
+    },
+    targetDigest: model.digest,
+    placement: {
+      status: "ANCHORED",
+      targetRevision: 7,
+      projectionVersion: 1,
+      resolverVersion: 1,
+      spans: [{ segmentId: "s0", start: annotation.startOffset, end: annotation.endOffset }],
+    },
+  };
+}
+function bootAnnotations() {
+  window._bdAnnotationCleanup?.();
+  const root = document.querySelector("#post-article .content");
+  if (root) {
+    if (!root.querySelector('[data-annotation-segment="s0"]')) {
+      const segment = document.createElement("span");
+      segment.dataset.annotationSegment = "s0";
+      segment.append(...root.childNodes);
+      root.append(segment);
+    }
+    const text = root.querySelector('[data-annotation-segment="s0"]').textContent;
+    window.__ANNOTATION_DOCUMENT__ = {
+      revision: 7,
+      projectionVersion: 1,
+      digest: "d".repeat(64),
+      text,
+      segments: [{ id: "s0", blockId: "b0", kind: "prose", text, start: 0, end: [...text].length }],
+    };
+    window.__ANNOTATIONS__ = (window.__ANNOTATIONS__ || []).map(protocolView);
+  }
+  window.initAnnotations();
+}
+
 describe("annotation sidebar", () => {
   beforeEach(() => {
+    for (const name of ["trim-range", "text-range"])
+      window.eval(
+        fs.readFileSync(
+          path.resolve(__dirname, `../../main/resources/static/vendor/hypothesis-anchoring/${name}.js`),
+          "utf8",
+        ),
+      );
     localStorage.clear();
     window.matchMedia = jest.fn(() => ({ matches: false }));
     Range.prototype.getClientRects = () => [{ left: 10, right: 90, top: 20, bottom: 40, width: 80, height: 20 }];
@@ -19,24 +82,187 @@ describe("annotation sidebar", () => {
       Promise.resolve({
         ok: true,
         json: () =>
-          Promise.resolve({
-            id: 1,
-            selectedText: "可批注",
-            color: "yellow",
-            visibility: "PRIVATE",
-            startOffset: 0,
-            endOffset: 3,
-            ownedByCurrentVisitor: true,
-          }),
+          Promise.resolve(
+            protocolView({
+              id: 1,
+              selectedText: "可批注",
+              color: "yellow",
+              visibility: "PRIVATE",
+              startOffset: 0,
+              endOffset: 3,
+              ownedByCurrentVisitor: true,
+            }),
+          ),
       }),
     );
-    eval(annotationJs);
+    bootAnnotations();
   });
   afterEach(() => {
+    window._bdAnnotationCleanup?.();
+    delete window.__ANNOTATION_DOCUMENT__;
     delete window.__ANNOTATIONS__;
     delete window.fetch;
     delete navigator.clipboard;
     delete document.execCommand;
+  });
+
+  for (const status of [409, 422, 0]) {
+    test(`U33_U35_failure${status}RetainsCommentAndRequestIdentityUntilSuccessfulRetry`, async () => {
+      const node = document.querySelector('[data-annotation-segment="s0"]').firstChild;
+      const range = document.createRange();
+      range.setStart(node, 0);
+      range.setEnd(node, 3);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      document.querySelector("[data-comment]").click();
+      const input = document.querySelector(".bd-annotation-composer-text");
+      input.value = "不可丢失的草稿";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      if (status) window.fetch.mockResolvedValueOnce({ ok: false, status });
+      else window.fetch.mockRejectedValueOnce(new Error("network lost"));
+      const save = document.querySelector(".bd-annotation-composer-save");
+      save.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const first = JSON.parse(window.fetch.mock.calls[0][1].body);
+      expect(first.anchor).toMatchObject({
+        schemaVersion: 1,
+        sourceRevision: 7,
+        projectionVersion: 1,
+        digest: "d".repeat(64),
+        exact: "可批注",
+        spans: [{ segmentId: "s0", start: 0, end: 3 }],
+      });
+      expect(first.anchor.requestId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(first).not.toHaveProperty("startOffset");
+      expect(input.value).toBe("不可丢失的草稿");
+      expect(input.closest(".bd-annotation-composer").hidden).toBe(false);
+      expect(save.dataset.status).toBe(String(status));
+      save.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(JSON.parse(window.fetch.mock.calls[1][1].body)).toEqual(first);
+      expect(input.closest(".bd-annotation-composer").hidden).toBe(true);
+      const nextNode = document
+        .createTreeWalker(document.querySelector('[data-annotation-segment="s0"]'), NodeFilter.SHOW_TEXT)
+        .nextNode();
+      const next = document.createRange();
+      next.setStart(nextNode, 0);
+      next.setEnd(nextNode, 3);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(next);
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      document.querySelector("[data-comment]").click();
+      expect(save.textContent).toBe("保存");
+      expect(save.dataset.status).toBeUndefined();
+      input.value = "下一次独立提交";
+      save.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(JSON.parse(window.fetch.mock.calls[2][1].body).anchor.requestId).not.toBe(first.anchor.requestId);
+    });
+  }
+
+  test("U35_twoPendingRetriesOfOneHighlightCannotDuplicateOrEraseTheVisibleRecord", async () => {
+    const node = document.querySelector('[data-annotation-segment="s0"]').firstChild;
+    const range = document.createRange();
+    range.setStart(node, 0);
+    range.setEnd(node, 3);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    document.querySelector("[data-highlight]").click();
+    const color = document.querySelector('[data-color="yellow"]');
+    color.click();
+    color.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toEqual(JSON.parse(window.fetch.mock.calls[1][1].body));
+    expect(document.querySelectorAll('mark[data-id="1"]')).toHaveLength(1);
+    expect(document.querySelector('mark[data-id="1"]').textContent).toBe("可批注");
+  });
+
+  test("U42_unresolvedCommentsAndCollapsedHighlightsRetainOriginalQuotesAndOwnership", async () => {
+    const base = { color: "yellow", visibility: "PRIVATE", startOffset: 0, endOffset: 2, ownedByCurrentVisitor: true };
+    window.__ANNOTATIONS__ = [
+      {
+        ...protocolView({ ...base, id: 31, selectedText: "已删除的原文", annotationText: "评论还在" }),
+        placement: { status: "UNRESOLVED", targetRevision: 7, projectionVersion: 1, resolverVersion: 1, spans: [] },
+      },
+      {
+        ...protocolView({ ...base, id: 32, selectedText: "原划线", annotationText: null }),
+        placement: { status: "AMBIGUOUS", targetRevision: 7, projectionVersion: 1, resolverVersion: 1, spans: [] },
+      },
+      {
+        ...protocolView({
+          ...base,
+          id: 33,
+          selectedText: "旧数据引用",
+          annotationText: null,
+          ownedByCurrentVisitor: false,
+        }),
+        anchor: null,
+        placement: {
+          status: "LEGACY_UNVERIFIED",
+          targetRevision: 7,
+          projectionVersion: 1,
+          resolverVersion: 1,
+          spans: [],
+        },
+      },
+    ];
+    bootAnnotations();
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    expect(document.querySelector("mark")).toBeNull();
+    expect(document.querySelector(".bd-annotation-unresolved-comments").textContent).toContain("未定位评注（1）");
+    expect(document.querySelector(".bd-annotation-unresolved-comments blockquote").textContent).toBe("已删除的原文");
+    expect(document.querySelectorAll(".bd-annotation-unresolved-comments blockquote")).toHaveLength(1);
+    expect(document.querySelector(".bd-annotation-unresolved-comments").textContent).toContain("评论还在");
+    const highlights = document.querySelector(".bd-annotation-unresolved-highlights");
+    expect(highlights.open).toBe(false);
+    expect(highlights.querySelector("summary").textContent).toBe("未定位划线（2）");
+    expect(highlights.querySelectorAll("button")).toHaveLength(1);
+    expect(document.querySelector(".bd-annotation-toolbar-count").textContent).toBe("1");
+    window.fetch.mockResolvedValueOnce({ ok: true, status: 204 });
+    highlights.querySelector("button").click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(document.querySelector(".bd-annotation-unresolved-highlights summary").textContent).toBe("未定位划线（1）");
+    expect(document.querySelector("mark")).toBeNull();
+  });
+
+  test("U42_editingAnUnresolvedCommentStaysInItsSectionAcrossRelayout", async () => {
+    const original = {
+      ...protocolView({
+        id: 41,
+        color: "blue",
+        visibility: "PRIVATE",
+        startOffset: 0,
+        endOffset: 2,
+        selectedText: "原引用",
+        annotationText: "原评论",
+        ownedByCurrentVisitor: true,
+      }),
+      placement: { status: "UNRESOLVED", targetRevision: 7, projectionVersion: 1, resolverVersion: 1, spans: [] },
+    };
+    window.__ANNOTATIONS__ = [original];
+    bootAnnotations();
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    document.querySelector(".bd-annotation-feed-actions button").click();
+    window.dispatchEvent(new Event("resize"));
+    const input = document.querySelector(".bd-annotation-composer-text");
+    expect(input.closest(".bd-annotation-unresolved-comments")).not.toBeNull();
+    expect(document.querySelector(".bd-annotation-composer-quote").textContent).toBe("原引用");
+    expect(document.querySelector("mark")).toBeNull();
+    input.value = "修改后的评论";
+    window.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ ...original, annotationText: "修改后的评论" }),
+    });
+    document.querySelector(".bd-annotation-composer-save").click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toEqual({
+      annotationText: "修改后的评论",
+      visibility: "PRIVATE",
+    });
+    expect(document.querySelector(".bd-annotation-unresolved-comments blockquote").textContent).toBe("原引用");
+    expect(document.querySelector(".bd-annotation-unresolved-comments").textContent).toContain("修改后的评论");
   });
 
   test("sidebar is closed on first visit and toggling remains a per-session choice", () => {
@@ -61,7 +287,7 @@ describe("annotation sidebar", () => {
     // 即使历史遗留了「打开」偏好，初始化也保持关闭，不再自动展开。
     localStorage.setItem("bd.annotation.sidebar.open", "true");
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
     // 初始化 setOpen(false)：侧栏关闭，且不再回写 localStorage（若回写会变成 'false'）。
     expect(document.querySelector("#bd-annotation-sidebar").classList.contains("bd-annotation-sidebar-open")).toBe(
       false,
@@ -91,7 +317,7 @@ describe("annotation sidebar", () => {
       throw new DOMException("blocked", "SecurityError");
     });
     document.body.innerHTML = `<article id="post-article"><button id="bd-annotation-sidebar-toggle"></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section><section class="bd-annotation-feed"></section></aside></article>`;
-    expect(() => eval(annotationJs)).not.toThrow();
+    expect(() => bootAnnotations()).not.toThrow();
     // 存储不可用时首次访问仍保持关闭，且开关可正常使用。
     expect(document.querySelector("#bd-annotation-sidebar").classList.contains("bd-annotation-sidebar-open")).toBe(
       false,
@@ -109,7 +335,7 @@ describe("annotation sidebar", () => {
   });
 
   test("typing a comment defaults visibility to public while a blank highlight stays private", () => {
-    const text = document.querySelector(".content").firstChild;
+    const text = document.querySelector('.content [data-annotation-segment="s0"]').firstChild;
     const range = document.createRange();
     range.setStart(text, 0);
     range.setEnd(text, 3);
@@ -130,7 +356,8 @@ describe("annotation sidebar", () => {
 
   test("stores trimmed selection text with matching rendered-text offsets", async () => {
     document.querySelector(".content").textContent = "  可批注文本  ";
-    const text = document.querySelector(".content").firstChild;
+    bootAnnotations();
+    const text = document.querySelector('.content [data-annotation-segment="s0"]').firstChild;
     const range = document.createRange();
     range.setStart(text, 0);
     range.setEnd(text, 5);
@@ -144,15 +371,22 @@ describe("annotation sidebar", () => {
     await Promise.resolve();
 
     expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toMatchObject({
-      selectedText: "可批注",
-      startOffset: 2,
-      endOffset: 5,
+      anchor: {
+        schemaVersion: 1,
+        sourceRevision: 7,
+        projectionVersion: 1,
+        digest: "d".repeat(64),
+        exact: "可批注",
+        start: 2,
+        end: 5,
+      },
     });
   });
 
   test("converts element range boundaries to offsets within the selected paragraph", async () => {
     const content = document.querySelector(".content");
     content.innerHTML = "<p>第一行</p><p>第二行</p>";
+    bootAnnotations();
     const firstParagraph = content.querySelector("p");
     const range = document.createRange();
     range.setStart(firstParagraph, 0);
@@ -167,14 +401,12 @@ describe("annotation sidebar", () => {
     await Promise.resolve();
 
     expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toMatchObject({
-      selectedText: "第一行",
-      startOffset: 0,
-      endOffset: 3,
+      anchor: { exact: "第一行", start: 0, end: 3 },
     });
   });
 
   test("opens a two-level menu before posting a private pure highlight even when the sidebar is open", async () => {
-    const text = document.querySelector(".content").firstChild;
+    const text = document.querySelector('.content [data-annotation-segment="s0"]').firstChild;
     const range = document.createRange();
     range.setStart(text, 0);
     range.setEnd(text, 3);
@@ -203,7 +435,7 @@ describe("annotation sidebar", () => {
   test("copies the selected text through the native clipboard and reports success", async () => {
     const writeText = jest.fn(() => Promise.resolve());
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
-    const text = document.querySelector(".content").firstChild;
+    const text = document.querySelector('.content [data-annotation-segment="s0"]').firstChild;
     const range = document.createRange();
     range.setStart(text, 0);
     range.setEnd(text, 3);
@@ -228,7 +460,7 @@ describe("annotation sidebar", () => {
       value: { writeText: jest.fn(() => Promise.reject(new Error("blocked"))) },
     });
     document.execCommand = jest.fn(() => true);
-    const text = document.querySelector(".content").firstChild;
+    const text = document.querySelector('.content [data-annotation-segment="s0"]').firstChild;
     const range = document.createRange();
     range.setStart(text, 0);
     range.setEnd(text, 3);
@@ -249,7 +481,7 @@ describe("annotation sidebar", () => {
 
   test("uses execCommand when the native clipboard is unavailable", async () => {
     document.execCommand = jest.fn(() => true);
-    const text = document.querySelector(".content").firstChild;
+    const text = document.querySelector('.content [data-annotation-segment="s0"]').firstChild;
     const range = document.createRange();
     range.setStart(text, 0);
     range.setEnd(text, 3);
@@ -269,7 +501,7 @@ describe("annotation sidebar", () => {
 
   test("mobile selection opens a highlight-only menu", () => {
     window.matchMedia = jest.fn(() => ({ matches: true }));
-    const text = document.querySelector(".content").firstChild;
+    const text = document.querySelector('.content [data-annotation-segment="s0"]').firstChild;
     const range = document.createRange();
     range.setStart(text, 0);
     range.setEnd(text, 3);
@@ -301,7 +533,7 @@ describe("annotation sidebar", () => {
         return this.classList.contains("bd-annotation-popup") ? 40 : (offsetHeightDescriptor?.get?.call(this) ?? 0);
       },
     });
-    const text = document.querySelector(".content").firstChild;
+    const text = document.querySelector('.content [data-annotation-segment="s0"]').firstChild;
     const range = document.createRange();
     range.setStart(text, 0);
     range.setEnd(text, 3);
@@ -360,7 +592,7 @@ describe("annotation sidebar", () => {
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
 
-    eval(annotationJs);
+    bootAnnotations();
 
     expect(document.querySelector(".bd-annotation-comment-count").textContent).toBe("2");
     expect(document.querySelector(".bd-annotation-toolbar-count").textContent).toBe("2");
@@ -433,7 +665,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     const triggers = document.querySelectorAll(".bd-annotation-comment-trigger");
     expect(triggers).toHaveLength(2);
@@ -500,7 +732,7 @@ describe("annotation sidebar", () => {
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
     // jsdom 默认 getComputedStyle 返回空串，sidebar.position !== 'sticky'，
     // layoutFeed 走非 sticky 提前返回分支：卡片应展开为常规列表而非被离场逻辑隐藏。
-    eval(annotationJs);
+    bootAnnotations();
 
     document.querySelector("#bd-annotation-sidebar-toggle").click();
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -524,7 +756,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><div class="bd-annotation-layout-switch" role="group"><button type="button" data-bd-layout="follow" aria-pressed="true">跟随</button><button type="button" data-bd-layout="compact" aria-pressed="false">紧凑</button></div><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     // 默认跟随型：侧栏带 follow class，切换按钮 aria-pressed 正确。
     expect(document.querySelector("#bd-annotation-sidebar").classList.contains("bd-annotation-feed-follow")).toBe(true);
@@ -571,7 +803,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><div class="bd-annotation-layout-switch" role="group"><button type="button" data-bd-layout="follow" aria-pressed="true">跟随</button><button type="button" data-bd-layout="compact" aria-pressed="false">紧凑</button></div><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
     document.querySelector("#bd-annotation-sidebar-toggle").click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -610,7 +842,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><div class="bd-annotation-layout-switch" role="group"><button type="button" data-bd-layout="follow" aria-pressed="true">跟随</button><button type="button" data-bd-layout="compact" aria-pressed="false">紧凑</button></div><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     // 点击正文「评注」标签：侧栏打开 + 卡片选中。
     const trigger = document.querySelector(".bd-annotation-comment-trigger");
@@ -645,7 +877,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
     document.querySelector("#bd-annotation-sidebar-toggle").click();
 
     const deleteButton = document.querySelector(".bd-annotation-feed-actions button:last-child");
@@ -682,7 +914,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
     document.querySelector("#bd-annotation-sidebar-toggle").click();
 
     document.querySelector(".bd-annotation-feed-actions button").click();
@@ -725,7 +957,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
     document.querySelector("#bd-annotation-sidebar-toggle").click();
 
     document.querySelector(".bd-annotation-feed-actions button").click();
@@ -764,7 +996,7 @@ describe("annotation sidebar", () => {
     window.requestAnimationFrame = (callback) => callback();
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><div class="bd-annotation-layout-switch" role="group"><button type="button" data-bd-layout="follow" aria-pressed="true">跟随</button><button type="button" data-bd-layout="compact" aria-pressed="false">紧凑</button></div><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
 
-    eval(annotationJs);
+    bootAnnotations();
     const feed = document.querySelector(".bd-annotation-feed");
     Object.defineProperty(feed, "clientHeight", { configurable: true, value: 400 });
     feed.getBoundingClientRect = () => ({ top: 100, bottom: 500 });
@@ -794,7 +1026,7 @@ describe("annotation sidebar", () => {
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
 
-    eval(annotationJs);
+    bootAnnotations();
     document.querySelector("#bd-annotation-sidebar-toggle").click();
 
     const card = document.querySelector('.bd-annotation-feed-item[data-id="8"]');
@@ -817,7 +1049,7 @@ describe("annotation sidebar", () => {
         endOffset: 2,
       },
     ];
-    eval(annotationJs);
+    bootAnnotations();
 
     document.querySelector('mark[data-id="8"]').click();
     expect(document.querySelector(".bd-annotation-mobile-note strong").textContent).toBe("重点");
@@ -842,7 +1074,7 @@ describe("annotation sidebar", () => {
         endOffset: 2,
       },
     ];
-    eval(annotationJs);
+    bootAnnotations();
     const mark = document.querySelector('mark[data-id="8"]');
     mark.getBoundingClientRect = () => ({ left: 12, top: 20, bottom: 40 });
     mark.click();
@@ -886,7 +1118,7 @@ describe("annotation sidebar", () => {
         endOffset: 2,
       },
     ];
-    eval(annotationJs);
+    bootAnnotations();
     while (frames.length) {
       frames.shift()();
     }
@@ -952,7 +1184,7 @@ describe("annotation sidebar", () => {
   });
 
   test("dismisses the selection menu after an outside click even if the browser retains the old selection", () => {
-    const text = document.querySelector(".content").firstChild;
+    const text = document.querySelector('.content [data-annotation-segment="s0"]').firstChild;
     const range = document.createRange();
     range.setStart(text, 0);
     range.setEnd(text, 3);
@@ -972,7 +1204,7 @@ describe("annotation sidebar", () => {
 
   test("keeps the selection menu visible after the trailing click in ordinary article content", () => {
     const content = document.querySelector(".content");
-    const text = content.firstChild;
+    const text = content.querySelector('[data-annotation-segment="s0"]').firstChild;
     const range = document.createRange();
     range.setStart(text, 0);
     range.setEnd(text, 3);
@@ -989,7 +1221,7 @@ describe("annotation sidebar", () => {
   });
 
   test("does not suppress the next real selection after the dismissed click ends in the sidebar", () => {
-    const text = document.querySelector(".content").firstChild;
+    const text = document.querySelector('.content [data-annotation-segment="s0"]').firstChild;
     const firstRange = document.createRange();
     firstRange.setStart(text, 0);
     firstRange.setEnd(text, 3);
@@ -1027,7 +1259,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     document.querySelector('mark[data-id="7"]').click();
     const deleteAction = document.querySelector(".bd-annotation-popup [data-delete-annotation]");
@@ -1065,7 +1297,7 @@ describe("annotation sidebar", () => {
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
 
-    eval(annotationJs);
+    bootAnnotations();
 
     expect(document.querySelector(".content").textContent).toBe("可批注文本");
     expect(document.querySelector('mark[data-id="1"] mark[data-id="2"]')).not.toBeNull();
@@ -1085,7 +1317,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     document.querySelector('mark[data-id="7"]').click();
     window.fetch.mockReturnValueOnce(Promise.resolve({ ok: false, status: 500 }));
@@ -1104,12 +1336,12 @@ describe("annotation sidebar", () => {
 
   test("reports failure and leaves the color menu when creating a highlight fails", async () => {
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     const content = document.querySelector(".content");
     const range = document.createRange();
-    range.setStart(content.firstChild, 0);
-    range.setEnd(content.firstChild, 2);
+    range.setStart(content.querySelector('[data-annotation-segment="s0"]').firstChild, 0);
+    range.setEnd(content.querySelector('[data-annotation-segment="s0"]').firstChild, 2);
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
@@ -1128,16 +1360,17 @@ describe("annotation sidebar", () => {
     // 失败时不写入 mark；popup 展示失败反馈。
     expect(document.querySelector('mark[data-id="1"]')).toBeNull();
     expect(document.querySelector(".bd-annotation-copy-result").textContent).toBe("划线失败，请重试");
+    expect(document.querySelector('.bd-annotation-popup [data-color="yellow"]')).not.toBeNull();
   });
 
   test("refreshes csrf token and retries after 403 when creating a highlight", async () => {
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     const content = document.querySelector(".content");
     const range = document.createRange();
-    range.setStart(content.firstChild, 0);
-    range.setEnd(content.firstChild, 2);
+    range.setStart(content.querySelector('[data-annotation-segment="s0"]').firstChild, 0);
+    range.setEnd(content.querySelector('[data-annotation-segment="s0"]').firstChild, 2);
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
@@ -1154,15 +1387,17 @@ describe("annotation sidebar", () => {
       Promise.resolve({
         ok: true,
         json: () =>
-          Promise.resolve({
-            id: 1,
-            selectedText: "可批",
-            color: "yellow",
-            visibility: "PRIVATE",
-            startOffset: 0,
-            endOffset: 2,
-            ownedByCurrentVisitor: true,
-          }),
+          Promise.resolve(
+            protocolView({
+              id: 1,
+              selectedText: "可批",
+              color: "yellow",
+              visibility: "PRIVATE",
+              startOffset: 0,
+              endOffset: 2,
+              ownedByCurrentVisitor: true,
+            }),
+          ),
       }),
     );
     document.querySelector('.bd-annotation-popup [data-color="yellow"]').click();
@@ -1171,6 +1406,7 @@ describe("annotation sidebar", () => {
     // 首次 POST 带旧 token；刷新后第二次 POST 带新 token。
     expect(window.fetch.mock.calls[0][1].headers["X-CSRF-TOKEN"]).toBe("token");
     expect(window.fetch.mock.calls[2][1].headers["X-CSRF-TOKEN"]).toBe("token2");
+    expect(window.fetch.mock.calls[2][1].body).toBe(window.fetch.mock.calls[0][1].body);
     expect(window.fetch.mock.calls[2][1].method).toBe("POST");
     // 重试成功后写入 mark，不显示失败。
     expect(document.querySelector('mark[data-id="1"]')).not.toBeNull();
@@ -1179,12 +1415,12 @@ describe("annotation sidebar", () => {
 
   test("retries after 403 when saving a comment", async () => {
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     const content = document.querySelector(".content");
     const range = document.createRange();
-    range.setStart(content.firstChild, 0);
-    range.setEnd(content.firstChild, 2);
+    range.setStart(content.querySelector('[data-annotation-segment="s0"]').firstChild, 0);
+    range.setEnd(content.querySelector('[data-annotation-segment="s0"]').firstChild, 2);
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
@@ -1201,22 +1437,25 @@ describe("annotation sidebar", () => {
       Promise.resolve({
         ok: true,
         json: () =>
-          Promise.resolve({
-            id: 2,
-            selectedText: "可批",
-            annotationText: "我的评论",
-            color: "yellow",
-            visibility: "PUBLIC",
-            startOffset: 0,
-            endOffset: 2,
-            ownedByCurrentVisitor: true,
-          }),
+          Promise.resolve(
+            protocolView({
+              id: 2,
+              selectedText: "可批",
+              annotationText: "我的评论",
+              color: "yellow",
+              visibility: "PUBLIC",
+              startOffset: 0,
+              endOffset: 2,
+              ownedByCurrentVisitor: true,
+            }),
+          ),
       }),
     );
     document.querySelector(".bd-annotation-composer-save").click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(window.fetch.mock.calls[2][1].headers["X-CSRF-TOKEN"]).toBe("token2");
+    expect(window.fetch.mock.calls[2][1].body).toBe(window.fetch.mock.calls[0][1].body);
     // 重试成功：composer 关闭，且未出现失败文案。
     expect(document.querySelector(".bd-annotation-composer").hidden).toBe(true);
     expect(document.querySelector(".bd-annotation-composer-save").textContent).not.toBe("保存失败，请重试");
@@ -1224,12 +1463,12 @@ describe("annotation sidebar", () => {
 
   test("reports data-status 403 when token refresh cannot find a new meta", async () => {
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     const content = document.querySelector(".content");
     const range = document.createRange();
-    range.setStart(content.firstChild, 0);
-    range.setEnd(content.firstChild, 2);
+    range.setStart(content.querySelector('[data-annotation-segment="s0"]').firstChild, 0);
+    range.setEnd(content.querySelector('[data-annotation-segment="s0"]').firstChild, 2);
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
@@ -1247,17 +1486,18 @@ describe("annotation sidebar", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(document.querySelector(".bd-annotation-copy-result").textContent).toBe("划线失败，请重试");
+    expect(document.querySelector('.bd-annotation-popup [data-color="yellow"]')).not.toBeNull();
     expect(document.querySelector(".bd-annotation-copy-result").getAttribute("data-status")).toBe("403");
   });
 
   test("reports data-status 500 for non-403 failures without retrying", async () => {
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     const content = document.querySelector(".content");
     const range = document.createRange();
-    range.setStart(content.firstChild, 0);
-    range.setEnd(content.firstChild, 2);
+    range.setStart(content.querySelector('[data-annotation-segment="s0"]').firstChild, 0);
+    range.setEnd(content.querySelector('[data-annotation-segment="s0"]').firstChild, 2);
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
@@ -1276,12 +1516,12 @@ describe("annotation sidebar", () => {
 
   test("reports data-status 0 for network errors", async () => {
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     const content = document.querySelector(".content");
     const range = document.createRange();
-    range.setStart(content.firstChild, 0);
-    range.setEnd(content.firstChild, 2);
+    range.setStart(content.querySelector('[data-annotation-segment="s0"]').firstChild, 0);
+    range.setEnd(content.querySelector('[data-annotation-segment="s0"]').firstChild, 2);
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
@@ -1298,12 +1538,12 @@ describe("annotation sidebar", () => {
 
   test("keeps the old token when the refresh page itself returns non-ok", async () => {
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     const content = document.querySelector(".content");
     const range = document.createRange();
-    range.setStart(content.firstChild, 0);
-    range.setEnd(content.firstChild, 2);
+    range.setStart(content.querySelector('[data-annotation-segment="s0"]').firstChild, 0);
+    range.setEnd(content.querySelector('[data-annotation-segment="s0"]').firstChild, 2);
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
@@ -1335,7 +1575,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     document.querySelector('mark[data-id="7"]').click();
     // DELETE(403) → GET 刷新拿新 token → DELETE 重试 204 成功
@@ -1368,7 +1608,7 @@ describe("annotation sidebar", () => {
     expect(annotationCss).toContain("border-style: dashed");
     expect(annotationCss).toContain(".bd-annotation-comment-trigger");
     expect(annotationCss).toContain("transform: translateY(-50%);");
-    expect(annotationJs).toContain("const labelGutter = index === 0 ? 9 : 0;");
+    // Gutter geometry is asserted through the real display adapter behavior suite.
     expect(annotationJs).toContain("item.hidden = false;");
     // 跟随型定位与 compact 重置两种分支并存。
     expect(annotationJs).toContain('item.style.transform = "";');
@@ -1422,7 +1662,7 @@ describe("annotation sidebar", () => {
       },
     ];
     document.body.innerHTML = `<meta name="_csrf" content="token"><article id="post-article" class="bd-annotation-scope"><button id="bd-annotation-sidebar-toggle"><span class="bd-annotation-toolbar-count" hidden></span></button><div class="content">可批注文本</div><aside id="bd-annotation-sidebar"><span class="bd-annotation-comment-count"></span><button class="bd-annotation-sidebar-close"></button><section class="bd-annotation-feed"></section><section class="bd-annotation-composer" hidden><div class="bd-annotation-composer-quote"></div><div class="bd-annotation-type-picker"><button type="button" class="bd-annotation-type-trigger"><span class="bd-annotation-type-label"></span></button><div class="bd-annotation-type-menu" hidden><button data-bd-annotation-type="blue"></button><button data-bd-annotation-type="yellow"></button><button data-bd-annotation-type="green"></button><button data-bd-annotation-type="red"></button></div></div><textarea class="bd-annotation-composer-text"></textarea><select class="bd-annotation-visibility"><option value="PUBLIC">公开</option><option value="PRIVATE">私有</option></select><button class="bd-annotation-composer-cancel"></button><button class="bd-annotation-composer-save"></button></section></aside></article>`;
-    eval(annotationJs);
+    bootAnnotations();
 
     // 框锚正文文字容器（随其滚动整体带走），不再挂在 article 视口层。
     const content = document.querySelector(".content");

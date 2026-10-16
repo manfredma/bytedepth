@@ -377,3 +377,33 @@ test("U30_dependencyReturningAWrongDomRangeIsRejectedBeforeDisplay", () => {
   w.HypothesisTextRange = { TextRange: { fromOffsets: () => ({ toRange: () => wrong }) } };
   expect(map.ranges([{ segmentId: "s1", start: 0, end: 1 }])).toHaveProperty("error");
 });
+
+test("U09_U26_optionalSelectionTrimPreservesCanonicalWhitespaceOutsideTheQuote", () => {
+  const { w, root, model, map } = boot();
+  const segment = model.segments.at(-1);
+  const el = root.querySelector(`[data-annotation-segment="${segment.id}"]`);
+  const r = w.document.createRange();
+  r.selectNodeContents(el);
+  const raw = map.describe(r);
+  const trimmed = map.describe(r, { trim: true });
+  expect(raw.exact).toBe(" & \u00a0");
+  expect(trimmed.exact).toBe("&");
+  expect(trimmed.suffix).toBe(" \u00a0");
+  expect(trimmed.end).toBe(raw.end - 2);
+  expect(trimmed.start).toBe(raw.start + 1);
+  expect(trimmed.prefix.endsWith("后文  ")).toBe(true);
+  root.innerHTML = '<span data-annotation-segment="s0">   </span>';
+  const spaces = mapperForSpaces(root);
+  const blank = w.document.createRange();
+  blank.selectNodeContents(root.firstChild);
+  expect(spaces.describe(blank, { trim: true })).toEqual({ error: "INVALID_MAPPING" });
+});
+function mapperForSpaces(root) {
+  return mappingAPI.create(root, {
+    revision: 7,
+    projectionVersion: 1,
+    digest: "d".repeat(64),
+    text: "   ",
+    segments: [{ id: "s0", blockId: "b0", kind: "prose", text: "   ", start: 0, end: 3 }],
+  });
+}

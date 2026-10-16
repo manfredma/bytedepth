@@ -155,7 +155,7 @@
       };
     }
 
-    function describe(selection) {
+    function describe(selection, options = {}) {
       return guard(() => {
         let range = selection;
         if (selection && "rangeCount" in selection) {
@@ -167,7 +167,7 @@
         if (!range || range.collapsed || !root.contains(range.startContainer) || !root.contains(range.endContainer)) {
           reject();
         }
-        const spans = [];
+        let spans = [];
         for (const segment of model.segments) {
           const els = root.querySelectorAll(`[data-annotation-segment="${segment.id}"]`);
           if (![...els].some((el) => range.intersectsNode(el))) {
@@ -194,8 +194,26 @@
           });
         }
         resolve(spans);
-        const { start, end } = bounds(spans);
+        let { start, end } = bounds(spans);
         const text = codepoints(model.text);
+        if (options.trim) {
+          // Trim canonical edges, including virtual block separators. Native Range
+          // edges may be elements; upstream trimRange requires text-node edges.
+          while (start < end && !text[start].trim()) {
+            start += 1;
+          }
+          while (end > start && !text[end - 1].trim()) {
+            end -= 1;
+          }
+          spans = model.segments
+            .filter((segment) => segment.start < end && segment.end > start)
+            .map((segment) => ({
+              segmentId: segment.id,
+              start: Math.max(start, segment.start) - segment.start,
+              end: Math.min(end, segment.end) - segment.start,
+            }));
+          resolve(spans);
+        }
         const exact = text.slice(start, end).join("");
         if (!exact.trim()) {
           reject();

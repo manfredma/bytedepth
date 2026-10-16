@@ -167,6 +167,35 @@ class PostControllerTest {
     }
 
     @Test
+    void U28_bootstrapJsonMatchesTheRenderedRevisionAndEscapesScriptClosers() throws Exception {
+        String text = "安全正文 </script><script data-annotation-attack>attack()</script>\u2028末尾";
+        PostDTO dto = new PostDTO();
+        dto.setId(91L);
+        dto.setSlug("safe-bootstrap");
+        dto.setTitle("标题");
+        dto.setContent(text);
+        dto.setStatus("PUBLISHED");
+        var article = ArticleRevisionFixture.from(dto);
+        when(getPostQryExe.executeBySlug("safe-bootstrap")).thenReturn(dto);
+        when(articleRevisions.current(91)).thenReturn(article);
+        when(postRepository.findById(91L)).thenReturn(Optional.of(article.post()));
+        String html = mockMvc.perform(get("/posts/safe-bootstrap"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(html).doesNotContain("</script><script data-annotation-attack>");
+        var json = java.util.regex.Pattern.compile("window\\.__ANNOTATION_DOCUMENT__ = (.*);")
+                .matcher(html);
+        assertThat(json.find()).isTrue();
+        var model = tools.jackson.databind.json.JsonMapper.builder().build().readTree(json.group(1));
+        assertThat(model.path("text").asText()).isEqualTo(text);
+        assertThat(model.path("revision").asInt()).isEqualTo(1);
+        assertThat(model.path("digest").asText())
+                .isEqualTo(article.revision().document().digest());
+    }
+
+    @Test
     void getPostDetail_existingPost_returnsOkWithPostModel() throws Exception {
         PostDTO dto = new PostDTO();
         dto.setId(1L);

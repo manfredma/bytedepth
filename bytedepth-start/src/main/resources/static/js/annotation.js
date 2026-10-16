@@ -14,12 +14,15 @@ window.initAnnotations = function () {
   if (!content || !sidebar || !toggle) {
     return;
   }
-  const commentOutlineLayer = document.createElement("div");
-  commentOutlineLayer.className = "bd-annotation-comment-outline-layer";
-  commentOutlineLayer.setAttribute("aria-hidden", "true");
-  content.appendChild(commentOutlineLayer);
-  const outlineNodes = new Map();
-
+  const events = new window.AbortController();
+  function listen(target, type, listener, options) {
+    const settings = typeof options === "boolean" ? { capture: options } : options;
+    target.addEventListener(type, listener, { ...settings, signal: events.signal });
+  }
+  const model = window.__ANNOTATION_DOCUMENT__;
+  const documentMap = window.AnnotationDocument.create(content, model);
+  const display = window.AnnotationDisplay.create(content, documentMap);
+  let paintedIds = new Set();
   let annotations = window.__ANNOTATIONS__ || [];
   let selected = null;
   let color = "yellow";
@@ -105,6 +108,15 @@ window.initAnnotations = function () {
     });
   }
 
+  function storeAnnotation(saved) {
+    const index = annotations.findIndex((annotation) => String(annotation.id) === String(saved.id));
+    if (index < 0) {
+      annotations.push(saved);
+    } else {
+      annotations[index] = saved;
+    }
+  }
+
   function comments() {
     return annotations.filter((annotation) => annotation.annotationText && annotation.annotationText.trim());
   }
@@ -141,44 +153,21 @@ window.initAnnotations = function () {
     }
   }
 
-  function textLength(node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return node.parentElement?.closest(".bd-annotation-comment-trigger") ? 0 : node.textContent.length;
-    }
-    return Array.from(node.childNodes).reduce((length, child) => length + textLength(child), 0);
-  }
-
-  function offsetBeforeNode(node) {
-    let offset = 0;
-    let current = node;
-    while (current && current !== content) {
-      let sibling = current.previousSibling;
-      while (sibling) {
-        offset += textLength(sibling);
-        sibling = sibling.previousSibling;
-      }
-      current = current.parentNode;
-    }
-    return offset;
-  }
-
-  function boundaryOffset(container, offset) {
-    if (container.nodeType === Node.TEXT_NODE) {
-      return offsetBeforeNode(container) + offset;
-    }
-    const child = container.childNodes[offset];
-    return child ? offsetBeforeNode(child) : offsetBeforeNode(container) + textLength(container);
-  }
-
   function selectionData(range) {
-    const rawSelectedText = range.toString();
-    const selectedText = rawSelectedText.trim();
-    const leadingWhitespaceLength = rawSelectedText.length - rawSelectedText.trimStart().length;
-    const startOffset = boundaryOffset(range.startContainer, range.startOffset) + leadingWhitespaceLength;
+    const description = documentMap.describe(range, { trim: true });
+    if (description.error) {
+      return null;
+    }
     return {
-      startOffset,
-      endOffset: startOffset + selectedText.length,
-      selectedText,
+      selectedText: description.exact,
+      anchor: {
+        ...description,
+        schemaVersion: 1,
+        sourceRevision: model.revision,
+        projectionVersion: model.projectionVersion,
+        digest: model.digest,
+        requestId: window.crypto.randomUUID(),
+      },
     };
   }
 
@@ -200,19 +189,6 @@ window.initAnnotations = function () {
     );
   }
 
-  function unwrapMarks() {
-    commentOutlineLayer.replaceChildren();
-    outlineNodes.clear();
-    content.querySelectorAll("mark.bd-annotation-highlight").forEach((mark) => {
-      const parent = mark.parentNode;
-      while (mark.firstChild) {
-        parent.insertBefore(mark.firstChild, mark);
-      }
-      parent.removeChild(mark);
-      parent.normalize();
-    });
-  }
-
   function hasComment(annotation) {
     return Boolean(annotation.annotationText && annotation.annotationText.trim());
   }
@@ -225,213 +201,33 @@ window.initAnnotations = function () {
     }
   }
 
-  function createMarker(annotation) {
-    const mark = document.createElement("mark");
-    mark.className =
-      `bd-annotation-highlight bd-annotation-color-${annotation.color}` +
-      (hasComment(annotation) ? " bd-annotation-has-comment" : "");
-    mark.dataset.id = annotation.id;
-    return mark;
-  }
-
-  function createCommentTrigger(annotation) {
-    const trigger = document.createElement("button");
-    trigger.type = "button";
-    trigger.className = "bd-annotation-comment-trigger";
-    trigger.textContent = "评注";
-    trigger.setAttribute("aria-label", "打开阅读批注");
-    trigger.addEventListener("mouseup", (event) => event.stopPropagation());
-    trigger.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      // 点击正文「评注」标签：聚焦/取消该批注，滚动正文到划线并选中；与点击卡片双向同步。
-      focusAnnotation(annotation.id);
-      // 聚焦后让对应卡片滚入侧栏可视区（跟随型下卡片已对齐划线，紧凑型下需主动滚入）。
-      const item = feed.querySelector(`[data-id="${annotation.id}"]`);
-      if (isOpen() && item) {
-        item.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-      }
-    });
-    return trigger;
-  }
-
   function restoreSelection(data) {
-    const range = rangeForOffsets(data);
-    if (!range) {
+    const ranges = data.placement ? documentMap.verify(data) : documentMap.ranges(data.anchor.spans);
+    if (!Array.isArray(ranges)) {
       return;
     }
     try {
       const selection = window.getSelection();
       selection.removeAllRanges();
-      selection.addRange(range);
+      ranges.forEach((range) => selection.addRange(range));
     } catch {
-      // 正文结构变化后无法精确恢复选择时，不影响已保存的批注。
+      // A detached native Selection cannot invalidate the saved record.
     }
-  }
-
-  function rangeForOffsets(data) {
-    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
-    let offset = 0;
-    let node;
-    let startNode;
-    let endNode;
-    let start;
-    let end;
-    while ((node = walker.nextNode())) {
-      const length = node.textContent.length;
-      if (!startNode && data.startOffset < offset + length) {
-        startNode = node;
-        start = data.startOffset - offset;
-      }
-      if (data.endOffset <= offset + length) {
-        endNode = node;
-        end = data.endOffset - offset;
-        break;
-      }
-      offset += length;
-    }
-    if (!startNode || !endNode) {
-      return null;
-    }
-    try {
-      const range = document.createRange();
-      range.setStart(startNode, Math.max(0, start));
-      range.setEnd(endNode, Math.max(start, Math.min(end, endNode.textContent.length)));
-      return range;
-    } catch {
-      return null;
-    }
-  }
-
-  function commentRows(range) {
-    const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
-    if (!rects.length) {
-      const fallback = range.getBoundingClientRect();
-      if (fallback.width > 0 && fallback.height > 0) {
-        rects.push(fallback);
-      }
-    }
-    return rects
-      .sort((left, right) => left.top - right.top || left.left - right.left)
-      .reduce((rows, rect) => {
-        const row = rows.at(-1);
-        if (row && Math.abs(row.top - rect.top) < 2 && Math.abs(row.bottom - rect.bottom) < 2) {
-          row.left = Math.min(row.left, rect.left);
-          row.right = Math.max(row.right, rect.right);
-          return rows;
-        }
-        rows.push({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
-        return rows;
-      }, []);
   }
 
   function renderCommentOutlines() {
-    const contentRect = content.getBoundingClientRect();
-    const contentTop = contentRect.top + window.scrollY;
-    const activeKeys = new Set();
-    const renderedRanges = new Set();
-    annotations.filter(hasComment).forEach((annotation) => {
-      const rangeKey = `${annotation.startOffset}:${annotation.endOffset}`;
-      if (renderedRanges.has(rangeKey)) {
-        return;
-      }
-      renderedRanges.add(rangeKey);
-      const range = rangeForOffsets(annotation);
-      if (!range) {
-        return;
-      }
-      commentRows(range).forEach((row, index) => {
-        // 为首行的“评注”标签预留垂直槽位，标签不覆盖正文文字。
-        const labelGutter = index === 0 ? 9 : 0;
-        const outlineKey = `${annotation.id}:${index}`;
-        activeKeys.add(outlineKey);
-        let outline = outlineNodes.get(outlineKey);
-        if (!outline) {
-          outline = document.createElement("div");
-          outlineNodes.set(outlineKey, outline);
-          commentOutlineLayer.appendChild(outline);
-        }
-        outline.className = `bd-annotation-comment-outline bd-annotation-color-${annotation.color}`;
-        if (String(activeAnnotationId) === String(annotation.id)) {
-          outline.classList.add("bd-annotation-comment-outline-active");
-        }
-        outline.dataset.annotationId = annotation.id;
-        outline.dataset.textTop = String(row.top);
-        // absolute 锚 .content：文档坐标（不随滚动变）一次算定，滚动时随容器整体带走。
-        const top = `${row.top + window.scrollY - contentTop - labelGutter}px`;
-        const left = `${row.left - contentRect.left}px`;
-        if (outline.style.top !== top) {
-          outline.style.top = top;
-        }
-        if (outline.style.left !== left) {
-          outline.style.left = left;
-        }
-        const width = `${row.right - row.left}px`;
-        const height = `${row.bottom - row.top + labelGutter}px`;
-        if (outline.style.width !== width) {
-          outline.style.width = width;
-        }
-        if (outline.style.height !== height) {
-          outline.style.height = height;
-        }
-        if (index === 0 && !outline.firstChild) {
-          outline.appendChild(createCommentTrigger(annotation));
-        }
-      });
-    });
-    outlineNodes.forEach((outline, outlineKey) => {
-      if (!activeKeys.has(outlineKey)) {
-        outline.remove();
-        outlineNodes.delete(outlineKey);
-      }
-    });
+    display.relayout(activeAnnotationId);
   }
 
   function renderMarks() {
-    unwrapMarks();
-    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
-    const textNodes = [];
-    let node;
-    while ((node = walker.nextNode())) {
-      textNodes.push(node);
-    }
-    let offset = 0;
-    textNodes.forEach((textNode) => {
-      const text = textNode.textContent;
-      const endOffset = offset + text.length;
-      const boundaries = new Set([offset, endOffset]);
-      annotations.forEach((annotation) => {
-        if (annotation.startOffset > offset && annotation.startOffset < endOffset) {
-          boundaries.add(annotation.startOffset);
-        }
-        if (annotation.endOffset > offset && annotation.endOffset < endOffset) {
-          boundaries.add(annotation.endOffset);
-        }
-      });
-      const positions = Array.from(boundaries).sort((left, right) => left - right);
-      const fragment = document.createDocumentFragment();
-      for (let index = 0; index < positions.length - 1; index += 1) {
-        const segmentStart = positions[index];
-        const segmentEnd = positions[index + 1];
-        const applicable = annotations.filter(
-          (annotation) => annotation.startOffset <= segmentStart && annotation.endOffset >= segmentEnd,
-        );
-        let decorated = document.createTextNode(text.slice(segmentStart - offset, segmentEnd - offset));
-        applicable
-          .slice()
-          .reverse()
-          .forEach((annotation) => {
-            const marker = createMarker(annotation);
-            marker.appendChild(decorated);
-            decorated = marker;
-          });
-        fragment.appendChild(decorated);
-      }
-      textNode.replaceWith(fragment);
-      offset = endOffset;
-    });
-    renderCommentOutlines();
+    paintedIds = display.render(annotations);
   }
+
+  function onAnnotationFocus(event) {
+    focusAnnotation(event.detail);
+    feed.querySelector(`[data-id="${event.detail}"]`)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }
+  listen(content, "bd:annotation-focus", onAnnotationFocus);
 
   function layoutFeed(updateSpacer = false) {
     const items = Array.from(feed.querySelectorAll(".bd-annotation-feed-item"));
@@ -491,12 +287,31 @@ window.initAnnotations = function () {
     feed.replaceChildren();
     const commentItems = comments();
     updateCommentCount();
-    if (!commentItems.length) {
+    if (!commentItems.length && !annotations.some((a) => !hasComment(a) && !paintedIds.has(a.id))) {
       const empty = document.createElement("p");
       empty.className = "bd-annotation-empty";
       empty.textContent = "还没有划线评论。选中文字后，可以写下第一条想法。";
       feed.appendChild(empty);
       return;
+    }
+    const unresolvedComments = document.createElement("section");
+    unresolvedComments.className = "bd-annotation-unresolved-comments";
+    const unresolvedTitle = document.createElement("h3");
+    unresolvedTitle.textContent = `未定位评注（${commentItems.filter((a) => !paintedIds.has(a.id)).length}）`;
+    unresolvedComments.appendChild(unresolvedTitle);
+    const unresolvedHighlights = document.createElement("details");
+    unresolvedHighlights.className = "bd-annotation-unresolved-highlights";
+    const highlights = annotations.filter((a) => !hasComment(a) && !paintedIds.has(a.id));
+    const summary = document.createElement("summary");
+    summary.textContent = `未定位划线（${highlights.length}）`;
+    unresolvedHighlights.appendChild(summary);
+    function appendComment(item, annotation) {
+      if (paintedIds.has(annotation.id)) {
+        feed.appendChild(item);
+      } else {
+        item.classList.add("bd-annotation-unresolved-item");
+        unresolvedComments.appendChild(item);
+      }
     }
     commentItems.forEach((annotation) => {
       const item = document.createElement("article");
@@ -506,7 +321,7 @@ window.initAnnotations = function () {
 
       if (String(editingAnnotationId) === String(annotation.id)) {
         mountInlineComposer(item, annotation);
-        feed.appendChild(item);
+        appendComment(item, annotation);
         return;
       }
 
@@ -566,12 +381,44 @@ window.initAnnotations = function () {
         }
         focusAnnotation(annotation.id);
       });
-      feed.appendChild(item);
+      if (paintedIds.has(annotation.id)) {
+        feed.appendChild(item);
+      } else {
+        item.classList.add("bd-annotation-unresolved-item");
+        unresolvedComments.appendChild(item);
+      }
     });
+    for (const annotation of highlights) {
+      const item = document.createElement("article");
+      item.className = "bd-annotation-unresolved-highlight";
+      item.dataset.id = annotation.id;
+      const quote = document.createElement("blockquote");
+      quote.textContent = annotation.selectedText;
+      item.appendChild(quote);
+      if (annotation.ownedByCurrentVisitor) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "删除划线";
+        remove.addEventListener("click", () =>
+          removeAnnotation(annotation.id, (status) => {
+            remove.textContent = "删除失败，请重试";
+            remove.dataset.status = status;
+          }),
+        );
+        item.appendChild(remove);
+      }
+      unresolvedHighlights.appendChild(item);
+    }
     const spacer = document.createElement("div");
     spacer.className = "bd-annotation-feed-spacer";
     spacer.setAttribute("aria-hidden", "true");
     feed.appendChild(spacer);
+    if (unresolvedComments.children.length > 1) {
+      feed.appendChild(unresolvedComments);
+    }
+    if (highlights.length) {
+      feed.appendChild(unresolvedHighlights);
+    }
     updateActiveItem();
     requestAnimationFrame(() => layoutFeed(true));
   }
@@ -651,6 +498,9 @@ window.initAnnotations = function () {
   }
 
   function configureComposer(data, existing) {
+    const saveButton = composer.querySelector(".bd-annotation-composer-save");
+    saveButton.textContent = "保存";
+    delete saveButton.dataset.status;
     selected = data;
     composer.dataset.editId = existing ? existing.id : "";
     composer.querySelector(".bd-annotation-composer-quote").textContent = data.selectedText;
@@ -691,21 +541,14 @@ window.initAnnotations = function () {
     const request = editId
       ? api(`/${editId}`, "PATCH", { annotationText: annotationText || null, visibility })
       : api("", "POST", {
-          selectedText: selected.selectedText.slice(0, 500),
+          anchor: selected.anchor,
           annotationText: annotationText || null,
           color,
           visibility,
-          startOffset: selected.startOffset,
-          endOffset: selected.endOffset,
         });
     request
       .then((saved) => {
-        const index = annotations.findIndex((annotation) => String(annotation.id) === String(saved.id));
-        if (index < 0) {
-          annotations.push(saved);
-        } else {
-          annotations[index] = saved;
-        }
+        storeAnnotation(saved);
         renderMarks();
         closeComposer();
         restoreSelection(annotatedSelection);
@@ -872,6 +715,10 @@ window.initAnnotations = function () {
       buildPopup();
     }
     selected = selectionData(range);
+    if (!selected) {
+      hidePopup();
+      return;
+    }
     if (isMobile()) {
       showMobileHighlightMenu();
     } else {
@@ -924,15 +771,13 @@ window.initAnnotations = function () {
     }
     const highlighted = selected;
     api("", "POST", {
-      selectedText: selected.selectedText.slice(0, 500),
+      anchor: selected.anchor,
       annotationText: null,
       color,
       visibility: "PRIVATE",
-      startOffset: selected.startOffset,
-      endOffset: selected.endOffset,
     })
       .then((saved) => {
-        annotations.push(saved);
+        storeAnnotation(saved);
         renderMarks();
         restoreSelection(highlighted);
         updateCommentCount();
@@ -949,33 +794,29 @@ window.initAnnotations = function () {
         result.className = "bd-annotation-copy-result";
         result.textContent = "划线失败，请重试";
         result.setAttribute("data-status", err && err.status ? String(err.status) : "0");
-        popup.replaceChildren(result);
-        window.setTimeout(() => {
-          if (popup.contains(popup.querySelector(".bd-annotation-copy-result"))) {
-            hidePopup();
-          }
-        }, 1600);
+        popup.querySelector(".bd-annotation-copy-result")?.remove();
+        popup.appendChild(result);
       });
   }
 
-  toggle.addEventListener("click", () => setOpen(!isOpen()));
-  sidebar.querySelector(".bd-annotation-sidebar-close").addEventListener("click", () => setOpen(false));
+  listen(toggle, "click", () => setOpen(!isOpen()));
+  listen(sidebar.querySelector(".bd-annotation-sidebar-close"), "click", () => setOpen(false));
   sidebar.querySelectorAll("[data-bd-layout]").forEach((button) => {
-    button.addEventListener("click", () => setFeedLayout(button.dataset.bdLayout));
+    listen(button, "click", () => setFeedLayout(button.dataset.bdLayout));
   });
-  sidebar.querySelector(".bd-annotation-composer-cancel").addEventListener("click", closeComposer);
-  sidebar.querySelector(".bd-annotation-composer-save").addEventListener("click", saveComposer);
-  typeTrigger.addEventListener("click", () => setTypeMenuOpen(typeMenu.hidden));
+  listen(sidebar.querySelector(".bd-annotation-composer-cancel"), "click", closeComposer);
+  listen(sidebar.querySelector(".bd-annotation-composer-save"), "click", saveComposer);
+  listen(typeTrigger, "click", () => setTypeMenuOpen(typeMenu.hidden));
   typeMenu.querySelectorAll("[data-bd-annotation-type]").forEach((button) => {
-    button.addEventListener("click", () => {
+    listen(button, "click", () => {
       selectColor(button.dataset.bdAnnotationType);
       setTypeMenuOpen(false);
     });
   });
-  composer.querySelector(".bd-annotation-visibility").addEventListener("change", () => {
+  listen(composer.querySelector(".bd-annotation-visibility"), "change", () => {
     visibilityChanged = true;
   });
-  composer.querySelector(".bd-annotation-composer-text").addEventListener("input", (event) => {
+  listen(composer.querySelector(".bd-annotation-composer-text"), "input", (event) => {
     if (!visibilityChanged) {
       composer.querySelector(".bd-annotation-visibility").value = event.target.value.trim() ? "PUBLIC" : "PRIVATE";
     }
@@ -1000,15 +841,15 @@ window.initAnnotations = function () {
     }
     showPopup(range);
   }
-  document.addEventListener("mouseup", onDocMouseUp);
+  listen(document, "mouseup", onDocMouseUp);
 
-  document.addEventListener("click", (event) => {
+  listen(document, "click", (event) => {
     if (!typePicker.contains(event.target)) {
       setTypeMenuOpen(false);
     }
   });
 
-  content.addEventListener("click", (event) => {
+  listen(content, "click", (event) => {
     const mark = event.target.closest && event.target.closest("mark.bd-annotation-highlight");
     if (!mark) {
       return;
@@ -1038,7 +879,7 @@ window.initAnnotations = function () {
     }
     hidePopup();
   }
-  document.addEventListener("click", onDocClickHidePopup);
+  listen(document, "click", onDocClickHidePopup);
 
   // 在正文重新按下鼠标时先关闭旧菜单并清空旧选区：单击不会遗留菜单，
   // 拖拽产生的新选区仍会在 mouseup 时正常打开菜单。
@@ -1054,7 +895,7 @@ window.initAnnotations = function () {
     hidePopup();
     window.getSelection().removeAllRanges();
   }
-  document.addEventListener("mousedown", onDocMouseDown, true);
+  listen(document, "mousedown", onDocMouseDown, true);
 
   function onDocClickMobileNote(event) {
     if (
@@ -1066,7 +907,7 @@ window.initAnnotations = function () {
       dismissMobileComment();
     }
   }
-  document.addEventListener("click", onDocClickMobileNote);
+  listen(document, "click", onDocClickMobileNote);
 
   function scheduleAnnotationPositionUpdate() {
     if (positionUpdateFrame) {
@@ -1084,7 +925,7 @@ window.initAnnotations = function () {
   function onScroll() {
     scheduleAnnotationPositionUpdate();
   }
-  window.addEventListener("scroll", onScroll, { passive: true });
+  listen(window, "scroll", onScroll, { passive: true });
 
   function onResize() {
     renderCommentOutlines();
@@ -1093,10 +934,16 @@ window.initAnnotations = function () {
       renderFeed();
     }
   }
-  window.addEventListener("resize", onResize);
+  listen(window, "resize", onResize);
 
   // 清理函数：专栏切换文章重新初始化前移除全局监听器，避免重复绑定
   window._bdAnnotationCleanup = function () {
+    events.abort();
+    popup?.remove();
+    mobileNote?.remove();
+    display.dispose();
+    documentMap.dispose();
+    content.removeEventListener("bd:annotation-focus", onAnnotationFocus);
     document.removeEventListener("mouseup", onDocMouseUp);
     document.removeEventListener("click", onDocClickHidePopup);
     document.removeEventListener("mousedown", onDocMouseDown, true);
