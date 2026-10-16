@@ -1,7 +1,9 @@
-import { expect, test } from "@playwright/test";
-
-const postSlug = process.env.E2E_POST_SLUG ?? "hello-bytedepth-3";
-const postPath = `/posts/${postSlug}`;
+import { expect } from "@playwright/test";
+import { test, selectedAnchor, postAnnotation } from "./helpers/annotation-fixture.js";
+let postPath;
+test.beforeEach(async ({ article }) => {
+  postPath = article.postPath;
+});
 
 function captureBrowserErrors(page) {
   const errors = [];
@@ -16,38 +18,24 @@ function captureBrowserErrors(page) {
 
 async function selectArticleText(page, start, length) {
   await page.locator("#post-article .content").evaluate(
-    (content, rangeData) => {
-      const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
-      let node;
-      let consumed = 0;
-      let startNode;
-      let endNode;
-      let startOffset;
-      let endOffset;
-      while ((node = walker.nextNode())) {
-        const end = consumed + node.textContent.length;
-        if (!startNode && rangeData.start >= consumed && rangeData.start < end) {
-          startNode = node;
-          startOffset = rangeData.start - consumed;
-        }
-        if (startNode && rangeData.start + rangeData.length <= end) {
-          endNode = node;
-          endOffset = rangeData.start + rangeData.length - consumed;
-          break;
-        }
-        consumed = end;
-      }
-      if (!startNode || !endNode) {
-        throw new Error("unable to select requested article text");
-      }
-      const range = document.createRange();
-      range.setStart(startNode, startOffset);
-      range.setEnd(endNode, endOffset);
+    (content, { start, length }) => {
+      const map = window.AnnotationDocument.create(content, window.__ANNOTATION_DOCUMENT__);
+      const spans = window.__ANNOTATION_DOCUMENT__.segments
+        .filter((s) => s.start < start + length && s.end > start)
+        .map((s) => ({
+          segmentId: s.id,
+          start: Math.max(start, s.start) - s.start,
+          end: Math.min(start + length, s.end) - s.start,
+        }));
+      const ranges = map.ranges(spans);
+      map.dispose();
+      if (!Array.isArray(ranges)) throw new Error("Cannot select fixture range");
+      const range = ranges[0].cloneRange();
+      range.setEnd(ranges.at(-1).endContainer, ranges.at(-1).endOffset);
       const selection = window.getSelection();
       selection.removeAllRanges();
       selection.addRange(range);
       document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-      // 浏览器在真实拖选结束后还会派发一次 click；普通正文不能因此立刻关闭菜单。
       content.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     },
     { start, length },
@@ -79,34 +67,9 @@ async function removeAnnotation(page, id) {
 }
 
 async function createCommentAnnotation(page, annotationText, startOffset = 0) {
-  const selectedText = await page.locator("#post-article .content").evaluate((content, start) => {
-    const text = Array.from(content.childNodes)
-      .map((node) => node.textContent)
-      .join("");
-    return text.slice(start, start + 2);
-  }, startOffset);
-  return page.evaluate(
-    async ({ text, start, selectedText }) => {
-      const token = document.querySelector('meta[name="_csrf"]').content;
-      const response = await fetch(`${window.location.pathname}/annotations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": token },
-        body: JSON.stringify({
-          selectedText,
-          annotationText: text,
-          color: "yellow",
-          visibility: "PUBLIC",
-          startOffset: start,
-          endOffset: start + 2,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error(`annotation setup failed: ${response.status}`);
-      }
-      return response.json();
-    },
-    { text: annotationText, start: startOffset, selectedText },
-  );
+  await selectArticleText(page, startOffset, 2);
+  const anchor = await selectedAnchor(page);
+  return postAnnotation(page, { anchor, annotationText, color: "yellow", visibility: "PUBLIC" });
 }
 
 test.describe("划线评论", () => {
@@ -334,7 +297,13 @@ test.describe("划线评论", () => {
       await expect(outline).toBeVisible();
       await page.locator("#bd-annotation-sidebar-toggle").click();
       await page.locator(".bd-annotation-sidebar-close").click();
-      await page.waitForTimeout(50);
+      await expect
+        .poll(async () =>
+          outline.evaluate((element) =>
+            Math.abs(Number(element.dataset.textTop) - element.getBoundingClientRect().top - 9),
+          ),
+        )
+        .toBeLessThan(1);
       const geometry = await outline.evaluate((element) => {
         const rect = element.getBoundingClientRect();
         return { outlineTop: rect.top, textTop: Number(element.dataset.textTop) };

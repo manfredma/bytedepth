@@ -1,110 +1,68 @@
 package manfred.bytedepth.integration;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
-import java.time.LocalDateTime;
-import manfred.bytedepth.app.annotation.AnnotationRepositoryPort;
-import manfred.bytedepth.app.post.MarkdownTextExtractor;
-import manfred.bytedepth.app.post.command.UpdatePostCmdExe;
 import manfred.bytedepth.domain.annotation.AnnotationVisibility;
-import manfred.bytedepth.domain.annotation.PostAnnotation;
-import manfred.bytedepth.domain.post.Post;
-import manfred.bytedepth.domain.post.PostRepository;
-import manfred.bytedepth.infrastructure.stats.RedisStatsService;
+import manfred.bytedepth.domain.annotation.PlacementStatus;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-class AnnotationContentUpdateIT {
-
-    @MockitoBean
-    private RedisStatsService redisStatsService;
-
-    @Autowired
-    private PostRepository postRepository;
-
-    @Autowired
-    private AnnotationRepositoryPort annotationRepository;
-
-    @Autowired
-    private UpdatePostCmdExe updatePostCmdExe;
-
+class AnnotationContentUpdateIT extends AnnotationITSupport {
     @Test
-    void updatePost_reanchorsAnnotationToRenderedTextAfterMarkdownParagraphInsertion() {
-        String oldContent = "第一段\n\n目标句子";
-        String newContent = "第一段\n\n新增段\n\n目标句子";
-        Post post = saveDraft("annotation-rendered-text-it", oldContent);
-        String oldReaderText = MarkdownTextExtractor.renderedText(oldContent);
-        int start = oldReaderText.indexOf("目标句子");
-        PostAnnotation saved = saveAnnotation(post, oldReaderText, start, start + "目标句子".length());
-
-        updatePostCmdExe.execute(post.getId(), post.getTitle(), newContent);
-
-        String newReaderText = MarkdownTextExtractor.renderedText(newContent);
-        PostAnnotation reloaded = annotationRepository.findById(saved.id()).orElseThrow();
-        assertThat(reloaded.deleted()).isFalse();
-        assertThat(reloaded.startOffset()).isEqualTo(newReaderText.indexOf("目标句子"));
-        assertThat(reloaded.endOffset()).isEqualTo(newReaderText.indexOf("目标句子") + "目标句子".length());
-        assertThat(reloaded.selectedText()).isEqualTo("目标句子");
-        assertThat(annotationRepository.findVisibleByPostId(post.getId(), null, null))
-                .containsExactly(reloaded);
+    void paragraphInsertionReanchorsWithoutRewritingOriginalEvidence() {
+        var post = draft("第一段\n\n目标句子");
+        var saved = annotate(post, "目标句子", AnnotationVisibility.PUBLIC);
+        var original = annotations.findById(saved.annotation().id()).orElseThrow();
+        update.execute(post.getId(), post.getTitle(), "第一段\n\n新增段\n\n目标句子");
+        var view =
+                query.viewCurrent(annotations.findById(saved.annotation().id()).orElseThrow());
+        assertEquals(PlacementStatus.ANCHORED, view.placement().status());
+        assertEquals(original, view.annotation());
+        assertEquals(post.getContentVersion() + 1, view.placement().targetRevision());
+        assertEquals("目标句子", view.annotation().selectedText());
+        assertFalse(view.annotation().deleted());
+        assertEquals(
+                2,
+                jdbc.queryForObject(
+                        "SELECT COUNT(DISTINCT target_revision) FROM annotation_placement WHERE annotation_id=?",
+                        Integer.class,
+                        original.id()));
+        assertEquals(1, query.views(post.getId(), null, null).size());
     }
 
     @Test
-    void updatePost_hidesAnnotationWhenSelectedRenderedTextIsDeleted() {
-        String oldContent = "保留内容\n\n待删除内容";
-        String newContent = "保留内容";
-        Post post = saveDraft("annotation-deleted-text-it", oldContent);
-        String oldReaderText = MarkdownTextExtractor.renderedText(oldContent);
-        int start = oldReaderText.indexOf("待删除内容");
-        PostAnnotation saved = saveAnnotation(post, oldReaderText, start, start + "待删除内容".length());
-
-        updatePostCmdExe.execute(post.getId(), post.getTitle(), newContent);
-
-        PostAnnotation reloaded = annotationRepository.findById(saved.id()).orElseThrow();
-        assertThat(reloaded.deleted()).isTrue();
-        assertThat(annotationRepository.findVisibleByPostId(post.getId(), null, null))
-                .isEmpty();
+    void deletedAndReplacedSelectionsKeepTheirQuoteAndCommentsUnresolved() {
+        for (String replacement : java.util.List.of("保留内容", "保留内容\n\n新方案")) {
+            var post = draft("保留内容\n\n旧方案");
+            var saved = annotate(post, "旧方案", AnnotationVisibility.PUBLIC);
+            var original = annotations.findById(saved.annotation().id()).orElseThrow();
+            update.execute(post.getId(), post.getTitle(), replacement);
+            var view = query.viewCurrent(
+                    annotations.findById(saved.annotation().id()).orElseThrow());
+            assertEquals(PlacementStatus.UNRESOLVED, view.placement().status());
+            assertEquals(original, view.annotation());
+            assertEquals("旧方案", view.annotation().selectedText());
+            assertEquals("原始评注", view.annotation().annotationText());
+            assertFalse(view.annotation().deleted());
+            assertEquals(1, query.views(post.getId(), null, null).size());
+        }
     }
 
     @Test
-    void updatePost_hidesAnnotationWhenSelectedRenderedTextIsReplaced() {
-        String oldContent = "保留内容\n\n旧方案";
-        String newContent = "保留内容\n\n新方案";
-        Post post = saveDraft("annotation-replaced-text-it", oldContent);
-        String oldReaderText = MarkdownTextExtractor.renderedText(oldContent);
-        int start = oldReaderText.indexOf("旧方案");
-        PostAnnotation saved = saveAnnotation(post, oldReaderText, start, start + "旧方案".length());
-
-        updatePostCmdExe.execute(post.getId(), post.getTitle(), newContent);
-
-        PostAnnotation reloaded = annotationRepository.findById(saved.id()).orElseThrow();
-        assertThat(reloaded.deleted()).isTrue();
-        assertThat(annotationRepository.findVisibleByPostId(post.getId(), null, null))
-                .isEmpty();
-    }
-
-    private Post saveDraft(String slug, String content) {
-        return postRepository.save(Post.create("批注集成测试", content, 1L, slug + "-" + System.nanoTime()));
-    }
-
-    private PostAnnotation saveAnnotation(Post post, String readerText, int start, int end) {
-        return annotationRepository.save(new PostAnnotation(
-                null,
-                post.getId(),
-                null,
-                "integration-owner-" + post.getId(),
-                readerText.substring(start, end),
-                "集成测试评注",
-                "yellow",
-                AnnotationVisibility.PUBLIC,
-                start,
-                end,
-                LocalDateTime.now(),
-                false));
+    void privateAnchoredAndUnresolvedRowsHaveTheSameOwnerBoundary() {
+        var post = draft("目标句子");
+        var saved = annotate(post, "目标句子", AnnotationVisibility.PRIVATE);
+        var original = annotations.findById(saved.annotation().id()).orElseThrow();
+        for (String body : java.util.List.of("目标句子", "替换正文")) {
+            update.execute(post.getId(), "版本更新", body);
+            assertTrue(query.views(post.getId(), null, null).isEmpty());
+            assertTrue(query.views(post.getId(), null, "b".repeat(64)).isEmpty());
+            assertTrue(query.views(post.getId(), 1L, null).isEmpty());
+            var owned = query.views(post.getId(), null, owner);
+            assertEquals(1, owned.size());
+            assertEquals(original, owned.getFirst().annotation());
+            assertEquals(
+                    body.equals("目标句子") ? PlacementStatus.ANCHORED : PlacementStatus.UNRESOLVED,
+                    owned.getFirst().placement().status());
+        }
     }
 }
