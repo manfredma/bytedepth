@@ -1,6 +1,6 @@
 # 阅读批注锚定设计
 
-> 状态：待审书面设计，尚未实施。架构取舍见 [ADR-0024](decisions/0024-versioned-annotation-selectors.md)；当前实现仍遵循 [ADR-0011](decisions/0011-rendered-text-annotation-anchors.md)。
+> 状态：书面设计已确认，尚未实施。架构取舍见 [ADR-0024](decisions/0024-versioned-annotation-selectors.md)；当前实现仍遵循 [ADR-0011](decisions/0011-rendered-text-annotation-anchors.md)。
 > 导航：[项目知识库](../README.md) · [统一语言](ubiquitous-language.md) · [批注权限](../security/annotation-write-permissions.md)。
 
 ## 目标与保证
