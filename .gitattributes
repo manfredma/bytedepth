@@ -1,1 +1,4 @@
 mvnw.cmd text eol=crlf
+
+# Preserve intentional CRLF input in the annotation projection regression.
+scripts/test-fixtures/annotation/unicode-markdown.md -text whitespace=cr-at-eol

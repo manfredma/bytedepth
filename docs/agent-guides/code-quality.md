@@ -8,3 +8,7 @@ Maven、Java 25、完整测试与变更覆盖率的唯一说明见 [maven.md](ma
 - 不为显而易见的代码添加注释；行为、约束或实现策略发生变化时，必须同步更新相关关键注释。
 - 改 Controller 构造器注入时，同步更新 `@WebMvcTest` 里的 `@MockBean`。
 - 接口改名时，检查所有调用方一起改。
+
+### Java 25 的聚合断言
+
+跨样本校验优先使用 JUnit `assertAll` 收集真实行为断言。AssertJ `SoftAssertions` 会生成运行时代理，在本项目 Java 25 环境可能触发 Byte Buddy 的 Unsafe 弃用告警；不得为此关闭零 WARNING 门禁或给测试 fork 扩大兼容参数。完整质量入口会拒绝此类告警。

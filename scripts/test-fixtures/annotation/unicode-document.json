@@ -1,0 +1,23 @@
+{
+  "projectionVersion": 1,
+  "digest": "14ec98b1b6d5e1d505a8e7fae26ac79aaa75fb833ff51784a4eb8e3357c2c73d",
+  "text": "中😀éé👩‍💻🇨🇳️   \n\tA  B\n",
+  "segments": [
+    {
+      "id": "s0",
+      "blockId": "b0",
+      "kind": "prose",
+      "text": "中😀éé👩‍💻🇨🇳️   ",
+      "start": 0,
+      "end": 14
+    },
+    {
+      "id": "s1",
+      "blockId": "b1",
+      "kind": "code",
+      "text": "\tA  B\n",
+      "start": 15,
+      "end": 21
+    }
+  ]
+}

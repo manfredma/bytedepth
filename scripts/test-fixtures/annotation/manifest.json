@@ -1,0 +1,4 @@
+{
+  "projectionVersion": 1,
+  "cases": ["rich", "unicode", "duplicates", "footnotes"]
+}

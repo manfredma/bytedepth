@@ -1,4 +1,4 @@
-package manfred.bytedepth.adapter.web.util;
+package manfred.bytedepth.app.post.document;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,10 +15,15 @@ import org.commonmark.renderer.html.HtmlNodeRendererFactory;
 import org.commonmark.renderer.html.HtmlWriter;
 
 final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
+    private final DocumentProjection projection;
+
+    EnhancedCodeBlockRenderer(DocumentProjection projection) {
+        this.projection = projection;
+    }
 
     @Override
     public NodeRenderer create(HtmlNodeRendererContext context) {
-        return new Renderer(context);
+        return new Renderer(context, projection);
     }
 
     private static final class Renderer implements NodeRenderer {
@@ -26,8 +31,10 @@ final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
 
         private final HtmlNodeRendererContext context;
         private final HtmlWriter html;
+        private final DocumentProjection projection;
 
-        private Renderer(HtmlNodeRendererContext context) {
+        private Renderer(HtmlNodeRendererContext context, DocumentProjection projection) {
+            this.projection = projection;
             this.context = context;
             this.html = context.getWriter();
         }
@@ -193,6 +200,9 @@ final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
             if (SAFE_LANGUAGE.matcher(metadata.language()).matches()) {
                 attributes.put("class", "language-" + metadata.language());
             }
+            attributes.put(
+                    "data-annotation-segment",
+                    projection.append(codeBlock, literal, metadata.language().equals("mermaid") ? "mermaid" : "code"));
             html.tag("code", attributes);
             html.text(literal);
             html.tag("/code");
@@ -218,7 +228,7 @@ final class EnhancedCodeBlockRenderer implements HtmlNodeRendererFactory {
 
         private void open(String tag, Map<String, String> attributes) {
             html.line();
-            html.tag(tag, attributes);
+            html.tag(tag, new java.util.TreeMap<>(attributes));
         }
 
         private void close(String tag) {

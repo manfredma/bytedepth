@@ -1,4 +1,4 @@
-package manfred.bytedepth.adapter.web.util;
+package manfred.bytedepth.app.post.document;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

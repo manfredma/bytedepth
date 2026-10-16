@@ -9,8 +9,17 @@ class MarkdownRendererTest {
     private final MarkdownRenderer renderer = new MarkdownRenderer();
 
     @Test
+    void U13_generatedCodeSourceHasAnIsolatedAnnotationRoot() {
+        String html = renderer.render("前文\n\n```java\nint anchorProbe = 1;\n```\n\n后文");
+        assertThat(html).contains("data-annotation-segment=");
+        assertThat(html)
+                .containsPattern(
+                        "<code[^>]*data-annotation-segment=\"s[0-9]+\"[^>]*>int anchorProbe &#61; 1;\n</code>");
+    }
+
+    @Test
     void footnoteAnchorsRemainUniqueForNumericSuffixLabelsAndSafeForAnyLabel() {
-        String html = renderer.render("正文[^n]，重复[^n]，另一个[^n-2]，特殊[^a<b]，长标签[^" + "x".repeat(257)
+        String html = renderWithoutMappingMetadata("正文[^n]，重复[^n]，另一个[^n-2]，特殊[^a<b]，长标签[^" + "x".repeat(257)
                 + "]。\n\n[^n]: 第一条。\n\n[^n-2]: 第二条。\n\n[^a<b]: 第三条。\n\n[^" + "x".repeat(257) + "]: 第四条。");
         var matcher = java.util.regex.Pattern.compile("id=\"([^\"]+)\"").matcher(html);
         java.util.Set<String> ids = new java.util.HashSet<>();
@@ -28,7 +37,8 @@ class MarkdownRendererTest {
 
     @Test
     void rendersFootnotesWithWorkingReferencesAndBacklinksAfterSanitizing() {
-        String rendered = renderer.render("正文[^memory]，再次引用[^memory]。\n\n[^memory]: 一次**硬件读写**。\n\n    第二段解释。");
+        String rendered =
+                renderWithoutMappingMetadata("正文[^memory]，再次引用[^memory]。\n\n[^memory]: 一次**硬件读写**。\n\n    第二段解释。");
 
         assertThat(rendered)
                 .contains("<sup class=\"footnote-ref\">")
@@ -47,22 +57,25 @@ class MarkdownRendererTest {
 
     @Test
     void rendersInlineFootnotesAlongsideNamedFootnotesWithoutLeakingAcrossPosts() {
-        assertThat(renderer.render("正文^[行内解释]，术语[^名词]。\n\n[^名词]: 命名解释。"))
+        assertThat(renderWithoutMappingMetadata("正文^[行内解释]，术语[^名词]。\n\n[^名词]: 命名解释。"))
                 .contains("id=\"bd-fn-i1\"")
                 .contains("id=\"bd-fn-le5908de8af8d\"")
                 .contains("行内解释")
                 .contains("命名解释。")
                 .doesNotContain("^[行内解释]");
-        assertThat(renderer.render("另一个正文^[独立解释]。")).contains("id=\"bd-fn-i1\"").doesNotContain("命名解释。");
-        assertThat(renderer.render("普通正文")).doesNotContain("footnote");
+        assertThat(renderWithoutMappingMetadata("另一个正文^[独立解释]。"))
+                .contains("id=\"bd-fn-i1\"")
+                .doesNotContain("命名解释。");
+        assertThat(renderWithoutMappingMetadata("普通正文")).doesNotContain("footnote");
     }
 
     @Test
     void preservesUndefinedReferencesAndCodeWhileKeepingFootnoteContentSafe() {
-        assertThat(renderer.render("未知[^missing]，`[^code]`。\n\n[^unused]: 不应显示的定义。"))
+        assertThat(renderWithoutMappingMetadata("未知[^missing]，`[^code]`。\n\n[^unused]: 不应显示的定义。"))
                 .contains("[^missing]", "<code>[^code]</code>")
                 .doesNotContain("不应显示的定义。", "class=\"footnotes\"");
-        assertThat(renderer.render("正文[^safe]。\n\n[^safe]: <script>alert(1)</script>\n\n    [危险](javascript:alert(1))"))
+        assertThat(renderWithoutMappingMetadata(
+                        "正文[^safe]。\n\n[^safe]: <script>alert(1)</script>\n\n    [危险](javascript:alert(1))"))
                 .contains("&lt;script&gt;")
                 .doesNotContain("<script>", "javascript:", "onclick=");
     }
@@ -70,7 +83,7 @@ class MarkdownRendererTest {
     @Test
     void footnoteDomTextMatchesAnnotationTextRepresentation() {
         String markdown = "正文[^memory]，后续文字。\n\n行内^[补充]。\n\n[^memory]: 注释**内容**。";
-        String html = renderer.render(markdown);
+        String html = renderWithoutMappingMetadata(markdown);
         String domText = manfred.bytedepth.app.post.MarkdownTextExtractor.renderedText(markdown);
         // DOM 模拟的 textContent 与服务端批注表示必须保留相同编号、空白与返回箭头。
         assertThat(org.springframework.web.util.HtmlUtils.htmlUnescape(html.replaceAll("<[^>]*>", "")))
@@ -90,7 +103,7 @@ class MarkdownRendererTest {
 
     @Test
     void escapesRawHtmlAndUnsafeLinkProtocols() {
-        String rendered = renderer.render("<img src=x onerror=alert(1)>\n\n[危险链接](javascript:alert(1))");
+        String rendered = renderWithoutMappingMetadata("<img src=x onerror=alert(1)>\n\n[危险链接](javascript:alert(1))");
 
         assertThat(rendered)
                 .contains("&lt;img")
@@ -101,8 +114,8 @@ class MarkdownRendererTest {
 
     @Test
     void preservesStandardMarkdownStructureAfterSanitizing() {
-        String rendered =
-                renderer.render("# 标题\n\n```java\nint value = 1;\n```\n\n| 名称 | 值 |\n| --- | --- |\n| A | 1 |");
+        String rendered = renderWithoutMappingMetadata(
+                "# 标题\n\n```java\nint value = 1;\n```\n\n| 名称 | 值 |\n| --- | --- |\n| A | 1 |");
 
         assertThat(rendered)
                 .contains("<h1 id=\"标题\">标题</h1>")
@@ -113,7 +126,7 @@ class MarkdownRendererTest {
 
     @Test
     void rendersAdjacentOrdinaryCodeBlocksWithTheUnifiedComponent() {
-        String rendered = renderer.render("```java\nint value = 1;\n```\n\n```kotlin\nval value = 1\n```");
+        String rendered = renderWithoutMappingMetadata("```java\nint value = 1;\n```\n\n```kotlin\nval value = 1\n```");
 
         assertThat(rendered)
                 .contains("class=\"bd-code-block__language\">java</span>")
@@ -127,7 +140,7 @@ class MarkdownRendererTest {
 
     @Test
     void rendersAnUnmarkedCodeBlockWithNeutralLabelWithoutInventingAFileName() {
-        String rendered = renderer.render("```\nint value = 1;\n```");
+        String rendered = renderWithoutMappingMetadata("```\nint value = 1;\n```");
 
         assertThat(rendered)
                 .contains("class=\"bd-code-block__language\">Code</span>")
@@ -141,8 +154,8 @@ class MarkdownRendererTest {
 
     @Test
     void rendersEmptyAndUnterminatedCodeBlocksWithCorrectLineCounts() {
-        String empty = renderer.render("```java\n```");
-        String unterminated = renderer.render("```java\nreturn 1;");
+        String empty = renderWithoutMappingMetadata("```java\n```");
+        String unterminated = renderWithoutMappingMetadata("```java\nreturn 1;");
 
         assertThat(empty).contains("class=\"bd-code-block__line\">1</span>");
         assertThat(unterminated)
@@ -152,7 +165,8 @@ class MarkdownRendererTest {
 
     @Test
     void rendersOptInCodeBlockTitleAndFoldControls() {
-        String rendered = renderer.render("```java title:Example.java fold\nSystem.out.println(\"<safe>\");\n```");
+        String rendered =
+                renderWithoutMappingMetadata("```java title:Example.java fold\nSystem.out.println(\"<safe>\");\n```");
 
         assertThat(rendered)
                 .contains("class=\"bd-code-block bd-code-block--collapsed\"")
@@ -166,7 +180,7 @@ class MarkdownRendererTest {
 
     @Test
     void rendersFoldOnlyBlockWithLanguageLabel() {
-        String rendered = renderer.render("```java fold\nint value = 1;\n```");
+        String rendered = renderWithoutMappingMetadata("```java fold\nint value = 1;\n```");
 
         assertThat(rendered)
                 .contains("class=\"bd-code-block__language\">java</span>")
@@ -176,7 +190,7 @@ class MarkdownRendererTest {
 
     @Test
     void omitsUnsafeLanguageClassForEnhancedCodeBlocks() {
-        String rendered = renderer.render("```java<script> fold\nint value = 1;\n```");
+        String rendered = renderWithoutMappingMetadata("```java<script> fold\nint value = 1;\n```");
 
         assertThat(rendered)
                 .contains("class=\"bd-code-block bd-code-block--collapsed\"")
@@ -186,7 +200,7 @@ class MarkdownRendererTest {
 
     @Test
     void groupsOnlyExplicitlyMarkedAdjacentCodeBlocks() {
-        String rendered = renderer.render("```java title:Example.java tabs:install\n"
+        String rendered = renderWithoutMappingMetadata("```java title:Example.java tabs:install\n"
                 + "java code\n"
                 + "```\n"
                 + "```kotlin title:Example.kt tabs:install\n"
@@ -205,8 +219,9 @@ class MarkdownRendererTest {
 
     @Test
     void rendersObsidianGroupTabLabelsSeparatelyFromPanelTitles() {
-        String rendered = renderer.render("```java group:install tab:Java title:Rule.java\njava code\n```\n"
-                + "```python group:install tab:Python title:rule.py\npython code\n```");
+        String rendered =
+                renderWithoutMappingMetadata("```java group:install tab:Java title:Rule.java\njava code\n```\n"
+                        + "```python group:install tab:Python title:rule.py\npython code\n```");
 
         assertThat(rendered)
                 .contains("class=\"bd-code-tabs\"")
@@ -218,8 +233,8 @@ class MarkdownRendererTest {
 
     @Test
     void usesLanguageLabelsForTabsWithoutTitles() {
-        String rendered =
-                renderer.render("```java tabs:install\njava code\n```\n```kotlin tabs:install\nkotlin code\n```");
+        String rendered = renderWithoutMappingMetadata(
+                "```java tabs:install\njava code\n```\n```kotlin tabs:install\nkotlin code\n```");
 
         assertThat(rendered).contains("bd-code-tabs__tab");
         assertThat(rendered).containsPattern("bd-code-tabs__tab[^>]*>java</button>");
@@ -228,7 +243,7 @@ class MarkdownRendererTest {
 
     @Test
     void usesLanguageForObsidianGroupWhenTabIsOmitted() {
-        String rendered = renderer.render("```python group=install title=rule.py\npython code\n```\n"
+        String rendered = renderWithoutMappingMetadata("```python group=install title=rule.py\npython code\n```\n"
                 + "```go group=install tab=Go title=rule.go\ngo code\n```");
 
         assertThat(rendered)
@@ -239,7 +254,7 @@ class MarkdownRendererTest {
 
     @Test
     void doesNotGroupExplicitTabBlocksAcrossParagraphsOrDifferentGroups() {
-        String rendered = renderer.render("```java title:A.java tabs:first\n"
+        String rendered = renderWithoutMappingMetadata("```java title:A.java tabs:first\n"
                 + "a\n"
                 + "```\n\n"
                 + "说明\n\n"
@@ -258,7 +273,7 @@ class MarkdownRendererTest {
 
     @Test
     void leavesNestedCodeBlocksOnTheOrdinaryRenderingPath() {
-        String rendered = renderer.render("> ```java title:Nested.java fold\n> nested\n> ```");
+        String rendered = renderWithoutMappingMetadata("> ```java title:Nested.java fold\n> nested\n> ```");
 
         assertThat(rendered)
                 .contains("<pre><code class=\"language-java\">")
@@ -268,14 +283,14 @@ class MarkdownRendererTest {
 
     @Test
     void preservesObsidianInPageAnchorLinks() {
-        String rendered = renderer.render("## TDD 三定律与工作流\n\n[跳转](#TDD%20三定律与工作流)");
+        String rendered = renderWithoutMappingMetadata("## TDD 三定律与工作流\n\n[跳转](#TDD%20三定律与工作流)");
 
         assertThat(rendered).contains("<h2 id=\"TDD 三定律与工作流\">TDD 三定律与工作流</h2>").contains("href=\"#TDD%20三定律与工作流\"");
     }
 
     @Test
     void preservesRestrictedLanguageClassForFencedMermaidCode() {
-        String rendered = renderer.render("```mermaid\ngraph TD\n  A --> B\n```");
+        String rendered = renderWithoutMappingMetadata("```mermaid\ngraph TD\n  A --> B\n```");
 
         assertThat(rendered)
                 .contains("class=\"bd-code-block\"")
@@ -285,7 +300,7 @@ class MarkdownRendererTest {
 
     @Test
     void preservesValidatedImageWidthFromMarkdownTitle() {
-        String rendered = renderer.render("![架构图](/images/diagram.png \"width=700\")");
+        String rendered = renderWithoutMappingMetadata("![架构图](/images/diagram.png \"width=700\")");
 
         assertThat(rendered)
                 .contains("<img src=\"/images/diagram.png\" alt=\"架构图\" width=\"700\" />")
@@ -294,7 +309,7 @@ class MarkdownRendererTest {
 
     @Test
     void rendersStandardMarkdownImageWithoutATitle() {
-        String rendered = renderer.render("![历史图片](/images/cache.png)");
+        String rendered = renderWithoutMappingMetadata("![历史图片](/images/cache.png)");
 
         assertThat(rendered)
                 .contains("<img src=\"/images/cache.png\" alt=\"历史图片\" />")
@@ -304,7 +319,7 @@ class MarkdownRendererTest {
 
     @Test
     void rendersLegacyMarkdownImageWithANonWidthTitle() {
-        String rendered = renderer.render("![历史图片](/images/cache.png \"缓存架构图\")");
+        String rendered = renderWithoutMappingMetadata("![历史图片](/images/cache.png \"缓存架构图\")");
 
         assertThat(rendered)
                 .contains("<img src=\"/images/cache.png\" alt=\"历史图片\" />")
@@ -314,10 +329,17 @@ class MarkdownRendererTest {
 
     @Test
     void ignoresImageWidthOutsideTheAcceptedRange() {
-        String rendered = renderer.render("![架构图](/images/diagram.png \"width=99\")");
+        String rendered = renderWithoutMappingMetadata("![架构图](/images/diagram.png \"width=99\")");
 
         assertThat(rendered)
                 .contains("<img src=\"/images/diagram.png\" alt=\"架构图\" />")
                 .doesNotContain("width=");
+    }
+    // Existing structure/security cases ignore only the new safe mapping wrappers.
+    // Raw mapped output is asserted by U13 and the shared golden suite.
+    private String renderWithoutMappingMetadata(String markdown) {
+        return renderer.render(markdown)
+                .replaceAll("<span data-annotation-segment=\"s[0-9]+\">([^<]*)</span>", "$1")
+                .replaceAll(" data-annotation-segment=\"s[0-9]+\"", "");
     }
 }

@@ -1,0 +1,71 @@
+{
+  "projectionVersion": 1,
+  "digest": "c2f11c8f5cbe1810d0b241164dde778427d763afdb4949fca7030f759b9a8dbe",
+  "text": "正文，重复，行内。\n注释重点。\n解释",
+  "segments": [
+    {
+      "id": "s0",
+      "blockId": "b0",
+      "kind": "prose",
+      "text": "正文",
+      "start": 0,
+      "end": 2
+    },
+    {
+      "id": "s1",
+      "blockId": "b0",
+      "kind": "prose",
+      "text": "，重复",
+      "start": 2,
+      "end": 5
+    },
+    {
+      "id": "s2",
+      "blockId": "b0",
+      "kind": "prose",
+      "text": "，行内",
+      "start": 5,
+      "end": 8
+    },
+    {
+      "id": "s3",
+      "blockId": "b0",
+      "kind": "prose",
+      "text": "。",
+      "start": 8,
+      "end": 9
+    },
+    {
+      "id": "s4",
+      "blockId": "b1",
+      "kind": "prose",
+      "text": "注释",
+      "start": 10,
+      "end": 12
+    },
+    {
+      "id": "s5",
+      "blockId": "b1",
+      "kind": "prose",
+      "text": "重点",
+      "start": 12,
+      "end": 14
+    },
+    {
+      "id": "s6",
+      "blockId": "b1",
+      "kind": "prose",
+      "text": "。",
+      "start": 14,
+      "end": 15
+    },
+    {
+      "id": "s7",
+      "blockId": "b2",
+      "kind": "prose",
+      "text": "解释",
+      "start": 16,
+      "end": 18
+    }
+  ]
+}

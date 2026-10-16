@@ -31,7 +31,7 @@
 
 正文模型提供按阅读顺序排列的纯内容片段：片段 ID、类型、正文、全文起止位置、所属块及其文本摘要。片段 ID 只在同一正文版本内有效，不把段落序号或文字哈希当成跨版本身份。HTML 以受 sanitizer 保留的内部属性对应这些片段；正文属性来自服务端 AST，不接受原始 HTML 注入。
 
-`projectionVersion=1` 的规则固定为：Unicode 码点计数、LF 换行、HTML 实体按 DOM 解码后计数；不做 NFC/NFD 合并、不压缩空格、不吞 NBSP；块间使用明确的换行分隔。软换行、硬换行、表格单元格分隔、列表和脚注在共享 fixture 中列出完整预期文本。服务端 Java 和浏览器不得各自从任意 HTML 去标签推导文本。
+`projectionVersion=1` 的规则固定为：Unicode 码点计数、LF 换行、HTML 实体按 DOM 解码后计数；不做 NFC/NFD 合并、不压缩空格、不吞 NBSP；块间使用明确的换行分隔（前块已以 LF 结尾时不重复添加）；同一表格行的单元格以 TAB 分隔。软换行、硬换行、表格单元格分隔、列表和脚注在共享 fixture 中列出完整预期文本。服务端 Java 和浏览器不得各自从任意 HTML 去标签推导文本。
 
 正文、行内代码、普通代码源码及实际可读脚注正文可作为文字目标。工具栏、语言标签、复制/折叠按钮、行号、脚注导航符号、批注自身的卡片和标记层不计入。Mermaid/公式生成节点整体排除；Mermaid 图形内部不提供文字划线，已有源码批注保留记录并标记当前无可显示文字范围，图表前后正文不受影响。不将这一边界声称为新增图表整体批注功能。
 
@@ -153,7 +153,9 @@ app 层是跨版本定位的唯一权威实现；浏览器只提交经过映射�
 
 ### 单测如何跨过实际故障接缝
 
-共享 fixture 提交在 `scripts/test-fixtures/annotation/`，包含 Markdown 输入、明确的预期文本、正文模型和实际页面 HTML。Java 端将同一输入经真实 `ArticleDocument`、renderer 和 sanitizer 生成结果，与这些经过审阅的 golden fixture 比较；使用 Java 25 进程内测试，不连接 MySQL、Redis 或 HTTP 服务。fixture 更新必须验证明确预期文本，不能静默重录所有结果。这样 JavaScript 单测可直接消费已提交 fixture，不依赖先启动 JVM 或先跑 Maven 才能执行。
+模型摘要采用确定性的二进制编码后 SHA-256：32 位大端投影版本、全文 UTF-8 长度与字节、32 位片段数；每片段依次为 id/blockId/kind/text 的 UTF-8 长度与字节，以及 32 位大端 start/end。摘要不包含自身；片段顺序为实际阅读顺序。编码变化须审查投影版本兼容性。
+
+共享 fixture 提交在 `scripts/test-fixtures/annotation/`，包含 Markdown 输入、明确的预期文本、正文模型和实际页面 HTML。Java 端将同一输入经真实 `ArticleDocument`、renderer 和 sanitizer 生成结果，与这些经过审阅的 golden fixture 比较；使用 Java 25 进程内测试，不连接 MySQL、Redis 或 HTTP 服务。fixture 更新必须验证明确预期文本，不能静默重录所有结果。输入 Markdown 与输出 HTML 的空白是协议证据，由 `.prettierignore` 精确排除自动重排；JSON 仍正常格式化。这样 JavaScript 单测可直接消费已提交 fixture，不依赖先启动 JVM 或先跑 Maven 才能执行。
 
 JavaScript 的 DOM 单测消费上述同批输入/输出，执行产品选择器、映射、显示、实际仓库 Prism 包与 `code-blocks.js`。Mermaid 在单测中使用受控 promise 和已核实的 DOM 替换 fixture，测试真实替换时序；不 mock 掉锚定算法或声称模拟器验证了 SVG 几何。期望结果包含范围文本、目标身份、保留的记录和状态，而不是只检查是否出现一个 `mark` 标签。
 

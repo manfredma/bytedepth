@@ -13,3 +13,6 @@ pnpm-lock.yaml
 yarn.lock
 *.svg
 **/src/main/resources/templates/**/*.html
+# Byte-exact annotation input/output goldens: whitespace is part of the protocol.
+scripts/test-fixtures/annotation/*-markdown.md
+scripts/test-fixtures/annotation/*-page.html

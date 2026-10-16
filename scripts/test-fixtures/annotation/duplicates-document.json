@@ -1,0 +1,39 @@
+{
+  "projectionVersion": 1,
+  "digest": "d0afa09a81d77800bf5e453757aaaeff0482df2c7a4c9c98ceee795350a965f5",
+  "text": "前段\n同文\n同文\n尾段",
+  "segments": [
+    {
+      "id": "s0",
+      "blockId": "b0",
+      "kind": "prose",
+      "text": "前段",
+      "start": 0,
+      "end": 2
+    },
+    {
+      "id": "s1",
+      "blockId": "b1",
+      "kind": "prose",
+      "text": "同文",
+      "start": 3,
+      "end": 5
+    },
+    {
+      "id": "s2",
+      "blockId": "b2",
+      "kind": "prose",
+      "text": "同文",
+      "start": 6,
+      "end": 8
+    },
+    {
+      "id": "s3",
+      "blockId": "b3",
+      "kind": "prose",
+      "text": "尾段",
+      "start": 9,
+      "end": 11
+    }
+  ]
+}

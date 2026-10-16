@@ -30,7 +30,7 @@ public final class MarkdownTextExtractor {
 
     private static final int CHARACTERS_PER_READING_MINUTE = 500;
 
-    /** Shared syntax for page HTML and annotation offsets; enabling an extension on only one breaks selection positions. */
+    /** Shared syntax for page HTML and text consumers; versioned annotation projection is built by ArticleDocumentService. */
     public static final List<Extension> EXTENSIONS = List.of(
             TablesExtension.create(),
             FootnotesExtension.builder().inlineFootnotes(true).build());
@@ -60,8 +60,8 @@ public final class MarkdownTextExtractor {
     }
 
     /**
-     * Returns the textContent produced by the reader's Markdown HTML rendering. Annotation offsets
-     * use this representation rather than raw Markdown offsets.
+     * Returns the legacy plain-renderer projection for interpreting pre-versioned annotation offsets.
+     * New anchors must use ArticleDocumentService; enhanced HTML has additional control text.
      */
     public static String renderedText(String markdown) {
         if (markdown == null || markdown.isBlank()) {

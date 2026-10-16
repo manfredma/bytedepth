@@ -1,0 +1,111 @@
+{
+  "projectionVersion": 1,
+  "digest": "ba3655171e54d0dcccd782daa4d706cbccaec55f9a0eb6eb8ce28116db3d595d",
+  "text": "阅读\n前文重点与inline。\nint anchorProbe = 1;\nA\tB\nC\tD\n后文  &  ",
+  "segments": [
+    {
+      "id": "s0",
+      "blockId": "b0",
+      "kind": "prose",
+      "text": "阅读",
+      "start": 0,
+      "end": 2
+    },
+    {
+      "id": "s1",
+      "blockId": "b1",
+      "kind": "prose",
+      "text": "前文",
+      "start": 3,
+      "end": 5
+    },
+    {
+      "id": "s2",
+      "blockId": "b1",
+      "kind": "prose",
+      "text": "重点",
+      "start": 5,
+      "end": 7
+    },
+    {
+      "id": "s3",
+      "blockId": "b1",
+      "kind": "prose",
+      "text": "与",
+      "start": 7,
+      "end": 8
+    },
+    {
+      "id": "s4",
+      "blockId": "b1",
+      "kind": "prose",
+      "text": "inline",
+      "start": 8,
+      "end": 14
+    },
+    {
+      "id": "s5",
+      "blockId": "b1",
+      "kind": "prose",
+      "text": "。",
+      "start": 14,
+      "end": 15
+    },
+    {
+      "id": "s6",
+      "blockId": "b2",
+      "kind": "code",
+      "text": "int anchorProbe = 1;\n",
+      "start": 16,
+      "end": 37
+    },
+    {
+      "id": "s7",
+      "blockId": "b3",
+      "kind": "prose",
+      "text": "A",
+      "start": 37,
+      "end": 38
+    },
+    {
+      "id": "s8",
+      "blockId": "b4",
+      "kind": "prose",
+      "text": "B",
+      "start": 39,
+      "end": 40
+    },
+    {
+      "id": "s9",
+      "blockId": "b5",
+      "kind": "prose",
+      "text": "C",
+      "start": 41,
+      "end": 42
+    },
+    {
+      "id": "s10",
+      "blockId": "b6",
+      "kind": "prose",
+      "text": "D",
+      "start": 43,
+      "end": 44
+    },
+    {
+      "id": "s11",
+      "blockId": "b7",
+      "kind": "prose",
+      "text": "后文 ",
+      "start": 45,
+      "end": 48
+    },
+    {
+      "id": "s12",
+      "blockId": "b7",
+      "kind": "prose",
+      "text": " &  ",
+      "start": 48,
+      "end": 52
+    }
+  ]
+}
