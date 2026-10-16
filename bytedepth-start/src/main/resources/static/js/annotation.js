@@ -26,6 +26,8 @@ window.initAnnotations = function () {
   let paintedIds = new Set();
   let annotations = window.__ANNOTATIONS__ || [];
   let selected = null;
+  let composerSelection = null;
+  let composerSession = 0;
   let color = "yellow";
   let visibilityChanged = false;
   let popup;
@@ -521,11 +523,31 @@ window.initAnnotations = function () {
     requestAnimationFrame(() => composer.querySelector(".bd-annotation-composer-text").focus());
   }
 
+  function setComposerPending(pending) {
+    composer
+      .querySelectorAll("textarea, select, .bd-annotation-type-picker button, .bd-annotation-composer-save")
+      .forEach((element) => {
+        element.disabled = pending;
+      });
+  }
+
+  function annotationFailureMessage(status, fallback) {
+    if (status === 409) {
+      return "正文已更新，请保留评论，刷新后重新选择";
+    }
+    if (status === 422) {
+      return "选区无法确认，请保留评论并重新选择";
+    }
+    return fallback;
+  }
+
   function configureComposer(data, existing) {
+    composerSession += 1;
+    composerSelection = data;
+    setComposerPending(false);
     const saveButton = composer.querySelector(".bd-annotation-composer-save");
     saveButton.textContent = "保存";
     delete saveButton.dataset.status;
-    selected = data;
     composer.dataset.editId = existing ? existing.id : "";
     composer.querySelector(".bd-annotation-composer-quote").textContent = data.selectedText;
     composer.querySelector(".bd-annotation-composer-text").value = existing ? existing.annotationText : "";
@@ -543,10 +565,12 @@ window.initAnnotations = function () {
   }
 
   function closeComposer() {
+    composerSession += 1;
+    composerSelection = null;
+    selected = null;
     composer.hidden = true;
     sidebar.appendChild(composer);
     setTypeMenuOpen(false);
-    selected = null;
     editingAnnotationId = null;
     delete composer.dataset.editId;
     if (isOpen()) {
@@ -555,19 +579,21 @@ window.initAnnotations = function () {
   }
 
   function saveComposer() {
-    if (!selected) {
+    if (!composerSelection) {
       return;
     }
-    const annotatedSelection = selected;
+    const annotatedSelection = composerSelection;
+    const session = composerSession;
     const annotationText = composer.querySelector(".bd-annotation-composer-text").value.trim();
     const visibility = composer.querySelector(".bd-annotation-visibility").value;
     const editId = composer.dataset.editId;
+    setComposerPending(true);
     const request = editId
       ? api(`/${editId}`, "PATCH", { annotationText: annotationText || null, visibility })
       : api("", "POST", {
-          anchor: selected.anchor,
+          anchor: annotatedSelection.anchor,
           annotationText: annotationText || null,
-          color,
+          color: typeTrigger.dataset.color,
           visibility,
         });
     request
@@ -577,16 +603,21 @@ window.initAnnotations = function () {
         }
         storeAnnotation(saved);
         renderMarks();
-        closeComposer();
-        restoreSelection(annotatedSelection);
+        if (session === composerSession) {
+          closeComposer();
+          restoreSelection(annotatedSelection);
+        } else if (isOpen()) {
+          renderFeed();
+        }
         updateCommentCount();
       })
       .catch((err) => {
-        if (!active || !content.isConnected) {
+        if (!active || !content.isConnected || session !== composerSession) {
           return;
         }
+        setComposerPending(false);
         const saveButton = composer.querySelector(".bd-annotation-composer-save");
-        saveButton.textContent = "保存失败，请重试";
+        saveButton.textContent = annotationFailureMessage(err && err.status, "保存失败，请重试");
         saveButton.setAttribute("data-status", err && err.status ? String(err.status) : "0");
       });
   }
@@ -825,7 +856,7 @@ window.initAnnotations = function () {
         }
         const result = document.createElement("span");
         result.className = "bd-annotation-copy-result";
-        result.textContent = "划线失败，请重试";
+        result.textContent = annotationFailureMessage(err && err.status, "划线失败，请重试");
         result.setAttribute("data-status", err && err.status ? String(err.status) : "0");
         popup.querySelector(".bd-annotation-copy-result")?.remove();
         popup.appendChild(result);

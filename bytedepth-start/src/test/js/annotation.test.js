@@ -109,6 +109,134 @@ describe("annotation sidebar", () => {
     delete document.execCommand;
   });
 
+  describe("composer request isolation", () => {
+    function select(start, end) {
+      const node = document.querySelector('[data-annotation-segment="s0"]').firstChild;
+      const range = document.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, end);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    }
+    function open(start, end, text) {
+      select(start, end);
+      document.querySelector("[data-comment]").click();
+      const input = document.querySelector(".bd-annotation-composer-text");
+      input.value = text;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    test("U33_composerKeepsItsOwnAnchorWhenAnotherSelectionOpensThePopup", async () => {
+      open(0, 2, "针对第一处的评论");
+      select(2, 5);
+      expect(document.querySelector(".bd-annotation-composer-quote").textContent).toBe("可批");
+      document.querySelector(".bd-annotation-composer-save").click();
+      expect(JSON.parse(window.fetch.mock.calls[0][1].body).anchor.exact).toBe("可批");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    for (const outcome of ["success", "failure"]) {
+      test(`U33_oldComposer${outcome}CannotCloseOrRelabelANewerDraft`, async () => {
+        let complete;
+        window.fetch.mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              complete = resolve;
+            }),
+        );
+        open(0, 2, "草稿 A");
+        document.querySelector(".bd-annotation-composer-save").click();
+        open(2, 5, "草稿 B");
+        complete(
+          outcome === "success"
+            ? {
+                ok: true,
+                json: async () =>
+                  protocolView({
+                    id: 91,
+                    selectedText: "可批",
+                    annotationText: "草稿 A",
+                    color: "blue",
+                    visibility: "PUBLIC",
+                    startOffset: 0,
+                    endOffset: 2,
+                  }),
+              }
+            : { ok: false, status: 409 },
+        );
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(document.querySelector(".bd-annotation-composer").hidden).toBe(false);
+        expect(document.querySelector(".bd-annotation-composer-quote").textContent).toBe("注文本");
+        expect(document.querySelector(".bd-annotation-composer-text").value).toBe("草稿 B");
+        expect(document.querySelector(".bd-annotation-composer-save").textContent).toBe("保存");
+        document.querySelector(".bd-annotation-composer-save").click();
+        expect(JSON.parse(window.fetch.mock.calls[1][1].body).anchor.exact).toBe("注文本");
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+
+    test("U33_cancelledComposerSuccessDoesNotRestoreSelectionOrReopenClosedSidebar", async () => {
+      let complete;
+      window.fetch.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            complete = resolve;
+          }),
+      );
+      open(0, 2, "草稿 A");
+      document.querySelector(".bd-annotation-composer-save").click();
+      document.querySelector(".bd-annotation-composer-cancel").click();
+      document.querySelector(".bd-annotation-sidebar-close").click();
+      window.getSelection().removeAllRanges();
+      complete({
+        ok: true,
+        json: async () =>
+          protocolView({
+            id: 91,
+            selectedText: "可批",
+            annotationText: "草稿 A",
+            color: "blue",
+            visibility: "PUBLIC",
+            startOffset: 0,
+            endOffset: 2,
+          }),
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(document.querySelector(".bd-annotation-composer").hidden).toBe(true);
+      expect(document.querySelector("#bd-annotation-sidebar").classList.contains("bd-annotation-sidebar-open")).toBe(
+        false,
+      );
+      expect(window.getSelection().rangeCount).toBe(0);
+    });
+
+    test("U33_pendingComposerLocksPayloadFieldsAndFailureRestoresEditing", async () => {
+      let complete;
+      window.fetch.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            complete = resolve;
+          }),
+      );
+      open(0, 2, "不可丢失的草稿");
+      const save = document.querySelector(".bd-annotation-composer-save");
+      save.click();
+      for (const element of document.querySelectorAll(
+        ".bd-annotation-composer textarea, .bd-annotation-composer select, .bd-annotation-type-picker button, .bd-annotation-composer-save",
+      )) {
+        expect(element.disabled).toBe(true);
+      }
+      save.click();
+      expect(window.fetch).toHaveBeenCalledTimes(1);
+      expect(document.querySelector(".bd-annotation-composer-cancel").disabled).toBe(false);
+      complete({ ok: false, status: 422 });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(save.disabled).toBe(false);
+      expect(document.querySelector(".bd-annotation-composer-text").disabled).toBe(false);
+      expect(document.querySelector(".bd-annotation-composer-text").value).toBe("不可丢失的草稿");
+    });
+  });
+
   for (const status of [409, 422, 0]) {
     test(`U33_U35_failure${status}RetainsCommentAndRequestIdentityUntilSuccessfulRetry`, async () => {
       const node = document.querySelector('[data-annotation-segment="s0"]').firstChild;
@@ -141,6 +269,8 @@ describe("annotation sidebar", () => {
       expect(input.value).toBe("不可丢失的草稿");
       expect(input.closest(".bd-annotation-composer").hidden).toBe(false);
       expect(save.dataset.status).toBe(String(status));
+      if (status === 409) expect(save.textContent).toContain("刷新后重新选择");
+      if (status === 422) expect(save.textContent).toContain("重新选择");
       save.click();
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(JSON.parse(window.fetch.mock.calls[1][1].body)).toEqual(first);

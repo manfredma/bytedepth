@@ -69,11 +69,11 @@ class AnnotationRevisionTransactionIT extends AnnotationITSupport {
     }
 
     @Test
-    void snapshotConstraintFailureRollsBackTheAlreadySavedBody() {
+    void snapshotConflictFailureRollsBackTheAlreadySavedBody() {
         var post = draft("目标句子");
         var source = current.current(post.getId()).revision();
         revisions.insert(new PostContentRevision(post.getId(), 2, source.markdown(), source.document(), false));
-        assertThrows(DataIntegrityViolationException.class, () -> update.execute(post.getId(), "新标题", "新正文"));
+        assertThrows(IllegalStateException.class, () -> update.execute(post.getId(), "新标题", "新正文"));
         var actual = posts.findById(post.getId()).orElseThrow();
         assertEquals(1, actual.getContentVersion());
         assertEquals("目标句子", actual.getContent());

@@ -815,6 +815,31 @@
         "runner": "vitest",
         "suite": "bytedepth-start/src/test/js/annotation.test.js",
         "name": "annotation sidebar U33_U35_failure422RetainsCommentAndRequestIdentityUntilSuccessfulRetry"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar composer request isolation U33_composerKeepsItsOwnAnchorWhenAnotherSelectionOpensThePopup"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar composer request isolation U33_oldComposersuccessCannotCloseOrRelabelANewerDraft"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar composer request isolation U33_oldComposerfailureCannotCloseOrRelabelANewerDraft"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar composer request isolation U33_pendingComposerLocksPayloadFieldsAndFailureRestoresEditing"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar composer request isolation U33_cancelledComposerSuccessDoesNotRestoreSelectionOrReopenClosedSidebar"
       }
     ],
     "U34": [
