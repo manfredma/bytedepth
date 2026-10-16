@@ -2,3 +2,6 @@ mvnw.cmd text eol=crlf
 
 # Preserve intentional CRLF input in the annotation projection regression.
 scripts/test-fixtures/annotation/unicode-markdown.md -text whitespace=cr-at-eol
+
+# Unified diff context lines intentionally contain their one-space prefix.
+bytedepth-start/src/main/resources/static/vendor/hypothesis-anchoring/adaptation.patch whitespace=-blank-at-eol
