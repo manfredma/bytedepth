@@ -1108,6 +1108,21 @@
         "runner": "vitest",
         "suite": "bytedepth-start/src/test/js/annotation.test.js",
         "name": "annotation sidebar U42_unresolvedHighlightDeletionFailureKeepsQuoteAndExposesStatus"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-responsive.test.js",
+        "name": "annotation responsive access U42_mobile390KeepsUnlocatedCommentsReachableThroughTheVisiblePanel"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation-responsive.test.js",
+        "name": "annotation responsive access U42_mobile768KeepsUnlocatedCommentsReachableThroughTheVisiblePanel"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/annotation.test.js",
+        "name": "annotation sidebar U42_mobileCommentPanelUsesFlowEvenWhenItsContainerIsFixed"
       }
     ],
     "U43": [

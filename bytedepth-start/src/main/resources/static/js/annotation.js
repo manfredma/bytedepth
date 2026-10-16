@@ -260,7 +260,7 @@ window.initAnnotations = function () {
     const spacer = feed.querySelector(".bd-annotation-feed-spacer");
 
     // 紧凑型，或侧栏非 fixed（中屏侧栏在正文下方）时：常规流堆叠，清掉跟随定位。
-    const followMode = feedLayout === "follow" && getComputedStyle(sidebar).position === "fixed";
+    const followMode = !isMobile() && feedLayout === "follow" && getComputedStyle(sidebar).position === "fixed";
     if (!followMode) {
       items.forEach((item) => {
         item.hidden = false;

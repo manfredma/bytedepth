@@ -78,6 +78,7 @@ assert_failsafe_uses_staging_profile() {
 }
 
 assert_runner_uses_manifest_transaction() {
+  rg -q 'MINIMUM_WORKSPACE_FREE_KIB=2097152' "$RUNNER"
   rg -q 'deployment-test\.lock' "$RUNNER"
   rg -q 'provision-staging-test-slot\.sh' "$RUNNER"
   rg -q 'teardown-staging-test-slot\.sh' "$RUNNER"

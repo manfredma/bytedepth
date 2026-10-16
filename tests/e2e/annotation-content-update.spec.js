@@ -16,9 +16,11 @@ test("正文变更后存活范围精确迁移，失效原引用和评论保留",
   await page.locator("#bd-annotation-sidebar-toggle").click();
   await expect(page.locator(`.bd-annotation-feed-item[data-id="${live.id}"]`)).toContainText("存活评论");
   const unresolved = page.locator(`.bd-annotation-unresolved-comments [data-id="${replaced.id}"]`);
+  await expect(unresolved).toBeVisible();
   await expect(unresolved.locator("blockquote")).toHaveText("旧方案");
   await expect(unresolved).toContainText("原方案评论");
   const highlights = page.locator(".bd-annotation-unresolved-highlights");
+  await expect(highlights).toBeVisible();
   await expect(highlights).not.toHaveAttribute("open");
   await highlights.locator("summary").click();
   await expect(highlights.locator(`[data-id="${deleted.id}"] blockquote`)).toHaveText("待删除内容");

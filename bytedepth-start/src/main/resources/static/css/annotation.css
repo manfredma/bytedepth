@@ -822,9 +822,17 @@
 }
 
 @media (max-width: 768px) {
-  .bd-annotation-toolbar-item,
+  /* Unlocated comments have no tappable mark; keep a persistent list entry. */
   .bd-annotation-sidebar {
-    display: none !important;
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    width: calc(100vw - 24px);
+    height: min(70dvh, 560px);
+  }
+  .bd-annotation-sidebar .bd-annotation-layout-switch,
+  .bd-annotation-sidebar .bd-annotation-feed-spacer {
+    display: none;
   }
   .bd-annotation-comments-open .reading-toolbar .rt-item:not(.bd-annotation-toolbar-item) {
     display: flex;

@@ -136,3 +136,7 @@
 `bootstrap-staging-runtime.sh` 的私有 `mktemp` 日志必须保持写入进程的所有权，不能在 root 的 `tee` 打开前改为 `ubuntu`；Linux `protected_regular` 可拒绝在 `/tmp` 中打开其他用户拥有的文件。脚注候选的 integration 日志曾出现临时日志 `Permission denied (os error 13)`，Maven 命令成功但日志采集失败。
 
 Maven 与 Playwright 预热必须同时检查命令和 `tee` 的 `PIPESTATUS`，日志写入失败必须阻断并禁止刷新 runtime manifest；不能只检查第一个退出码后对空日志运行 WARNING 过滤。`scripts/test-staging-runtime-preparation.sh` 用真实采集函数与离线命令验证成功、日志写入失败、未允许 WARNING 和日志所有权边界。已允许的 Javassist WARNING 仍遵循 `TD-0001` 与窄范围 warning policy。
+
+### staging 验证的工作区容量
+
+`run-staging-integration-tests.sh` 在创建测试槽位前要求工作区至少 2 GiB 可用空间。平台摘要的失败分类不能替代当前 attempt 日志：出现 `staging workspace needs at least` 时先通过正式主机维护恢复容量，再复用同一候选/制品重试失败任务；不要降低门槛、在项目工作区 SSH 清理或重复构建掩盖问题。容量恢复前不生成 IT/E2E PASS，不进入人工验收。`test-run-staging-integration-tests.sh` 固定检查容量门槛。

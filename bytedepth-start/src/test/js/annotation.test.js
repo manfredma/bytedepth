@@ -360,6 +360,27 @@ describe("annotation sidebar", () => {
     expect(document.querySelector("mark")).toBeNull();
   });
 
+  test("U42_mobileCommentPanelUsesFlowEvenWhenItsContainerIsFixed", async () => {
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    document.querySelector("#bd-annotation-sidebar").style.position = "fixed";
+    window.__ANNOTATIONS__ = [
+      {
+        id: 81,
+        selectedText: "可批",
+        annotationText: "手机评论",
+        color: "blue",
+        visibility: "PUBLIC",
+        startOffset: 0,
+        endOffset: 2,
+      },
+    ];
+    bootAnnotations();
+    document.querySelector("#bd-annotation-sidebar-toggle").click();
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(document.querySelector(".bd-annotation-feed-item").style.transform).toBe("");
+    expect(document.querySelector(".bd-annotation-feed-spacer").style.height).toBe("");
+  });
+
   test("U42_editingAnUnresolvedCommentStaysInItsSectionAcrossRelayout", async () => {
     const original = {
       ...protocolView({
