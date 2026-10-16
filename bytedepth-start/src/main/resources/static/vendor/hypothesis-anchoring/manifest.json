@@ -1,0 +1,39 @@
+{
+  "commit": "a7b7400d0d706d4357ec37c2a3610b25dcca89d5",
+  "generator": {
+    "module": "rolldown/utils",
+    "version": "1.2.5",
+    "lang": "ts",
+    "target": "es2022"
+  },
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "8000e9f55b3ea757318f072c8fae3640a4f9e2e3b578c6a271ae98b1598eee7f"
+    },
+    {
+      "path": "NOTICE",
+      "sha256": "c9186310f28b67212fe56236a00f3cc7cbeb08def6d12500afc6e4ab03db60da"
+    },
+    {
+      "path": "upstream/text-range.ts",
+      "sha256": "8846cb3f9f2b4b0606ea1e20393a07be1eab0465d49760713c8997dc0ab0ce67"
+    },
+    {
+      "path": "upstream/trim-range.ts",
+      "sha256": "779f57490be0023afda902e90c24204ab7af4a32200755a32a53975b2fb93a15"
+    },
+    {
+      "path": "text-range.js",
+      "sha256": "23cf9ccbb9b44c85df7b86a8761e049740b1f06d6c3b7ea4f4405f17f238b664"
+    },
+    {
+      "path": "trim-range.js",
+      "sha256": "ffc4092ea267b5e5414fc32fa1c6a1c6ff24cfa48b289a73cb2e7c940ce9b755"
+    },
+    {
+      "path": "adaptation.patch",
+      "sha256": "0ff880132ac4798e78ba39e11abecfa3a269ee824910a4a9250cd0056968a0ac"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ export default defineConfig({
     coverage: {
       include: [
         'bytedepth-start/src/main/resources/static/js/post-image-lightbox.js',
+        'bytedepth-start/src/main/resources/static/js/annotation-document.js',
         'bytedepth-start/src/main/resources/static/js/code-blocks.js',
         'bytedepth-start/src/main/resources/static/js/nav-menu.js',
         'bytedepth-start/src/main/resources/static/js/reading-history-page.js'

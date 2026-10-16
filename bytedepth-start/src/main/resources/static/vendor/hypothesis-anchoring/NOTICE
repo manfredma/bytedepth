@@ -1,0 +1,18 @@
+Hypothesis client anchoring helpers
+Source: https://github.com/hypothesis/client
+Commit: a7b7400d0d706d4357ec37c2a3610b25dcca89d5
+Original paths: src/annotator/anchoring/text-range.ts, trim-range.ts
+Complete upstream LICENSE is retained verbatim, including subcomponent notices.
+
+Local adaptation: erase TypeScript syntax using the existing lockfile's rolldown
+transformer (1.2.5, target es2022); remove ESM export keywords; replace the one
+trim-range import with the local global namespace; wrap each result in an IIFE
+and expose frozen HypothesisTrimRange/HypothesisTextRange globals. No algorithm,
+matching policy, ignored-node filter or coordinate rule is changed. Reproduce
+runtime outputs with node scripts/build-hypothesis-anchoring.mjs. Runtime has no
+compiler, build tool, CDN, hosted account or upstream application dependency.
+
+Use these helpers ONLY within validated pure-content roots. Unicode codepoint
+conversion, model validation, identity decisions and rendering lifecycle belong
+to product code outside this directory. The upstream fuzzy matcher is omitted.
+Review adaptation.patch and rerun the complete annotation matrix on upgrades.
