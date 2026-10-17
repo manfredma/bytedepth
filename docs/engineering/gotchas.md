@@ -149,3 +149,7 @@ Maven 与 Playwright 预热必须同时检查命令和 `tee` 的 `PIPESTATUS`，
 - 访客批注 cookie 必须保留在各自 context，不能随管理员身份复用；匿名 context 不注入认证状态。失效的运行身份直接报错，不循环登录。
 - 提交服务端表单使用目标 action 对应隐藏 CSRF 字段或编辑页的 meta；没有 token 时禁止请求。创建草稿后先保存清理句柄，再发布，保证中途失败也能删除本用例资源。表单成功还须核对实际重定向目标；正文更新后重新读取服务端 textarea 初始文本逐字比对，不能把登录页或校验页的最终 HTTP 200 当作写入成功。页面切换等待 DOMContentLoaded，随后核对 annotation-ready；E2E 还需对照页面正文版本与接口 placement.targetRevision，区分准备失败和产品定位失败。
 - 新建批注必须从原生选区取得 canonical versioned anchor；脚注、代码等辅助测试也复用该协议，禁止构造全文 textContent 绝对偏移的旧请求。回归入口：`e2e-owned-form.test.js`、批注正式 U01–U46 单测及 staging 全量 E2E。
+
+### Service Worker 的动态响应与身份边界
+
+“非导航 GET”包含批注、搜索和其他动态接口，不能一律 cache-first。staging 已出现正文 v2 但批注 placement.targetRevision 仍为 v1；真实 worker 的离线单测重现了同一缓存路径。Cache API 不自动遵守 `Cache-Control: no-store`，且同浏览器缓存不按登录身份隔离。缓存必须默认拒绝，只允许内容指纹静态目录资源和固定公共预缓存资源；含 CSRF/私有数据的 HTML 不预缓存、不存储、不用作离线回退。升级版本清理旧 bytedepth 缓存。`service-worker.test.js`、U11/U38 报告映射、第七项行为变异及 staging 控制中 worker 的隐私场景共同防复发。不能关闭 worker 或放宽版本断言规避问题。

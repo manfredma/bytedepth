@@ -12,7 +12,7 @@ import unittest
 
 CHECKER = Path(__file__).with_name('verify-annotation-unit-evidence.py').resolve()
 MODULES = ['annotation.js', 'annotation-document.js', 'annotation-display.js',
-           'annotation-render-lifecycle.js', 'post-mermaid.js']
+           'annotation-render-lifecycle.js', 'post-mermaid.js', 'sw.js']
 
 
 class EvidenceTest(unittest.TestCase):
@@ -30,7 +30,7 @@ class EvidenceTest(unittest.TestCase):
                        'numPendingTests': 0, 'numTodoTests': 0,
                        'testResults': [{'name': '/repo/src/unit.test.js', 'assertionResults': [
                            {'fullName': 'suite behavior', 'status': 'passed'}]}]}
-        self.coverage = {f'/repo/bytedepth-start/src/main/resources/static/js/{name}': {
+        self.coverage = {f'/repo/bytedepth-start/src/main/resources/static/{"" if name == "sw.js" else "js/"}{name}': {
             's': {'0': 1}, 'b': {'0': [1, 1]}, 'f': {'0': 1},
             'statementMap': {'0': {'start': {'line': 1}, 'end': {'line': 1}}},
             'branchMap': {'0': {}}, 'fnMap': {'0': {}}} for name in MODULES}

@@ -211,6 +211,11 @@
         "runner": "vitest",
         "suite": "bytedepth-start/src/test/js/annotation-display.test.js",
         "name": "U09_U11_mismatchedQuotesRevisionsAndIncompleteMappingsNeverPaintPartialRanges"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/service-worker.test.js",
+        "name": "real Service Worker cache boundary U11_U38_annotationResponsesAlwaysReachCurrentRevisionAndIdentity"
       }
     ],
     "U12": [
@@ -1000,6 +1005,16 @@
         "runner": "surefire",
         "suite": "manfred.bytedepth.infrastructure.annotation.AnnotationPersistenceTest",
         "name": "U38_protocolPublicPrivateAndAnonymousVisibilityMatrixUsesRealSql"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/service-worker.test.js",
+        "name": "real Service Worker cache boundary U11_U38_annotationResponsesAlwaysReachCurrentRevisionAndIdentity"
+      },
+      {
+        "runner": "vitest",
+        "suite": "bytedepth-start/src/test/js/service-worker.test.js",
+        "name": "real Service Worker cache boundary U38_switchingIdentityCannotReplayAnotherVisitorsPrivateResponse"
       }
     ],
     "U39": [

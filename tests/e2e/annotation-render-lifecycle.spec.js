@@ -152,6 +152,14 @@ test("旧页面提交返回409并保留同一次操作的选区或评论草稿",
 test("匿名身份与登录身份对已定位及未定位私有记录保持隔离，草稿无泄露", async ({ page, browser, baseURL, article }) => {
   test.setTimeout(60000);
   await ready(page, article.postPath);
+  // Exercise the installed worker, rather than accidentally passing before it controls the page.
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    if (!navigator.serviceWorker.controller)
+      await new Promise((resolve) =>
+        navigator.serviceWorker.addEventListener("controllerchange", resolve, { once: true }),
+      );
+  });
   const privateA = await createAnnotation(page, "批注测试正文", "匿名A私有", "PRIVATE");
   const publicA = await createAnnotation(page, "第二段独立内容", "匿名A公开", "PUBLIC");
   const secondContext = await browser.newContext({ baseURL });
@@ -181,6 +189,21 @@ test("匿名身份与登录身份对已定位及未定位私有记录保持隔�
           view.placement.targetRevision,
           JSON.stringify({ id: view.id, placement: view.placement, pageRevision: revision }),
         ).toBe(revision);
+    for (const reader of [page, second, article.adminPage]) {
+      const cachedPrivatePaths = await reader.evaluate(async () => {
+        const paths = [];
+        for (const name of await caches.keys()) {
+          if (!name.startsWith("bytedepth-")) continue;
+          const cache = await caches.open(name);
+          for (const request of await cache.keys()) {
+            const path = new URL(request.url).pathname;
+            if (path.startsWith("/posts/") || path.startsWith("/admin")) paths.push(path);
+          }
+        }
+        return paths;
+      });
+      expect(cachedPrivatePaths).toEqual([]);
+    }
     expect(a.find((r) => r.id === privateA.id).placement.status).toBe(updated ? "UNRESOLVED" : "ANCHORED");
     expect(b.find((r) => r.id === publicA.id).ownedByCurrentVisitor).toBe(false);
     for (const result of [...a, ...b, ...user]) {

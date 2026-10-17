@@ -240,7 +240,7 @@ class ThemeAssetsTest {
         String sw = classpathText("/static/sw.js");
 
         assertThat(sw)
-                .contains("bytedepth-v8")
+                .contains("bytedepth-v9")
                 .contains("/favicon.ico")
                 .contains("/icons/favicon-48.png")
                 .contains("/favicon-staging.ico")

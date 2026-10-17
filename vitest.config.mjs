@@ -6,6 +6,7 @@ export default defineConfig({
     outputFile: {json: 'target/annotation-unit-evidence/vitest.json'},
     coverage: {
       include: [
+        'bytedepth-start/src/main/resources/static/sw.js',
         'bytedepth-start/src/main/resources/static/js/post-image-lightbox.js',
         'bytedepth-start/src/main/resources/static/js/annotation.js',
         'bytedepth-start/src/main/resources/static/js/annotation-document.js',

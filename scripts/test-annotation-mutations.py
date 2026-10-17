@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Kill six known annotation safety regressions using the formal unit suites."""
+"""Kill known annotation safety regressions using the formal unit suites."""
 import argparse
 from dataclasses import dataclass
 import json
@@ -54,6 +54,10 @@ MUTATIONS = [
         '.then((saved) => {\n        if (!active || !content.isConnected) {\n          return;\n        }\n        storeAnnotation(saved);\n        renderMarks();\n        if (session === composerSession) {',
         '.then((saved) => {\n        storeAnnotation(saved);\n        renderMarks();\n        if (session === composerSession) {', TEST_JS+'annotation.test.js',
         'U19_U30_oldcommentSuccessCannotChangeReinitializedUi'),
+    Mutation('cache-dynamic-annotation-responses', 'bytedepth-start/src/main/resources/static/sw.js',
+        'if (!fingerprintedStatic && !PRECACHE_URLS.includes(url.pathname)) return;',
+        '// UNSAFE MUTANT: cache every dynamic GET as a static asset',
+        TEST_JS+'service-worker.test.js', 'U11_U38_annotationResponsesAlwaysReachCurrentRevisionAndIdentity'),
 ]
 
 
@@ -158,7 +162,7 @@ def run():
                 elif code != 0 or not report.exists() or not passed_case(report, mutation):
                     raise RuntimeError(f'{mutation.name}: {phase} did not pass\n{log.read_text()[-4000:]}')
             print(f'KILLED {mutation.name}: baseline PASS -> assertion FAIL -> restored PASS', flush=True)
-    print('Annotation mutations PASS: 6/6 killed by formal unit assertions', flush=True)
+    print(f'Annotation mutations PASS: {len(MUTATIONS)}/{len(MUTATIONS)} killed by formal unit assertions', flush=True)
 
 
 if __name__ == '__main__':

@@ -10,7 +10,7 @@ import uuid
 import xml.etree.ElementTree as ET
 
 MODULES = ('annotation.js', 'annotation-document.js', 'annotation-display.js',
-           'annotation-render-lifecycle.js', 'post-mermaid.js')
+           'annotation-render-lifecycle.js', 'post-mermaid.js', 'sw.js')
 CASE_IDS = {f'U{i:02}' for i in range(1, 47)}
 
 
@@ -91,7 +91,7 @@ def verify(args):
 
     coverage = load(args.coverage)
     for module in MODULES:
-        suffix = '/bytedepth-start/src/main/resources/static/js/'+module
+        suffix = '/bytedepth-start/src/main/resources/static/'+('' if module == 'sw.js' else 'js/')+module
         matches = [value for path, value in coverage.items() if path.replace('\\', '/').endswith(suffix)]
         require(len(matches) == 1, f'Missing or duplicate product coverage: {module}')
         record = matches[0]
