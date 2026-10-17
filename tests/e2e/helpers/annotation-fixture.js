@@ -17,12 +17,7 @@ export async function createArticle(page, title, content) {
   return { editPath, postPath, title };
 }
 
-export async function updateArticle(page, article, content) {
-  await page.goto(article.editPath, { waitUntil: "commit" });
-  const categoryId = await page.locator('select[name="categoryId"] option:checked').getAttribute("value");
-  const path = await page.locator("form.post-editor-form").getAttribute("action");
-  await form(page, path, { title: article.title, content, categoryId });
-}
+export { updateOwnedArticle as updateArticle } from "./owned-form.js";
 
 export async function deleteArticle(page, article) {
   await page.goto(article.editPath, { waitUntil: "commit" });
@@ -30,7 +25,7 @@ export async function deleteArticle(page, article) {
 }
 
 export async function ready(page, path) {
-  if (path) await page.goto(path, { waitUntil: "commit" });
+  if (path) await page.goto(path, { waitUntil: "domcontentloaded" });
   await expect(page.locator('#post-article[data-bd-annotation-ready="true"]')).toBeVisible({ timeout: 15000 });
 }
 

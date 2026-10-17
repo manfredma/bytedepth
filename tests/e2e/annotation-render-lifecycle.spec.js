@@ -164,13 +164,23 @@ test("匿名身份与登录身份对已定位及未定位私有记录保持隔�
   const privateUser = await createAnnotation(article.adminPage, "批注测试正文", "登录身份私有", "PRIVATE");
   for (const updated of [false, true]) {
     if (updated) await updateArticle(article.adminPage, article, "整段删除后保留评论");
-    for (const reader of [page, second, article.adminPage]) await ready(reader, article.postPath);
+    for (const reader of [page, second, article.adminPage]) {
+      await ready(reader, article.postPath);
+      if (updated) await expect(reader.locator("#post-article .content")).toHaveText("整段删除后保留评论");
+    }
     const a = await rows(page, article.postPath),
       b = await rows(second, article.postPath),
       user = await rows(article.adminPage, article.postPath);
     expect(a.map((r) => r.id).sort()).toEqual([privateA.id, publicA.id].sort());
     expect(b.map((r) => r.id).sort()).toEqual([privateB.id, publicA.id].sort());
     expect(user.map((r) => r.id).sort()).toEqual([privateUser.id, publicA.id].sort());
+    const revision = await page.evaluate(() => window.__ANNOTATION_DOCUMENT__.revision);
+    for (const views of [a, b, user])
+      for (const view of views)
+        expect(
+          view.placement.targetRevision,
+          JSON.stringify({ id: view.id, placement: view.placement, pageRevision: revision }),
+        ).toBe(revision);
     expect(a.find((r) => r.id === privateA.id).placement.status).toBe(updated ? "UNRESOLVED" : "ANCHORED");
     expect(b.find((r) => r.id === publicA.id).ownedByCurrentVisitor).toBe(false);
     for (const result of [...a, ...b, ...user]) {

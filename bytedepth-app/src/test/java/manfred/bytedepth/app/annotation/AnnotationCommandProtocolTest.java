@@ -275,6 +275,28 @@ class AnnotationCommandProtocolTest {
     }
 
     @Test
+    void U38_privateCachedPlacementIsRecomputedWhenItsOriginalParagraphIsDeleted() {
+        save();
+        var privateRequest = new CreateAnnotationRequest(anchor, "私有原评论", "yellow", AnnotationVisibility.PRIVATE);
+        var original = create.execute(1L, null, "visitor-a", privateRequest);
+        when(annotations.findVisibleByPostId(1L, null, "visitor-a"))
+                .thenReturn(java.util.List.of(original.annotation()));
+        when(placements.find(9, 7, 1, 1)).thenReturn(Optional.of(original.placement()));
+        assertEquals(
+                PlacementStatus.ANCHORED,
+                query.views(1L, null, "visitor-a").getFirst().placement().status());
+        post.updateContent("title", "整段删除后保留评论");
+        var after = query.views(1L, null, "visitor-a").getFirst();
+        assertEquals(8, after.placement().targetRevision());
+        assertEquals(PlacementStatus.UNRESOLVED, after.placement().status());
+        assertEquals(original.annotation().anchor(), after.annotation().anchor());
+        assertEquals("私有原评论", after.annotation().annotationText());
+        verify(placements).find(9, 8, 1, 1);
+        verify(annotations, never()).update(any());
+        verify(annotations, never()).delete(any());
+    }
+
+    @Test
     void U35_missingReplayRowNeverRecreatesAndUnavailableHashFailsClosed() {
         save();
         create.execute(1L, 2L, null, request(anchor));

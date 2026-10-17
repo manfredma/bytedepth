@@ -147,5 +147,5 @@ Maven 与 Playwright 预热必须同时检查命令和 `tee` 的 `PIPESTATUS`，
 
 - 整次 Playwright 运行在 global setup 进行一次真实管理登录并验证后台权限；通过进程内状态向 worker 提供且仅提供认证 session cookie，不输出 cookie 值或生成 storageState 文件。不得逐用例重复提交密码触发真实登录限流，也不得降低限流来通过测试。
 - 访客批注 cookie 必须保留在各自 context，不能随管理员身份复用；匿名 context 不注入认证状态。失效的运行身份直接报错，不循环登录。
-- 提交服务端表单使用目标 action 对应隐藏 CSRF 字段或编辑页的 meta；没有 token 时禁止请求。创建草稿后先保存清理句柄，再发布，保证中途失败也能删除本用例资源。
+- 提交服务端表单使用目标 action 对应隐藏 CSRF 字段或编辑页的 meta；没有 token 时禁止请求。创建草稿后先保存清理句柄，再发布，保证中途失败也能删除本用例资源。表单成功还须核对实际重定向目标；正文更新后重新读取服务端 textarea 初始文本逐字比对，不能把登录页或校验页的最终 HTTP 200 当作写入成功。页面切换等待 DOMContentLoaded，随后核对 annotation-ready；E2E 还需对照页面正文版本与接口 placement.targetRevision，区分准备失败和产品定位失败。
 - 新建批注必须从原生选区取得 canonical versioned anchor；脚注、代码等辅助测试也复用该协议，禁止构造全文 textContent 绝对偏移的旧请求。回归入口：`e2e-owned-form.test.js`、批注正式 U01–U46 单测及 staging 全量 E2E。

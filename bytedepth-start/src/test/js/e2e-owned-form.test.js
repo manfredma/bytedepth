@@ -1,4 +1,4 @@
-import { submitOwnedForm } from "../../../../tests/e2e/helpers/owned-form.js";
+import { submitOwnedForm, updateOwnedArticle } from "../../../../tests/e2e/helpers/owned-form.js";
 import { authenticationCookies, loginAsAdmin } from "../../../../tests/e2e/helpers/admin-auth.js";
 
 describe("owned staging fixture requests", () => {
@@ -18,7 +18,7 @@ describe("owned staging fixture requests", () => {
     let body;
     globalThis.fetch = async (path, options) => {
       body = options.body;
-      return { ok: true, status: 200 };
+      return { ok: true, status: 200, redirected: true, url: "http://localhost/admin/posts" };
     };
     await submitOwnedForm(page, "/admin/posts/1/publish", {});
     expect(body.get("_csrf")).toBe("publish-token");
@@ -28,7 +28,7 @@ describe("owned staging fixture requests", () => {
     let body;
     globalThis.fetch = async (path, options) => {
       body = options.body;
-      return { ok: true, status: 200 };
+      return { ok: true, status: 200, redirected: true, url: "http://localhost/admin/posts" };
     };
     await submitOwnedForm(page, "/admin/posts", { title: "fixture", _csrf: "wrong" });
     expect(body.get("_csrf")).toBe("editor-token");
@@ -89,5 +89,46 @@ describe("owned staging fixture requests", () => {
       if (old === undefined) delete process.env.E2E_ADMIN_COOKIES;
       else process.env.E2E_ADMIN_COOKIES = old;
     }
+  });
+  test("a successful HTTP response cannot pretend a rejected or lost content update was persisted", async () => {
+    const page = {
+      goto: async () => {},
+      locator: (selector) => ({
+        getAttribute: async () => (selector.includes("option") ? "1" : "/admin/posts/1"),
+        textContent: async () => "old content",
+      }),
+      evaluate: async () => ({ ok: true, status: 200, url: "https://staging.example/admin/posts", redirected: true }),
+    };
+    await expect(
+      updateOwnedArticle(page, { editPath: "/admin/posts/1/edit", title: "owned" }, "new content"),
+    ).rejects.toThrow(/persisted content/);
+  });
+
+  for (const result of [
+    { ok: true, status: 200, redirected: true, url: "http://localhost/login" },
+    { ok: true, status: 200, redirected: false, url: "http://localhost/admin/posts/1" },
+  ]) {
+    test(`does not accept a login/validation page as form success (${result.url})`, async () => {
+      document.head.innerHTML = '<meta name="_csrf" content="token">';
+      globalThis.fetch = async () => result;
+      await expect(submitOwnedForm(page, "/admin/posts/1", {})).rejects.toThrow(/redirect/);
+    });
+  }
+
+  test("accepts an update only after reading the exact new server-rendered source", async () => {
+    const navigations = [];
+    const page = {
+      goto: async (path, options) => navigations.push([path, options.waitUntil]),
+      locator: (selector) => ({
+        getAttribute: async () => (selector.includes("option") ? "1" : "/admin/posts/1"),
+        textContent: async () => "new content",
+      }),
+      evaluate: async () => ({ ok: true, status: 200, url: "https://staging.example/admin/posts", redirected: true }),
+    };
+    await updateOwnedArticle(page, { editPath: "/admin/posts/1/edit", title: "owned" }, "new content");
+    expect(navigations).toEqual([
+      ["/admin/posts/1/edit", "domcontentloaded"],
+      ["/admin/posts/1/edit", "domcontentloaded"],
+    ]);
   });
 });
