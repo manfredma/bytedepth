@@ -1,15 +1,8 @@
+import { loginAsAdmin } from "./helpers/admin-auth.js";
 import { expect, test } from "@playwright/test";
 
 const adminUsername = process.env.E2E_ADMIN_USERNAME;
 const adminPassword = process.env.E2E_ADMIN_PASSWORD;
-
-async function loginAsAdmin(page) {
-  await page.goto("/login", { waitUntil: "commit" });
-  await page.locator('input[name="username"]').fill(adminUsername);
-  await page.locator('input[name="password"]').fill(adminPassword);
-  await page.getByRole("button", { name: "登录" }).click();
-  await expect(page).not.toHaveURL(/\/login/);
-}
 
 async function createDraft(page, title, content) {
   await page.goto("/admin/posts/new", { waitUntil: "commit" });

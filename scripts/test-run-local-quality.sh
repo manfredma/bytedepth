@@ -10,6 +10,7 @@ readonly RUNNER="$SOURCE_ROOT/scripts/run-local-quality.sh"
 [[ -x "$RUNNER" ]]
 grep -Fqx 'npm ci --ignore-scripts --no-audit --no-fund' "$RUNNER"
 grep -Fq 'bash scripts/format-check.sh --all' "$RUNNER"
+grep -Fqx 'bash scripts/test-warning-policy.sh' "$RUNNER"
 grep -Fq 'bash scripts/test-format-code.sh' "$RUNNER"
 grep -Fqx 'bash scripts/test-agent-delivery-workflow.sh' "$RUNNER"
 grep -Fqx 'bash scripts/test-handoff-documentation.sh' "$RUNNER"

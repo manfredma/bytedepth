@@ -1,35 +1,11 @@
 import { expect, test as base } from "@playwright/test";
+import { loginAsAdmin } from "./admin-auth.js";
+import { submitOwnedForm as form } from "./owned-form.js";
+export { loginAsAdmin };
 
 export const fixtureBody = "批注测试正文包含足够字符用于选区和布局验证。\n\n第二段独立内容。";
 
-export async function loginAsAdmin(page) {
-  const username = process.env.E2E_ADMIN_USERNAME;
-  const password = process.env.E2E_ADMIN_PASSWORD;
-  if (!username || !password) throw new Error("Annotation E2E requires the configured admin identity");
-  await page.goto("/login", { waitUntil: "commit" });
-  await page.locator('input[name="username"]').fill(username);
-  await page.locator('input[name="password"]').fill(password);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
-  await expect(page).not.toHaveURL(/\/login/);
-}
-
-async function form(page, path, fields) {
-  const result = await page.evaluate(
-    async ({ path, fields }) => {
-      const csrf = document.querySelector('meta[name="_csrf"]')?.content;
-      const response = await fetch(path, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ ...fields, _csrf: csrf }),
-      });
-      return { ok: response.ok, status: response.status };
-    },
-    { path, fields },
-  );
-  expect(result.ok, `owned article operation failed: ${result.status}`).toBeTruthy();
-}
-
-export async function createArticle(page, title, content, published = false) {
+export async function createArticle(page, title, content) {
   await page.goto("/admin/posts/new", { waitUntil: "commit" });
   const categoryId = await page.locator('select[name="categoryId"] option').first().getAttribute("value");
   await form(page, "/admin/posts", { title, content, categoryId });
@@ -38,7 +14,6 @@ export async function createArticle(page, title, content, published = false) {
   await expect(card).toHaveCount(1);
   const editPath = new URL(await card.locator(".btn-edit").getAttribute("href"), page.url()).pathname;
   const postPath = new URL(await card.locator(".title").getAttribute("href"), page.url()).pathname;
-  if (published) await form(page, editPath.replace(/\/edit$/, "/publish"), {});
   return { editPath, postPath, title };
 }
 
@@ -170,18 +145,21 @@ export const test = base.extend({
     const adminContext = await browser.newContext({ baseURL });
     const adminPage = await adminContext.newPage();
     let article;
+    let published = false;
     const readers = new Set([page, adminPage]);
     const contexts = new Set([adminContext]);
     try {
       await loginAsAdmin(adminPage);
-      article = await createArticle(adminPage, `批注验收-${testInfo.project.name}-${Date.now()}`, fixtureBody, true);
+      article = await createArticle(adminPage, `批注验收-${testInfo.project.name}-${Date.now()}`, fixtureBody);
+      await form(adminPage, article.editPath.replace(/\/edit$/, "/publish"), {});
+      published = true;
       await use({ ...article, adminPage, readers, contexts });
     } finally {
       try {
         if (article) {
           // Only this fixture's article and the explicit reader identities are touched.
           const failures = [];
-          for (const reader of readers) {
+          for (const reader of published ? readers : []) {
             try {
               expect(reader.isClosed(), "Reader closed before owned annotation cleanup").toBe(false);
               await cleanupAnnotations(reader, article.postPath);

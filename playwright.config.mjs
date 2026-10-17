@@ -12,6 +12,7 @@ const chromiumLaunchOptions = {
 
 export default defineConfig({
     testDir: './tests/e2e',
+    globalSetup: './tests/e2e/global-setup.js',
     workers: 1,
     timeout: 30_000,
     forbidOnly: Boolean(process.env.CI),

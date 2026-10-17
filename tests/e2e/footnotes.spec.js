@@ -1,15 +1,9 @@
+import { createAnnotation } from "./helpers/annotation-fixture.js";
+import { loginAsAdmin } from "./helpers/admin-auth.js";
 import { expect, test } from "@playwright/test";
 
 const adminUsername = process.env.E2E_ADMIN_USERNAME;
 const adminPassword = process.env.E2E_ADMIN_PASSWORD;
-
-async function loginAsAdmin(page) {
-  await page.goto("/login", { waitUntil: "commit" });
-  await page.locator('input[name="username"]').fill(adminUsername);
-  await page.locator('input[name="password"]').fill(adminPassword);
-  await page.getByRole("button", { name: "登录" }).click();
-  await expect(page).not.toHaveURL(/\/login/);
-}
 
 async function createDraft(page, title, content) {
   await page.goto("/admin/posts/new", { waitUntil: "commit" });
@@ -36,37 +30,6 @@ async function createDraft(page, title, content) {
     editPath: new URL(await card.locator(".btn-edit").getAttribute("href"), page.url()).pathname,
     postPath: new URL(await card.locator(".title").getAttribute("href"), page.url()).pathname,
   };
-}
-
-async function createAnnotation(page, selectedText, annotationText = null) {
-  return page.evaluate(
-    async ({ selectedText: expectedText, annotationText: note }) => {
-      const content = document.querySelector("#post-article .content");
-      const text = content.textContent;
-      const startOffset = text.indexOf(expectedText);
-      if (startOffset < 0) {
-        throw new Error(`Unable to find selected text: ${expectedText}`);
-      }
-      const csrf = document.querySelector('meta[name="_csrf"]')?.content;
-      const response = await fetch(`${window.location.pathname}/annotations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": csrf },
-        body: JSON.stringify({
-          selectedText: expectedText,
-          annotationText: note,
-          color: "yellow",
-          visibility: "PUBLIC",
-          startOffset,
-          endOffset: startOffset + expectedText.length,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error(`annotation creation failed with HTTP ${response.status}`);
-      }
-      return response.json();
-    },
-    { selectedText, annotationText },
-  );
 }
 
 async function updateDraft(page, editPath, title, content) {
@@ -204,8 +167,22 @@ test("普通和行内脚注可双向跳转，编辑后批注仍定位到正文",
       return response.json();
     });
     const saved = annotations.find((item) => item.id === annotationId);
-    const domText = await article.textContent();
-    expect(domText.slice(saved.startOffset, saved.endOffset)).toBe(selectedText);
+    expect(saved.anchor).toEqual(annotation.anchor);
+    expect(saved.placement.status).toBe("ANCHORED");
+    const verifiedQuote = await page.evaluate((view) => {
+      const map = window.AnnotationDocument.create(
+        document.querySelector("#post-article .content"),
+        window.__ANNOTATION_DOCUMENT__,
+      );
+      try {
+        const ranges = map.verify(view);
+        if (!Array.isArray(ranges)) throw new Error("Footnote annotation placement failed canonical verification");
+        return ranges.map((range) => range.toString()).join("");
+      } finally {
+        map.dispose();
+      }
+    }, saved);
+    expect(verifiedQuote).toBe(selectedText);
     expect(errors).toEqual([]);
   } finally {
     if (annotationId) await removeAnnotation(page, paths.postPath, annotationId);

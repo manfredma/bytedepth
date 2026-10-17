@@ -1,3 +1,4 @@
+import { loginAsAdmin } from "./helpers/admin-auth.js";
 import { expect, test } from "@playwright/test";
 
 async function publicRoutes(page) {
@@ -173,11 +174,7 @@ test("登录后的手机页头保留账号操作、搜索和键盘关闭", async
   expect(process.env.E2E_ADMIN_USERNAME, "staging must supply admin test credentials").toBeTruthy();
   expect(process.env.E2E_ADMIN_PASSWORD, "staging must supply admin test credentials").toBeTruthy();
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/login", { waitUntil: "domcontentloaded" });
-  await page.locator('input[name="username"]').fill(process.env.E2E_ADMIN_USERNAME);
-  await page.locator('input[name="password"]').fill(process.env.E2E_ADMIN_PASSWORD);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
-  await expect(page).not.toHaveURL(/\/login/);
+  await loginAsAdmin(page);
   for (const route of ["/", "/reading-history", "/posts"]) {
     await page.goto(route, { waitUntil: "domcontentloaded" });
     const nav = page.locator(".nav-bar");

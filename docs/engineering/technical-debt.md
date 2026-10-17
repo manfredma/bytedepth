@@ -54,3 +54,14 @@
 - 代码与单测：采用 [ADR-0024](../architecture/decisions/0024-versioned-annotation-selectors.md) 的单一正文模型、不可变版本锚点与核验显示；无法确认的批注保留原引用和评注。共享渲染 golden、真实 Prism、Mermaid 异步生命周期、U01–U46 与六类严重变异均进入本地门禁，测试入口见[代码质量](../agent-guides/code-quality.md#批注单测证据与反例)。
 - 修复边界：任意改写或重复段落缺少身份依据时不猜测；旧数据依据不足仅创建者可见。staging 与人工发布验收完成前保留 In Progress，不把本地通过称作债务关闭。
 - 验收条件：将上述最小输入沉淀为两侧文本一致性自动回归，并在 staging 桌面/手机验证增强代码块前后及脚注内的批注在编辑后仍正确定位；保持代码框复制、行号和展开/收起行为。现有 `MarkdownRendererTest` 的脚注文本一致性与 `tests/e2e/footnotes.spec.js` 继续保护本次纯正文脚注场景。
+
+## TD-0006：Tomcat 首次随机数播种存在亚秒初始化耗时
+
+- 状态：`Open`
+- 发现日期：2026-10-17
+- 证据：staging 隔离 E2E 的 `o.a.c.util.SessionIdGeneratorBase` 提示默认 `SHA1PRNG` 初始化完成耗时 109ms。
+- 根因与边界：[Tomcat 官方源码](https://github.com/apache/tomcat/blob/11.0.x/java/org/apache/catalina/util/SessionIdGeneratorBase.java) 在 `result.nextInt()` 强制完成播种之后，仅因计时超过 100ms 打印 `createRandom` 警告；这条消息本身不表示算法、provider 或熵源失败。算法或 provider 失败走独立 error 分支。
+- 发布策略：`deploy/lib/warning-policy.sh` 只允许该 logger、完整固定消息、默认 `SHA1PRNG` 且 101–999ms 的完成提示；保持原始日志。达到 1000ms、不同算法、消息尾随告警、其他 logger 或未知 WARN/WARNING 均阻断。不修改随机数算法、日志等级或登录限流。
+- 取舍：一秒是本项目对这条启动诊断的允许上限，不是 Tomcat 的保证或产品延迟 SLA；若主机负载继续升高，门禁会再次阻断并要求诊断，不能扩大白名单代替排障。
+- 自动检查：`bash scripts/test-warning-policy.sh` 覆盖实际消息和上述拒绝反例；已有未知依赖与框架告警继续拒绝。
+- 验收条件：定位首次初始化开销并在 staging 不再出现此提示，或升级上游后复核该日志语义，移除例外并通过完整门禁。

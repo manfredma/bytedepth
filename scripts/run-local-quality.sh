@@ -12,6 +12,7 @@ bash scripts/check-release-readiness.sh --target HEAD --base origin/main --mode 
 npm ci --ignore-scripts --no-audit --no-fund
 bash scripts/format-check.sh --all
 bash scripts/test-format-code.sh
+bash scripts/test-warning-policy.sh
 bash scripts/test-agent-delivery-workflow.sh
 bash scripts/test-handoff-documentation.sh
 bash scripts/test-run-local-quality.sh
