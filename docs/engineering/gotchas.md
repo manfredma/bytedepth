@@ -153,3 +153,9 @@ Maven 与 Playwright 预热必须同时检查命令和 `tee` 的 `PIPESTATUS`，
 ### Service Worker 的动态响应与身份边界
 
 “非导航 GET”包含批注、搜索和其他动态接口，不能一律 cache-first。staging 已出现正文 v2 但批注 placement.targetRevision 仍为 v1；真实 worker 的离线单测重现了同一缓存路径。Cache API 不自动遵守 `Cache-Control: no-store`，且同浏览器缓存不按登录身份隔离。缓存必须默认拒绝，只允许内容指纹静态目录资源和固定公共预缓存资源；含 CSRF/私有数据的 HTML 不预缓存、不存储、不用作离线回退。升级版本清理旧 bytedepth 缓存。`service-worker.test.js`、U11/U38 报告映射、第七项行为变异及 staging 控制中 worker 的隐私场景共同防复发。不能关闭 worker 或放宽版本断言规避问题。
+
+### 文章 slug 与数字 ID 的路由边界
+
+`/posts/{identifier}` 的纯数字路径保留旧文章 ID 兼容跳转。中文加时间戳标题经通用 `slugify` 后可能只剩数字，不能把这种 slug 原样保存；staging 隐私 E2E 曾在管理员访问这类草稿时实际失败。文章专用有效性规则集中于 `Post.isValidSlug`，不改变专栏、标签等通用 slug 语义。创建时先给纯数字结果加 `post-` 前缀，再按既有协议检查唯一性；Web 修改入口和应用修改端口共用规则，在写入和搜索更新前拒绝无效值。领域创建也校验非空 slug，持久化重建不自动改历史值，不改变旧数字 ID 跳转。
+
+正式回归包含中文加时间戳、显式数字 slug、前缀冲突、直接领域创建、绕过 Web 的应用端口与 HTTP 400；第八项变异重新允许纯数字 slug 后必须被单测拦住。保留隐私 E2E 原标题，禁止改成英文测试标题掩盖真实链接问题。

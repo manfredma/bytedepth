@@ -9,6 +9,13 @@ import org.junit.jupiter.api.Test;
 class PostTest {
 
     @Test
+    void numericSlugCannotCreateAnArticleThatCollidesWithTheReservedIdRoute() {
+        for (var slug : java.util.List.of("1792212312345", "invalid slug", "")) {
+            assertThrows(DomainException.class, () -> Post.create("title", "body", 1L, slug));
+        }
+    }
+
+    @Test
     void create_shouldSetDraftStatus() {
         Post post = Post.create("标题", "内容");
         assertEquals(PostStatus.DRAFT, post.getStatus());

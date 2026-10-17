@@ -51,6 +51,8 @@ public class CreatePostCmdExe {
             // 纯中文/无 ASCII 字符标题：用时间戳生成唯一基础 slug
             base = "post-" + LocalDateTime.now().format(SLUG_TS);
         }
+        // 数字路径属于旧 ID 路由，标题或手填 slug 的纯数字结果须先转换，再检查唯一性。
+        if (!Post.isValidSlug(base)) base = "post-" + base;
         if (postRepository.findBySlug(base).isEmpty()) return base;
         for (int i = 2; i <= 999; i++) {
             String candidate = base + "-" + i;

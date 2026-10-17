@@ -38,17 +38,17 @@ MUTATIONS = [
     Mutation('first-duplicate', APP+'AnnotationResolver.java',
         'if (oldByKey.get(block.key()).size() != 1 || candidates.size() != 1)\n'
         '                return failed(id, targetRevision, PlacementReason.DUPLICATE_TARGET);',
-        '// UNSAFE MUTANT: take first duplicate', 'AnnotationResolverTest',
+        '// UNSAFE MUTANT: take first duplicate', 'manfred.bytedepth.app.annotation.AnnotationResolverTest',
         'U07_oldOffsetsAndFirstCandidateCannotResolveEquivalentDuplicates', True),
     Mutation('delete-unresolved', APP+'ListAnnotationsQryExe.java',
         'placements.save(resolved);',
         'if (resolved.status() != manfred.bytedepth.domain.annotation.PlacementStatus.ANCHORED) '
         'annotationRepository.delete(annotation.id());\n                    placements.save(resolved);',
-        'AnnotationCommandProtocolTest', 'U04_U11_resolveDeletedTextKeepsCommentAndOriginalAnchor', True),
+        'manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest', 'U04_U11_resolveDeletedTextKeepsCommentAndOriginalAnchor', True),
     Mutation('ignore-revision', APP+'CreateAnnotationCmdExe.java',
         'if (anchor.sourceRevision() != post.getContentVersion())\n'
         '                throw new AnnotationWriteConflictException(AnnotationWriteConflictException.Kind.STALE_REVISION);',
-        '// UNSAFE MUTANT: accept stale page', 'AnnotationCommandProtocolTest',
+        '// UNSAFE MUTANT: accept stale page', 'manfred.bytedepth.app.annotation.AnnotationCommandProtocolTest',
         'U33_U36_lockedLatestVersionRejectsStaleAndWritesNothing', True),
     Mutation('accept-old-generation', JS+'annotation.js',
         '.then((saved) => {\n        if (!active || !content.isConnected) {\n          return;\n        }\n        storeAnnotation(saved);\n        renderMarks();\n        if (session === composerSession) {',
@@ -58,6 +58,12 @@ MUTATIONS = [
         'if (!fingerprintedStatic && !PRECACHE_URLS.includes(url.pathname)) return;',
         '// UNSAFE MUTANT: cache every dynamic GET as a static asset',
         TEST_JS+'service-worker.test.js', 'U11_U38_annotationResponsesAlwaysReachCurrentRevisionAndIdentity'),
+    Mutation('accept-reserved-numeric-slug',
+        'bytedepth-domain/src/main/java/manfred/bytedepth/domain/post/Post.java',
+        'return SlugUtils.isValid(slug) && !slug.matches("\\\\d+");',
+        'return SlugUtils.isValid(slug);',
+        'manfred.bytedepth.domain.post.PostTest',
+        'numericSlugCannotCreateAnArticleThatCollidesWithTheReservedIdRoute', True),
 ]
 
 
@@ -144,9 +150,10 @@ def run():
             source_path = sandbox/mutation.path
             original = source_path.read_text()
             if mutation.java:
-                command = ['./mvnw', '-pl', 'bytedepth-app', '-am', 'test',
+                module = mutation.path.split('/')[0]
+                command = ['./mvnw', '-pl', module, '-am', 'test',
                     f'-Dtest={mutation.suite}#{mutation.test}', '-Dsurefire.failIfNoSpecifiedTests=false', '-Dsort.skip=true']
-                report = sandbox/f'bytedepth-app/target/surefire-reports/TEST-manfred.bytedepth.app.annotation.{mutation.suite}.xml'
+                report = sandbox/f'{module}/target/surefire-reports/TEST-{mutation.suite}.xml'
             else:
                 command = ['npx', 'vitest', 'run', mutation.suite, '-t', mutation.test,
                     '--reporter=json', '--outputFile=target/mutation-vitest.json']

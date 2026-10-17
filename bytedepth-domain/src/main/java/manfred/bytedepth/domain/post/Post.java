@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import lombok.Getter;
 import manfred.bytedepth.domain.common.DomainException;
+import manfred.bytedepth.domain.common.SlugUtils;
 
 @Getter
 public class Post {
@@ -38,6 +39,7 @@ public class Post {
     }
 
     public static Post create(String title, String content, Long authorId, String slug) {
+        if (slug != null && !isValidSlug(slug)) throw new DomainException("文章 slug 格式无效或为保留的纯数字标识");
         Post post = new Post();
         post.title = title;
         post.slug = slug;
@@ -49,6 +51,11 @@ public class Post {
         post.updatedAt = LocalDateTime.now();
         post.contentVersion = 1;
         return post;
+    }
+
+    /** 纯数字路径保留给旧文章 ID；创建和修改共用这一约束，重建历史数据不改名。 */
+    public static boolean isValidSlug(String slug) {
+        return SlugUtils.isValid(slug) && !slug.matches("\\d+");
     }
 
     public static Post reconstruct(

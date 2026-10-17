@@ -93,6 +93,40 @@ class CreatePostCmdExeTest {
         verify(userRepository, never()).findByUsername(any());
     }
 
+    @Test
+    void chineseTitleAndTimestampCannotGenerateAnUnreachableNumericSlug() {
+        when(postRepository.save(any(Post.class))).thenAnswer(call -> call.getArgument(0));
+        var cmd = new CreatePostCmd();
+        cmd.setTitle("批注隐私草稿-1792212312345");
+        cmd.setContent("draft-secret-body");
+        assertDoesNotThrow(() -> createPostCmdExe.execute(cmd));
+        verify(postRepository).save(argThat(post -> "post-1792212312345".equals(post.getSlug())));
+    }
+
+    @Test
+    void explicitlyProvidedNumericSlugIsPrefixedBeforeCheckingUniqueness() {
+        when(postRepository.save(any(Post.class))).thenAnswer(call -> call.getArgument(0));
+        var cmd = new CreatePostCmd();
+        cmd.setTitle("Title");
+        cmd.setContent("body");
+        cmd.setSlug("123");
+        createPostCmdExe.execute(cmd);
+        verify(postRepository).save(argThat(post -> "post-123".equals(post.getSlug())));
+        verify(postRepository).findBySlug("post-123");
+    }
+
+    @Test
+    void numericSlugPrefixParticipatesInTheExistingCollisionProtocol() {
+        when(postRepository.findBySlug("post-123")).thenReturn(Optional.of(Post.create("old", "body")));
+        when(postRepository.save(any(Post.class))).thenAnswer(call -> call.getArgument(0));
+        var cmd = new CreatePostCmd();
+        cmd.setTitle("123");
+        cmd.setContent("body");
+        createPostCmdExe.execute(cmd);
+        verify(postRepository).save(argThat(post -> "post-123-2".equals(post.getSlug())));
+        verify(postRepository).findBySlug("post-123-2");
+    }
+
     // ---- resolveSlug branches ----
 
     @Test

@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -347,6 +348,16 @@ class AdminPostControllerTest {
                 .andExpect(status().isOk());
 
         verify(setPostTagsCmdExe).execute(1L, List.of("java", "spring"));
+    }
+
+    @Test
+    @WithMockUser(authorities = {"admin:dashboard:view", "blog:post:manage"})
+    void updateSlug_rejectsNumericSlugReservedForLegacyArticleIds() throws Exception {
+        mockMvc.perform(post("/admin/posts/1/slug")
+                        .param("slug", "1792212312345")
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+        verify(updatePostSlugCmdExe, never()).execute(any(), any());
     }
 
     @Test

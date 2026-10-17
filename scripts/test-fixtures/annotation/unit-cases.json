@@ -1032,6 +1032,21 @@
         "runner": "surefire",
         "suite": "manfred.bytedepth.app.annotation.LegacyAnchorMigratorTest",
         "name": "U39_migrationCannotBorrowAnotherArticlesRevision"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.command.CreatePostCmdExeTest",
+        "name": "chineseTitleAndTimestampCannotGenerateAnUnreachableNumericSlug"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.app.post.command.UpdatePostSlugCmdExeTest",
+        "name": "numericSlugCannotBypassReservedIdRouteThroughTheApplicationPort"
+      },
+      {
+        "runner": "surefire",
+        "suite": "manfred.bytedepth.domain.post.PostTest",
+        "name": "numericSlugCannotCreateAnArticleThatCollidesWithTheReservedIdRoute"
       }
     ],
     "U40": [

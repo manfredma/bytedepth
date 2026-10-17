@@ -21,7 +21,7 @@ import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.ListAllPostsQryExe;
 import manfred.bytedepth.app.series.AppendPostToSeriesCmdExe;
 import manfred.bytedepth.app.series.RemovePostFromSeriesCmdExe;
-import manfred.bytedepth.domain.common.SlugUtils;
+import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.series.Series;
 import manfred.bytedepth.domain.series.SeriesRepository;
@@ -267,8 +267,8 @@ public class AdminPostController {
     public ResponseEntity<String> updateSlug(
             Authentication authentication, @PathVariable Long id, @RequestParam String slug) {
         contentOwnershipGuard.requirePostOwner(authentication, id);
-        if (!SlugUtils.isValid(slug)) {
-            return ResponseEntity.badRequest().body("slug 格式非法：只允许小写英文、数字和连字符（-），首尾须为英数字，不可连续 -");
+        if (!Post.isValidSlug(slug)) {
+            return ResponseEntity.badRequest().body("slug 格式非法：只允许小写英文、数字和连字符（-），首尾须为英数字，不可连续 -，且不能为纯数字");
         }
         // 唯一性检查：同 slug 被其他文章占用则拒绝
         var conflict = postRepository.findBySlug(slug);

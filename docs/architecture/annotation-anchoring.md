@@ -182,3 +182,5 @@ JavaScript 的 DOM 单测消费上述同批输入/输出，执行产品选择器
 Service Worker 也属于批注版本与身份边界。非导航 GET 不等于静态资源；只允许公共静态目录中的内容指纹资源及明确预缓存图标/离线页使用 Cache API。批注、搜索、阅读历史及未来动态接口默认直达网络，不读取旧缓存。HTML 含身份、CSRF 和私有批注，不缓存，也不作为离线回退；断网显示中性离线页。升级缓存版本清除旧 bytedepth 缓存，不删除其他应用的缓存。[Cache API 不遵守 HTTP 缓存头](https://developer.mozilla.org/en-US/docs/Web/API/Cache)，不能以服务端 `no-store` 代替此边界。
 
 `service-worker.test.js` 在隔离 JS VM 中执行真实 worker，只替换网络和 Cache API，覆盖版本切换、同浏览器身份切换、既有错误缓存、动态接口默认拒绝缓存、离线隐私及旧缓存清理。U11/U38 映射到正式报告，第七个严重变异恢复动态接口缓存后必须被单测拦住。staging E2E 等待真实 worker 接管，并核对所有读者 Cache API 中不存在文章 HTML 或批注响应；禁止通过关闭 Service Worker 让测试通过。
+
+文章 URL 同样必须可验证：纯数字路径保留旧文章 ID，文章 slug 不接受纯数字。创建时先规范化为 `post-` 前缀再检查唯一性，修改在 Web/应用端口共用领域规则拒绝不合法值；不改变旧 ID 跳转或批量改历史 slug。U39 映射真实生成与修改端口单测，第八项变异重新允许纯数字 slug 须被正式断言杀死；原 staging 隐私 E2E 的中文加时间戳标题保持不变。
