@@ -121,6 +121,8 @@
 
 ## 合并分支后的 Flyway 版本
 
+- 隔离库内再次隔离迁移表时，只替换完整表标识符，不能用普通子串替换连带改写索引名。MySQL 标识符上限为 64 字符；表内索引名无需额外命名空间。正式单测必须读取真实迁移脚本，使用完整 UUID 前缀校验生成的名称和表隔离，避免将 DDL 命名错误留到 staging。
+
 - 并行分支新增 Flyway 迁移时，合并前必须检查 `ls bytedepth-start/src/main/resources/db/migration | sort -V`，确保每个版本号唯一。若主线已占用版本号，应在候选合并前递增新迁移版本，并运行 migration contract 测试。
 
 ## 共享页头空隙反复出现

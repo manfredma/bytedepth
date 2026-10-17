@@ -121,18 +121,13 @@ class AnnotationRevisionTransactionIT extends AnnotationITSupport {
         // migrations with table names isolated again, never clean shared history.
         String prefix = "an_" + UUID.randomUUID().toString().replace("-", "");
         var directory = Files.createTempDirectory("annotation-migration-");
-        var tables = java.util.List.of(
-                "post_annotation", "post_content_revision", "annotation_request", "annotation_placement");
+        var tables = AnnotationMigrationFixture.TABLES;
         try {
-            for (String file : java.util.List.of(
-                    "V20__add_post_annotation.sql",
-                    "V21__upgrade_post_annotations_for_visibility.sql",
-                    "V22__add_annotation_deleted_flag.sql",
-                    "V29__versioned_annotation_anchors.sql")) {
+            for (String file : AnnotationMigrationFixture.MIGRATIONS) {
                 try (var input = getClass().getResourceAsStream("/db/migration/" + file)) {
                     assertNotNull(input);
                     String sql = new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-                    for (String table : tables) sql = sql.replace(table, prefix + "_" + table);
+                    sql = AnnotationMigrationFixture.namespacedSql(sql, prefix);
                     Files.writeString(directory.resolve(file), sql);
                 }
             }
