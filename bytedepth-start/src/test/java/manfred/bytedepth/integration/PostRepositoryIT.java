@@ -92,9 +92,9 @@ class PostRepositoryIT {
 
     @Test
     void findsPublishedPostsByHotnessAndLatestExcludingIds() {
-        Post first = publishPost("热门排序第一篇");
-        Post second = publishPost("热门排序第二篇");
-        Post third = publishPost("热门排序第三篇");
+        Post first = publishPost("热门排序第一篇", "it-hotness-first");
+        Post second = publishPost("热门排序第二篇", "it-hotness-second");
+        Post third = publishPost("热门排序第三篇", "it-hotness-third");
 
         jdbcTemplate.update(
                 "UPDATE post SET published_at = DATE_ADD(NOW(), INTERVAL 1 DAY) - INTERVAL 3 MINUTE WHERE" + " id = ?",
@@ -160,8 +160,8 @@ class PostRepositoryIT {
         mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(view().name("public/index"));
     }
 
-    private Post publishPost(String title) {
-        Post post = postRepository.save(Post.create(title, "内容", 1L, title));
+    private Post publishPost(String title, String slug) {
+        Post post = postRepository.save(Post.create(title, "内容", 1L, slug));
         post.publish();
         return postRepository.save(post);
     }
