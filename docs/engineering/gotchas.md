@@ -159,3 +159,11 @@ Maven 与 Playwright 预热必须同时检查命令和 `tee` 的 `PIPESTATUS`，
 `/posts/{identifier}` 的纯数字路径保留旧文章 ID 兼容跳转。中文加时间戳标题经通用 `slugify` 后可能只剩数字，不能把这种 slug 原样保存；staging 隐私 E2E 曾在管理员访问这类草稿时实际失败。文章专用有效性规则集中于 `Post.isValidSlug`，不改变专栏、标签等通用 slug 语义。创建时先给纯数字结果加 `post-` 前缀，再按既有协议检查唯一性；Web 修改入口和应用修改端口共用规则，在写入和搜索更新前拒绝无效值。领域创建也校验非空 slug，持久化重建不自动改历史值，不改变旧数字 ID 跳转。
 
 正式回归包含中文加时间戳、显式数字 slug、前缀冲突、直接领域创建、绕过 Web 的应用端口与 HTTP 400；第八项变异重新允许纯数字 slug 后必须被单测拦住。保留隐私 E2E 原标题，禁止改成英文测试标题掩盖真实链接问题。直接调用 `Post.create` 的仓储 IT 夹具也必须显式提供合法 slug，不能把中文显示标题兼作路径；排序测试保留中文标题及全部排序断言，只独立指定 `it-hotness-*` slug。领域单测负责拒绝无效路径，真实仓储排序由 staging IT 证明。
+
+## 公共静态资源缓存与更新
+
+- 内容指纹只改变 URL，不自动开启 HTTP 缓存。`StaticResourceCacheHeadersWriter` 只为实际静态资源处理器的成功、分段与条件响应设置缓存：`css/js/vendor/fonts/icons` 下带有效内容指纹的资源使用 `public,max-age=31536000,immutable`；未指纹化的公共静态文件使用 `no-cache`，允许保存但每次重新验证。错误指纹、404、HTML、私人接口和 `/sw.js` 不放宽 Spring Security 的 `no-store`。
+- 字体和图标纳入同一个内容版本策略；公共页面从共享 head 引入本地字体，不再通过外部 Google Fonts CSS 阻塞首屏。字体升级须使用新文件名并同步修改 `fonts.css`，保证引用它的 CSS 指纹也更新。页面 HTML 始终取最新版本，新指纹使用独立缓存键；不要在原指纹 URL 下覆盖内容。
+- Service Worker 只对指纹资源 cache-first；固定 URL 的公共图标与离线页 online-first，网络失败才回退缓存。不能把所有 GET 或 HTML 加入公共缓存，也不能用旧缓存吞掉正常的 HTTP 错误。升级缓存版本清理历史策略。
+- 无 Mermaid 代码块的文章不加载图表运行时。运行时开启文本与 SVG 的 gzip 压缩；不要依赖用户已经有缓存来掩盖首次下载体积。
+- 防复发：`StaticResourceCachingTest` 经实际 MVC/Security 资源链验证指纹、304、错误指纹和字体重写；`StaticResourceCacheHeadersWriterTest` 覆盖缓存安全边界；`service-worker.test.js` 验证新指纹获取新内容、固定 URL 在线更新和离线回退；文章渲染测试验证 Mermaid 按需引入。`tests/e2e/static-resource-cache.spec.js` 由 staging Host Agent 检查实际缓存头、压缩和无 Service Worker 的浏览器缓存复用。

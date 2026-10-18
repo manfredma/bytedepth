@@ -2,6 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
 <th:block th:fragment="pwa">
+    <link rel="stylesheet" th:href="@{/css/fonts.css}">
     <meta th:if="${environment == 'staging'}" name="robots" content="noindex, nofollow, noarchive">
     <link th:if="${environment != 'staging'}" rel="alternate" type="application/rss+xml" title="bytedepth RSS" href="/feed.xml">
     <!-- PWA: Manifest -->

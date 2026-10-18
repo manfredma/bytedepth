@@ -75,6 +75,7 @@ public class SecurityConfig {
         // 把 token 存 session、提交时从 session 校验，不依赖 cookie 下发，更可靠。
         http.authenticationProvider(authenticationProvider(userDetailsService, passwordEncoder))
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .headers(headers -> headers.addHeaderWriter(new StaticResourceCacheHeadersWriter()))
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/admin/search/**")
                         .ignoringRequestMatchers(
                                 PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/posts/*/reading-progress")))

@@ -279,6 +279,35 @@ class PostControllerSeriesDetailRenderingTest {
         verify(postRepository, never()).findNextPublished(77L);
     }
 
+    @Test
+    void mermaidRuntimeLoadsOnlyForActualDiagramCodeBlocks() throws Exception {
+        PostDTO dto = new PostDTO();
+        dto.setId(77L);
+        dto.setSlug("resource-loading");
+        dto.setTitle("资源加载");
+        dto.setStatus("PUBLISHED");
+        dto.setPublishedAt(LocalDateTime.of(2026, 10, 19, 7, 0));
+        dto.setUpdatedAt(dto.getPublishedAt());
+        when(getPostQryExe.executeBySlug(dto.getSlug())).thenReturn(dto);
+        when(listTagsQryExe.findByPostId(77L)).thenReturn(List.of());
+        when(listCommentsQryExe.findApprovedByPostId(77L)).thenReturn(List.of());
+        for (String markdown : List.of("正文提到 mermaid，但没有图表。", "```mermaid\ngraph TD; A-->B\n```")) {
+            dto.setContent(markdown);
+            var article = ArticleRevisionFixture.from(dto);
+            when(articleRevisions.current(77L)).thenReturn(article);
+            when(postRepository.findById(77L)).thenReturn(Optional.of(article.post()));
+            String html = mockMvc.perform(get("/posts/resource-loading"))
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            org.assertj.core.api.Assertions.assertThat(html.contains("/vendor/mermaid/mermaid.min"))
+                    .isEqualTo(markdown.startsWith("```"));
+            org.assertj.core.api.Assertions.assertThat(html.contains("/js/post-mermaid"))
+                    .isEqualTo(markdown.startsWith("```"));
+        }
+    }
+
     private static SeriesPostItemDTO seriesItem(Long id, String slug, String title, int seriesOrder) {
         SeriesPostItemDTO item = new SeriesPostItemDTO();
         item.setId(id);

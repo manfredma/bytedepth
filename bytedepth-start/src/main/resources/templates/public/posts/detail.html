@@ -24,7 +24,6 @@
     <meta property="og:title" th:content="${post.title}">
     <meta property="og:description" th:if="${metaDescription != null}" th:content="${metaDescription}">
     <meta property="og:url" th:if="${canonicalUrl != null}" th:content="${canonicalUrl}">
-    <link rel="stylesheet" th:href="@{/css/fonts.css}">
     <style>
         :root {
             --bg:        var(--bd-bg, #f7f5f0);
@@ -1245,8 +1244,11 @@
 
 </div>
 <!-- Mermaid 图表渲染 -->
+<!-- Do not download the diagram runtime for articles without a diagram. -->
+<th:block th:if="${#strings.contains(renderedContent, 'language-mermaid')}">
 <script th:src="@{/vendor/mermaid/mermaid.min.js}" defer></script>
 <script th:src="@{/js/post-mermaid.js}" defer></script>
+</th:block>
 <!-- Schema.org 结构化数据：让 Google 展示发布时间、作者等富文本摘要 -->
 <script type="application/ld+json" th:inline="javascript">
 {

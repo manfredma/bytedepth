@@ -34,6 +34,8 @@ spring:
               - /css/**
               - /js/**
               - /vendor/**
+              - /fonts/**
+              - /icons/**
   data:
     redis:
       host: localhost
@@ -53,6 +55,10 @@ server:
   # nginx 在 443 终止 SSL 后反代 HTTP 到本应用；开启后 Tomcat 信任 X-Forwarded-Proto，
   # request.isSecure()/scheme/port 反映原始请求，Secure cookie 与 https 重定向才正确。
   forward-headers-strategy: native
+  compression:
+    enabled: true
+    mime-types: text/html,text/plain,text/css,text/javascript,application/javascript,application/json,image/svg+xml
+    min-response-size: 1KB
   servlet:
     session:
       cookie:

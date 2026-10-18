@@ -30,7 +30,7 @@ function worker(responseOptions = {}) {
       for (const path of paths) stored.set(path, response(path));
     },
   };
-  const names = new Set(["bytedepth-v8", "another-app"]);
+  const names = new Set(["bytedepth-v8", "bytedepth-v9", "another-app"]);
   const caches = {
     open: async (name) => {
       names.add(name);
@@ -145,13 +145,31 @@ describe("real Service Worker cache boundary", () => {
     "/js/annotation-0123456789abcdef0123456789abcdef.js",
     "/css/theme-0123456789abcdef0123456789abcdef.css",
     "/vendor/mermaid/mermaid.min-0123456789abcdef0123456789abcdef.js",
-    "/icons/favicon.svg",
   ])("public static asset %s retains cache-first behavior", async (path) => {
     const w = worker();
     expect((await w.request(path)).text).toBe("A:v1");
     w.setVersion(2);
     expect((await w.request(path)).text).toBe("A:v1");
     expect(w.calls).toHaveLength(1);
+  });
+  test("new fingerprints fetch new content while the previous URL retains its own bytes", async () => {
+    const w = worker();
+    const first = "/vendor/mermaid/mermaid.min-0123456789abcdef0123456789abcdef.js";
+    const next = "/vendor/mermaid/mermaid.min-abcdef0123456789abcdef0123456789.js";
+    expect((await w.request(first)).text).toBe("A:v1");
+    w.setVersion(2);
+    expect((await w.request(next)).text).toBe("A:v2");
+    expect((await w.request(first)).text).toBe("A:v1");
+    expect(w.calls).toHaveLength(2);
+  });
+  test("fixed public URLs update online and only fall back to their cache when offline", async () => {
+    const w = worker();
+    expect((await w.request("/icons/favicon.svg")).text).toBe("A:v1");
+    w.setVersion(2);
+    expect((await w.request("/icons/favicon.svg")).text).toBe("A:v2");
+    w.offline();
+    expect((await w.request("/icons/favicon.svg")).text).toBe("A:v2");
+    await expect(w.request("/icons/logo.svg")).rejects.toThrow("offline");
   });
   test.each(["/posts/private", "/posts", "/?token=secret"])(
     "navigation %s never stores personalized HTML and offline uses only neutral fallback",
@@ -175,6 +193,7 @@ describe("real Service Worker cache boundary", () => {
     await w.lifecycle("install");
     await w.lifecycle("activate");
     expect(w.names.has("bytedepth-v8")).toBe(false);
+    expect(w.names.has("bytedepth-v9")).toBe(false);
     expect(w.names.has("another-app")).toBe(true);
   });
   test.each([{ ok: false }, { type: "opaque" }])(

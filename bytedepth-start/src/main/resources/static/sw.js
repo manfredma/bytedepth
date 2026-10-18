@@ -2,7 +2,7 @@
 // 策略：明确的公共静态资源 cache-first，页面导航直达网络 + 中性离线页。
 // CSS / JS 的 URL 由 Spring 依据内容生成 hash；内容变更时自然使用新缓存键。
 
-const CACHE_NAME = "bytedepth-v9";
+const CACHE_NAME = "bytedepth-v10";
 
 // 预缓存的核心资源
 const PRECACHE_URLS = [
@@ -68,20 +68,29 @@ self.addEventListener("fetch", (event) => {
   // 默认不缓存：非导航 GET 不等于静态资源。Cache API 不自动遵守 no-store，
   // 批注、搜索、阅读历史及未来新增接口必须始终直达网络。
   const fingerprintedStatic =
-    /^\/(?:css|js|vendor|fonts)\//.test(url.pathname) &&
+    /^\/(?:css|js|vendor|fonts|icons)\//.test(url.pathname) &&
     /-[a-f0-9]{32}\.(?:css|js|woff2?|ttf|otf|svg|png|ico)$/.test(url.pathname);
   if (!fingerprintedStatic && !PRECACHE_URLS.includes(url.pathname)) return;
 
-  // 内容指纹 URL cache-first；只有明确的公共静态响应可以写入缓存。
+  // 指纹 URL 内容不可变；固定 URL 必须先确认线上版本，避免图标长期停留在旧内容。
   event.respondWith(
-    caches.match(request).then(async (cached) => {
-      if (cached) return cached;
-      const response = await fetch(request);
-      if (response.ok && response.type === "basic") {
-        const clone = response.clone();
-        event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)));
+    (async () => {
+      if (fingerprintedStatic) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
       }
-      return response;
-    }),
+      try {
+        const response = await fetch(request);
+        if (response.ok && response.type === "basic") {
+          const clone = response.clone();
+          event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)));
+        }
+        return response;
+      } catch (error) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        throw error;
+      }
+    })(),
   );
 });

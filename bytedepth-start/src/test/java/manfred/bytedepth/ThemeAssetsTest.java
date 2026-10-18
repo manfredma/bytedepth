@@ -48,6 +48,15 @@ class ThemeAssetsTest {
     }
 
     @Test
+    void sharedFontsAreLocalAndLoadedWithoutAnExternalStylesheetDependency() throws Exception {
+        assertThat(classpathText("/static/css/theme.css")).doesNotContain("fonts.googleapis.com");
+        assertThat(classpathText("/static/css/nav.css")).doesNotContain("fonts.googleapis.com");
+        assertThat(classpathText("/templates/fragments/pwa-head.html")).contains("@{/css/fonts.css}");
+        assertThat(classpathText("/templates/fragments/nav.html")).contains("@{/css/fonts.css}");
+        assertThat(classpathText("/templates/public/register.html")).contains("@{/css/fonts.css}");
+    }
+
+    @Test
     void sharedThemeResetsBrowserBodyMargin() throws Exception {
         String css = classpathText("/static/css/theme.css");
 
@@ -89,7 +98,7 @@ class ThemeAssetsTest {
         String css = classpathText("/static/css/nav.css");
 
         assertThat(css)
-                .contains("@import url(\"https://fonts.googleapis.com")
+                .doesNotContain("fonts.googleapis.com")
                 .contains(".nav-bar")
                 .contains("font-family: var(--bd-font-sans")
                 .contains("font-size: 16px")
@@ -240,14 +249,13 @@ class ThemeAssetsTest {
         String sw = classpathText("/static/sw.js");
 
         assertThat(sw)
-                .contains("bytedepth-v9")
+                .contains("bytedepth-v10")
                 .contains("/favicon.ico")
                 .contains("/icons/favicon-48.png")
                 .contains("/favicon-staging.ico")
                 .contains("/icons/favicon-staging-48.png")
                 .contains("/icons/favicon-staging-192.png")
                 .contains("/icons/favicon-staging-512.png")
-                .contains("内容指纹 URL cache-first")
                 .contains("if (request.method !== \"GET\") return;")
                 .contains("if (cached) return cached")
                 .doesNotContain("admin-layout.css")
