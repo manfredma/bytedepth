@@ -72,7 +72,9 @@ test("文章远处图片在滚动后加载，首图和图片预览保持可用",
     await expect(last).toHaveAttribute("width", "700");
     await expect.poll(() => first.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
     expect(distantRequests).toEqual([]);
-    expect(await last.evaluate((image) => image.getBoundingClientRect().top)).toBeGreaterThan(5000);
+    expect(await last.evaluate((image) => image.getBoundingClientRect().top)).toBeGreaterThan(
+      page.viewportSize().height,
+    );
     await last.scrollIntoViewIfNeeded();
     await expect.poll(() => last.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
     expect(distantRequests.length).toBeGreaterThan(0);
