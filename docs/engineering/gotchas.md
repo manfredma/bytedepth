@@ -167,3 +167,9 @@ Maven 与 Playwright 预热必须同时检查命令和 `tee` 的 `PIPESTATUS`，
 - Service Worker 只对指纹资源 cache-first；固定 URL 的公共图标与离线页 online-first，网络失败才回退缓存。不能把所有 GET 或 HTML 加入公共缓存，也不能用旧缓存吞掉正常的 HTTP 错误。升级缓存版本清理历史策略。
 - 无 Mermaid 代码块的文章不加载图表运行时。运行时开启文本与 SVG 的 gzip 压缩；不要依赖用户已经有缓存来掩盖首次下载体积。
 - 防复发：`StaticResourceCachingTest` 经实际 MVC/Security 资源链验证指纹、304、错误指纹和字体重写；`StaticResourceCacheHeadersWriterTest` 覆盖缓存安全边界；`service-worker.test.js` 验证新指纹获取新内容、固定 URL 在线更新和离线回退；文章渲染测试验证 Mermaid 按需引入。`tests/e2e/static-resource-cache.spec.js` 由 staging Host Agent 检查实际缓存头、压缩和无 Service Worker 的浏览器缓存复用。
+
+## E2E 搜索依赖诊断
+
+Playwright 用例失败必须先区分断言和 owned fixture teardown。2026-10-19 两次运行在不同用例清理文章时，`MeiliSearchPostIndexer.awaitTask` 查询已提交任务超过 5 秒，删除接口返回 500；平台摘要匹配到恢复阶段的 curl 连接错误，不能代替首个应用错误。搜索服务超时的底层原因必须以服务证据判断，不直接增加超时或忽略清理失败。
+
+`run-staging-e2e-tests.sh` 在 Playwright 非零退出后、销毁隔离搜索索引前，由 Host Agent 只读采集 Meilisearch 资源、重启及日志、健康延迟、最近任务和错误日志中的任务终态。输出仅保留任务元数据，不输出认证 header 或文档细节；诊断失败不能改变原始失败或生成 PASS。`test-run-staging-e2e-tests.sh` 验证失败路径会采集、保持门禁失败并过滤凭据及任务详情。

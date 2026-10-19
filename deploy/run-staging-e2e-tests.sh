@@ -164,6 +164,55 @@ capture_test_slot_journal() {
   }
 }
 
+# Failure diagnostics execute inside the signed Host Agent test task. Read only;
+# never restart dependencies or turn a failed test into PASS.
+capture_search_diagnostics() {
+  local header_file="$WORK_DIR/meili-header" response_file="$WORK_DIR/meili-tasks.json" task_id
+  local failed_tasks="$WORK_DIR/meili-failed-task-ids"
+  printf 'E2E_SEARCH_DIAGNOSTIC begin\n'
+  timeout 8 systemctl show "$BYTEDEPTH_STAGING_MEILI_SERVICE" \
+    --property=ActiveState,Result,NRestarts,ExecMainStatus,MemoryCurrent,MemoryPeak,MemoryMax,CPUUsageNSec || true
+  for metric in /proc/pressure/memory /proc/pressure/io \
+    /sys/fs/cgroup/system.slice/bytedepth-staging-native-meilisearch.service/memory.events; do
+    if [[ -r "$metric" ]]; then
+      printf 'E2E_SEARCH_DIAGNOSTIC metric=%s\n' "$metric"
+      cat "$metric"
+    fi
+  done
+  timeout 8 journalctl --unit="$BYTEDEPTH_STAGING_MEILI_SERVICE" --since="$slot_started_at" \
+    --no-pager --output=short-iso --lines=80 2>&1 | redact_secrets || true
+  curl --silent --show-error --connect-timeout 3 --max-time 6 \
+    --output /dev/null --write-out 'E2E_SEARCH_DIAGNOSTIC health http=%{http_code} seconds=%{time_total}\n' \
+    "$BYTEDEPTH_TEST_MEILI_URL/health" || true
+  # Keep credentials out of process arguments and limit output to task metadata.
+  (
+    umask 077
+    printf 'Authorization: Bearer %s\n' "$BYTEDEPTH_TEST_MEILI_API_KEY" > "$header_file"
+  )
+  if curl --fail --silent --show-error --connect-timeout 3 --max-time 6 \
+    --header "@$header_file" --output "$response_file" \
+    --write-out 'E2E_SEARCH_DIAGNOSTIC tasks http=%{http_code} seconds=%{time_total}\n' \
+    "$BYTEDEPTH_TEST_MEILI_URL/tasks?indexUids=$BYTEDEPTH_STAGING_E2E_SEARCH_INDEX&limit=5"; then
+    jq '{results: [.results[] | {uid, indexUid, status, type, enqueuedAt, startedAt, finishedAt, duration,
+      error: (if .error then {code: .error.code, type: .error.type} else null end)}]}' "$response_file" || true
+  fi
+  timeout 8 journalctl --unit="$SLOT_SERVICE" --since="$slot_started_at" --no-pager --output=cat --lines=2000 2> /dev/null \
+    | sed -nE 's#.*127\.0\.0\.1:[0-9]+/tasks/([0-9]+).*#\1#p' \
+    | sort -u | head -5 > "$failed_tasks" || true
+  while IFS= read -r task_id; do
+    [[ "$task_id" =~ ^[0-9]+$ ]] || continue
+    if curl --fail --silent --show-error --connect-timeout 3 --max-time 6 \
+      --header "@$header_file" --output "$response_file" \
+      --write-out "E2E_SEARCH_DIAGNOSTIC task=$task_id http=%{http_code} seconds=%{time_total}\n" \
+      "$BYTEDEPTH_TEST_MEILI_URL/tasks/$task_id"; then
+      jq '{uid, indexUid, status, type, enqueuedAt, startedAt, finishedAt, duration,
+        error: (if .error then {code: .error.code, type: .error.type} else null end)}' "$response_file" || true
+    fi
+  done < "$failed_tasks"
+  rm -f "$header_file" "$response_file" "$failed_tasks"
+  printf 'E2E_SEARCH_DIAGNOSTIC end\n'
+}
+
 cleanup_slot() {
   local cleanup_status=0
 
@@ -343,6 +392,7 @@ if ! E2E_POST_SLUG="$e2e_post_slug" \
   PLAYWRIGHT_CHROMIUM_EXECUTABLE="$CHROMIUM_EXECUTABLE" \
   npm run test:e2e -- --reporter=list,json 2>&1 | redact_secrets | tee -a "$E2E_LOG"; then
   printf 'Staging E2E tests failed.\n' >&2
+  capture_search_diagnostics
   exit 1
 fi
 

@@ -240,13 +240,53 @@ chmod +x "$FAKE_BIN/npm"
 cat > "$FAKE_BIN/curl" << 'SCRIPT'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "$STAGING_E2E_CURL_ARGS"
-if [[ "${*: -1}" == */version ]]; then
+if [[ "${*: -1}" == */health ]]; then
+    printf 'E2E_SEARCH_DIAGNOSTIC health http=200 seconds=0.01\n'
+elif [[ "${*: -1}" == */tasks/7295 ]]; then
+    output=''
+    authenticated=0
+    while [[ $# -gt 1 ]]; do
+        case "$1" in
+            --output) output="$2"; shift 2 ;;
+            --header) [[ "$2" == @* && "$(cat "${2#@}")" == 'Authorization: Bearer meili-test-secret' ]] || exit 1; authenticated=1; shift 2 ;;
+            *) shift ;;
+        esac
+    done
+    [[ "$authenticated" == 1 ]] || exit 1
+    printf '{"uid":7295,"status":"succeeded","details":{"private":"not-for-diagnostic-output"}}\n' > "$output"
+    printf 'E2E_SEARCH_DIAGNOSTIC task=7295 http=200 seconds=0.01\n'
+elif [[ "${*: -1}" == *'/tasks?'* ]]; then
+    output=''
+    authenticated=0
+    while [[ $# -gt 1 ]]; do
+        case "$1" in
+            --output) output="$2"; shift 2 ;;
+            --header) [[ "$2" == @* && "$(cat "${2#@}")" == 'Authorization: Bearer meili-test-secret' ]] || exit 1; authenticated=1; shift 2 ;;
+            *) shift ;;
+        esac
+    done
+    [[ "$authenticated" == 1 ]] || exit 1
+    printf '{"results":[{"uid":7384,"status":"succeeded","details":{"private":"not-for-diagnostic-output"}}]}\n' > "$output"
+    printf 'E2E_SEARCH_DIAGNOSTIC tasks http=200 seconds=0.01\n'
+elif [[ "${*: -1}" == */version ]]; then
     printf '{"commit":"%s"}\n' "$STAGING_E2E_SHA"
 else
     printf '<a href="/posts/staging-e2e-fixture">fixture</a>\n'
 fi
 SCRIPT
 chmod +x "$FAKE_BIN/curl"
+
+cat > "$FAKE_BIN/timeout" << 'SCRIPT'
+#!/usr/bin/env bash
+[[ "$1" == 8 ]] || exit 2
+shift
+if [[ "${STAGING_E2E_DIAGNOSTIC_TIMEOUT:-0}" == 1 ]]; then
+  printf 'E2E_SEARCH_DIAGNOSTIC query_timeout\n' >&2
+  exit 124
+fi
+exec "$@"
+SCRIPT
+chmod +x "$FAKE_BIN/timeout"
 
 cat > "$FAKE_BIN/redis-cli" << 'SCRIPT'
 #!/usr/bin/env bash
@@ -258,6 +298,10 @@ cat > "$FAKE_BIN/journalctl" << 'SCRIPT'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 printf '%s\n' "$@" > "$STAGING_E2E_JOURNAL_ARGS"
+if [[ "$*" == *'--output=cat'* ]]; then
+  printf 'ResourceAccessException http://127.0.0.1:17700/tasks/7295 Read timed out\n'
+  exit 0
+fi
 printf '%s\n' "${STAGING_E2E_JOURNAL_OUTPUT:-E2E test-slot journal clean}"
 SCRIPT
 chmod +x "$FAKE_BIN/journalctl"
@@ -272,6 +316,7 @@ service="${1:-}"
 state='app-active'
 [[ -f "$STAGING_E2E_SYSTEMCTL_STATE" ]] && state="$(< "$STAGING_E2E_SYSTEMCTL_STATE")"
 case "$action:$service" in
+    show:bytedepth-staging-native-meilisearch.service) printf 'MemoryCurrent=123456\nNRestarts=0\n' ;;
     is-active:bytedepth-app.service|is-active:bytedepth-staging-native-app.service) [[ "$state" == app-active ]] ;;
     stop:bytedepth-app.service|stop:bytedepth-staging-native-app.service) printf 'app-stopped\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
     start:bytedepth-app.service|start:bytedepth-staging-native-app.service) printf 'app-active\n' > "$STAGING_E2E_SYSTEMCTL_STATE" ;;
@@ -463,6 +508,25 @@ if STAGING_E2E_NPM_EXIT=17 run_runner; then
   exit 1
 fi
 grep -Fq 'Staging E2E tests failed.' "$RUNNER_OUTPUT"
+grep -Fq 'E2E_SEARCH_DIAGNOSTIC begin' "$RUNNER_OUTPUT"
+grep -Fq 'MemoryCurrent=123456' "$RUNNER_OUTPUT"
+grep -Fq 'E2E_SEARCH_DIAGNOSTIC health http=200' "$RUNNER_OUTPUT"
+grep -Fq '"uid": 7384' "$RUNNER_OUTPUT"
+grep -Fq '"uid": 7295' "$RUNNER_OUTPUT"
+if rg -q 'not-for-diagnostic-output|meili-test-secret' "$RUNNER_OUTPUT"; then
+  printf 'Diagnostic output must exclude credentials and task payload details.\n' >&2
+  exit 1
+fi
+[[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
+
+# A blocked journal/systemd query must not block the original failure cleanup.
+if STAGING_E2E_NPM_EXIT=17 STAGING_E2E_DIAGNOSTIC_TIMEOUT=1 run_runner; then
+  printf 'Expected failed test to remain failed after diagnostic timeout.\n' >&2
+  exit 1
+fi
+grep -Fq 'E2E_SEARCH_DIAGNOSTIC query_timeout' "$RUNNER_OUTPUT"
+grep -Fq 'E2E_SEARCH_DIAGNOSTIC end' "$RUNNER_OUTPUT"
+grep -Fqx 'app-active' "$SYSTEMCTL_STATE"
 [[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
 
 # The deployed checkout must not advance while Playwright is running.
