@@ -9,6 +9,10 @@ Maven、Java 25、完整测试与变更覆盖率的唯一说明见 [maven.md](ma
 - 改 Controller 构造器注入时，同步更新 `@WebMvcTest` 里的 `@MockBean`。
 - 接口改名时，检查所有调用方一起改。
 
+### IDE 告警清理
+
+清理 Java 空值分析告警时，显式展开 `null` / `isBlank()` 判断可能增加 JaCoCo 分支，即使运行行为等价也要重新执行变更覆盖率门禁。多字段可选筛选必须测试“一个字段为空白、另一个有效”的组合；分类筛选的回归见 `CategoryQueriesAndCommandsTest`，由 `bash scripts/run-local-quality.sh` 执行。
+
 ### Java 25 的聚合断言
 
 跨样本校验优先使用 JUnit `assertAll` 收集真实行为断言。AssertJ `SoftAssertions` 会生成运行时代理，在本项目 Java 25 环境可能触发 Byte Buddy 的 Unsafe 弃用告警；不得为此关闭零 WARNING 门禁或给测试 fork 扩大兼容参数。完整质量入口会拒绝此类告警。

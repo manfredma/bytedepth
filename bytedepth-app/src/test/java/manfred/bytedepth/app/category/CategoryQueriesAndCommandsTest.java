@@ -96,6 +96,32 @@ class CategoryQueriesAndCommandsTest {
     }
 
     @Test
+    void filteredList_ignoresBlankNameWhenSlugIsPresent() {
+        when(repository.findAll())
+                .thenReturn(List.of(
+                        Category.reconstruct(1L, "Java", "backend-java", null),
+                        Category.reconstruct(2L, "Kotlin", "kotlin", null)));
+
+        List<CategoryDTO> categories = new ListCategoriesQryExe(repository).executeFiltered(" ", " END-J ");
+
+        assertEquals(
+                List.of("Java"), categories.stream().map(CategoryDTO::getName).toList());
+    }
+
+    @Test
+    void filteredList_ignoresBlankSlugWhenNameIsPresent() {
+        when(repository.findAll())
+                .thenReturn(List.of(
+                        Category.reconstruct(1L, "Java", "java", null),
+                        Category.reconstruct(2L, "Kotlin", "kotlin", null)));
+
+        List<CategoryDTO> categories = new ListCategoriesQryExe(repository).executeFiltered(" JAVA ", " ");
+
+        assertEquals(
+                List.of("Java"), categories.stream().map(CategoryDTO::getName).toList());
+    }
+
+    @Test
     void filteredList_withoutFiltersUsesNormalTreeQuery() {
         when(repository.findAll()).thenReturn(List.of(Category.reconstruct(1L, "Java", "java", null)));
 

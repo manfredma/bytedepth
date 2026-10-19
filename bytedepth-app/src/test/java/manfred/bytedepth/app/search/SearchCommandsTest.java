@@ -164,8 +164,6 @@ class SearchCommandsTest {
                 null,
                 null,
                 false);
-        Post draft = Post.reconstruct(
-                2L, "d", "t", "c", PostStatus.DRAFT, LocalDateTime.now(), null, LocalDateTime.now(), null, null, false);
         when(posts.findAllPublished()).thenReturn(List.of(published));
 
         IndexPostCmdExe indexer = mock(IndexPostCmdExe.class);

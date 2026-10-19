@@ -27,8 +27,8 @@ public class ListCategoriesQryExe {
             return execute();
         }
         List<Category> all = categoryRepository.findAll();
-        String normalizedName = hasName ? name.trim().toLowerCase() : null;
-        String normalizedSlug = hasSlug ? slug.trim().toLowerCase() : null;
+        String normalizedName = name != null && !name.isBlank() ? name.trim().toLowerCase() : null;
+        String normalizedSlug = slug != null && !slug.isBlank() ? slug.trim().toLowerCase() : null;
         Set<Long> keptIds = all.stream()
                 .filter(category -> (normalizedName != null
                                 && category.getName().toLowerCase().contains(normalizedName))

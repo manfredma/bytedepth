@@ -108,7 +108,7 @@ class SeriesRepositoryImplTest {
 
         repository.findAll();
 
-        ArgumentCaptor<Wrapper<SeriesDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        ArgumentCaptor<Wrapper<SeriesDO>> captor = ArgumentCaptor.captor();
         verify(mapper).selectList(captor.capture());
         String sql = captor.getValue().getSqlSegment();
         assertTrue(sql.contains("COLLATE utf8mb4_zh_0900_as_cs"));

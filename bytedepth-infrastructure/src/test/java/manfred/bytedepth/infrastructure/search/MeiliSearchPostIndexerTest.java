@@ -533,7 +533,7 @@ class MeiliSearchPostIndexerTest {
     @Nested
     class SearchTests {
 
-        @SuppressWarnings({"rawtypes", "unchecked"})
+        @SuppressWarnings("rawtypes")
         private RestClient.ResponseSpec stubSearch(Map<String, Object> response) {
             RestClient.RequestHeadersUriSpec uriSpec = mock(RestClient.RequestHeadersUriSpec.class);
             RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);

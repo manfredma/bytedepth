@@ -150,7 +150,6 @@ class UserRepositoryImplTest {
 
     @Test
     void save_setsTimestampsWhenNull() {
-        User user = User.register("newuser", "hash");
         // register sets createdAt/updatedAt to now, but let's test toDO null-guard
         // by reconstructing with null timestamps
         User userNullTs = User.reconstruct(null, "newuser", "hash", null, null, null, UserStatus.PENDING, null, null);
