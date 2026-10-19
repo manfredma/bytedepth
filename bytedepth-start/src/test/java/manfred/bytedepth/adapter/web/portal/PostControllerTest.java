@@ -189,9 +189,9 @@ class PostControllerTest {
                 .matcher(html);
         assertThat(json.find()).isTrue();
         var model = tools.jackson.databind.json.JsonMapper.builder().build().readTree(json.group(1));
-        assertThat(model.path("text").asText()).isEqualTo(text);
+        assertThat(model.path("text").asString()).isEqualTo(text);
         assertThat(model.path("revision").asInt()).isEqualTo(1);
-        assertThat(model.path("digest").asText())
+        assertThat(model.path("digest").asString())
                 .isEqualTo(article.revision().document().digest());
     }
 

@@ -28,8 +28,10 @@ class ViewLogArchiveJobTest {
     void jobRunsUseCaseUnderTheNamedLockWithTheConfiguredLimit() {
         var useCase = mock(ArchiveViewLogsCmdExe.class);
         var adapter = mock(ViewLogArchiveAdapter.class);
-        when(adapter.runWithLock(any()))
-                .thenAnswer(invocation -> ((Supplier<ViewLogArchiveRunResult>) invocation.getArgument(0)).get());
+        when(adapter.runWithLock(any())).thenAnswer(invocation -> {
+            Supplier<ViewLogArchiveRunResult> callback = invocation.getArgument(0);
+            return callback.get();
+        });
         when(useCase.archive(NOW, 24)).thenReturn(new ViewLogArchiveRunResult(1, 3, 3));
 
         new ViewLogArchiveJob(useCase, adapter, CLOCK, 24).run();

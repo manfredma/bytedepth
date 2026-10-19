@@ -134,9 +134,11 @@ class ViewLogTablespaceMaintenanceJobTest {
         when(lockStatement.executeQuery()).thenReturn(lockResult);
         when(lockResult.next()).thenReturn(true);
         when(lockResult.getInt(1)).thenReturn(0);
-        when(jdbcTemplate.execute(any(ConnectionCallback.class)))
-                .thenAnswer(
-                        invocation -> ((ConnectionCallback<?>) invocation.getArgument(0)).doInConnection(connection));
+        when(jdbcTemplate.execute(org.mockito.ArgumentMatchers.<ConnectionCallback<Object>>any()))
+                .thenAnswer(invocation -> {
+                    ConnectionCallback<Object> callback = invocation.getArgument(0);
+                    return callback.doInConnection(connection);
+                });
         var job = new ViewLogTablespaceMaintenanceJob(
                 mapper, jdbcTemplate, new ViewLogTablespaceMaintenanceProperties(100, 100, "custom-lock"));
 
@@ -156,9 +158,11 @@ class ViewLogTablespaceMaintenanceJobTest {
         when(connection.prepareStatement("SELECT GET_LOCK(?, 0)")).thenReturn(lockStatement);
         when(lockStatement.executeQuery()).thenReturn(lockResult);
         when(lockResult.next()).thenReturn(false);
-        when(jdbcTemplate.execute(any(ConnectionCallback.class)))
-                .thenAnswer(
-                        invocation -> ((ConnectionCallback<?>) invocation.getArgument(0)).doInConnection(connection));
+        when(jdbcTemplate.execute(org.mockito.ArgumentMatchers.<ConnectionCallback<Object>>any()))
+                .thenAnswer(invocation -> {
+                    ConnectionCallback<Object> callback = invocation.getArgument(0);
+                    return callback.doInConnection(connection);
+                });
 
         new ViewLogTablespaceMaintenanceJob(mapper, jdbcTemplate, new ViewLogTablespaceMaintenanceProperties(100, 100))
                 .run();
@@ -183,9 +187,11 @@ class ViewLogTablespaceMaintenanceJobTest {
         when(lockResult.getInt(1)).thenReturn(1);
         when(releaseResult.next()).thenReturn(true);
         when(releaseResult.getInt(1)).thenReturn(1);
-        when(jdbcTemplate.execute(any(ConnectionCallback.class)))
-                .thenAnswer(
-                        invocation -> ((ConnectionCallback<?>) invocation.getArgument(0)).doInConnection(connection));
+        when(jdbcTemplate.execute(org.mockito.ArgumentMatchers.<ConnectionCallback<Object>>any()))
+                .thenAnswer(invocation -> {
+                    ConnectionCallback<Object> callback = invocation.getArgument(0);
+                    return callback.doInConnection(connection);
+                });
         var job = new ViewLogTablespaceMaintenanceJob(
                 mapper, jdbcTemplate, new ViewLogTablespaceMaintenanceProperties(100, 100));
 

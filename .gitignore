@@ -44,6 +44,7 @@ settings.xml
 .env
 
 # IDE
+.vscode/
 .idea/
 *.iml
 *.ipr

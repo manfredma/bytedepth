@@ -148,7 +148,7 @@ class PostRepositoryImplTest {
 
         repository.findPublished(1, 10);
 
-        ArgumentCaptor<Wrapper<PostDO>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        ArgumentCaptor<Wrapper<PostDO>> captor = ArgumentCaptor.captor();
         verify(postMapper).selectPage(any(), captor.capture());
         String sql = captor.getValue().getSqlSegment();
         assertTrue(sql.contains("updated_at"));
