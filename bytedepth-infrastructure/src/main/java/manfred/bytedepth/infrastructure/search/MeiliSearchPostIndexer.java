@@ -1,5 +1,6 @@
 package manfred.bytedepth.infrastructure.search;
 
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -183,10 +185,22 @@ public class MeiliSearchPostIndexer implements PostSearchPort {
     private void awaitTask(Map<?, ?> acceptance, boolean deletion) {
         long uid = requireNonNegativeLong(requireResponse(acceptance).get("taskUid"));
         long started = System.nanoTime();
+        boolean readRetried = false;
         // Each HTTP call is independently bounded; a deadline may overrun by one read timeout.
         while (System.nanoTime() - started < taskTimeout.toNanos()) {
-            Map<?, ?> task = requireResponse(
-                    restClient.get().uri("/tasks/{uid}", uid).retrieve().body(Map.class));
+            Map<?, ?> task;
+            try {
+                task = requireResponse(
+                        restClient.get().uri("/tasks/{uid}", uid).retrieve().body(Map.class));
+            } catch (ResourceAccessException failure) {
+                // Only re-read an accepted task. Never replay the preceding write or
+                // restart the deadline; a second timeout leaves the result unknown.
+                if (readRetried || !(failure.getCause() instanceof SocketTimeoutException)) throw failure;
+                ensureNotInterrupted();
+                readRetried = true;
+                log.info("Rechecking Meilisearch task after a status read timeout uid={}", uid);
+                continue;
+            }
             Object status = task.get("status");
             if (!(status instanceof String state)) {
                 throw new IllegalStateException("Missing Meilisearch task status uid=" + uid);

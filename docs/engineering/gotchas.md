@@ -170,6 +170,6 @@ Maven 与 Playwright 预热必须同时检查命令和 `tee` 的 `PIPESTATUS`，
 
 ## E2E 搜索依赖诊断
 
-Playwright 用例失败必须先区分断言和 owned fixture teardown。2026-10-19 两次运行在不同用例清理文章时，`MeiliSearchPostIndexer.awaitTask` 查询已提交任务超过 5 秒，删除接口返回 500；平台摘要匹配到恢复阶段的 curl 连接错误，不能代替首个应用错误。搜索服务超时的底层原因必须以服务证据判断，不直接增加超时或忽略清理失败。
+Playwright 用例失败必须先区分断言和 owned fixture teardown。2026-10-19 两次运行在不同用例清理文章时，`MeiliSearchPostIndexer.awaitTask` 查询已提交任务超过 5 秒，删除接口返回 500；平台摘要匹配到恢复阶段的 curl 连接错误，不能代替首个应用错误。后续诊断确认任务 7511 已在约 20ms 成功、无重启/OOM，但 Java 状态读取未得到响应。按[搜索任务边界](search-indexing.md#任务与失败边界)仅恢复一次同 UID 状态 GET；不增加超时、不忽略清理失败、不重发写入。底层连接触发原因仍需与应用恢复边界区分。
 
 `run-staging-e2e-tests.sh` 在 Playwright 非零退出后、销毁隔离搜索索引前，由 Host Agent 只读采集 Meilisearch 资源、重启及日志、健康延迟、最近任务和错误日志中的任务终态。输出仅保留任务元数据，不输出认证 header 或文档细节；诊断失败不能改变原始失败或生成 PASS。`test-run-staging-e2e-tests.sh` 验证失败路径会采集、保持门禁失败并过滤凭据及任务详情。

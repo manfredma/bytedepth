@@ -8,6 +8,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -287,6 +288,98 @@ class MeiliSearchPostIndexerTest {
         accepted(HttpMethod.POST, "", "{\"taskUid\":7}");
         server.expect(requestTo("http://meili/tasks/7")).andRespond(withServerError());
         assertThrows(org.springframework.web.client.RestClientException.class, () -> indexer.index(doc()));
+        server.verify();
+    }
+
+    @Test
+    void acceptedDeletionRechecksSameTaskAfterOneReadTimeoutWithoutResubmitting() {
+        useServer();
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        server.expect(requestTo("http://meili/tasks/7"))
+                .andRespond(withException(new SocketTimeoutException("Read timed out")));
+        task("{\"status\":\"succeeded\"}");
+        assertDoesNotThrow(() -> indexer.delete(1L));
+        server.verify();
+    }
+
+    @Test
+    void readTimeoutBudgetIsNotResetByPendingTaskResponse() {
+        useServer();
+        accepted(HttpMethod.POST, "", "{\"taskUid\":7}");
+        server.expect(requestTo("http://meili/tasks/7"))
+                .andRespond(withException(new SocketTimeoutException("first timeout")));
+        task("{\"status\":\"processing\"}");
+        server.expect(requestTo("http://meili/tasks/7"))
+                .andRespond(withException(new SocketTimeoutException("second timeout")));
+        var failure =
+                assertThrows(org.springframework.web.client.ResourceAccessException.class, () -> indexer.index(doc()));
+        assertEquals("second timeout", failure.getCause().getMessage());
+        server.verify();
+    }
+
+    @Test
+    void taskReadDoesNotRetryOtherNetworkFailures() {
+        useServer();
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        server.expect(requestTo("http://meili/tasks/7")).andRespond(withException(new IOException("offline")));
+        assertThrows(org.springframework.web.client.ResourceAccessException.class, () -> indexer.delete(1L));
+        server.verify();
+    }
+
+    @Test
+    void taskReadTimeoutDoesNotExtendTaskDeadline() {
+        var builder = RestClient.builder().baseUrl("http://meili");
+        server = MockRestServiceServer.bindTo(builder).build();
+        indexer = new MeiliSearchPostIndexer(builder.build(), "isolated_posts", Duration.ofMillis(100), Duration.ZERO);
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        server.expect(requestTo("http://meili/tasks/7")).andRespond(request -> {
+            try {
+                Thread.sleep(Duration.ofMillis(200));
+            } catch (InterruptedException failure) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(failure);
+            }
+            throw new SocketTimeoutException("Read timed out");
+        });
+        var failure = assertThrows(IllegalStateException.class, () -> indexer.delete(1L));
+        assertTrue(failure.getMessage().contains("Timed out waiting"));
+        server.verify();
+    }
+
+    @Test
+    void taskReadTimeoutPreservesInterruptionAndDoesNotRetry() {
+        useServer();
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        server.expect(requestTo("http://meili/tasks/7")).andRespond(request -> {
+            Thread.currentThread().interrupt();
+            throw new SocketTimeoutException("Read timed out");
+        });
+        try {
+            assertThrows(IllegalStateException.class, () -> indexer.delete(1L));
+            assertTrue(Thread.currentThread().isInterrupted());
+        } finally {
+            Thread.interrupted();
+        }
+        server.verify();
+    }
+
+    @Test
+    void writeReadTimeoutIsNeverResubmitted() {
+        useServer();
+        server.expect(requestTo("http://meili/indexes/isolated_posts/documents"))
+                .andRespond(withException(new SocketTimeoutException("Read timed out")));
+        assertThrows(org.springframework.web.client.ResourceAccessException.class, () -> indexer.index(doc()));
+        server.verify();
+    }
+
+    @Test
+    void taskFailureAfterReadTimeoutStillFails() {
+        useServer();
+        accepted(HttpMethod.DELETE, "/1", "{\"taskUid\":7}");
+        server.expect(requestTo("http://meili/tasks/7"))
+                .andRespond(withException(new SocketTimeoutException("Read timed out")));
+        task("{\"status\":\"failed\",\"error\":{\"code\":\"internal\"}}");
+        assertThrows(IllegalStateException.class, () -> indexer.delete(1L));
         server.verify();
     }
 
