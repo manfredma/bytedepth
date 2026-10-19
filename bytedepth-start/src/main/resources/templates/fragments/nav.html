@@ -7,7 +7,6 @@
 <link rel="stylesheet" th:href="@{/css/nav.css}">
 <link rel="stylesheet" th:href="@{/css/bd-dialog.css}">
 <script defer th:src="@{/js/bd-dialog.js}"></script>
-<script defer th:src="@{/js/nav-menu.js}"></script>
 <nav class="nav-bar" th:attr="data-env=${environment}">
     <div class="nav-inner">
         <div class="nav-left">
@@ -90,6 +89,9 @@
         </div>
     </div>
 </nav>
+<!-- Initialize the small shared menu before parsing article images/scripts, so
+     slow deferred article assets cannot move content down and then back up. -->
+<script th:src="@{/js/nav-menu.js}"></script>
 <div class="network-staging-notice" th:if="${environment == 'staging'}">
     预发环境 · 正式网站：<a href="https://bytedepth.cn" target="_blank" rel="noopener noreferrer">bytedepth.cn</a>
 </div>

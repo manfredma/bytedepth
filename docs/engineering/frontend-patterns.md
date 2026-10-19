@@ -16,7 +16,7 @@
 
 ## 共享页头的窄屏布局
 
-所有带公共导航的页面复用 `fragments/nav :: navbar`，页面 CSS 不覆盖 `.nav-*` 或共享导航的 `.theme-*`。导航字体尺寸在组件中显式定义，不随页面根字号变化。`nav-menu.js` 与 fragment 一起加载，断点与 `nav.css` 保持 1100px 一致。
+所有带公共导航的页面复用 `fragments/nav :: navbar`，页面 CSS 不覆盖 `.nav-*` 或共享导航的 `.theme-*`。导航字体尺寸在组件中显式定义，不随页面根字号变化。`nav-menu.js` 在导航标记后同步初始化、先于正文解析，断点与 `nav.css` 保持 1100px 一致。不能将该小脚本移回 `defer` 队列：正文大图与高亮包的下载会延迟折叠导航，使正文在首次访问时大幅跳动。
 
 窄屏品牌与菜单按钮在同一行，品牌保持左对齐。菜单按钮带图标和明确字重，展开时显示“收起”。展开内容依次为全宽搜索、两列主导航、主题/订阅/关于共用工具行、账号操作；作者入口与个人账号分别分组，允许换行。工具的文字标签仅在窄屏显示，桌面保留原有图标与排列。搜索输入框保留可读宽度，按钮触控高度至少 44px。Esc 收起菜单并返回菜单按钮焦点；切换到桌面宽度恢复完整导航，再回窄屏默认收起。收起时同时关闭嵌套菜单。脚本不可用时保留完整菜单内容，避免导航入口丢失。
 
@@ -116,3 +116,9 @@ filterBar(action, fields)
 定位协议以[版本化批注设计](../architecture/annotation-anchoring.md)为准。代码渲染完成发送 `bd:content-rendered`（`detail.segmentIds`）；折叠、tab 等仅改变布局时发送 `bd:content-geometry`。批注观察器批量重核验纯内容片段，不缓存原生 Range；自身绘制通过 `mutate` 暂停观察并先保留待处理的外部记录，避免循环或吞掉渲染变化。实例销毁后，旧请求及渲染回调不得写回当前页面。
 
 `post-mermaid.js` 保留源码并逐块处理成功与失败，不让一张图阻塞正文；失败显示源码提示。图形文字不属于可提交选区。`annotation.test.js`、`annotation-render-lifecycle.test.js` 和 `post-mermaid.test.js` 覆盖渲染、异步乱序及销毁。Prism 接缝测试必须使用真正的 `#post-article .content` 与代码复制按钮；仅导入一个提前返回的组件不能证明集成行为。单测中的 SVG 结构样本只证明替换与排除规则，实际 SVG 几何仍由 staging 浏览器验证。
+
+## 文章图片的首次加载
+
+正文渲染器在服务端输出图片加载提示，不能等浏览器下载图片后再由脚本设置。文章首段的图片保持 `loading="eager"`，避免首图等待；后续段落、标题或引用内的图片使用原生 `loading="lazy"`，由浏览器按距离视口加载；解码使用 `decoding="async"`。原始 URL、alt 和经过校验的 width 保留，不改写 Markdown 或批注投影，不生成低清替代图。已有尺寸保持原样；缺少高度信息时不猜测宽高比。无脚本环境继续使用浏览器原生图片加载。
+
+`ArticleDocumentServiceTest` 与 `MarkdownRendererTest` 验证真实渲染和安全清洗后的提示、宽度、文本映射；staging 的 `article-loading.spec.js` 验证首图下载、远处图片滚动后下载、灯箱放大/关闭、无脚本导航，以及阻塞正文高亮脚本时导航仍可操作。验收不能只比较 `window.load`，还应记录首次绘制、DOMContentLoaded、布局偏移和首屏下载量；懒加载会把正文图片下载移到滚动时，不能称为图片本身体积变小。

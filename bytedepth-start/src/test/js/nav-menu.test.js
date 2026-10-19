@@ -33,6 +33,14 @@ describe("shared mobile navigation", () => {
     expect(document.querySelector(".nav-toggle")).not.toBeNull();
     expect(document.querySelector(".nav-panel")).not.toBeNull();
   });
+  test("initializes before article parsing rather than waiting for deferred article scripts", () => {
+    document.body.innerHTML = fragment;
+    const nav = document.querySelector(".nav-bar");
+    const script = document.querySelector('script[th\\:src="@{/js/nav-menu.js}"]');
+    expect(script.defer).toBe(false);
+    expect(nav.nextElementSibling).toBe(script);
+  });
+
   test("starts compact on mobile and opens all actual navigation controls", async () => {
     const { toggle, panel } = await initialize();
     expect(toggle.hidden).toBe(false);

@@ -6,9 +6,11 @@ import manfred.bytedepth.app.post.FootnoteIdProvider;
 import manfred.bytedepth.app.post.MarkdownHtmlPolicy;
 import manfred.bytedepth.app.post.MarkdownTextExtractor;
 import org.commonmark.node.AbstractVisitor;
+import org.commonmark.node.Document;
 import org.commonmark.node.Heading;
 import org.commonmark.node.Image;
 import org.commonmark.node.Node;
+import org.commonmark.node.Paragraph;
 import org.commonmark.node.Text;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.AttributeProvider;
@@ -43,6 +45,15 @@ public class ArticleDocumentService {
         @Override
         public void setAttributes(Node node, String tagName, Map<String, String> attributes) {
             if (node instanceof Image image) {
+                // A leading illustration may be the LCP; later diagrams must not compete
+                // with reading/navigation scripts on a visitor's first uncached request.
+                Node block = image.getParent();
+                while (!(block.getParent() instanceof Document)) {
+                    block = block.getParent();
+                }
+                boolean leadingImage = block instanceof Paragraph && block.getPrevious() == null;
+                attributes.put("loading", leadingImage ? "eager" : "lazy");
+                attributes.put("decoding", "async");
                 String imageTitle = image.getTitle();
                 var matcher = imageTitle == null ? null : IMAGE_WIDTH_TITLE.matcher(imageTitle);
                 if (matcher != null && matcher.matches()) {

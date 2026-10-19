@@ -42,12 +42,30 @@ public final class MarkdownHtmlPolicy {
             .onElements("a")
             .toFactory();
 
+    // Keep image grants in one factory: and() intersects policies for a shared
+    // element and would otherwise discard the new browser loading hints.
+    private static final PolicyFactory IMAGES_WITH_LOADING_HINTS = new HtmlPolicyBuilder()
+            .allowUrlProtocols("http", "https")
+            .allowElements("img")
+            .allowAttributes("src", "alt")
+            .onElements("img")
+            .allowAttributes("loading")
+            .matching(Pattern.compile("lazy|eager"))
+            .onElements("img")
+            .allowAttributes("decoding")
+            .matching(Pattern.compile("async"))
+            .onElements("img")
+            .allowAttributes("width")
+            .matching(Pattern.compile("(?:[1-9]\\d{2}|1\\d{3}|2[0-4]\\d{2})"))
+            .onElements("img")
+            .toFactory();
+
     private static final PolicyFactory CONTENT_POLICY = BLOCKS_WITH_HEADING_IDS
             .and(FOOTNOTES)
             .and(Sanitizers.FORMATTING)
             .and(Sanitizers.LINKS)
             .and(Sanitizers.TABLES)
-            .and(Sanitizers.IMAGES)
+            .and(IMAGES_WITH_LOADING_HINTS)
             .and(new HtmlPolicyBuilder()
                     .allowElements("pre", "code", "div", "span", "button")
                     .allowAttributes("data-annotation-segment")
@@ -77,9 +95,6 @@ public final class MarkdownHtmlPolicy {
                     .allowAttributes("hidden")
                     .matching(Pattern.compile("hidden"))
                     .onElements("div")
-                    .allowAttributes("width")
-                    .matching(Pattern.compile("(?:[1-9]\\d{2}|1\\d{3}|2[0-4]\\d{2})"))
-                    .onElements("img")
                     .toFactory());
 
     public static String sanitize(String html) {

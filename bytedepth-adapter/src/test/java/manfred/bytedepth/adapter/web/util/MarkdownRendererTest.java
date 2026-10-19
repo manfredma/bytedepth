@@ -303,7 +303,8 @@ class MarkdownRendererTest {
         String rendered = renderWithoutMappingMetadata("![架构图](/images/diagram.png \"width=700\")");
 
         assertThat(rendered)
-                .contains("<img src=\"/images/diagram.png\" alt=\"架构图\" width=\"700\" />")
+                .contains(
+                        "<img src=\"/images/diagram.png\" alt=\"架构图\" loading=\"eager\" decoding=\"async\" width=\"700\" />")
                 .doesNotContain("title=");
     }
 
@@ -312,7 +313,7 @@ class MarkdownRendererTest {
         String rendered = renderWithoutMappingMetadata("![历史图片](/images/cache.png)");
 
         assertThat(rendered)
-                .contains("<img src=\"/images/cache.png\" alt=\"历史图片\" />")
+                .contains("<img src=\"/images/cache.png\" alt=\"历史图片\" loading=\"eager\" decoding=\"async\" />")
                 .doesNotContain("width=")
                 .doesNotContain("title=");
     }
@@ -322,7 +323,7 @@ class MarkdownRendererTest {
         String rendered = renderWithoutMappingMetadata("![历史图片](/images/cache.png \"缓存架构图\")");
 
         assertThat(rendered)
-                .contains("<img src=\"/images/cache.png\" alt=\"历史图片\" />")
+                .contains("<img src=\"/images/cache.png\" alt=\"历史图片\" loading=\"eager\" decoding=\"async\" />")
                 .doesNotContain("width=")
                 .doesNotContain("title=");
     }
@@ -332,7 +333,7 @@ class MarkdownRendererTest {
         String rendered = renderWithoutMappingMetadata("![架构图](/images/diagram.png \"width=99\")");
 
         assertThat(rendered)
-                .contains("<img src=\"/images/diagram.png\" alt=\"架构图\" />")
+                .contains("<img src=\"/images/diagram.png\" alt=\"架构图\" loading=\"eager\" decoding=\"async\" />")
                 .doesNotContain("width=");
     }
     // Existing structure/security cases ignore only the new safe mapping wrappers.

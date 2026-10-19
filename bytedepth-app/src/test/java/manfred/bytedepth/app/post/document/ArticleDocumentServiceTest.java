@@ -9,6 +9,23 @@ class ArticleDocumentServiceTest {
     private final ArticleDocumentService service = new ArticleDocumentService();
 
     @Test
+    void keepsLeadingImagesEagerAndDefersImagesAfterArticleContent() {
+        for (String markdown : List.of(
+                "![首图](/images/hero.svg)", "[![首图](/images/hero.svg)](/posts)", "**![首图](/images/hero.svg)**")) {
+            assertThat(service.render(markdown).html())
+                    .contains("loading=\"eager\"", "decoding=\"async\"", "src=\"/images/hero.svg\"");
+        }
+        for (String markdown : List.of(
+                "介绍\n\n![图](/images/body.svg \"width=700\")",
+                "# ![标题图](/images/title.svg)",
+                "> ![引用图](/images/quote.svg)")) {
+            assertThat(service.render(markdown).html()).contains("loading=\"lazy\"", "decoding=\"async\"");
+        }
+        assertThat(service.render("介绍\n\n![图](/images/body.svg \"width=700\")").html())
+                .contains("width=\"700\"");
+    }
+
+    @Test
     void U13_codeControlsNeverEnterProjection() {
         var article = service.render("前文\n\n```java\nint anchorProbe = 1;\n```\n\n后文");
         assertThat(article.document().text()).isEqualTo("前文\nint anchorProbe = 1;\n后文");
