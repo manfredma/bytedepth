@@ -75,8 +75,10 @@ public class MobileInteractionService {
         account(user);
         return access.withPublishedPost(id, post -> {
             owned(id, annotation, user);
+            // Migration must precede the shared update's row read, or its immutable result has a stale anchor.
+            var target = current.ensureCurrent(post).revision();
             var changed = update.execute(annotation, id, user, null, text, visibility);
-            return query.view(changed, current.ensureCurrent(post).revision());
+            return query.view(changed, target);
         });
     }
 

@@ -220,4 +220,101 @@ class MobileInteractionServiceTest {
                 .isEqualTo(5);
         verify(rating).execute(1L, visitor);
     }
+
+    @Test
+    void firstTouchLegacyPatchMigratesBeforeComputingAndCachingPlacement() {
+        var now = java.time.LocalDateTime.of(2026, 10, 1, 8, 0);
+        var actualPost = Post.reconstruct(
+                1L, "slug", "title", "quote", PostStatus.PUBLISHED, now, null, now, null, 2L, false, 7);
+        var row = new java.util.concurrent.atomic.AtomicReference<>(new PostAnnotation(
+                3L, 1L, 2L, null, "quote", "old note", "yellow", AnnotationVisibility.PRIVATE, 0, 5, now, false));
+        var revisionRows = new java.util.HashMap<Long, PostContentRevision>();
+        var placementRows = new java.util.HashMap<java.util.List<Object>, AnnotationPlacement>();
+        when(annotations.findById(3L)).thenAnswer(i -> java.util.Optional.of(row.get()));
+        when(annotations.findByPostId(1L)).thenAnswer(i -> java.util.List.of(row.get()));
+        when(annotations.findVisibleByPostId(1L, 2L, null)).thenAnswer(i -> java.util.List.of(row.get()));
+        when(annotations.update(any())).thenAnswer(i -> {
+            row.set(i.getArgument(0));
+            return row.get();
+        });
+        doAnswer(i -> {
+                    var a = row.get();
+                    row.set(new PostAnnotation(
+                            a.id(),
+                            a.postId(),
+                            a.userId(),
+                            a.ownerTokenHash(),
+                            a.selectedText(),
+                            a.annotationText(),
+                            a.color(),
+                            a.visibility(),
+                            a.startOffset(),
+                            a.endOffset(),
+                            a.createdAt(),
+                            a.deleted(),
+                            i.getArgument(1),
+                            i.getArgument(2)));
+                    return null;
+                })
+                .when(annotations)
+                .initializeAnchor(eq(3L), any(), eq(7L));
+        var revisions = mock(manfred.bytedepth.app.post.PostContentRevisionPort.class);
+        when(revisions.find(eq(1L), anyLong()))
+                .thenAnswer(
+                        i -> java.util.Optional.ofNullable(revisionRows.get(((Number) i.getArgument(1)).longValue())));
+        doAnswer(i -> {
+                    PostContentRevision r = i.getArgument(0);
+                    revisionRows.put(r.contentVersion(), r);
+                    return null;
+                })
+                .when(revisions)
+                .insert(any());
+        var placements = mock(AnnotationPlacementPort.class);
+        when(placements.find(anyLong(), anyLong(), anyInt(), anyInt()))
+                .thenAnswer(i -> java.util.Optional.ofNullable(placementRows.get(
+                        java.util.List.of(i.getArgument(0), i.getArgument(1), i.getArgument(2), i.getArgument(3)))));
+        doAnswer(i -> {
+                    AnnotationPlacement p = i.getArgument(0);
+                    placementRows.put(
+                            java.util.List.of(
+                                    p.annotationId(), p.targetRevision(), p.projectionVersion(), p.resolverVersion()),
+                            p);
+                    return null;
+                })
+                .when(placements)
+                .save(any());
+        PostWriteTransaction actualTx = new PostWriteTransaction() {
+            public <T> T withLockedPost(Long id, java.util.function.Function<Post, T> action) {
+                return action.apply(actualPost);
+            }
+        };
+        var documents = new manfred.bytedepth.app.post.document.ArticleDocumentService();
+        var actualCurrent =
+                new ArticleRevisionService(actualTx, revisions, documents, annotations, new LegacyAnchorMigrator());
+        var actualQuery =
+                new ListAnnotationsQryExe(annotations, actualCurrent, revisions, placements, new AnnotationResolver());
+        var actualService = new MobileInteractionService(
+                new PublicPostAccess(actualTx, posts),
+                rate,
+                rating,
+                submit,
+                comments,
+                create,
+                new UpdateAnnotationCmdExe(annotations),
+                delete,
+                annotations,
+                actualCurrent,
+                actualQuery);
+        var patched = actualService.update(1L, 3L, 2L, "new note", AnnotationVisibility.PUBLIC);
+        var subsequent = actualService.annotations(1L, 2L).annotations().getFirst();
+        var cached = placementRows.get(java.util.List.of(3L, 7L, 1, 1));
+        org.junit.jupiter.api.Assertions.assertAll(
+                () -> assertThat(row.get().anchor()).isNotNull(),
+                () -> assertThat(patched.annotation().anchor()).isNotNull(),
+                () -> assertThat(patched.placement().status()).isEqualTo(PlacementStatus.ANCHORED),
+                () -> assertThat(subsequent.placement().status()).isEqualTo(PlacementStatus.ANCHORED),
+                () -> assertThat(cached.status()).isEqualTo(PlacementStatus.ANCHORED),
+                () -> assertThat(patched.annotation().annotationText()).isEqualTo("new note"),
+                () -> assertThat(patched.annotation().visibility()).isEqualTo(AnnotationVisibility.PUBLIC));
+    }
 }
