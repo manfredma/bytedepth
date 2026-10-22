@@ -7,7 +7,7 @@ const config = {
   version: "0.1.0",
   android: {
     package: "cn.bytedepth.reader.preview",
-    versionCode: 1,
+    versionCode: 2,
     allowBackup: false,
     blockedPermissions: [
       "android.permission.READ_EXTERNAL_STORAGE",
@@ -20,6 +20,7 @@ const config = {
     "expo-sqlite",
     ["expo-secure-store", { configureAndroidBackup: false }],
     "./plugins/withLocalDataPrivacy.cjs",
+    "./plugins/withPinnedAndroidBuild.cjs",
   ],
 };
 test("accepts preview identity and explicit privacy configuration", () =>
@@ -67,4 +68,13 @@ test("all native npm entry points use the dependency input lock", () => {
   assert.equal(scripts.android, "npm run android:build --");
   for (const key of ["android:build", "prebuild:android", "ios"])
     assert.ok(scripts[key].startsWith("bash ../../scripts/with-mobile-toolchain-lock.sh "));
+});
+
+test("rejects losing pinned wrapper and managed-only release signing", () => {
+  assert.throws(() =>
+    verifyMobileConfig({
+      ...config,
+      plugins: config.plugins.filter((p) => p !== "./plugins/withPinnedAndroidBuild.cjs"),
+    }),
+  );
 });

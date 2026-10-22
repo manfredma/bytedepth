@@ -17,6 +17,7 @@ export function verifyMobileConfig(config) {
       throw new Error(`Unexpected Android permission: ${permission}`);
   if (
     !config.plugins?.includes("./plugins/withLocalDataPrivacy.cjs") ||
+    !config.plugins.includes("./plugins/withPinnedAndroidBuild.cjs") ||
     !config.plugins.some(
       (p) => Array.isArray(p) && p[0] === "expo-secure-store" && p[1]?.configureAndroidBackup === false,
     )

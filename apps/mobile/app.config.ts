@@ -7,7 +7,7 @@ const config: ExpoConfig = {
   icon: "./assets/icon.png",
   android: {
     package: "cn.bytedepth.reader.preview",
-    versionCode: 1,
+    versionCode: 2,
     allowBackup: false,
     blockedPermissions: [
       "android.permission.READ_EXTERNAL_STORAGE",
@@ -21,6 +21,7 @@ const config: ExpoConfig = {
     "expo-sqlite",
     ["expo-secure-store", { configureAndroidBackup: false }],
     "./plugins/withLocalDataPrivacy.cjs",
+    "./plugins/withPinnedAndroidBuild.cjs",
   ],
 };
 export default config;

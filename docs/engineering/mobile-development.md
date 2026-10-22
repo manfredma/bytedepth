@@ -2,7 +2,7 @@
 
 > 导航：[知识库](../README.md) · [阅读客户端设计](../architecture/mobile-reader.md) · [API 契约](../architecture/mobile-api.md) · [发布边界](release-platform-only.md)。
 
-客户端位于 `apps/mobile/`，独立维护 package、lockfile 和 `node_modules`。Node 版本以该目录的 `.nvmrc` 为准，依赖按 lockfile 安装；Android 使用 JDK 17，服务端仍使用仓库要求的 Java 25。原生 SDK、NDK 与 Gradle 需求以 Expo 生成工程为准，当前版本见 [App README](../../apps/mobile/README.md)。不修改全局 Java 选择来适配单个工具。
+客户端位于 `apps/mobile/`，独立维护 package、lockfile 和 `node_modules`。Node 版本以该目录的 `.nvmrc` 为准，依赖按 lockfile 安装；Android 使用 JDK 17，服务端仍使用仓库要求的 Java 25。原生 SDK、NDK 与 Gradle 固定输入由 `apps/mobile/android-toolchain.json` 声明，生成工程及 Host preflight 必须核对一致，当前版本见 [App README](../../apps/mobile/README.md)。不修改全局 Java 选择来适配单个工具。
 
 ## 本地检查与构建
 
@@ -16,7 +16,7 @@ npm run prebuild:android
 npm run android:build
 ```
 
-`android/` 与 `ios/` 是忽略的生成目录。原生配置通过 `app.config.ts` 和 config plugin 修改，配置或原生依赖变化后重新生成；不要只改生成文件。显示版本与 Expo 版本读取同一个 package version，Android versionCode 在 app config 声明。
+`android/` 与 `ios/` 是忽略的生成目录。原生配置通过 `app.config.ts` 和 config plugin 修改，配置或原生依赖变化后重新生成；不要只改生成文件。显示版本与 Expo 版本读取同一个 package version，Android versionCode 在 app config 声明。`withPinnedAndroidBuild.cjs` 核对生成 wrapper 的固定 URL 并写入官方 SHA-256；release 覆盖模板的 debug 签名配置，以未签名包交给 Host 受管签名。参考 [Gradle wrapper 校验](https://docs.gradle.org/current/userguide/gradle_wrapper.html#sec:verification) 和 [Expo config plugin](https://docs.expo.dev/config-plugins/plugins/)。
 
 依赖安装会删除并重建 `node_modules`，必须与 Gradle、原生生成及 JS 测试串行。移动质量入口与原生命令通过同一个 worktree 锁互斥；命令未结束前不删除锁或启动第二次构建。包装进程收到 HUP、INT 或 TERM 时保留锁，因为原生子进程可能仍在使用依赖；中断后先核对全部相关进程终态，再清理遗留锁。正常命令失败且已退出时可释放锁。Gradle 首次 wrapper 下载也只能由一个命令持有，下载缓慢但持续增长时等待原任务，不启动竞争下载。长构建、下载和 Metro 由协调 Agent 持有；短任务子 Agent 结束时可能终止其子进程。
 

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "nodeVersion": "22.22.1",
+  "javaMajorVersion": 17,
+  "minSdk": 24,
+  "compileSdk": 37,
+  "targetSdk": 36,
+  "buildToolsVersion": "37.0.0",
+  "ndkVersion": "27.1.12297006",
+  "gradleVersion": "9.4.1",
+  "gradleDistributionSha256": "2ab2958f2a1e51120c326cad6f385153bb11ee93b3c216c5fccebfdfbb7ec6cb",
+  "androidGradlePluginVersion": "9.2.1"
+}
