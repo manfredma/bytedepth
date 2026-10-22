@@ -35,7 +35,7 @@ node scripts/mobile-staging-fixtures.mjs cleanup --input <managed-output.json>
 - `webCookie`：独立网站 session，用于比较真实 `/reading-history` readCount/totalActiveSeconds；不与移动会话混用。
 - `ownedUser`：仅在 helper 创建账号时存在，包含精确 ID 与唯一用户名；部分失败时 ID 可以为 null，由精确用户名重新定位归属。
 
-helper 复用 `annotation-fixture.js`、`admin-auth.js` 与 `owned-form.js`。文章在发布前保存实际 ID 与编辑路径，cleanup 逐项验证 title/runId/ID/path 并核对实际编辑页标题；一个失败不会跳过其他 owned 项。cleanup 失败使验证失败；保留私密输入供后续受管恢复，不得吞错后发 PASS。成功 cleanup 删除输出文件；Host 最后删除设备与主机临时凭据。
+helper 复用 `annotation-fixture.js`、`admin-auth.js` 与 `owned-form.js`。文章在发布前保存实际 ID 与编辑路径，cleanup 逐项验证 title/runId/ID/path 并核对实际编辑页标题；一个失败不会跳过其他 owned 项。每项删除前将 `cleanupStarted` 持久化，删除成功后将 `retired` 持久化；输出通过 0600 临时文件、fsync 与原子 rename 更新。重试先校验归属，再跳过已退休项；只有已持久化删除意图的精确 owned 编辑路径返回 404 或 owned 用户查无此人时才按已完成处理。准备失败后的自动 cleanup 与 Host finally cleanup 共用这一协议。cleanup 失败使验证失败；保留私密输入供后续受管恢复，不得吞错后发 PASS。成功 cleanup 删除输出文件；Host 最后删除设备与主机临时凭据。
 
 ## 执行与判定
 
@@ -77,6 +77,8 @@ npm run typecheck
 npm run lint
 ```
 
-Node 检查 fixture 绑定、owned 生命周期、部分失败与 cleanup 边界；Jest 检查插件配置、幂等性及 AndroidTest 源目录。上述检查不会启动浏览器、模拟器或原生构建，因此不能勾选真实 staging 验证。
+续读断言构造 `AnnotationDocument` 时必须保留数值 `revision`；Kotlin 使用 `JSONObject.getLong`，不得把正文修订转换成字符串，否则实际 mapping 会返回 `INVALID_MAPPING`。
+
+Node 使用实际 annotation runtime 检查这一映射，同时检查 fixture 绑定、owned 生命周期、部分失败与可重试 cleanup 边界；Jest 检查插件配置、幂等性及 AndroidTest 源目录。上述检查不会启动浏览器、模拟器或原生构建，因此不能勾选真实 staging 验证。
 
 新增 Kotlin instrumentation 文件需通过 Node fixture 中的尾随空白检查，并在暂存后执行 `git diff --cached --check`；未跟踪文件不会被普通 `git diff --check` 覆盖。

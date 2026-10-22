@@ -246,7 +246,7 @@ class MobileReaderStagingTest {
         assertTrue("real viewport resumed", (js("window.scrollY") as Number).toDouble() > 100)
         val saved = verifiedCopy()
         val content = JSONObject(File(target.cacheDir, "mobile-reader/${saved.getString("body")}").readText())
-        val model = content.getJSONObject("document").put("revision", content.getString("contentVersion"))
+        val model = content.getJSONObject("document").put("revision", content.getLong("contentVersion"))
         val segment = expected.getString("segmentId")
         val offset = expected.getInt("codePointOffset")
         val ratio = expected.getDouble("viewportRatio")

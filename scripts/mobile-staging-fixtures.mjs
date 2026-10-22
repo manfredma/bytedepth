@@ -34,6 +34,7 @@ export function fixtureContent(link, token) {
 }
 export function validateOwnedArticle(article, key, runId) {
   if (
+    !/^[a-f0-9-]{36}$/.test(runId) ||
     !["primary", "secondary", "uncached", "broken"].includes(key) ||
     !/^[0-9]+$/.test(article.id) ||
     article.editPath !== `/admin/posts/${article.id}/edit` ||
@@ -42,19 +43,33 @@ export function validateOwnedArticle(article, key, runId) {
   )
     throw Error("Owned mobile article identity mismatch");
 }
-export async function cleanupFixtures(state, adapter) {
+export async function cleanupFixtures(state, adapter, persist = async () => {}) {
   const failures = [];
   for (const [key, article] of Object.entries(state.articles)) {
     try {
       validateOwnedArticle(article, key, state.runId);
+      if (article.retired === true) continue;
+      article.cleanupStarted = true;
+      await persist(state);
       await adapter.remove(article);
+      article.retired = true;
+      await persist(state);
     } catch {
       failures.push(article.id);
     }
   }
   if (state.ownedUser) {
     try {
-      await adapter.removeUser(state.ownedUser);
+      const owned = state.ownedUser;
+      if (owned.username !== `mobile-${state.runId.slice(0, 24)}` || (owned.id !== null && !/^[0-9]+$/.test(owned.id)))
+        throw Error("Owned mobile user identity mismatch");
+      if (owned.retired !== true) {
+        owned.cleanupStarted = true;
+        await persist(state);
+        await adapter.removeUser(owned);
+        owned.retired = true;
+        await persist(state);
+      }
     } catch {
       failures.push("owned-user");
     }
@@ -115,7 +130,7 @@ export async function prepareFixtures(input, adapter, persist) {
     await persist(state);
     return state;
   } catch (error) {
-    await cleanupFixtures(state, adapter);
+    await cleanupFixtures(state, adapter, persist);
     throw error;
   }
 }
@@ -225,7 +240,9 @@ async function realAdapter(baseURL) {
     remove: async (article) => {
       if (!/^[0-9]+$/.test(article.id) || article.editPath !== `/admin/posts/${article.id}/edit`)
         throw Error("Owned post cleanup identity mismatch");
-      await page.goto(article.editPath, { waitUntil: "domcontentloaded" });
+      const response = await page.goto(article.editPath, { waitUntil: "domcontentloaded" });
+      // Only an exact, durably recorded owned deletion attempt may accept 404.
+      if (response?.status() === 404 && article.cleanupStarted === true) return;
       await expect(page.locator('input[name="title"]')).toHaveValue(article.title);
       await deleteArticle(page, article);
     },
@@ -233,7 +250,7 @@ async function realAdapter(baseURL) {
       if (!/^mobile-[a-f0-9-]{24}$/.test(owned.username)) throw Error("Invalid owned user name");
       await page.goto(`/admin/users?username=${encodeURIComponent(owned.username)}`);
       const card = page.locator(".user-card").filter({ hasText: owned.username });
-      if ((await card.count()) === 0 && owned.id === null) return;
+      if ((await card.count()) === 0 && owned.cleanupStarted === true) return;
       await expect(card).toHaveCount(1);
       await expect(card.locator(".username")).toHaveText(owned.username);
       const action = await card.locator('form[action$="/delete"]').getAttribute("action");
@@ -253,6 +270,27 @@ async function realAdapter(baseURL) {
       if (!status) throw Error("Owned user cleanup failed");
     },
   };
+}
+async function persistManaged(file, state) {
+  const temporary = `${file}.next-${randomBytes(12).toString("hex")}`;
+  const handle = await fs.open(temporary, "wx", 0o600);
+  try {
+    try {
+      await handle.writeFile(JSON.stringify(state), "utf8");
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    await fs.rename(temporary, file);
+    const directory = await fs.open(path.dirname(file), "r");
+    try {
+      await directory.sync();
+    } finally {
+      await directory.close();
+    }
+  } finally {
+    await fs.rm(temporary, { force: true });
+  }
 }
 async function readManaged(file) {
   const stat = await fs.lstat(file);
@@ -288,20 +326,12 @@ async function main(args) {
       const destination = path.resolve(flags.get("--output"));
       // Refuse symlinks and existing files, including files not owned by this run.
       const handle = await fs.open(destination, "wx", 0o600);
-      try {
-        await prepareFixtures(input, adapter, async (state) => {
-          await handle.truncate(0);
-          const bytes = Buffer.from(JSON.stringify(state));
-          await handle.write(bytes, 0, bytes.length, 0);
-          await handle.sync();
-        });
-      } finally {
-        await handle.close();
-      }
+      await handle.close();
+      await prepareFixtures(input, adapter, (state) => persistManaged(destination, state));
     } else {
       if (input.origin !== origin || input.schemaVersion !== 1) throw Error("Invalid owned cleanup binding");
       await adapter.login(input.account);
-      await cleanupFixtures(input, adapter);
+      await cleanupFixtures(input, adapter, (state) => persistManaged(flags.get("--input"), state));
       await fs.unlink(flags.get("--input"));
     }
   } finally {
