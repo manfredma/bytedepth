@@ -13,8 +13,9 @@ spring:
       database: ${BYTEDEPTH_STAGING_E2E_REDIS_DATABASE}
       password: ${BYTEDEPTH_STAGING_E2E_REDIS_PASSWORD}
   session:
-    redis:
-      namespace: ${BYTEDEPTH_STAGING_E2E_REDIS_SESSION_NAMESPACE}
+    data:
+      redis:
+        namespace: ${BYTEDEPTH_STAGING_E2E_REDIS_SESSION_NAMESPACE}
 
 bytedepth:
   redis:

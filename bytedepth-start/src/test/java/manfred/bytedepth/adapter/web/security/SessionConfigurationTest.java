@@ -79,6 +79,46 @@ class SessionConfigurationTest {
                 });
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"staging-it", "staging-e2e"})
+    void actualStagingYamlOverridesBaseRedisSessionNamespace(String profile) {
+        String expected = "bytedepth:test:isolated:" + profile;
+        String variable = "BYTEDEPTH_"
+                + profile.toUpperCase(java.util.Locale.ROOT).replace('-', '_') + "_REDIS_SESSION_NAMESPACE";
+        var factory = org.mockito.Mockito.mock(org.springframework.data.redis.connection.RedisConnectionFactory.class);
+        new org.springframework.boot.test.context.runner.WebApplicationContextRunner()
+                .withInitializer(context -> {
+                    context.setServletContext(null);
+                    var sources = context.getEnvironment().getPropertySources();
+                    sources.addFirst(yamlProperties("application.yml"));
+                    sources.addFirst(yamlProperties("application-" + profile + ".yml"));
+                })
+                .withConfiguration(org.springframework.boot.autoconfigure.AutoConfigurations.of(
+                        org.springframework.boot.session.autoconfigure.SessionAutoConfiguration.class,
+                        org.springframework.boot.session.data.redis.autoconfigure.SessionDataRedisAutoConfiguration
+                                .class))
+                .withBean(org.springframework.data.redis.connection.RedisConnectionFactory.class, () -> factory)
+                .withPropertyValues(variable + "=" + expected, "BYTEDEPTH_REDIS_SESSION_NAMESPACE=bytedepth:test:base")
+                .run(context -> {
+                    assertThat(context)
+                            .hasNotFailed()
+                            .hasSingleBean(org.springframework.session.data.redis.RedisSessionRepository.class);
+                    var repository =
+                            context.getBean(org.springframework.session.data.redis.RedisSessionRepository.class);
+                    assertThat(org.springframework.test.util.ReflectionTestUtils.getField(repository, "keyNamespace"))
+                            .as("%s must bind its Host-isolated Session namespace", profile)
+                            .isEqualTo(expected + ":");
+                    org.mockito.Mockito.verifyNoInteractions(factory);
+                });
+    }
+
+    private static org.springframework.core.env.PropertiesPropertySource yamlProperties(String resource) {
+        var yaml = new org.springframework.beans.factory.config.YamlPropertiesFactoryBean();
+        yaml.setResources(new org.springframework.core.io.ClassPathResource(resource));
+        return new org.springframework.core.env.PropertiesPropertySource(
+                resource, java.util.Objects.requireNonNull(yaml.getObject()));
+    }
+
     @org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
     static class ResolverSpy {
         @org.springframework.context.annotation.Bean
