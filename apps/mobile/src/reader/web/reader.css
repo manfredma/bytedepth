@@ -1,0 +1,126 @@
+html {
+  --reader-scale: 1;
+  color-scheme: light;
+  background: var(--bd-surface);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background: var(--bd-surface);
+  color: var(--bd-text);
+}
+#post-article {
+  font-family: system-ui, sans-serif;
+  font-size: calc(18px * var(--reader-scale));
+  line-height: 1.85;
+  padding: 16px 22px 100px;
+  overflow-wrap: anywhere;
+}
+#post-article .content h1 {
+  font-size: 1.65em;
+  line-height: 1.4;
+}
+#post-article .content h2 {
+  font-size: 1.35em;
+  margin-top: 1.8em;
+}
+#post-article .content h3 {
+  font-size: 1.15em;
+  margin-top: 1.6em;
+}
+#post-article .content p {
+  margin: 1em 0;
+}
+#post-article .content a {
+  color: var(--bd-info-text);
+}
+#post-article .content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 16px auto;
+}
+#post-article .content pre {
+  overflow-x: auto;
+  max-width: 100%;
+  font-size: 0.8em;
+  line-height: 1.6;
+}
+#post-article .content table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+#post-article .content th,
+#post-article .content td {
+  border: 1px solid var(--bd-border);
+  padding: 8px 12px;
+  white-space: normal;
+  min-width: 5em;
+}
+#post-article .content blockquote {
+  border-left: 2px solid var(--bd-border);
+  margin-left: 0;
+  padding-left: 16px;
+  color: var(--bd-text-muted);
+}
+#post-article .content button {
+  min-height: 44px;
+  font-family: system-ui, sans-serif;
+}
+#post-article .content .reader-image-missing {
+  display: block;
+  color: var(--bd-text-muted);
+  font-size: 0.8em;
+  margin: 16px 0;
+}
+#post-article .content .mermaid {
+  overflow-x: auto;
+}
+#reader-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+#reader-marks .reader-mark {
+  position: absolute;
+  height: 1px;
+  background: var(--bd-info-text);
+}
+#reader-marks .reader-mark--yellow {
+  background: #ba9700;
+}
+#reader-marks .reader-mark--green {
+  background: #278947;
+}
+#reader-marks .reader-mark--red {
+  background: var(--bd-danger);
+}
+#reader-preview {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  padding: 20px;
+  overflow: auto;
+  background: var(--bd-surface);
+  z-index: 3;
+}
+#reader-preview:not([open]) {
+  display: none;
+}
+#reader-preview img {
+  max-width: 100%;
+  height: auto;
+  margin: auto;
+  display: block;
+}

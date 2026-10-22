@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'nonce-bd-reader-v1'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; font-src 'none'; media-src 'none'"
+    />
+    <style>
+      __READER_STYLE__
+    </style>
+  </head>
+  <body>
+    <article id="post-article"><div class="content"></div></article>
+    <div id="reader-marks" aria-hidden="true"></div>
+    <dialog id="reader-preview" aria-label="图片预览，点击关闭"></dialog>
+    __READER_SCRIPTS__
+  </body>
+</html>

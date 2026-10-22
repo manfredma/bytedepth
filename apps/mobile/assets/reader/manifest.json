@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/sync-mobile-reader-assets.mjs",
+  "sources": [
+    {
+      "name": "template",
+      "path": "apps/mobile/src/reader/web/reader.html",
+      "sha256": "ecdbca15f91135151a143cb6a4ff535e7ea3c2314b8ee6c67accc1b822765f93",
+      "bytes": 815
+    },
+    {
+      "name": "css",
+      "path": "apps/mobile/src/reader/web/reader.css",
+      "sha256": "449527cd2ec58754b315216abba0b7c7c24d0fc5afd74edc2b0d70ec306be010",
+      "bytes": 2429
+    },
+    {
+      "name": "theme",
+      "path": "bytedepth-start/src/main/resources/static/css/theme.css",
+      "sha256": "d0ecfb93e4f1de4809256320a8208b21f85736bdd4ff2ebe505d94934e48fb95",
+      "bytes": 6341
+    },
+    {
+      "name": "codeCss",
+      "path": "bytedepth-start/src/main/resources/static/css/code-blocks.css",
+      "sha256": "fff2b176f67e84bda7b76db7f325e1cbe33cbc6157fbe292bf27b85dc34e0632",
+      "bytes": 5941
+    },
+    {
+      "name": "prismCss",
+      "path": "bytedepth-start/src/main/resources/static/vendor/prism/prism.css",
+      "sha256": "87faadabd6d49d76ce3b03f811c6cbb5833d324de241070764067e273e72d164",
+      "bytes": 2335
+    },
+    {
+      "name": "trimRange",
+      "path": "bytedepth-start/src/main/resources/static/vendor/hypothesis-anchoring/trim-range.js",
+      "sha256": "ffc4092ea267b5e5414fc32fa1c6a1c6ff24cfa48b289a73cb2e7c940ce9b755",
+      "bytes": 6130
+    },
+    {
+      "name": "textRange",
+      "path": "bytedepth-start/src/main/resources/static/vendor/hypothesis-anchoring/text-range.js",
+      "sha256": "23cf9ccbb9b44c85df7b86a8761e049740b1f06d6c3b7ea4f4405f17f238b664",
+      "bytes": 8562
+    },
+    {
+      "name": "annotationDocument",
+      "path": "bytedepth-start/src/main/resources/static/js/annotation-document.js",
+      "sha256": "8e5073e436f9d8e907e07f789011926ece5599fcae87cbf910364ef3f46cb990",
+      "bytes": 8578
+    },
+    {
+      "name": "prism",
+      "path": "bytedepth-start/src/main/resources/static/vendor/prism/prism-common.min.js",
+      "sha256": "8fc81c7fd992b56001e2a43af8d247c002c772e3ab8ec03528f448181c132cb5",
+      "bytes": 120591
+    },
+    {
+      "name": "mermaid",
+      "path": "bytedepth-start/src/main/resources/static/vendor/mermaid/mermaid.min.js",
+      "sha256": "57f81f1f67981f226e259855f78f2ba3d4c313fa82bf1518d18239434016347f",
+      "bytes": 2749094
+    },
+    {
+      "name": "reader",
+      "path": "apps/mobile/src/reader/web/reader.js",
+      "sha256": "dd70b51939da0bc0ca2f33bc19603d000a7f4a8937d97163da5162980c6c4de6",
+      "bytes": 14877
+    },
+    {
+      "name": "codeBlocks",
+      "path": "bytedepth-start/src/main/resources/static/js/code-blocks.js",
+      "sha256": "5d463ca570dbb6c4e8ed5eb6915e650cb9c727d1f886eaf8e166b4d8560eb9fa",
+      "bytes": 3960
+    },
+    {
+      "name": "postMermaid",
+      "path": "bytedepth-start/src/main/resources/static/js/post-mermaid.js",
+      "sha256": "843726ac2daa8dcc438bc77b48363a344f7f965804b2bb52ad1d19ed8a4eb608",
+      "bytes": 4609
+    },
+    {
+      "name": "hypothesisLicense",
+      "path": "bytedepth-start/src/main/resources/static/vendor/hypothesis-anchoring/LICENSE",
+      "sha256": "8000e9f55b3ea757318f072c8fae3640a4f9e2e3b578c6a271ae98b1598eee7f",
+      "bytes": 2672
+    },
+    {
+      "name": "hypothesisNotice",
+      "path": "bytedepth-start/src/main/resources/static/vendor/hypothesis-anchoring/NOTICE",
+      "sha256": "c9186310f28b67212fe56236a00f3cc7cbeb08def6d12500afc6e4ab03db60da",
+      "bytes": 1154
+    },
+    {
+      "name": "hypothesisManifest",
+      "path": "bytedepth-start/src/main/resources/static/vendor/hypothesis-anchoring/manifest.json",
+      "sha256": "d5442bb534f2adab181773f34d771ba7deadb5e56af8e366524209dc285aa221",
+      "bytes": 1092
+    },
+    {
+      "name": "prismLicense",
+      "path": "bytedepth-start/src/main/resources/static/vendor/prism/LICENSE",
+      "sha256": "2b947f0901a7ffcf08a89957da9783c0e9c6e72cb6ce8e959f501ab5409e4d2b",
+      "bytes": 1066
+    },
+    {
+      "name": "prismVersion",
+      "path": "bytedepth-start/src/main/resources/static/vendor/prism/prism-version.txt",
+      "sha256": "170bd335cc6971eab2bce8af0368e24c1cb8d0340882508d6428e5161443d5ca",
+      "bytes": 69
+    }
+  ]
+}
