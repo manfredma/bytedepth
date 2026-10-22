@@ -51,7 +51,7 @@ format_is_ignored() {
   [[ "$relative_path" == *.svg ]] && return 0
 
   case "/$relative_path/" in
-    */node_modules/* | */target/* | */build/* | */dist/* | */coverage/* | */generated/* | */vendor/*)
+    /apps/mobile/.expo/* | /apps/mobile/android/* | /apps/mobile/ios/* | */node_modules/* | */target/* | */build/* | */dist/* | */coverage/* | */generated/* | */vendor/*)
       return 0
       ;;
   esac
@@ -82,7 +82,7 @@ format_add_tree() {
   while IFS= read -r -d '' file; do
     format_add_file "$file"
   done < <(
-    find "$root" -type d \( -name node_modules -o -name target -o -name build -o -name dist -o -name coverage -o -name generated -o -name vendor \) -prune -o -type f -print0
+    find "$root" -type d \( -path "$SOURCE_ROOT/apps/mobile/.expo" -o -path "$SOURCE_ROOT/apps/mobile/android" -o -path "$SOURCE_ROOT/apps/mobile/ios" -o -name node_modules -o -name target -o -name build -o -name dist -o -name coverage -o -name generated -o -name vendor \) -prune -o -type f -print0
   )
 }
 

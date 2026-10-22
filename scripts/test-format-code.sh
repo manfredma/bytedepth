@@ -43,4 +43,30 @@ cp "$TEMP_ROOT/sample.json" "$TEMP_ROOT/sample.json.formatted"
 bash "$FORMATTER" "$TEMP_ROOT/sample.json" "$TEMP_ROOT/sample.sh" "$TEMP_ROOT/sample.md"
 cmp -s "$TEMP_ROOT/sample.json" "$TEMP_ROOT/sample.json.formatted"
 
+# Generated Expo config remains after a successful quality run; the next run must
+# collect the same source files instead of parsing generated/native output.
+bash -s "$SOURCE_ROOT/scripts/lib/format-common.sh" "$TEMP_ROOT/generated-scope" << 'GENERATED_SCOPE'
+  set -Eeuo pipefail
+  source "$1"
+  mkdir -p "$2"
+  SOURCE_ROOT="$(cd "$2" && pwd -P)"
+  mkdir -p "$SOURCE_ROOT/apps/mobile/"{.expo,android,ios,src,plugins}
+  for generated in .expo/config.json android/generated.json ios/generated.json; do
+    printf '{ intentionally invalid generated JSON' > "$SOURCE_ROOT/apps/mobile/$generated"
+  done
+  printf 'const value = 1;\n' > "$SOURCE_ROOT/apps/mobile/src/example.ts"
+  printf 'export default {};\n' > "$SOURCE_ROOT/apps/mobile/plugins/example.js"
+  for scope in all paths; do
+    format_collect_scope "$scope" "$SOURCE_ROOT/apps/mobile"
+    [[ "${#FORMAT_FILES[@]}" == 2 ]] || {
+      printf 'Expected 2 source files, collected %s (generated outputs leaked).\n' "${#FORMAT_FILES[@]}" >&2
+      exit 1
+    }
+    [[ "${FORMAT_FILES[0]}" == "$SOURCE_ROOT/apps/mobile/plugins/example.js" ]]
+    [[ "${FORMAT_FILES[1]}" == "$SOURCE_ROOT/apps/mobile/src/example.ts" ]]
+  done
+  format_collect_scope paths "$SOURCE_ROOT/apps/mobile/.expo/config.json" "$SOURCE_ROOT/apps/mobile/android/generated.json" "$SOURCE_ROOT/apps/mobile/ios/generated.json"
+  [[ "${#FORMAT_FILES[@]}" == 0 ]]
+GENERATED_SCOPE
+
 printf 'Formatting contract passed.\n'
