@@ -16,7 +16,7 @@
 - 搜索索引同步、残留清理与失败恢复：读 [搜索索引同步](engineering/search-indexing.md)。
 - 排查已知问题、同类失败再次出现或准备重试：读 [工程陷阱](engineering/gotchas.md)。
 - 管理尚未处理的技术债：读 [技术债清单](engineering/technical-debt.md)。
-- 修改访问日志、阅读统计或首页排序：读 [访问日志与统计](engineering/view-log-and-analytics.md)。
+- 修改无痕阅读、Agent 验证流量、访问日志、阅读统计或首页排序：读 [访问日志与统计](engineering/view-log-and-analytics.md)。
 - 修改登录、表单或 CSRF：读 [CSRF 决策记录](security/csrf-session-repository.md)。
 - 修改会话、记住我或 Session 共享：读 [会话与认证](security/authentication.md)。
 - 新增后台权限或调整授权分层：读 [角色与权限模型](security/rbac.md)。

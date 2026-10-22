@@ -1,5 +1,6 @@
 package manfred.bytedepth.adapter.web.util;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,9 @@ public class VisitRequestFilter {
     private final VisitFilterProperties properties;
 
     public boolean shouldRecord(Request request) {
+        if (request.excluded()) {
+            return false;
+        }
         if (!properties.isEnabled()) {
             return true;
         }
@@ -40,7 +44,16 @@ public class VisitRequestFilter {
         };
     }
 
-    public record Request(String userAgent) {
+    public record Request(String userAgent, boolean excluded) {
+        public Request(String userAgent) {
+            this(userAgent, false);
+        }
+
+        public static Request from(HttpServletRequest request) {
+            return new Request(
+                    WebUtils.truncate(request.getHeader("User-Agent"), 512), ReadingPrivacy.isExcluded(request));
+        }
+
         String valueOf(VisitFilterProperties.Field field) {
             return switch (field) {
                 case USER_AGENT -> userAgent;

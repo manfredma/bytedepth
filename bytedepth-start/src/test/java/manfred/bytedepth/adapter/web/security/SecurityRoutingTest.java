@@ -33,7 +33,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(
-        value = {CommentController.class, ReadingEventController.class},
+        value = {
+            CommentController.class,
+            ReadingEventController.class,
+            manfred.bytedepth.adapter.web.portal.ReadingHistoryController.class
+        },
         excludeAutoConfiguration = DataSourceAutoConfiguration.class)
 @Import({SecurityConfig.class})
 class SecurityRoutingTest {
@@ -58,6 +62,9 @@ class SecurityRoutingTest {
 
     @MockitoBean
     private PostRepository postRepository;
+
+    @MockitoBean
+    private manfred.bytedepth.app.reading.ListReadingHistoryQryExe listReadingHistoryQryExe;
 
     @MockitoBean
     private RateLimitPort rateLimitPort;
@@ -85,6 +92,7 @@ class SecurityRoutingTest {
 
     @Test
     void authenticatedReadingEventWithCsrfHeaderReachesRecording() throws Exception {
+        when(visitRequestFilter.shouldRecord(any())).thenReturn(true);
         mockMvc.perform(post("/posts/java/reading-events")
                         .with(SecurityMockMvcRequestPostProcessors.user(
                                 new SiteUserDetails(7L, "reader", "", java.util.List.of())))
@@ -165,5 +173,18 @@ class SecurityRoutingTest {
     void accessDenied_returnsForbiddenForAuthenticatedUserWithoutPermission() throws Exception {
         mockMvc.perform(get("/admin").with(SecurityMockMvcRequestPostProcessors.user("author")))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void anonymousPrivacyPreferenceRequiresCsrfAndRemainsAvailableWithoutLogin() throws Exception {
+        mockMvc.perform(post("/reading-history/privacy").param("enabled", "true"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/reading-history/privacy")
+                        .param("enabled", "true")
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/reading-history"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Set-Cookie", org.hamcrest.Matchers.containsString("bd_reading_mode=private")));
     }
 }

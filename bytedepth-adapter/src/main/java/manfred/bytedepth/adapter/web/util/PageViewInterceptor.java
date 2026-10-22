@@ -31,7 +31,7 @@ public class PageViewInterceptor implements HandlerInterceptor {
             return true;
         }
         String userAgent = WebUtils.truncate(request.getHeader("User-Agent"), 512);
-        if (!visitRequestFilter.shouldRecord(new VisitRequestFilter.Request(userAgent))) {
+        if (!visitRequestFilter.shouldRecord(VisitRequestFilter.Request.from(request))) {
             return true;
         }
         eventPublisher.publishEvent(new PageViewedEvent(

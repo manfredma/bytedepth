@@ -1,5 +1,6 @@
 package manfred.bytedepth.adapter.web.portal;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -12,6 +13,7 @@ import manfred.bytedepth.app.analytics.PostViewLogPort;
 import manfred.bytedepth.app.analytics.ReadingProgressTokenPort;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
 import manfred.bytedepth.app.post.query.PostDTO;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
@@ -39,6 +41,11 @@ class PostReadingControllerTest {
 
     @MockitoBean
     private ReadingProgressTokenPort readingProgressTokenPort;
+
+    @BeforeEach
+    void ordinaryTraffic() {
+        when(visitRequestFilter.shouldRecord(any())).thenReturn(true);
+    }
 
     @Test
     void recordsCumulativeReadingProgressForTheMatchingPost() throws Exception {

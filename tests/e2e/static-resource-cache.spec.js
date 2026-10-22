@@ -1,3 +1,4 @@
+import { newVerificationContext } from "./helpers/verification-traffic.js";
 import { expect, test } from "@playwright/test";
 
 test("公共静态资源缓存、错误指纹拒绝和压缩", async ({ request }) => {
@@ -26,7 +27,7 @@ test("公共静态资源缓存、错误指纹拒绝和压缩", async ({ request 
 });
 
 test("没有 Service Worker 时跨页面访问也复用浏览器静态缓存", async ({ browser, baseURL }) => {
-  const context = await browser.newContext({ baseURL, serviceWorkers: "block" });
+  const context = await newVerificationContext(browser, { baseURL, serviceWorkers: "block" });
   try {
     const page = await context.newPage();
     await page.goto("/", { waitUntil: "load" });

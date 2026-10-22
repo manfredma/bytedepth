@@ -1,3 +1,4 @@
+import { verificationHeaders } from "./tests/e2e/helpers/verification-traffic.js";
 import {defineConfig, devices} from '@playwright/test';
 
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
@@ -20,6 +21,7 @@ export default defineConfig({
     reporter: process.env.CI ? [['html', {open: 'never'}], ['list']] : 'list',
     use: {
         baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:8080',
+        extraHTTPHeaders: verificationHeaders,
         trace: 'retain-on-failure',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure'

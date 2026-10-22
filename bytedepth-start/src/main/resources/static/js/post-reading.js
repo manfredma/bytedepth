@@ -1,7 +1,7 @@
 (function () {
   const tracker = document.getElementById("post-reading-tracker");
   const article = document.querySelector(".content");
-  if (!tracker || !article || !window.ReadingHistoryStore) {
+  if (!tracker || tracker.dataset.recordReading === "false" || !article || !window.ReadingHistoryStore) {
     return;
   }
   const activityWindowMs = 60_000;
@@ -22,6 +22,9 @@
     lastActivityAt = Date.now();
   }
   function updateDepth() {
+    if (window.ReadingHistoryStore.isPrivate()) {
+      return;
+    }
     const rect = article.getBoundingClientRect();
     const articleHeight = Math.max(article.scrollHeight, rect.height);
     const visible = Math.max(0, Math.min(articleHeight, window.innerHeight - rect.top));
@@ -34,6 +37,10 @@
     }
   }
   function report(finalType) {
+    if (window.ReadingHistoryStore.isPrivate()) {
+      reportedSeconds = activeSeconds;
+      return;
+    }
     const delta = activeSeconds - reportedSeconds;
     if (delta <= 0 && !finalType) {
       return;
@@ -89,7 +96,11 @@
     window.addEventListener(type, markActivity, { passive: true }),
   );
   setInterval(() => {
-    if (!document.hidden && Date.now() - lastActivityAt <= activityWindowMs) {
+    if (
+      !window.ReadingHistoryStore.isPrivate() &&
+      !document.hidden &&
+      Date.now() - lastActivityAt <= activityWindowMs
+    ) {
       activeSeconds += 1;
       updateDepth();
     }

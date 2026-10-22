@@ -1,3 +1,4 @@
+import { newVerificationContext } from "./helpers/verification-traffic.js";
 import { chromium, expect } from "@playwright/test";
 import { authenticationCookies } from "./helpers/admin-auth.js";
 
@@ -11,7 +12,7 @@ export default async function globalSetup(config) {
   const { baseURL, launchOptions } = config.projects[0].use;
   const browser = await chromium.launch(launchOptions);
   try {
-    const context = await browser.newContext({ baseURL });
+    const context = await newVerificationContext(browser, { baseURL });
     const page = await context.newPage();
     await page.goto("/login", { waitUntil: "domcontentloaded" });
     await page.locator('input[name="username"]').fill(username);

@@ -1,14 +1,18 @@
 package manfred.bytedepth.adapter.web.portal;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.adapter.web.util.ReadingPrivacy;
 import manfred.bytedepth.adapter.web.util.SecurityUtils;
 import manfred.bytedepth.app.reading.ListReadingHistoryQryExe;
 import manfred.bytedepth.domain.post.PostRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -36,6 +40,12 @@ public class ReadingHistoryController {
                                 + "|"
                                 + entries.get(entries.size() - 1).postId());
         return "public/reading-history";
+    }
+
+    @PostMapping("/privacy")
+    public String privacy(@RequestParam boolean enabled, HttpServletRequest request, HttpServletResponse response) {
+        ReadingPrivacy.setPreference(request, response, enabled);
+        return "redirect:/reading-history";
     }
 
     @GetMapping("/available-posts")

@@ -1180,6 +1180,7 @@
     <div th:replace="~{fragments/post-rating :: rating(${post}, ${rating}, 'post-rating')}"></div>
 
     <div id="post-reading-tracker" hidden
+         th:data-record-reading="${recordReading}"
          th:data-authenticated="${currentUserId != null}"
          th:data-post-slug="${post.slug}"
          th:data-visit-token="${visitToken}"

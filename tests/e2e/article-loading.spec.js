@@ -1,3 +1,4 @@
+import { newVerificationContext } from "./helpers/verification-traffic.js";
 import { loginAsAdmin } from "./helpers/admin-auth.js";
 import { expect, test } from "@playwright/test";
 
@@ -141,7 +142,10 @@ test("文章延迟脚本尚未完成时手机导航已收起且可以操作", as
 });
 
 test("禁用脚本仍能访问导航入口", async ({ browser }, testInfo) => {
-  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  const context = await newVerificationContext(browser, {
+    javaScriptEnabled: false,
+    viewport: { width: 390, height: 844 },
+  });
   const page = await context.newPage();
   try {
     await page.goto(

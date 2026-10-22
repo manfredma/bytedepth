@@ -13,6 +13,20 @@
 <main class="reading-history-page" id="reading-history-page"
       th:data-authenticated="${#authorization.expression('isAuthenticated()')}">
     <h1>阅读历史</h1>
+    <section class="reading-history-privacy" aria-labelledby="reading-privacy-title">
+        <div>
+            <span id="reading-privacy-title">无痕阅读</span>
+            <p id="reading-privacy-description">开启后，不新增阅读记录，也不计入站点访问统计。已有记录保留，仅对当前浏览器生效。</p>
+            <p class="reading-history-privacy-status" th:text="${privateReading == true ? '已开启' : '未开启'}">未开启</p>
+        </div>
+        <form method="post" th:action="@{/reading-history/privacy}">
+            <input type="hidden" name="enabled" th:value="${privateReading != true}">
+            <button class="reading-history-privacy-toggle" type="submit" role="switch"
+                    aria-label="无痕阅读" aria-describedby="reading-privacy-description"
+                    th:attr="aria-checked=${privateReading == true}"
+                    th:text="${privateReading == true ? '关闭' : '开启'}">开启</button>
+        </form>
+    </section>
     <p class="reading-history-empty" th:if="${#lists.isEmpty(readingHistory)}">还没有阅读记录。</p>
     <div class="reading-history-list">
         <a class="reading-history-item" th:each="entry : ${readingHistory}"
