@@ -35,7 +35,7 @@ node scripts/mobile-staging-fixtures.mjs cleanup --input <managed-output.json>
 - `webCookie`：独立网站 session，用于比较真实 `/reading-history` readCount/totalActiveSeconds；不与移动会话混用。
 - `ownedUser`：仅在 helper 创建账号时存在，包含精确 ID 与唯一用户名；部分失败时 ID 可以为 null，由精确用户名重新定位归属。
 
-helper 复用 `annotation-fixture.js`、`admin-auth.js` 与 `owned-form.js`。文章在发布前保存实际 ID 与编辑路径，cleanup 逐项验证 title/runId/ID/path 并核对实际编辑页标题；一个失败不会跳过其他 owned 项。每项删除前将 `cleanupStarted` 持久化，删除成功后将 `retired` 持久化；输出通过 0600 临时文件、fsync 与原子 rename 更新。重试先校验归属，再跳过已退休项；只有已持久化删除意图的精确 owned 编辑路径返回 404 或 owned 用户查无此人时才按已完成处理。准备失败后的自动 cleanup 与 Host finally cleanup 共用这一协议。cleanup 失败使验证失败；保留私密输入供后续受管恢复，不得吞错后发 PASS。成功 cleanup 删除输出文件；Host 最后删除设备与主机临时凭据。
+helper 复用 `annotation-fixture.js`、`admin-auth.js` 与 `owned-form.js`。文章在发布前保存实际 ID 与编辑路径，cleanup 逐项验证 title/runId/ID/path 并核对实际编辑页标题；一个失败不会跳过其他 owned 项。每项删除前将 `cleanupStarted` 持久化，删除成功后将 `retired` 持久化；输出通过 0600 临时文件、fsync 与原子 rename 更新。重试先校验归属，再跳过已退休项；只有已持久化删除意图的精确 owned 编辑路径返回 404 或 owned 用户查无此人时才按已完成处理。用户缺失必须先核对 HTTP 200、响应和最终 URL 均为精确 username 查询的固定 staging `/admin/users`，并验证现有「用户管理」标题及已登录退出表单；503/500、登录跳转和无认证标记页面都保留未完成归属。正常删除从精确 owned 删除表单读取现有 CSRF token。准备失败后的自动 cleanup 与 Host finally cleanup 共用这一协议。cleanup 失败使验证失败；保留私密输入供后续受管恢复，不得吞错后发 PASS。成功 cleanup 删除输出文件；Host 最后删除设备与主机临时凭据。
 
 ## 执行与判定
 

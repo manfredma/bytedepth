@@ -7,6 +7,7 @@ import {
   validateOwnedArticle,
   prepareFixtures,
   cleanupFixtures,
+  removeOwnedUser,
 } from "../../mobile-staging-fixtures.mjs";
 const input = {
   schemaVersion: 1,
@@ -382,4 +383,97 @@ test("a lost completion write retries a previously owned deletion without accept
     /Owned mobile fixture cleanup failed/,
   );
   assert.equal(foreignCalls, 0);
+});
+
+async function userListBoundary({ status = 200, path, html = "", username }) {
+  const { JSDOM } = await import("jsdom");
+  const url = new URL(path ?? `/admin/users?username=${encodeURIComponent(username)}`, input.origin).href;
+  const dom = new JSDOM(html, { url, runScripts: "outside-only" });
+  const requests = [];
+  dom.window.fetch = async (path, options) => {
+    requests.push({ path, options });
+    return { ok: true, url: `${input.origin}/admin/users` };
+  };
+  const locator = (nodes) => ({
+    filter: ({ hasText }) => locator(nodes.filter((node) => node.textContent.includes(hasText))),
+    locator: (selector) => locator(nodes.flatMap((node) => [...node.querySelectorAll(selector)])),
+    count: async () => nodes.length,
+    getAttribute: async (attribute) => {
+      assert.equal(nodes.length, 1);
+      return nodes[0].getAttribute(attribute);
+    },
+    text: () => {
+      assert.equal(nodes.length, 1);
+      return nodes[0].textContent.trim();
+    },
+  });
+  const page = {
+    goto: async () => ({ ok: () => status >= 200 && status < 300, status: () => status, url: () => url }),
+    url: () => url,
+    locator: (selector) => locator([...dom.window.document.querySelectorAll(selector)]),
+    evaluate: (fn, argument) => dom.window.eval(`(${fn.toString()})(${JSON.stringify(argument)})`),
+  };
+  const expect = (actual) => ({
+    toHaveCount: async (count) => assert.equal(await actual.count(), count),
+    toHaveText: async (text) => assert.equal(actual.text(), text),
+  });
+  return { page, expect, requests, close: () => dom.window.close() };
+}
+const authenticatedUserList = `<form class="nav-logout" action="/logout"></form><div class="admin-main"><h1>用户管理</h1></div>`;
+for (const sample of [
+  { name: "HTTP 503", status: 503, html: authenticatedUserList },
+  { name: "HTTP 500", status: 500, html: authenticatedUserList },
+  { name: "login redirect", path: "/login", html: authenticatedUserList },
+  { name: "unrelated successful page", path: "/admin/posts", html: authenticatedUserList },
+  { name: "missing authenticated DOM", html: "<h1>Gateway page</h1>" },
+])
+  test(`actual user cleanup rejects ${sample.name} and retains unfinished ownership`, async () => {
+    const owned = { id: "42", username: `mobile-${input.runId.slice(0, 24)}` };
+    const boundary = await userListBoundary({ username: owned.username, ...sample });
+    let durable;
+    try {
+      await assert.rejects(
+        cleanupFixtures(
+          { runId: input.runId, articles: {}, ownedUser: owned },
+          { removeUser: (record) => removeOwnedUser(boundary.page, boundary.expect, record) },
+          async (state) => {
+            durable = structuredClone(state);
+          },
+        ),
+        /Owned mobile fixture cleanup failed/,
+      );
+      assert.equal(durable.ownedUser.cleanupStarted, true);
+      assert.equal(durable.ownedUser.retired, undefined);
+      assert.equal(boundary.requests.length, 0);
+    } finally {
+      boundary.close();
+    }
+  });
+test("actual user cleanup accepts a successful authenticated exact empty query only after recorded ownership", async () => {
+  const owned = { id: "42", username: `mobile-${input.runId.slice(0, 24)}`, cleanupStarted: true };
+  const boundary = await userListBoundary({ username: owned.username, html: authenticatedUserList });
+  try {
+    await assert.doesNotReject(removeOwnedUser(boundary.page, boundary.expect, owned));
+    await assert.rejects(removeOwnedUser(boundary.page, boundary.expect, { ...owned, cleanupStarted: false }));
+    assert.equal(boundary.requests.length, 0);
+  } finally {
+    boundary.close();
+  }
+});
+test("actual user cleanup validates normal owned card ID and submits its existing form CSRF", async () => {
+  const owned = { id: "42", username: `mobile-${input.runId.slice(0, 24)}`, cleanupStarted: true };
+  const html =
+    authenticatedUserList +
+    `<div class="user-card"><div class="username">${owned.username}</div><form action="/admin/users/42/delete"><input name="_csrf" value="fixture-token"></form></div>`;
+  const boundary = await userListBoundary({ username: owned.username, html });
+  try {
+    await assert.doesNotReject(removeOwnedUser(boundary.page, boundary.expect, owned));
+    assert.equal(boundary.requests.length, 1);
+    assert.equal(boundary.requests[0].path, "/admin/users/42/delete");
+    assert.equal(boundary.requests[0].options.body.get("_csrf"), "fixture-token");
+    await assert.rejects(removeOwnedUser(boundary.page, boundary.expect, { ...owned, id: "43" }), /identity mismatch/);
+    assert.equal(boundary.requests.length, 1);
+  } finally {
+    boundary.close();
+  }
 });

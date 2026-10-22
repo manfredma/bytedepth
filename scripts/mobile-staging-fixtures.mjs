@@ -134,6 +134,36 @@ export async function prepareFixtures(input, adapter, persist) {
     throw error;
   }
 }
+export async function removeOwnedUser(page, expect, owned) {
+  if (!/^mobile-[a-f0-9-]{24}$/.test(owned.username)) throw Error("Invalid owned user name");
+  const expected = new URL(`/admin/users?username=${encodeURIComponent(owned.username)}`, origin);
+  const response = await page.goto(expected.href, { waitUntil: "domcontentloaded" });
+  if (!response || response.status() !== 200 || response.url() !== expected.href || page.url() !== expected.href)
+    throw Error("Authenticated owned user list unavailable");
+  await expect(page.locator('form.nav-logout[action="/logout"]')).toHaveCount(1);
+  await expect(page.locator(".admin-main h1")).toHaveText("用户管理");
+  const card = page.locator(".user-card").filter({ hasText: owned.username });
+  if ((await card.count()) === 0 && owned.cleanupStarted === true) return;
+  await expect(card).toHaveCount(1);
+  await expect(card.locator(".username")).toHaveText(owned.username);
+  const action = await card.locator('form[action$="/delete"]').getAttribute("action");
+  const match = /^\/admin\/users\/([0-9]+)\/delete$/.exec(action);
+  if (!match || (owned.id !== null && match[1] !== owned.id)) throw Error("Owned user cleanup identity mismatch");
+  const id = match[1];
+  const status = await page.evaluate(async (id) => {
+    const csrf =
+      document.querySelector(`form[action="/admin/users/${id}/delete"] input[name="_csrf"]`)?.value ||
+      document.querySelector('meta[name="_csrf"]')?.content;
+    if (!csrf) throw Error("Owned user cleanup CSRF missing");
+    const response = await fetch(`/admin/users/${id}/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ _csrf: csrf }),
+    });
+    return response.ok && new URL(response.url).pathname === "/admin/users";
+  }, id);
+  if (!status) throw Error("Owned user cleanup failed");
+}
 async function realAdapter(baseURL) {
   const { chromium, expect } = await import("@playwright/test");
   const { createArticle, deleteArticle, createAnnotation, ready } = await import(
@@ -246,29 +276,7 @@ async function realAdapter(baseURL) {
       await expect(page.locator('input[name="title"]')).toHaveValue(article.title);
       await deleteArticle(page, article);
     },
-    removeUser: async (owned) => {
-      if (!/^mobile-[a-f0-9-]{24}$/.test(owned.username)) throw Error("Invalid owned user name");
-      await page.goto(`/admin/users?username=${encodeURIComponent(owned.username)}`);
-      const card = page.locator(".user-card").filter({ hasText: owned.username });
-      if ((await card.count()) === 0 && owned.cleanupStarted === true) return;
-      await expect(card).toHaveCount(1);
-      await expect(card.locator(".username")).toHaveText(owned.username);
-      const action = await card.locator('form[action$="/delete"]').getAttribute("action");
-      const match = /^\/admin\/users\/([0-9]+)\/delete$/.exec(action);
-      if (!match || (owned.id !== null && match[1] !== owned.id)) throw Error("Owned user cleanup identity mismatch");
-      const id = match[1];
-      const status = await page.evaluate(async (id) => {
-        const csrf = document.querySelector('meta[name="_csrf"]')?.content;
-        if (!csrf) throw Error("Owned user cleanup CSRF missing");
-        const response = await fetch(`/admin/users/${id}/delete`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ _csrf: csrf }),
-        });
-        return response.ok && new URL(response.url).pathname === "/admin/users";
-      }, id);
-      if (!status) throw Error("Owned user cleanup failed");
-    },
+    removeUser: (owned) => removeOwnedUser(page, expect, owned),
   };
 }
 async function persistManaged(file, state) {
