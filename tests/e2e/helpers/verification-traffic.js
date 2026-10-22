@@ -1,8 +1,11 @@
-export const verificationHeaders = { "X-Bytedepth-Traffic": "verification" };
+const verificationHeaders = { "X-Bytedepth-Traffic": "verification" };
 
-export function newVerificationContext(browser, options = {}) {
+function newVerificationContext(browser, options = {}) {
   return browser.newContext({
     ...options,
     extraHTTPHeaders: { ...options.extraHTTPHeaders, ...verificationHeaders },
   });
 }
+
+// Playwright's .mjs configuration imports this helper directly in the package's CommonJS scope.
+module.exports = { verificationHeaders, newVerificationContext };

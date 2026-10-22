@@ -63,8 +63,8 @@ test("code scrollbar styling declares explicit sizing and a non-hover thumb", ()
 });
 
 test("staging Chromium projects do not suppress native scrollbars in headless mode", () => {
-  const { execFileSync } = require("node:child_process");
-  const output = execFileSync(
+  const { spawnSync } = require("node:child_process");
+  const result = spawnSync(
     process.execPath,
     [
       "--input-type=module",
@@ -73,7 +73,10 @@ test("staging Chromium projects do not suppress native scrollbars in headless mo
     ],
     { cwd: path.resolve(__dirname, "../../../.."), encoding: "utf-8" },
   );
-  const projectArguments = JSON.parse(output);
+  // Node loads this configuration outside Vitest's module transforms; warnings must fail the check.
+  expect(result.status).toBe(0);
+  expect(result.stderr).toBe("");
+  const projectArguments = JSON.parse(result.stdout);
   expect(projectArguments).toHaveLength(2);
   for (const ignoredArguments of projectArguments) {
     expect(ignoredArguments).toContain("--hide-scrollbars");
