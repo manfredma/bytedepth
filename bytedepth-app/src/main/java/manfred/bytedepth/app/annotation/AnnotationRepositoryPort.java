@@ -7,6 +7,10 @@ import manfred.bytedepth.domain.annotation.PostAnnotation;
 /** 批注存储端口。 */
 public interface AnnotationRepositoryPort {
 
+    List<PostAnnotation> findOwnPublished(Long userId, int page, int size);
+
+    long countOwnPublished(Long userId);
+
     PostAnnotation save(PostAnnotation annotation);
 
     PostAnnotation update(PostAnnotation annotation);

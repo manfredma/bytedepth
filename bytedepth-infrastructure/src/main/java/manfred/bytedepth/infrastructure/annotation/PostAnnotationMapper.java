@@ -9,6 +9,16 @@ import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface PostAnnotationMapper extends BaseMapper<PostAnnotationDO> {
+    // Apply access and owner predicates before LIMIT; filtering an all-row list would corrupt paging.
+    // Legacy deleted flags remain diagnostic, matching the existing owner-visible migration policy.
+    @Select(
+            "SELECT a.* FROM post_annotation a JOIN post p ON p.id=a.post_id WHERE a.user_id=#{userId} AND p.status='PUBLISHED' AND (a.deleted=0 OR a.anchor_json IS NULL) ORDER BY a.created_at DESC,a.id DESC LIMIT #{size} OFFSET #{offset}")
+    List<PostAnnotationDO> findOwnPublished(
+            @Param("userId") Long userId, @Param("offset") long offset, @Param("size") int size);
+
+    @Select(
+            "SELECT COUNT(*) FROM post_annotation a JOIN post p ON p.id=a.post_id WHERE a.user_id=#{userId} AND p.status='PUBLISHED' AND (a.deleted=0 OR a.anchor_json IS NULL)")
+    long countOwnPublished(@Param("userId") Long userId);
 
     @Select("""
       <script>

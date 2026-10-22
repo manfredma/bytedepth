@@ -4,6 +4,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CommentRepository {
+    List<Comment> findApprovedByPostId(Long postId, int page, int size);
+
+    long countApprovedByPostId(Long postId);
+
     Comment save(Comment comment);
 
     Optional<Comment> findById(Long id);

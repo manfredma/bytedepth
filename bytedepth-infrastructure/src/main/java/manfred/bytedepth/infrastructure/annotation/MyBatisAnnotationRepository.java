@@ -15,6 +15,16 @@ public class MyBatisAnnotationRepository implements AnnotationRepositoryPort {
 
     private final PostAnnotationMapper mapper;
 
+    public List<PostAnnotation> findOwnPublished(Long id, int page, int size) {
+        return mapper.findOwnPublished(id, (long) (page - 1) * size, size).stream()
+                .map(MyBatisAnnotationRepository::toDomain)
+                .toList();
+    }
+
+    public long countOwnPublished(Long id) {
+        return mapper.countOwnPublished(id);
+    }
+
     @Override
     public PostAnnotation save(PostAnnotation annotation) {
         PostAnnotationDO data = toDO(annotation);

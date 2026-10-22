@@ -18,6 +18,16 @@ public class CommentRepositoryImpl implements CommentRepository {
 
     private final CommentMapper commentMapper;
 
+    public List<Comment> findApprovedByPostId(Long id, int page, int size) {
+        return commentMapper.findApprovedPage(id, (long) (page - 1) * size, size).stream()
+                .map(this::toEntity)
+                .toList();
+    }
+
+    public long countApprovedByPostId(Long id) {
+        return commentMapper.countApproved(id);
+    }
+
     @Override
     public Comment save(Comment comment) {
         CommentDO d = toDO(comment);
