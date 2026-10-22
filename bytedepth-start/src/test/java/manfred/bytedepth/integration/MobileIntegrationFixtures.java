@@ -1,6 +1,7 @@
 package manfred.bytedepth.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -17,6 +18,7 @@ import manfred.bytedepth.domain.annotation.AnnotationVisibility;
 import manfred.bytedepth.domain.post.Post;
 import manfred.bytedepth.domain.post.PostRepository;
 import manfred.bytedepth.domain.post.document.SegmentSpan;
+import manfred.bytedepth.domain.search.PostSearchPort;
 import manfred.bytedepth.infrastructure.redis.RedisKeyNamespace;
 import manfred.bytedepth.infrastructure.stats.RedisStatsService;
 import org.junit.jupiter.api.AfterEach;
@@ -60,6 +62,9 @@ abstract class MobileIntegrationFixtures {
     PostRepository posts;
 
     @Autowired
+    PostSearchPort search;
+
+    @Autowired
     ArticleRevisionService revisions;
 
     @Autowired
@@ -93,7 +98,8 @@ abstract class MobileIntegrationFixtures {
                 "BYTEDEPTH_STAGING_IT_DATASOURCE_URL",
                 "BYTEDEPTH_STAGING_IT_REDIS_DATABASE",
                 "BYTEDEPTH_STAGING_IT_REDIS_SESSION_NAMESPACE",
-                "BYTEDEPTH_STAGING_IT_REDIS_KEY_NAMESPACE")) {
+                "BYTEDEPTH_STAGING_IT_REDIS_KEY_NAMESPACE",
+                "BYTEDEPTH_STAGING_IT_SEARCH_INDEX")) {
             assertThat(environment.getProperty(key))
                     .as("Host staging resource: %s", key)
                     .isNotBlank();
@@ -104,6 +110,8 @@ abstract class MobileIntegrationFixtures {
                 .isEqualTo(environment.getProperty("BYTEDEPTH_STAGING_IT_REDIS_DATABASE"));
         assertThat(environment.getProperty("spring.session.data.redis.namespace"))
                 .isEqualTo(environment.getProperty("BYTEDEPTH_STAGING_IT_REDIS_SESSION_NAMESPACE"));
+        assertThat(environment.getProperty("bytedepth.search.index"))
+                .isEqualTo(environment.getProperty("BYTEDEPTH_STAGING_IT_SEARCH_INDEX"));
         assertThat(environment.getProperty("bytedepth.redis.key-namespace"))
                 .isEqualTo(environment.getProperty("BYTEDEPTH_STAGING_IT_REDIS_KEY_NAMESPACE"));
     }
@@ -243,7 +251,19 @@ abstract class MobileIntegrationFixtures {
     }
 
     @AfterEach
-    void cleanupOnlyOwnedFixtures() throws Exception {
+    void cleanupOnlyOwnedFixtures() {
+        // Attempt both boundaries and retain any failure; Host outer teardown is not a passing substitute.
+        assertAll("owned mobile fixtures", this::cleanupDatabaseAndRedis, this::cleanupSearchDocuments);
+    }
+
+    private void cleanupSearchDocuments() {
+        if (ownedPosts.isEmpty()) return;
+        // The real port awaits the accepted Meili task's terminal result before returning.
+        search.deleteAll(List.copyOf(ownedPosts));
+        assertThat(search.findIndexedIds()).doesNotContainAnyElementsOf(ownedPosts);
+    }
+
+    private void cleanupDatabaseAndRedis() throws Exception {
         for (String session : ownedSessions) sessions.deleteById(session);
         for (long id : ownedPosts) {
             jdbc.update(
