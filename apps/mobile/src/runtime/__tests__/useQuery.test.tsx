@@ -4,8 +4,8 @@ import { Text, Pressable } from "react-native";
 import { useQuery, errorMessage } from "../useQuery";
 import { MobileRequestError } from "../../api/errors";
 import { createFixture } from "../../screens/__tests__/fixtures";
-function Probe() {
-  const state = useQuery<string>("/search");
+function Probe({ privateQuery = false }: { privateQuery?: boolean }) {
+  const state = useQuery<string>("/search", privateQuery);
   return (
     <>
       <Text>{state.error ?? state.data ?? "等待结果"}</Text>
@@ -56,4 +56,23 @@ it("allows an explicit retry when the server supplies no Retry-After duration", 
   await screen.findByText("操作较频繁，请稍后重试");
   await fireEvent.press(screen.getByRole("button", { name: "重试" }));
   expect(await screen.findByText("结果")).toBeOnTheScreen();
+});
+it("retains the original query retry deadline through offline/online and private clearing, with retry still explicit", async () => {
+  const f = await createFixture();
+  const time = jest.spyOn(Date, "now").mockReturnValue(1000);
+  f.request.mockRejectedValueOnce(new MobileRequestError(429, "RATE_LIMITED", "slow", 5000)).mockResolvedValue("结果");
+  await render(<Probe privateQuery />, { wrapper: f.provider });
+  await screen.findByText("操作较频繁，请稍后重试（约 5 秒）");
+  time.mockReturnValue(2000);
+  await act(() => f.setOnline(false));
+  await act(() => f.setOnline(true));
+  await act(() => f.auth.clearPrivateState("account-change"));
+  expect(f.request).toHaveBeenCalledTimes(1);
+  time.mockReturnValue(6000);
+  await act(() => f.setOnline(false));
+  await act(() => f.setOnline(true));
+  expect(f.request).toHaveBeenCalledTimes(1);
+  await fireEvent.press(screen.getByRole("button", { name: "重试" }));
+  expect(await screen.findByText("结果")).toBeOnTheScreen();
+  time.mockRestore();
 });

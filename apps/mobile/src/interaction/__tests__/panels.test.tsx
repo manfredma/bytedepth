@@ -92,6 +92,10 @@ it("shows stale annotations as references and edits an owned annotation in place
   await fireEvent.press(screen.getByRole("button", { name: "取消编辑" }));
   expect(screen.getByText("已有评注")).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole("button", { name: "编辑评注" }));
+  expect(screen.getByLabelText("评注文字").props.value).toBe("已有评注");
+  expect(screen.getByRole("button", { name: "仅自己", selected: true })).toBeOnTheScreen();
+  await fireEvent.changeText(screen.getByLabelText("评注文字"), "修改内容");
+  await fireEvent.press(screen.getByRole("button", { name: "公开" }));
   await fireEvent.press(screen.getByRole("button", { name: "保存评注" }));
   await screen.findByText("修改内容");
   const confirm = jest.spyOn(Alert, "alert");

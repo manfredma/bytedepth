@@ -15,25 +15,40 @@ export function useQuery<T>(path: string | null, authenticated = false, identity
   const runtime = useRuntime();
   const online = useOnline();
   const [revision, reload] = useState(0);
-  const retryAt = useRef(0);
-  const key = JSON.stringify([path, authenticated, identity, online, revision]);
+  const [cooldown, setCooldown] = useState<{ until: number; message: string } | null>(null);
+  const scope = useRef({ generation: 0, controller: null as AbortController | null });
+  const [privateGeneration, setPrivateGeneration] = useState(0);
+  const key = JSON.stringify([path, authenticated, identity, online, revision, privateGeneration]);
   const [state, set] = useState<{ key: string; data: T | null; error: string | null }>({
     key: "",
     data: null,
     error: null,
   });
+  // User ID alone is not a private cache generation: the same account can return after clearing.
   useEffect(() => {
-    if (!path || !online) return;
+    if (!authenticated) return;
+    return runtime.auth.onPrivateClear(() => {
+      scope.current.generation++;
+      setPrivateGeneration((value) => value + 1);
+      scope.current.controller?.abort();
+      set({ key: "", data: null, error: null });
+    });
+  }, [runtime, authenticated, scope]);
+  useEffect(() => {
+    // A reconnect or account transition cannot consume a server-mandated wait or trigger its retry.
+    if (!path || !online || cooldown) return;
     let current = true;
     const controller = new AbortController();
+    scope.current.controller = controller;
+    const generation = scope.current.generation;
     runtime.api.request<T>(path, { method: "GET", authenticated, signal: controller.signal }).then(
       (data) => {
-        if (current) set({ key, data, error: null });
+        if (current && generation === scope.current.generation) set({ key, data, error: null });
       },
       (error) => {
-        if (current) {
+        if (current && generation === scope.current.generation) {
           if (error instanceof MobileRequestError && error.status === 429 && error.retryAfterMs !== null)
-            retryAt.current = Date.now() + error.retryAfterMs;
+            setCooldown({ until: Date.now() + error.retryAfterMs, message: errorMessage(error) });
           set({ key, data: null, error: errorMessage(error) });
         }
       },
@@ -42,14 +57,17 @@ export function useQuery<T>(path: string | null, authenticated = false, identity
       current = false;
       controller.abort();
     };
-  }, [runtime, path, authenticated, online, key]);
+  }, [runtime, path, authenticated, online, key, scope, cooldown]);
   const latest = state.key === key;
   return {
-    data: latest ? state.data : null,
-    error: latest ? state.error : null,
-    loading: !!path && online && !latest,
+    data: cooldown ? null : latest ? state.data : null,
+    error: cooldown ? cooldown.message : latest ? state.error : null,
+    loading: !!path && online && !cooldown && !latest,
     reload: useCallback(() => {
-      if (Date.now() >= retryAt.current) reload((n) => n + 1);
-    }, []),
+      if (!cooldown || Date.now() >= cooldown.until) {
+        setCooldown(null);
+        reload((n) => n + 1);
+      }
+    }, [cooldown]),
   };
 }

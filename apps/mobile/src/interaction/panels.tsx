@@ -234,7 +234,11 @@ function AnnotationRow({ annotation, store }: { annotation: MobileAnnotation; st
             setVisibility(scope);
           }}
           busy={busy}
-          onCancel={() => setEditing(false)}
+          onCancel={() => {
+            setText(annotation.annotationText);
+            setVisibility(annotation.visibility);
+            setEditing(false);
+          }}
           onSave={() => {
             void run(async () => {
               await store.update(annotation, text, visibility);
@@ -251,7 +255,14 @@ function AnnotationRow({ annotation, store }: { annotation: MobileAnnotation; st
           </Text>
           {annotation.ownedByCurrentVisitor && (
             <Row>
-              <Button title="编辑评注" onPress={() => setEditing(true)} />
+              <Button
+                title="编辑评注"
+                onPress={() => {
+                  setText(annotation.annotationText);
+                  setVisibility(annotation.visibility);
+                  setEditing(true);
+                }}
+              />
               <Button
                 title="删除评注"
                 onPress={() =>

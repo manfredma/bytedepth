@@ -1,10 +1,28 @@
 import React from "react";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react-native";
+import { render as nativeRender, screen, fireEvent, act, waitFor } from "@testing-library/react-native";
 import { ReaderScreen } from "../ReaderScreen";
 import { createFixture, content, navigation } from "./fixtures";
 import type { ReaderWebViewProps } from "../../reader/ReaderWebView";
-import { Linking } from "react-native";
+import { Linking, Text } from "react-native";
 import { API_ORIGIN } from "../../config";
+import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { RootStackParams } from "../../navigation/types";
+jest.mock(
+  "react-native-safe-area-context",
+  () => jest.requireActual("react-native-safe-area-context/jest/mock").default,
+);
+const ProbeStack = createNativeStackNavigator();
+function render(element: React.ReactElement, options?: Parameters<typeof nativeRender>[1]) {
+  return nativeRender(
+    <NavigationContainer>
+      <ProbeStack.Navigator screenOptions={{ headerShown: false, animation: "none" }}>
+        <ProbeStack.Screen name="Probe">{() => element}</ProbeStack.Screen>
+      </ProbeStack.Navigator>
+    </NavigationContainer>,
+    options,
+  );
+}
 let mockReader: ReaderWebViewProps;
 jest.mock("../../reader/ReaderWebView", () => ({
   ReaderWebView: (props: ReaderWebViewProps) => {
@@ -506,4 +524,102 @@ it("keeps public reading available when annotations fail to load and shows the f
   expect(screen.queryByText("评注暂不可读")).toBeNull();
   await fireEvent.press(screen.getByRole("button", { name: "评注" }));
   expect(await screen.findByText("评注暂不可读")).toBeOnTheScreen();
+});
+const JourneyStack = createNativeStackNavigator<RootStackParams>();
+function journey(ref: ReturnType<typeof createNavigationContainerRef<RootStackParams>>) {
+  return (
+    <NavigationContainer ref={ref}>
+      <JourneyStack.Navigator initialRouteName="Reader" screenOptions={{ animation: "none" }}>
+        <JourneyStack.Screen name="Reader" component={ReaderScreen} initialParams={{ postId: "1" }} />
+        <JourneyStack.Screen name="Column">{() => <Text>专栏目录页面</Text>}</JourneyStack.Screen>
+      </JourneyStack.Navigator>
+    </NavigationContainer>
+  );
+}
+it("reopens and rechecks article A after a real native-stack A to B to back navigation, clearing the hidden draft", async () => {
+  const f = await createFixture();
+  await f.auth.login("reader", "password");
+  const base = f.request.getMockImplementation()!;
+  f.request.mockImplementation((path: string, options?: any) =>
+    path.includes("/resolve") ? Promise.resolve({ postId: "2" }) : base(path, options),
+  );
+  const pending = new Map<string, (value: void) => void>();
+  const open = jest.fn(async function* (postId: string) {
+    yield {
+      postId,
+      copyState: "OFFLINE_READY" as const,
+      checkState: "CURRENT" as const,
+      content: { ...content, postId, title: postId === "1" ? "文章 A" : "文章 B" },
+      lastConfirmedAt: null,
+    };
+    await new Promise<void>((resolve) => pending.set(postId, resolve));
+  });
+  f.runtime.reader.open = open;
+  f.reader.release.mockImplementation((postId?: string) => {
+    pending.get(postId!)?.();
+  });
+  const ref = createNavigationContainerRef<RootStackParams>();
+  await nativeRender(journey(ref), { wrapper: f.provider });
+  await screen.findByText("文章 A");
+  await act(() =>
+    send("selection", {
+      exact: "文",
+      prefix: "",
+      suffix: "字",
+      start: 0,
+      end: 1,
+      spans: [{ segmentId: "s", start: 0, end: 1 }],
+    }),
+  );
+  await screen.findByLabelText("评注文字");
+  await fireEvent.changeText(screen.getByLabelText("评注文字"), "离页必须清掉的草稿");
+  await fireEvent.press(screen.getByRole("button", { name: "关闭" }));
+  await act(() => send("link", { href: "/posts/b" }));
+  await screen.findByText("文章 B");
+  expect(f.reader.release).toHaveBeenCalledWith("1");
+  await act(() => ref.goBack());
+  await screen.findByText("文章 A");
+  expect(open.mock.calls.map((call) => call[0])).toEqual(["1", "2", "1"]);
+  await fireEvent.press(screen.getByRole("button", { name: "评注" }));
+  expect(screen.queryByLabelText("评注文字")).toBeNull();
+});
+it("does not navigate from article A slow link after a real push to its column while A remains in the stack", async () => {
+  const f = await createFixture();
+  const base = f.request.getMockImplementation()!;
+  let resolve!: (value: any) => void;
+  f.request.mockImplementation((path: string, options?: any) =>
+    path.includes("/resolve")
+      ? new Promise((r) => {
+          resolve = r;
+        })
+      : base(path, options),
+  );
+  f.setInitial({
+    postId: "1",
+    copyState: "OFFLINE_READY",
+    checkState: "CURRENT",
+    content: {
+      ...content,
+      series: {
+        id: "5",
+        name: "系统设计",
+        slug: "systems",
+        posts: [],
+        position: 1,
+        total: 1,
+        progressPercent: 100,
+        previous: null,
+        next: null,
+      },
+    },
+    lastConfirmedAt: null,
+  });
+  const ref = createNavigationContainerRef<RootStackParams>();
+  await nativeRender(journey(ref), { wrapper: f.provider });
+  await screen.findByText("技术长文");
+  await act(() => send("link", { href: "/posts/late" }));
+  await fireEvent.press(screen.getByRole("button", { name: "系统设计 · 1/1" }));
+  await screen.findByText("专栏目录页面");
+  await act(() => resolve({ postId: "2" }));
+  expect(ref.getCurrentRoute()?.name).toBe("Column");
 });

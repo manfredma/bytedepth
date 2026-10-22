@@ -1,3 +1,4 @@
+import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, useColorScheme, useWindowDimensions, View } from "react-native";
 import { ArticleRow, Button, Label, Loading, Notice, Page, Row, Sheet } from "../components/ui";
@@ -26,7 +27,9 @@ interface OpenState {
   previousDocument: ArticleDocument | null;
 }
 export function ReaderScreen(props: { navigation: Navigation; route: { params: { postId: string } } }) {
-  return <ReaderSession key={props.route.params.postId} {...props} />;
+  // Native-stack retains blurred routes; each focused visit owns its own reader consumer and private state.
+  const focused = useIsFocused();
+  return focused ? <ReaderSession key={props.route.params.postId} {...props} /> : null;
 }
 function ReaderSession({ navigation, route }: { navigation: Navigation; route: { params: { postId: string } } }) {
   const runtime = useRuntime();

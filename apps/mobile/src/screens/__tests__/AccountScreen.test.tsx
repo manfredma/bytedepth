@@ -3,6 +3,7 @@ import { render, screen, fireEvent, act } from "@testing-library/react-native";
 import { AccountScreen } from "../AccountScreen";
 import { createFixture, navigation } from "./fixtures";
 import { Preferences } from "../../runtime/Preferences";
+import { MobileRequestError } from "../../api/errors";
 it("registers an account application without pretending it is an authenticated account", async () => {
   const f = await createFixture();
   f.request.mockImplementation(async (path: string) => (path === "/registrations" ? { status: "PENDING" } : undefined));
@@ -136,3 +137,67 @@ it("does not display an old registration result after leaving online account sta
   await act(() => resolve({ status: "PENDING" }));
   expect(screen.queryByText("申请已提交，等待管理员审核后才能登录。")).toBeNull();
 });
+it("does not revive cleared own annotations while the same account fresh request is pending", async () => {
+  const f = await createFixture();
+  await f.auth.login("reader", "password");
+  const base = f.request.getMockImplementation()!;
+  let reads = 0;
+  let complete!: (value: any) => void;
+  f.request.mockImplementation((path: string, options?: any) => {
+    if (path.startsWith("/me/annotations")) {
+      reads++;
+      return reads === 1
+        ? Promise.resolve({
+            items: [{ id: "a", postId: "1", selectedText: "引用", annotationText: "必须清除的私有旧文字" }],
+            hasNext: false,
+          })
+        : new Promise((resolve) => {
+            complete = resolve;
+          });
+    }
+    return base(path, options);
+  });
+  await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  await fireEvent.press(screen.getByRole("button", { name: "本人批注" }));
+  await screen.findByText("必须清除的私有旧文字");
+  await act(() => f.setOnline(false));
+  await act(() => f.setOnline(true));
+  await act(() => f.auth.revalidate());
+  await fireEvent.press(screen.getByRole("button", { name: "本人批注" }));
+  expect(screen.queryByText("必须清除的私有旧文字")).toBeNull();
+  expect(screen.getByLabelText("正在加载")).toBeOnTheScreen();
+  await act(() => complete({ items: [], hasNext: false }));
+  expect(screen.getByText("还没有批注")).toBeOnTheScreen();
+});
+it.each(["login", "register"] as const)(
+  "honors the original %s Retry-After deadline across offline and account-state clearing",
+  async (mode) => {
+    const f = await createFixture();
+    const time = jest.spyOn(Date, "now").mockReturnValue(1000);
+    f.request.mockRejectedValueOnce(new MobileRequestError(429, "RATE_LIMITED", "slow", 5000));
+    const base = f.request.getMockImplementation()!;
+    f.request.mockImplementation((path: string, options?: any) =>
+      path === "/registrations" ? Promise.resolve({ status: "PENDING" }) : base(path, options),
+    );
+    await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+    if (mode === "register") await fireEvent.press(screen.getByRole("button", { name: "申请账号" }));
+    await fireEvent.changeText(screen.getByLabelText("用户名"), "reader");
+    await fireEvent.changeText(screen.getByLabelText("密码"), "abc123456");
+    const submit = mode === "login" ? "登录账号" : "提交申请";
+    await fireEvent.press(screen.getByRole("button", { name: submit }));
+    await screen.findByText("操作较频繁，请稍后重试（约 5 秒）");
+    const initial = f.request.mock.calls.length;
+    time.mockReturnValue(2000);
+    await act(() => f.setOnline(false));
+    await act(() => f.setOnline(true));
+    await act(() => f.auth.clearPrivateState("account-change"));
+    await fireEvent.changeText(screen.getByLabelText("密码"), "abc123456");
+    await fireEvent.press(screen.getByRole("button", { name: submit }));
+    expect(f.request).toHaveBeenCalledTimes(initial);
+    time.mockReturnValue(6000);
+    await fireEvent.press(screen.getByRole("button", { name: submit }));
+    if (mode === "register") await screen.findByText("申请已提交，等待管理员审核后才能登录。");
+    else await screen.findByText("reader");
+    time.mockRestore();
+  },
+);

@@ -1,5 +1,6 @@
+import { MobileRequestError } from "../api/errors";
 import packageInfo from "../../package.json";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ArticleRow, Button, Field, Label, Loading, Notice, Page, Row } from "../components/ui";
 import type { MobileAnnotation, MobilePage, RegistrationResult } from "../contracts/mobile";
 import type { Navigation } from "../navigation/types";
@@ -62,6 +63,8 @@ export function AccountScreen({ navigation }: { navigation: Navigation }) {
     user?.id ?? "",
   );
   const scope = useMemo(() => ({ generation: 0 }), []);
+  // Rate limits survive private-state clearing and reconnects; only an explicit submit after the deadline retries.
+  const deadlines = useRef(new Map<"login" | "register", { until: number; error: MobileRequestError }>());
   useEffect(() => {
     const unsubscribe = runtime.auth.onPrivateClear(() => {
       scope.generation++;
@@ -76,6 +79,11 @@ export function AccountScreen({ navigation }: { navigation: Navigation }) {
     };
   }, [runtime, scope]);
   const submit = async () => {
+    const deadline = deadlines.current.get(mode);
+    if (deadline && Date.now() < deadline.until) {
+      setMessage(errorMessage(deadline.error));
+      return;
+    }
     setMessage(null);
     const pending =
       mode === "login"
@@ -95,6 +103,8 @@ export function AccountScreen({ navigation }: { navigation: Navigation }) {
             : "注册结果无法确认，请稍后重试",
         );
     } catch (error) {
+      if (error instanceof MobileRequestError && error.status === 429 && error.retryAfterMs !== null)
+        deadlines.current.set(mode, { until: Date.now() + error.retryAfterMs, error });
       if (generation === scope.generation) setMessage(errorMessage(error));
     } finally {
       if (generation === scope.generation) {
