@@ -29,6 +29,7 @@ class ReadingPrivacyTest {
         assertThat(captured.getFirst()).isInstanceOf(manfred.bytedepth.domain.stats.PageViewedEvent.class);
     }
 
+    @SuppressWarnings("unused")
     private void pageHandler() {}
 
     @Test
