@@ -80,4 +80,35 @@ rmdir "$FIXTURE/apps/mobile/.expo/toolchain.lock"
 bash "$FIXTURE/scripts/with-mobile-toolchain-lock.sh" touch "$FIXTURE/lock-was-held"
 [[ -f "$FIXTURE/lock-was-held" && ! -e "$FIXTURE/apps/mobile/.expo/toolchain.lock" ]]
 
+# A signal can leave child native processes alive: retain the lock for inspection.
+python3 - "$FIXTURE" << 'PYTHON'
+import os, pathlib, signal, subprocess, sys, time
+root = pathlib.Path(sys.argv[1])
+child_pid = root / "child.pid"
+wrapper = root / "scripts/with-mobile-toolchain-lock.sh"
+lock = root / "apps/mobile/.expo/toolchain.lock"
+program = "import os,pathlib,time; pathlib.Path(__import__('sys').argv[1]).write_text(str(os.getpid())); time.sleep(2)"
+process = subprocess.Popen(["bash", str(wrapper), sys.executable, "-c", program, str(child_pid)], start_new_session=True)
+try:
+    deadline = time.monotonic() + 5
+    while not child_pid.exists():
+        assert time.monotonic() < deadline, "Child failed to start"
+        time.sleep(.01)
+    process.send_signal(signal.SIGTERM)
+    time.sleep(.1)
+    os.kill(int(child_pid.read_text()), 0)
+    assert lock.is_dir(), "Interrupted wrapper released a live child's input lock"
+    blocked = subprocess.run(["bash", str(wrapper), "touch", str(root / "interrupted-overlap")], capture_output=True)
+    assert blocked.returncode != 0 and not (root / "interrupted-overlap").exists()
+    process.wait(timeout=5)
+    assert lock.is_dir(), "Interrupted wrapper removed the lock before explicit inspection"
+finally:
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    process.wait()
+PYTHON
+rmdir "$FIXTURE/apps/mobile/.expo/toolchain.lock"
+
 printf 'Mobile runner failure, coverage and toolchain-lock boundaries passed.\n'

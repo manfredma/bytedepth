@@ -6,7 +6,7 @@
 
 ## 本地检查与构建
 
-完整入口为 `bash scripts/run-local-quality.sh`，包含移动配置夹具和 `bash scripts/run-mobile-quality.sh`。移动入口先执行独立的 `npm ci --ignore-scripts --no-audit --no-fund`，再进行类型、lint、全量测试及覆盖率、固定阅读资源一致性与 Expo 公开配置检查。`verify-mobile-coverage.mjs` 从源码清单检查每个业务文件的实际计数，缺失报告不能算通过。离线单测不调用 staging、部署、集成测试或 E2E。
+完整入口为 `bash scripts/run-local-quality.sh`，包含移动配置夹具和 `bash scripts/run-mobile-quality.sh`。移动入口先执行独立的 `npm ci --ignore-scripts --no-audit --no-fund`，再进行类型、lint、全量测试及覆盖率、固定阅读资源一致性与 Expo 公开配置检查。依赖 Expo plugin 的根配置夹具在移动入口完成安装与检查后运行，干净 worktree 也遵守这一顺序。`verify-mobile-coverage.mjs` 从源码清单检查每个业务文件的实际计数，缺失报告不能算通过。离线单测不调用 staging、部署、集成测试或 E2E。
 
 在固定移动工具环境中，从 `apps/mobile/` 运行：
 
@@ -18,7 +18,7 @@ npm run android:build
 
 `android/` 与 `ios/` 是忽略的生成目录。原生配置通过 `app.config.ts` 和 config plugin 修改，配置或原生依赖变化后重新生成；不要只改生成文件。显示版本与 Expo 版本读取同一个 package version，Android versionCode 在 app config 声明。
 
-依赖安装会删除并重建 `node_modules`，必须与 Gradle、原生生成及 JS 测试串行。移动质量入口与原生命令通过同一个 worktree 锁互斥；命令未结束前不删除锁或启动第二次构建。中断后先核对实际进程终态，再清理遗留锁。Gradle 首次 wrapper 下载也只能由一个命令持有，下载缓慢但持续增长时等待原任务，不启动竞争下载。长构建、下载和 Metro 由协调 Agent 持有；短任务子 Agent 结束时可能终止其子进程。
+依赖安装会删除并重建 `node_modules`，必须与 Gradle、原生生成及 JS 测试串行。移动质量入口与原生命令通过同一个 worktree 锁互斥；命令未结束前不删除锁或启动第二次构建。包装进程收到 HUP、INT 或 TERM 时保留锁，因为原生子进程可能仍在使用依赖；中断后先核对全部相关进程终态，再清理遗留锁。正常命令失败且已退出时可释放锁。Gradle 首次 wrapper 下载也只能由一个命令持有，下载缓慢但持续增长时等待原任务，不启动竞争下载。长构建、下载和 Metro 由协调 Agent 持有；短任务子 Agent 结束时可能终止其子进程。
 
 开发构建需要同一 Node 环境启动 Metro。它只能证明工程与原生运行时可用；正式签名、分发、升级和 staging 业务验证均不能用本地 debug APK 替代。
 
