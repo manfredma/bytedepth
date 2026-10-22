@@ -44,6 +44,6 @@ native-stack 会保留被遮挡页面。一次阅读会话以页面 focus 为边
 
 ## 真实验证与发布
 
-测试夹具和 DOM 模拟不能替代 Android WebView。模拟器连接 staging 验证选区、续读、旋转、键盘、安全区、代码、表格、Mermaid、图片/SVG、进程重启及断网；同时核对网络中没有阅读位置上报或凭据外泄。具体矩阵以[客户端设计](../architecture/mobile-reader.md#验收矩阵)为准。
+测试夹具和 DOM 模拟不能替代 Android WebView。模拟器连接 staging 验证选区、续读、旋转、键盘、安全区、代码、表格、Mermaid、图片/SVG、进程重启及断网；同时核对网络中没有阅读位置上报或凭据外泄。可执行用例、受管夹具与同签名升级流程见 [Android staging instrumentation](mobile-instrumentation.md)。具体矩阵以[客户端设计](../architecture/mobile-reader.md#验收矩阵)为准。
 
 服务端候选、客户端完整 SHA、APK 摘要、证书、版本、不可变下载地址和 mobile evidence 必须对应。正式构建与受管签名由 canonical release-platform 和 Host Agent 执行；不存在平台回执时保持未就绪。手机验收只在 staging 自测及签名 APK 证据齐全后发起。
