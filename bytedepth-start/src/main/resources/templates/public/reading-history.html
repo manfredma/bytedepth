@@ -12,21 +12,43 @@
 <nav th:replace="~{fragments/nav :: navbar(true)}"></nav>
 <main class="reading-history-page" id="reading-history-page"
       th:data-authenticated="${#authorization.expression('isAuthenticated()')}">
-    <h1>阅读历史</h1>
-    <section class="reading-history-privacy" aria-labelledby="reading-privacy-title">
-        <div>
-            <span id="reading-privacy-title">无痕阅读</span>
-            <p id="reading-privacy-description">开启后，不新增阅读记录，也不计入站点访问统计。已有记录保留，仅对当前浏览器生效。</p>
-            <p class="reading-history-privacy-status" th:text="${privateReading == true ? '已开启' : '未开启'}">未开启</p>
+    <header class="reading-history-heading">
+        <h1>阅读历史</h1>
+        <p>回到读过的内容，接着往下读。</p>
+    </header>
+    <section class="reading-history-privacy" aria-labelledby="reading-privacy-title"
+             th:attr="data-private=${privateReading == true}">
+        <div class="reading-history-privacy-main">
+            <span class="reading-history-privacy-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3 4.5 6v5.5c0 4.3 3 7.5 7.5 9.5 4.5-2 7.5-5.2 7.5-9.5V6L12 3Z"/>
+                    <path d="m8.5 12 2.3 2.3 4.7-4.8"/>
+                </svg>
+            </span>
+            <div class="reading-history-privacy-copy">
+                <div class="reading-history-privacy-label">
+                    <h2 id="reading-privacy-title">无痕阅读</h2>
+                    <span class="reading-history-privacy-status"
+                          th:text="${privateReading == true ? '已开启' : '未开启'}">未开启</span>
+                </div>
+                <p id="reading-privacy-description"
+                   th:text="${privateReading == true ? '本次浏览不新增阅读记录，也不计入访问统计。' : '开启后，暂停记录阅读足迹与站点访问统计。'}">开启后，暂停记录阅读足迹与站点访问统计。</p>
+            </div>
         </div>
-        <form method="post" th:action="@{/reading-history/privacy}">
+        <form method="post" th:action="@{/reading-history/privacy}" class="reading-history-privacy-form">
             <input type="hidden" name="enabled" th:value="${privateReading != true}">
             <button class="reading-history-privacy-toggle" type="submit" role="switch"
-                    aria-label="无痕阅读" aria-describedby="reading-privacy-description"
-                    th:attr="aria-checked=${privateReading == true}"
-                    th:text="${privateReading == true ? '关闭' : '开启'}">开启</button>
+                    aria-label="无痕阅读" aria-describedby="reading-privacy-description reading-privacy-scope"
+                    th:attr="aria-checked=${privateReading == true}">
+                <span class="reading-history-privacy-track" aria-hidden="true">
+                    <span class="reading-history-privacy-thumb"></span>
+                </span>
+            </button>
         </form>
+        <p class="reading-history-privacy-scope" id="reading-privacy-scope">已有记录保留<span aria-hidden="true"> · </span>仅当前浏览器生效</p>
     </section>
+    <h2 class="reading-history-list-heading">已读文章</h2>
     <p class="reading-history-empty" th:if="${#lists.isEmpty(readingHistory)}">还没有阅读记录。</p>
     <div class="reading-history-list">
         <a class="reading-history-item" th:each="entry : ${readingHistory}"
