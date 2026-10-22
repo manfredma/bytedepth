@@ -244,6 +244,57 @@ class RateLimitFilterTest {
         verify(rateLimitPort, never()).tryConsume(any(), anyLong(), any(), any());
     }
 
+    @Test
+    void mobileWritesShareWebQuotasAndRejectAsJson() throws Exception {
+        when(rateLimitPort.tryConsume(eq("comment-rating-ip"), anyLong(), any(), any()))
+                .thenReturn(RateLimitDecision.rejected(1_000_000_001));
+        String[][] writes = {
+            {"PUT", "/api/mobile/v1/posts/1/rating"},
+            {"POST", "/api/mobile/v1/posts/1/comments"},
+            {"POST", "/api/mobile/v1/posts/1/annotations"},
+            {"PATCH", "/api/mobile/v1/posts/1/annotations/abc"},
+            {"DELETE", "/api/mobile/v1/posts/1/annotations/abc"}
+        };
+        for (String[] write : writes) {
+            var response = new MockHttpServletResponse();
+            filter.doFilter(new MockHttpServletRequest(write[0], write[1]), response, filterChain);
+            assertThat(response.getStatus()).isEqualTo(429);
+            assertThat(response.getHeader("Retry-After")).isEqualTo("2");
+            assertThat(response.getContentType()).startsWith("application/json");
+            assertThat(response.getContentAsString()).contains("\"code\":\"RATE_LIMITED\"");
+        }
+        verify(filterChain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    void mobileLoginAndRegistrationShareWebBucketsAndReadsDoNotConsume() throws Exception {
+        var login = post("/blog/api/mobile/v1/login", "203.0.113.20");
+        login.setContextPath("/blog");
+        login.addParameter("username", " ALICE ");
+        filter.doFilter(login, new MockHttpServletResponse(), filterChain);
+        filter.doFilter(
+                post("/api/mobile/v1/registrations", "203.0.113.20"), new MockHttpServletResponse(), filterChain);
+        verify(rateLimitPort).tryConsume(eq("login-ip"), anyLong(), any(), eq("203.0.113.20"));
+        verify(rateLimitPort).tryConsume(eq("login-username"), anyLong(), any(), eq("alice"));
+        verify(rateLimitPort).tryConsume(eq("register-ip"), anyLong(), any(), eq("203.0.113.20"));
+        org.mockito.Mockito.clearInvocations(rateLimitPort);
+        for (String method : java.util.List.of("GET", "HEAD", "PUT", "POST", "PATCH", "DELETE")) {
+            filter.doFilter(
+                    new MockHttpServletRequest(method, "/api/mobile/v1/other"),
+                    new MockHttpServletResponse(),
+                    filterChain);
+        }
+        for (String path : java.util.List.of(
+                "/api/mobile/v1/posts/1/rating",
+                "/api/mobile/v1/posts/1/comments",
+                "/api/mobile/v1/posts/1/annotations",
+                "/api/mobile/v1/posts/1/annotations/a",
+                "/api/mobile/v10/login")) {
+            filter.doFilter(new MockHttpServletRequest("GET", path), new MockHttpServletResponse(), filterChain);
+        }
+        verify(rateLimitPort, never()).tryConsume(any(), anyLong(), any(), any());
+    }
+
     private MockHttpServletRequest post(String path, String remoteAddr) {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", path);
         request.setRemoteAddr(remoteAddr);

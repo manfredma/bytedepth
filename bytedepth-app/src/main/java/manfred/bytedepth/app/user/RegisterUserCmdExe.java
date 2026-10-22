@@ -15,8 +15,12 @@ public class RegisterUserCmdExe {
     private final PasswordEncoder passwordEncoder;
 
     public void execute(String username, String rawPassword) {
+        if (username == null || username.trim().length() < 2 || username.trim().length() > 50) {
+            throw new DomainException("用户名长度必须为 2–50 个字符");
+        }
+        username = username.trim();
         if (userRepository.existsByUsername(username)) {
-            throw new DomainException("用户名已存在：" + username);
+            throw new UsernameTakenException();
         }
         validatePassword(rawPassword);
         User user = User.register(username, passwordEncoder.encode(rawPassword));

@@ -2,17 +2,24 @@
 
 网页端使用 Spring Security 表单登录 + CSRF + HttpSession，不引入 JWT。认证与 CSRF 配置位于 `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/security/SecurityConfig.java`。
 
-独立移动客户端的显式会话传递与网页隔离方案见 [ADR-0025（提案，尚未实现）](../architecture/decisions/0025-react-native-mobile-reader.md)。
+移动接口使用独立安全链与显式 Session 头，边界见 [ADR-0025](../architecture/decisions/0025-react-native-mobile-reader.md) 与 [移动 API 契约](../architecture/mobile-api.md)。网页 Cookie 不认证移动接口，移动头不认证网页；两者均保留 CSRF。
 
 ## 共享 Session
 
 多实例共享 Spring Session Redis，负载均衡无需 sticky session。配置见 `bytedepth-start/src/main/resources/application.yml`：
 
-- `spring.session.store-type=redis`
 - `spring.session.timeout=60m`（空闲 60 分钟过期）
-- `spring.session.redis.namespace=bytedepth:session:v2`
+- `spring.session.data.redis.namespace`（默认值与环境变量见配置文件）
+
+Spring Boot 4 的 Redis Session 自动配置来自 BOM 管理的 `spring-boot-starter-session-data-redis`；仅依赖原始 `spring-session-data-redis` 不足以注册 Boot 自动配置。不要另写 `@EnableRedisHttpSession` 或复制命名空间/超时作为第二套配置。`SessionConfigurationTest` 验证实际 repository、filter 注册与顺序、命名空间、超时和 Cookie 属性；这是离线配置证据，真实 Redis 存取仍由 staging 集成测试验证。
+
+`SessionIdConfiguration` 使用 Boot 提供的 CookieSerializer 配置网页 delegate，并将按路径选择的 resolver 设为主 resolver。自定义 resolver 时必须保留该 delegate，否则 Boot 的条件配置可能不再生成 CookieSerializer，导致 Secure/HttpOnly/SameSite 配置失效。`RouteSessionIdResolverTest` 与 `MobileSessionLifecycleTest` 检查读取、下发、失效和两种传输互不回退。
+
+测试可执行 JAR 的 Cookie 配置时，`WebApplicationContextRunner` 的默认 MockServletContext 会被识别为 WAR 环境；配置夹具需明确选择 embedded 分支，再验证 `server.servlet.session.cookie.*`，不能靠生产代码硬编码属性使测试通过。
 
 Redis 重启会丢失普通 Session；勾选记住我的用户靠签名 cookie 恢复登录，无需重新登录。
+
+移动端不使用 remember-me。先获取 `/api/mobile/v1/csrf`，再提交标准登录表单；成功接收轮换后的 `X-App-Session` 并重新获取 CSRF。会话失效重新登录，CSRF 失效不自动重放写入。Session principal 沿用登录快照，不将 `/me` 描述为已有即时封禁撤销能力。
 
 ## 记住我
 

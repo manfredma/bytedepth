@@ -43,12 +43,12 @@ spring:
       database: ${BYTEDEPTH_REDIS_DATABASE:0}
       password: ${BYTEDEPTH_REDIS_PASSWORD:}
   session:
-    store-type: redis
     timeout: 60m
-    redis:
-      # 登录主体类曾调整包路径；升级命名空间可使旧 Redis 会话自然失效，
-      # 避免旧序列化数据在请求开始阶段反序列化失败。
-      namespace: ${BYTEDEPTH_REDIS_SESSION_NAMESPACE:bytedepth:session:v2}
+    data:
+      redis:
+        # 登录主体类曾调整包路径；升级命名空间可使旧 Redis 会话自然失效，
+        # 避免旧序列化数据在请求开始阶段反序列化失败。
+        namespace: ${BYTEDEPTH_REDIS_SESSION_NAMESPACE:bytedepth:session:v2}
 
 server:
   port: 8080

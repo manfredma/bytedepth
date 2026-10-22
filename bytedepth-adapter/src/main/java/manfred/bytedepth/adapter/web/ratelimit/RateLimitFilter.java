@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import manfred.bytedepth.adapter.web.mobile.MobileApiError;
+import manfred.bytedepth.adapter.web.security.RouteSessionIdResolver;
 import manfred.bytedepth.app.ratelimit.RateLimitDecision;
 import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import org.springframework.core.io.ResourceLoader;
@@ -48,7 +50,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                         attempt.rule().getPeriod(),
                         attempt.identity());
                 if (!decision.allowed()) {
-                    reject(response, decision.nanosToWaitForRefill());
+                    reject(request, response, decision.nanosToWaitForRefill());
                     return;
                 }
             } catch (RuntimeException e) {
@@ -64,12 +66,21 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private List<Attempt> matchingAttempts(HttpServletRequest request) {
+        String path = pathWithinApplication(request);
+        String ip = clientIp(request);
+        if (RouteSessionIdResolver.isMobileRequest(request)) {
+            String method = request.getMethod();
+            if (("PUT".equals(method) && path.matches("/api/mobile/v1/posts/[^/]+/rating"))
+                    || ("POST".equals(method) && path.matches("/api/mobile/v1/posts/[^/]+/(comments|annotations)"))
+                    || (("PATCH".equals(method) || "DELETE".equals(method))
+                            && path.matches("/api/mobile/v1/posts/[^/]+/annotations/[^/]+"))) {
+                return List.of(new Attempt("comment-rating-ip", properties.getCommentRatingIp(), ip));
+            }
+        }
         if (!HttpMethod.POST.matches(request.getMethod())) {
             return List.of();
         }
-        String path = pathWithinApplication(request);
-        String ip = clientIp(request);
-        if ("/login".equals(path)) {
+        if ("/login".equals(path) || "/api/mobile/v1/login".equals(path)) {
             List<Attempt> attempts = new ArrayList<>();
             attempts.add(new Attempt("login-ip", properties.getLoginIp(), ip));
             String username = request.getParameter("username");
@@ -81,7 +92,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
             return attempts;
         }
-        if ("/register".equals(path)) {
+        if ("/register".equals(path) || "/api/mobile/v1/registrations".equals(path)) {
             return List.of(new Attempt("register-ip", properties.getRegisterIp(), ip));
         }
         if (path.matches("/posts/[^/]+/(comments|rating)")) {
@@ -96,7 +107,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return List.of();
     }
 
-    private void reject(HttpServletResponse response, long nanosToWait) throws IOException {
+    private void reject(HttpServletRequest request, HttpServletResponse response, long nanosToWait) throws IOException {
         long nonNegativeNanos = Math.max(0, nanosToWait);
         long retryAfterSeconds = nonNegativeNanos / 1_000_000_000L;
         if (nonNegativeNanos % 1_000_000_000L != 0) {
@@ -106,6 +117,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
         response.setStatus(429);
         response.setHeader("Retry-After", Long.toString(retryAfterSeconds));
         response.setHeader("Cache-Control", "no-store");
+        if (RouteSessionIdResolver.isMobileRequest(request)) {
+            MobileApiError.write(response, 429, "RATE_LIMITED", "请求过于频繁，请稍后重试");
+            return;
+        }
         response.setContentType("text/html;charset=UTF-8");
         response.getWriter().write(rateLimitPage(retryAfterSeconds));
     }

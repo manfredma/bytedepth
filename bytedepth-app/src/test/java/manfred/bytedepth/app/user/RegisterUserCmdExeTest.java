@@ -31,6 +31,17 @@ class RegisterUserCmdExeTest {
     }
 
     @Test
+    void rejectsInvalidUsernameBeforePersistenceAndTrimsAcceptedName() {
+        for (String name : new String[] {"", " ", "a", "a".repeat(51)}) {
+            assertThrows(DomainException.class, () -> exe.execute(name, "Password1"));
+        }
+        assertThrows(DomainException.class, () -> exe.execute(null, "Password1"));
+        when(passwordEncoder.encode("Password1")).thenReturn("hash");
+        exe.execute(" alice ", "Password1");
+        verify(userRepository).save(argThat(u -> "alice".equals(u.getUsername())));
+    }
+
+    @Test
     void execute_newUsername_savesUserAsPending() {
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(passwordEncoder.encode("Pass1word")).thenReturn("$2a$hash$");
@@ -51,28 +62,28 @@ class RegisterUserCmdExeTest {
 
     @Test
     void execute_tooShortPassword_throws() {
-        assertThrows(DomainException.class, () -> exe.execute("u", "Ab1"), "密码长度至少 8 位");
+        assertThrows(DomainException.class, () -> exe.execute("user", "Ab1"), "密码长度至少 8 位");
     }
 
     @Test
     void execute_nullPassword_throws() {
-        assertThrows(DomainException.class, () -> exe.execute("u", null), "密码长度至少 8 位");
+        assertThrows(DomainException.class, () -> exe.execute("user", null), "密码长度至少 8 位");
     }
 
     @Test
     void execute_noLetterPassword_throws() {
-        assertThrows(DomainException.class, () -> exe.execute("u", "1234567890"), "密码必须包含字母和数字");
+        assertThrows(DomainException.class, () -> exe.execute("user", "1234567890"), "密码必须包含字母和数字");
     }
 
     @Test
     void execute_noDigitPassword_throws() {
-        assertThrows(DomainException.class, () -> exe.execute("u", "Abcdefghij"), "密码必须包含字母和数字");
+        assertThrows(DomainException.class, () -> exe.execute("user", "Abcdefghij"), "密码必须包含字母和数字");
     }
 
     @Test
     void execute_tooLongPassword_throws() {
         String longPwd = "Ab1" + "a".repeat(62);
-        assertThrows(DomainException.class, () -> exe.execute("u", longPwd), "密码长度不能超过 64 位");
+        assertThrows(DomainException.class, () -> exe.execute("user", longPwd), "密码长度不能超过 64 位");
     }
 
     @Test

@@ -1,11 +1,11 @@
 # 独立阅读 App
 
-> 状态：Proposed，未实施。本文描述独立客户端的目标行为与系统边界，不代表已有移动 API、APK 或发布能力。
+> 状态：Accepted，实施中。本文描述独立客户端的目标行为与系统边界，不代表已有移动 API、APK 或发布能力。
 > 导航：[项目知识库](../README.md) · [架构概览](overview.md) · [统一语言](ubiquitous-language.md) · [移动端架构决策](decisions/0025-react-native-mobile-reader.md) · [批注锚定](annotation-anchoring.md)。
 
 ## 目标与范围
 
-Android 独立阅读 App 首先以 APK 小范围试用，验证连续阅读、自动保存文章和本机续读；Android 验证后再交付 iOS。客户端采用 React Native；建议配套 Expo 与 TypeScript，使用原生组件承载列表、搜索、导航、账号和互动，专用 WebView 承载正文。WebView 读取服务端净化后的正文与固定版本阅读资源，不打开整篇网站页面。
+Android 独立阅读 App 首先以 APK 小范围试用，验证连续阅读、自动保存文章和本机续读；Android 验证后再交付 iOS。客户端采用 React Native；配套 Expo 与 TypeScript，使用原生组件承载列表、搜索、导航、账号和互动，专用 WebView 承载正文。WebView 读取服务端净化后的正文与固定版本阅读资源，不打开整篇网站页面。
 
 游客可以发现文章、浏览专栏、阅读、自动保存离线副本、保存本机位置和评分。登录复用网站账号，联网查看本人批注，并按权限创建或修改划线、评注和文章评论。公开评注与文章评论联网读取。阅读历史、续读位置和公共正文副本属于当前设备，不随账号切换，也不上传。
 
