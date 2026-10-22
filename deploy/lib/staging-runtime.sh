@@ -10,6 +10,51 @@ staging_runtime_sha256() {
   shasum -a 256 "$1" | awk '{print $1}'
 }
 
+# Release source snapshots have no .git. Follow declared reactor modules rather
+# than scanning generated target/node_modules trees, and bind paths as well as bytes.
+staging_maven_inputs_sha256() {
+  python3 - "$1" << 'PY_MAVEN_INPUTS'
+import hashlib
+from pathlib import Path
+import sys
+import xml.etree.ElementTree as ET
+
+root = Path(sys.argv[1]).resolve()
+inputs = set()
+
+def add_pom(pom):
+    pom = pom.resolve()
+    pom.relative_to(root)
+    if pom in inputs:
+        return
+    inputs.add(pom)
+    project = ET.parse(pom).getroot()
+    modules = project.findall('./{*}modules/{*}module')
+    modules += project.findall('./{*}profiles/{*}profile/{*}modules/{*}module')
+    for module in modules:
+        if module.text is None or not module.text.strip():
+            raise ValueError(f'empty reactor module in {pom.relative_to(root)}')
+        child = pom.parent / module.text.strip()
+        add_pom(child if child.is_file() else child / 'pom.xml')
+
+try:
+    add_pom(root / 'pom.xml')
+    inputs.update(path for path in (root / '.mvn').rglob('*') if path.is_file())
+    inputs.update(root / name for name in ('mvnw', 'mvnw.cmd') if (root / name).is_file())
+    digest = hashlib.sha256(b'bytedepth-maven-inputs-v1\0')
+    for path in sorted(inputs, key=lambda item: item.relative_to(root).as_posix()):
+        relative = path.relative_to(root).as_posix().encode('utf-8')
+        content = path.read_bytes()
+        for part in (relative, content):
+            digest.update(len(part).to_bytes(8, 'big'))
+            digest.update(part)
+    print(digest.hexdigest())
+except (OSError, ET.ParseError, ValueError) as error:
+    print(f'Refusing: cannot fingerprint staging Maven dependency inputs: {error}', file=sys.stderr)
+    sys.exit(1)
+PY_MAVEN_INPUTS
+}
+
 staging_ensure_ubuntu_owner() {
   if [[ "${EUID:-}" -eq 0 ]] && getent passwd ubuntu > /dev/null 2>&1 && getent group ubuntu > /dev/null 2>&1; then
     chown ubuntu:ubuntu "$@"
@@ -52,13 +97,13 @@ write_runtime_manifest() {
   local runtime_directory
   local temporary_file
   local lockfile_sha
-  local pom_sha
+  local maven_inputs_sha
   local chromium_version
   local playwright_ffmpeg_version
 
   runtime_directory="$(dirname "$manifest")"
   lockfile_sha="$(staging_runtime_sha256 "$source_root/package-lock.json")"
-  pom_sha="$(staging_runtime_sha256 "$source_root/pom.xml")"
+  maven_inputs_sha="$(staging_maven_inputs_sha256 "$source_root")" || return 1
   if [[ ! -x "$SHARED_CHROMIUM_EXECUTABLE" ]]; then
     printf 'Refusing: staging Chromium executable is unavailable.\n' >&2
     return 1
@@ -73,8 +118,8 @@ write_runtime_manifest() {
   fi
   temporary_file="$(mktemp "$runtime_directory/.manifest.XXXXXX")"
   staging_ensure_ubuntu_owner "$temporary_file"
-  printf 'package_lock_sha256=%s\npom_sha256=%s\nchromium_version=%s\nplaywright_ffmpeg_version=%s\n' \
-    "$lockfile_sha" "$pom_sha" "$chromium_version" "$playwright_ffmpeg_version" > "$temporary_file"
+  printf 'package_lock_sha256=%s\nmaven_inputs_sha256=%s\nchromium_version=%s\nplaywright_ffmpeg_version=%s\n' \
+    "$lockfile_sha" "$maven_inputs_sha" "$chromium_version" "$playwright_ffmpeg_version" > "$temporary_file"
   staging_ensure_ubuntu_owner "$runtime_directory" "$temporary_file"
   chmod 0600 "$temporary_file"
   mv -f "$temporary_file" "$manifest"
@@ -84,9 +129,9 @@ require_staging_runtime() {
   local manifest="$1"
   local source_root="$2"
   local expected_lock_sha
-  local expected_pom_sha
+  local expected_maven_inputs_sha
   local actual_lock_sha
-  local actual_pom_sha
+  local actual_maven_inputs_sha
   local actual_chromium_version
   local actual_playwright_ffmpeg_version
 
@@ -95,16 +140,16 @@ require_staging_runtime() {
     return 1
   fi
   actual_lock_sha="$(awk -F= '$1 == "package_lock_sha256" {print $2; exit}' "$manifest")"
-  actual_pom_sha="$(awk -F= '$1 == "pom_sha256" {print $2; exit}' "$manifest")"
+  actual_maven_inputs_sha="$(awk -F= '$1 == "maven_inputs_sha256" {print $2; exit}' "$manifest")"
   actual_chromium_version="$(awk -F= '$1 == "chromium_version" {print $2; exit}' "$manifest")"
   actual_playwright_ffmpeg_version="$(awk -F= '$1 == "playwright_ffmpeg_version" {print substr($0, index($0, "=") + 1); exit}' "$manifest")"
   expected_lock_sha="$(staging_runtime_sha256 "$source_root/package-lock.json")"
-  expected_pom_sha="$(staging_runtime_sha256 "$source_root/pom.xml")"
+  expected_maven_inputs_sha="$(staging_maven_inputs_sha256 "$source_root")" || return 1
 
-  if [[ "$actual_lock_sha" != "$expected_lock_sha" || "$actual_pom_sha" != "$expected_pom_sha" ]]; then
+  if [[ "$actual_lock_sha" != "$expected_lock_sha" || "$actual_maven_inputs_sha" != "$expected_maven_inputs_sha" ]]; then
     printf 'Refusing: staging runtime manifest does not match dependency inputs. Run bootstrap-staging-runtime.sh.\n' >&2
-    printf 'Runtime dependency hashes: package_lock recorded=%s expected=%s; pom recorded=%s expected=%s\n' \
-      "$actual_lock_sha" "$expected_lock_sha" "$actual_pom_sha" "$expected_pom_sha" >&2
+    printf 'Runtime dependency hashes: package_lock recorded=%s expected=%s; maven_inputs recorded=%s expected=%s\n' \
+      "$actual_lock_sha" "$expected_lock_sha" "$actual_maven_inputs_sha" "$expected_maven_inputs_sha" >&2
     return 1
   fi
   if [[ ! -x "$SHARED_CHROMIUM_EXECUTABLE" || "$actual_chromium_version" != "$("$SHARED_CHROMIUM_EXECUTABLE" --version)" ]]; then

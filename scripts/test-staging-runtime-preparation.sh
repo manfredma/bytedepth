@@ -4,9 +4,10 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 # Use the real manifest validator with deterministic browser/version fixtures.
-mkdir -p "$tmp/source/deploy" "$tmp/runtime"
+mkdir -p "$tmp/source/deploy" "$tmp/source/bytedepth-start" "$tmp/runtime"
 printf 'lock inputs\n' > "$tmp/source/package-lock.json"
-printf 'pom inputs\n' > "$tmp/source/pom.xml"
+printf '<project><modules><module>bytedepth-start</module></modules></project>\n' > "$tmp/source/pom.xml"
+printf '<project/>\n' > "$tmp/source/bytedepth-start/pom.xml"
 # The Chromium path is readonly; transform only this fixture's library path.
 sed "s|/opt/shared-e2e/chrome-linux64/chrome|$tmp/chrome|g" "$root/deploy/lib/staging-runtime.sh" > "$tmp/runtime-lib.sh"
 cat > "$tmp/chrome" << 'CHROME'
@@ -46,7 +47,99 @@ bash "$tmp/run"
 [[ "$(wc -l < "$PREPARATION_CALLS" | tr -d ' ')" == 1 ]]
 bash "$tmp/run"
 [[ "$(wc -l < "$PREPARATION_CALLS" | tr -d ' ')" == 1 ]]
-printf 'changed dependency\n' >> "$tmp/source/pom.xml"
+# A new module dependency must invalidate a root-POM-identical manifest.
+printf '<!-- new session starter -->\n' >> "$tmp/source/bytedepth-start/pom.xml"
+if FAIL_PREPARATION=1 bash "$tmp/run"; then
+  printf 'Module POM change reused a stale staging runtime manifest\n' >&2
+  exit 1
+fi
+# Successful preparation stamps the new complete input set, then reuse is safe.
+bash "$tmp/run"
+[[ "$(wc -l < "$PREPARATION_CALLS" | tr -d ' ')" == 3 ]]
+bash "$tmp/run"
+[[ "$(wc -l < "$PREPARATION_CALLS" | tr -d ' ')" == 3 ]]
+# Validate the real no-.git manifest against config/wrapper and nested modules.
+assert_maven_inputs_changed() {
+  local reason="$1"
+  if bash -c 'source "$FIXTURE_RUNTIME_LIB"; staging_shared_ffmpeg_version() { printf "ffmpeg fixture\n"; }; require_staging_runtime "$EXPECTED_MANIFEST" "$EXPECTED_SOURCE"' > "$tmp/validation.out" 2>&1; then
+    printf 'Stale staging runtime accepted after %s\n' "$reason" >&2
+    exit 1
+  fi
+  grep -Fq 'maven_inputs recorded=' "$tmp/validation.out"
+  bash "$tmp/run" > "$tmp/recovery.out" 2>&1
+}
+# An otherwise-current root-POM-only legacy manifest cannot certify module inputs.
+sed '/^maven_inputs_sha256=/d' "$EXPECTED_MANIFEST" > "$tmp/runtime/legacy"
+printf 'pom_sha256=%s\n' "$(shasum -a 256 "$tmp/source/pom.xml" | awk '{print $1}')" >> "$tmp/runtime/legacy"
+if EXPECTED_MANIFEST="$tmp/runtime/legacy" FAIL_PREPARATION=1 bash "$tmp/run" > "$tmp/legacy.out" 2>&1; then
+  printf 'Legacy root-POM-only manifest accepted\n' >&2
+  exit 1
+fi
+grep -Fq 'maven_inputs recorded=' "$tmp/legacy.out"
+for input in .mvn/settings.xml .mvn/maven.config .mvn/jvm.config .mvn/extensions.xml .mvn/wrapper/maven-wrapper.properties .mvn/wrapper/maven-wrapper.jar mvnw mvnw.cmd; do
+  mkdir -p "$(dirname "$tmp/source/$input")"
+  printf 'first input version\n' > "$tmp/source/$input"
+  assert_maven_inputs_changed "adding $input"
+  printf 'changed input version\n' >> "$tmp/source/$input"
+  assert_maven_inputs_changed "changing $input"
+done
+mv "$tmp/source/.mvn/extensions.xml" "$tmp/source/.mvn/renamed-extensions.xml"
+assert_maven_inputs_changed 'renaming a Maven configuration file with unchanged bytes'
+rm "$tmp/source/.mvn/renamed-extensions.xml"
+assert_maven_inputs_changed 'deleting a Maven configuration file'
+# Recursively include modules declared in any POM, including namespaced POMs.
+printf '<project xmlns="http://maven.apache.org/POM/4.0.0"><modules><module>nested</module></modules></project>\n' > "$tmp/source/bytedepth-start/pom.xml"
+mkdir -p "$tmp/source/bytedepth-start/nested"
+printf '<project/>\n' > "$tmp/source/bytedepth-start/nested/pom.xml"
+assert_maven_inputs_changed 'adding a nested reactor module'
+printf '<!-- changed nested dependency -->\n' >> "$tmp/source/bytedepth-start/nested/pom.xml"
+assert_maven_inputs_changed 'changing a nested module POM'
+mv "$tmp/source/bytedepth-start/nested" "$tmp/source/bytedepth-start/renamed"
+sed 's|<module>nested</module>|<module>renamed</module>|' "$tmp/source/bytedepth-start/pom.xml" > "$tmp/renamed-pom"
+mv "$tmp/renamed-pom" "$tmp/source/bytedepth-start/pom.xml"
+assert_maven_inputs_changed 'renaming a reactor module'
+mv "$tmp/source/bytedepth-start/renamed/pom.xml" "$tmp/missing-pom"
+if bash -c 'source "$FIXTURE_RUNTIME_LIB"; require_staging_runtime "$EXPECTED_MANIFEST" "$EXPECTED_SOURCE"' > "$tmp/missing.out" 2>&1; then
+  printf 'Missing declared reactor POM accepted\n' >&2
+  exit 1
+fi
+grep -Fq 'cannot fingerprint staging Maven dependency inputs:' "$tmp/missing.out"
+manifest_before="$(shasum -a 256 "$EXPECTED_MANIFEST" | awk '{print $1}')"
+if bash -c 'source "$FIXTURE_RUNTIME_LIB"; staging_shared_ffmpeg_version() { printf "ffmpeg fixture\n"; }; write_runtime_manifest "$EXPECTED_MANIFEST" "$EXPECTED_SOURCE"' > "$tmp/missing-write.out" 2>&1; then
+  printf 'Missing declared reactor POM was stamped as prepared\n' >&2
+  exit 1
+fi
+[[ "$(shasum -a 256 "$EXPECTED_MANIFEST" | awk '{print $1}')" == "$manifest_before" ]]
+mv "$tmp/missing-pom" "$tmp/source/bytedepth-start/renamed/pom.xml"
+printf '<project/>\n' > "$tmp/source/bytedepth-start/pom.xml"
+rm -rf "$tmp/source/bytedepth-start/renamed"
+assert_maven_inputs_changed 'removing a reactor module'
+# Only project/profile module declarations are reactor inputs; similarly named
+# plugin configuration must not be interpreted as a path to another POM.
+printf '<project><build><plugins><plugin><configuration><modules><module>plugin-option</module></modules></configuration></plugin></plugins></build><profiles><profile><id>extra</id><modules><module>profiled</module></modules></profile></profiles></project>\n' > "$tmp/source/bytedepth-start/pom.xml"
+mkdir -p "$tmp/source/bytedepth-start/profiled"
+printf '<project/>\n' > "$tmp/source/bytedepth-start/profiled/pom.xml"
+if ! bash -c 'source "$FIXTURE_RUNTIME_LIB"; staging_maven_inputs_sha256 "$EXPECTED_SOURCE"' > "$tmp/profile-hash.out" 2>&1; then
+  printf 'Plugin configuration modules were mistaken for reactor declarations\n' >&2
+  exit 1
+fi
+assert_maven_inputs_changed 'adding a profile reactor module without following plugin options'
+printf '<!-- profile dependency -->\n' >> "$tmp/source/bytedepth-start/profiled/pom.xml"
+assert_maven_inputs_changed 'changing a profile module POM'
+# Generated/undeclared POMs do not change the reactor's dependency inputs.
+for generated in node_modules/package target/generated android/build apps/mobile/node_modules/package; do
+  mkdir -p "$tmp/source/$generated"
+  printf '<project/>\n' > "$tmp/source/$generated/pom.xml"
+done
+calls_before="$(wc -l < "$PREPARATION_CALLS")"
+bash "$tmp/run"
+[[ "$(wc -l < "$PREPARATION_CALLS")" == "$calls_before" ]]
+# The same tracked input paths/bytes give the same hash in a relocated snapshot.
+cp -R "$tmp/source" "$tmp/relocated-source"
+original_hash="$(bash -c 'source "$FIXTURE_RUNTIME_LIB"; staging_maven_inputs_sha256 "$1"' -- "$tmp/source")"
+relocated_hash="$(bash -c 'source "$FIXTURE_RUNTIME_LIB"; staging_maven_inputs_sha256 "$1"' -- "$tmp/relocated-source")"
+[[ "$original_hash" == "$relocated_hash" ]]
+printf '<!-- changed dependency -->\n' >> "$tmp/source/pom.xml"
 if FAIL_PREPARATION=1 bash "$tmp/run"; then
   printf 'Failed preparation accepted\n' >&2
   exit 1

@@ -30,12 +30,14 @@ Host Agent 调用 `deploy/run-staging-integration-tests.sh --commit-sha <40 位 
 | `RELEASE_PLATFORM_TEST_DEPLOY_HISTORY`                                  | 本次部署记录，含唯一 `commit` 和 `artifact_digest`                                      |
 | `RELEASE_PLATFORM_TEST_EVIDENCE_DIR`                                    | 当前 verifier 的证据目录                                                                |
 | `RELEASE_PLATFORM_TEST_LOCK_FILE` / `RELEASE_PLATFORM_TEST_LOCK_HELD=1` | 统一测试锁及外层已持锁标记；已持锁时 runner 不再次 flock                                |
-| `RELEASE_PLATFORM_TEST_RUNTIME_MANIFEST`                                | 与候选 `package-lock.json`、`pom.xml`、Chromium 和 ffmpeg 一致的既有依赖 manifest       |
+| `RELEASE_PLATFORM_TEST_RUNTIME_MANIFEST`                                | 与候选 npm/Maven 依赖输入、Chromium 和 ffmpeg 一致的既有依赖 manifest                   |
 | `RELEASE_PLATFORM_TEST_CONFIG_FILE`                                     | 既有 staging 配置；必须声明 staging 模式                                                |
 | `RELEASE_PLATFORM_TEST_STATE_DIR` / `RELEASE_PLATFORM_TEST_WORK_DIR`    | 隔离测试 slot 状态和 integration 临时工作目录                                           |
 | `RELEASE_PLATFORM_TEST_JAR`                                             | 已部署 E2E test-slot JAR；默认 release 下的 `app.jar`                                   |
 
 隔离 MySQL、Redis、Meili、fixture、管理员账号和 native target 配置仍须由环境显式注入，原有资源隔离、清理和依赖校验保持生效。源快照没有 `.git`，也不自带 `node_modules`；E2E runner 在隔离快照中按 lockfile 执行 `npm ci --ignore-scripts --no-audit --no-fund`；宿主机须预备一致的 runtime manifest 与离线 Maven 仓库。依赖准备或校验失败时失败，不能退回版本探针。
+
+runtime manifest 的 `maven_inputs_sha256` 覆盖根 POM、递归声明的 reactor 模块 POM、`.mvn/` 下的 settings/config/extensions/wrapper 文件及 `mvnw`、`mvnw.cmd`，按稳定的相对路径和文件字节计算；不扫描 `target`、`node_modules` 或 Android 生成目录。该计算不依赖 `.git`，适用于平台的 source 快照。仅含旧 `pom_sha256` 的 manifest 不可复用；模块依赖、Maven 配置或 wrapper 改变时，由 Host Agent 在既有锁内调用 `ensure_staging_runtime` 重新准备同一候选的依赖，成功后才写新 manifest。声明的模块 POM 缺失或无法读取时拒绝校验和写入，不能沿用旧指纹或放宽离线 Maven 策略。
 
 integration 从本次 Maven Failsafe summary 统计 `completed - skipped`（执行前清除旧 summary）；E2E 使用本次 Playwright JSON reporter 的成功用例数。用例数为零或报告失败时，不生成 PASS。证据包含 `commit`、`artifact_digest`、`attempt_nonce`、`tests_total`、`command`、`result` 与清理结果；这些文件仅由正式 Host Agent 任务生成，本地回归测试不上传为 staging evidence。
 
