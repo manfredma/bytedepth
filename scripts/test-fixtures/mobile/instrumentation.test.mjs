@@ -210,3 +210,8 @@ test("cleanup rejects foreign post title/path/ID without touching it and still c
   );
   assert.deepEqual(removed, ["43"]);
 });
+
+test("owned Android instrumentation source has no trailing whitespace", () => {
+  const source = fs.readFileSync(new URL("../../../apps/mobile/testing/android/MobileReaderStagingTest.kt", import.meta.url), "utf8");
+  assert.equal(/[\t ]+$/m.test(source), false, "Android instrumentation must have no trailing whitespace");
+});

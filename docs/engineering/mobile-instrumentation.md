@@ -78,3 +78,5 @@ npm run lint
 ```
 
 Node 检查 fixture 绑定、owned 生命周期、部分失败与 cleanup 边界；Jest 检查插件配置、幂等性及 AndroidTest 源目录。上述检查不会启动浏览器、模拟器或原生构建，因此不能勾选真实 staging 验证。
+
+新增 Kotlin instrumentation 文件需通过 Node fixture 中的尾随空白检查，并在暂存后执行 `git diff --cached --check`；未跟踪文件不会被普通 `git diff --check` 覆盖。

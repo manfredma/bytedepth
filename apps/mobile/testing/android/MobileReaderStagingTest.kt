@@ -146,7 +146,7 @@ class MobileReaderStagingTest {
         failure?.let { throw it }
         return value
     }
-    
+
     private fun db(): SQLiteDatabase {
         val file = File(target.filesDir, "mobile-local/reader.sqlite")
         assertTrue("real SQLite file absent", file.isFile)
