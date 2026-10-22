@@ -340,6 +340,8 @@ export async function createNativeReaderRepository(
     index,
     history: new HistoryStore(index.db),
     verifyAsset: async (asset) => {
+      // Passive SVG is decoded by the WebView img context; its error bridge invalidates the copy.
+      if (asset.mediaType === "image/svg+xml") return;
       const size = await Image.getSize(imageDataUri(asset));
       if (!Number.isFinite(size.width) || !Number.isFinite(size.height) || size.width <= 0 || size.height <= 0)
         throw new Error("Image decoder returned invalid dimensions");

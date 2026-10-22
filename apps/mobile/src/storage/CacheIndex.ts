@@ -1,3 +1,4 @@
+import { normalizeSvg } from "../api/safeSvg";
 import { CACHE_BUDGET_BYTES, ARTICLE_BODY_BUDGET_BYTES } from "../config";
 import { parsePublicContent, type PublicContent } from "../contracts/mobile";
 import type { DownloadedAsset } from "../api/AssetDownloader";
@@ -219,7 +220,7 @@ export function referencedFiles(data: CacheData): Set<string> {
   return names;
 }
 export function imageDataUri(asset: Pick<DownloadedAsset, "bytes" | "mediaType">): string {
-  return `data:${asset.mediaType};base64,${base64(asset.bytes)}`;
+  return `data:${asset.mediaType};base64,${base64(asset.mediaType === "image/svg+xml" ? normalizeSvg(asset.bytes) : asset.bytes)}`;
 }
 function base64(bytes: Uint8Array): string {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

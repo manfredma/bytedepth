@@ -187,6 +187,47 @@ describe("native decoder contract", () => {
       decode.mockRestore();
     }
   });
+  test("SVG uses the WebView image decoder and a decode failure invalidates the complete copy", async () => {
+    const { Image } = jest.requireActual<typeof import("react-native")>("react-native");
+    const decode = jest
+      .spyOn(Image, "getSize")
+      .mockImplementation(() => Promise.reject(new Error("Unsupported SVG raster codec")));
+    const c = content("1", 1, true),
+      bytes = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>');
+    try {
+      const repo = await createNativeReaderRepository(
+        {
+          async request<T>(path: string) {
+            const { postId, contentVersion, projectionVersion, digest, representationHash, shellVersion } = c;
+            return (
+              path.endsWith("/state")
+                ? {
+                    schemaVersion: 1,
+                    postId,
+                    availability: "AVAILABLE",
+                    identity: { postId, contentVersion, projectionVersion, digest, representationHash, shellVersion },
+                  }
+                : c
+            ) as T;
+          },
+        },
+        {
+          async download() {
+            return { key: "image", bytes, mediaType: "image/svg+xml", sha256: await hash(bytes) };
+          },
+        },
+      );
+      await repo.refresh("1");
+      expect(await repo.dependencies.index.get("1")).not.toBeNull();
+      expect(decode).not.toHaveBeenCalled();
+      expect((await repo.assetDataUris(c)).image).toMatch(/^data:image\/svg\+xml;base64,/);
+      await repo.reportImageFailure("1", "image", c.representationHash);
+      expect(await repo.dependencies.index.get("1")).toBeNull();
+      repo.release("1");
+    } finally {
+      decode.mockRestore();
+    }
+  });
   test("unexpected subdirectories are rejected instead of counted as zero bytes", async () => {
     const directory = new TestDirectory();
     directory.list = () => [new TestDirectory()] as unknown as TestFile[];

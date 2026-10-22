@@ -1,7 +1,7 @@
 import { MobileRequestError } from "./errors";
 /** Bound decoded allocations before invoking a native image decoder. Byte limits alone do not bound pixels. */
-export function assertImageBounds(bytes: Uint8Array, type: string): void {
-  if (type === "image/svg+xml") return;
+export function assertImageBounds(bytes: Uint8Array, type: string): number {
+  if (type === "image/svg+xml") return 0;
   const invalid = () => new MobileRequestError(0, "INVALID_RESOURCE", "图片尺寸无法确认");
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const ascii = (start: number, end: number) => String.fromCharCode(...bytes.subarray(start, end));
@@ -46,4 +46,5 @@ export function assertImageBounds(bytes: Uint8Array, type: string): void {
   } else throw invalid();
   if (width < 1 || height < 1 || width > 8192 || height > 8192 || width * height > 16_777_216)
     throw new MobileRequestError(0, "RESOURCE_TOO_LARGE", "图片尺寸超过可保存范围");
+  return width * height;
 }

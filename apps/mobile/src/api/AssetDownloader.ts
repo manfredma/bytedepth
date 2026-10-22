@@ -1,3 +1,4 @@
+import { normalizeSvg } from "./safeSvg";
 import { assertImageBounds } from "./imageBounds";
 import type { PublicResource } from "../contracts/mobile";
 import type { TransportOptions, TransportResponse } from "./MobileApi";
@@ -102,20 +103,7 @@ function validateImage(bytes: Uint8Array, type: string): void {
   if (type === "image/gif" && ["GIF87a", "GIF89a"].includes(ascii(0, 6))) return;
   if (type === "image/webp" && ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return;
   if (type === "image/svg+xml") {
-    // SVG stays a passive data-image. Never insert these bytes as HTML or grant it a network origin.
-    const svg = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    if (
-      /<!|&|\\|<(?:[\w.-]+:)?(?:script|iframe|object|embed|audio|video|link|style)\b|\son[\w:.-]*\s*=|\s(?:srcset|action|poster|background)\s*=|@import/i.test(
-        svg,
-      )
-    )
-      throw failure("UNSAFE_RESOURCE");
-    if (!/^\s*(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(svg)) throw failure("INVALID_RESOURCE");
-    for (const match of svg.matchAll(/\b(?:href|src)\s*=\s*(["'])(.*?)\1/gis))
-      if (!match[2].startsWith("#")) throw failure("UNSAFE_RESOURCE");
-    if (/\b(?:href|src)\s*=\s*[^\s"']/i.test(svg)) throw failure("UNSAFE_RESOURCE");
-    for (const match of svg.matchAll(/url\s*\((.*?)\)/gi))
-      if (!/^\s*["']?#[\w.-]+["']?\s*$/.test(match[1])) throw failure("UNSAFE_RESOURCE");
+    normalizeSvg(bytes);
     return;
   }
   throw failure("INVALID_RESOURCE");

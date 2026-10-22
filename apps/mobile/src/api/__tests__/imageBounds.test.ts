@@ -86,3 +86,7 @@ it("leaves SVG passive validation to the dedicated sanitizer", () =>
   expect(() => assertImageBounds(new Uint8Array(), "image/svg+xml")).not.toThrow());
 it("rejects a complete but undersized JPEG frame header", () =>
   expect(() => assertImageBounds(new Uint8Array([255, 216, 255, 192, 0, 6, 8, 0, 1, 0]), "image/jpeg")).toThrow());
+
+it("returns the validated pixel count for aggregate embedded-image accounting", () => {
+  expect(assertImageBounds(png(100, 200), "image/png")).toBe(20000);
+});
