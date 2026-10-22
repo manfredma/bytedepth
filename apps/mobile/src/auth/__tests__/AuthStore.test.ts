@@ -188,3 +188,34 @@ it("notifies active account subscribers when private state is cleared", async ()
   auth.clearPrivateState("offline");
   expect(observed).toBeNull();
 });
+it.each(["background", "offline", "page-destroyed"] as const)(
+  "removes logout credentials despite later %s private invalidation",
+  async (reason) => {
+    const sessions = store();
+    await sessions.accept(await sessions.snapshot(), "valid-session");
+    let finish!: () => void;
+    let started!: () => void;
+    const ready = new Promise<void>((r) => {
+      started = r;
+    });
+    const auth = new AuthStore(
+      {
+        csrf: async () => {},
+        request: async <T>() => {
+          started();
+          await new Promise<void>((r) => {
+            finish = r;
+          });
+          throw new Error("lost response");
+        },
+      },
+      sessions,
+    );
+    const pending = auth.logout();
+    await ready;
+    auth.clearPrivateState(reason);
+    finish();
+    await pending;
+    expect((await sessions.snapshot()).id).toBeNull();
+  },
+);

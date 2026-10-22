@@ -1,4 +1,5 @@
 import { MobileApi, type TransportOptions, type TransportResponse } from "../../api/MobileApi";
+import { MobileRequestError } from "../../api/errors";
 import { SessionStore, type SecureValues } from "../SessionStore";
 import { InstallIdentity } from "../InstallIdentity";
 
@@ -395,4 +396,62 @@ it("rejects null login credentials as a typed client input error", async () => {
     code: "INVALID_REQUEST",
   });
   expect(f.requests).toHaveLength(1);
+});
+it.each(["background", "logout"])(
+  "rejects a private session-rotating response invalidated by %s during secure persistence",
+  async (reason) => {
+    const entries = new Map<string, string>();
+    let finish!: () => void;
+    let started!: () => void;
+    const ready = new Promise<void>((r) => {
+      started = r;
+    });
+    const sessions = new SessionStore({
+      get: async () => null,
+      set: async (key, id) => {
+        started();
+        await new Promise<void>((r) => {
+          finish = r;
+        });
+        entries.set(key, id);
+      },
+      remove: async (key) => {
+        entries.delete(key);
+      },
+    });
+    const api = new MobileApi(
+      async () => response(200, { private: "old" }, { "x-app-session": "rotated" }),
+      sessions,
+      async () => "app:visitor",
+    );
+    const pending = api.request("/me", { method: "GET", authenticated: true });
+    const rejected = expect(pending).rejects.toMatchObject({ code: "STALE_RESPONSE" });
+    await ready;
+    let clearing: Promise<void> | undefined;
+    if (reason === "background") sessions.invalidatePrivate();
+    else {
+      clearing = sessions.clear();
+      await Promise.resolve();
+    }
+    finish();
+    await clearing;
+    await rejected;
+    if (reason === "logout") expect(entries.size).toBe(0);
+  },
+);
+
+it("preserves a bounded-response size error so the reader can explain why it cannot save the article", async () => {
+  const f = fixture([
+    {
+      status: 200,
+      headers: { get: () => "application/json" },
+      text: async () => {
+        throw new MobileRequestError(0, "RESOURCE_TOO_LARGE", "正文超过可读取范围");
+      },
+    },
+  ]);
+  await expect(f.api.request("/posts/1/content", { method: "GET" })).rejects.toMatchObject({
+    code: "RESOURCE_TOO_LARGE",
+    message: "正文超过可读取范围",
+  });
 });

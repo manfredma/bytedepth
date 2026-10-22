@@ -25,15 +25,18 @@ export class SessionStore {
     await this.ready;
     return { id: this.id, generation: this.generation, privateGeneration: this.privateGeneration };
   }
-  async accept(expected: SessionSnapshot, id: string | null): Promise<SessionSnapshot> {
-    if (!this.isCurrent(expected)) throw new StaleResponseError();
+  async accept(expected: SessionSnapshot, id: string | null, privateRequest = false): Promise<SessionSnapshot> {
+    if (!this.isCurrent(expected, privateRequest)) throw new StaleResponseError();
     if (id !== null && id !== this.id) {
       this.id = id || null;
       this.generation++;
       this.privateGeneration++;
+      const accepted = { id: this.id, generation: this.generation, privateGeneration: this.privateGeneration };
       await this.persist();
+      if (!this.isCurrent(accepted, privateRequest)) throw new StaleResponseError();
+      return accepted;
     }
-    return this.snapshot();
+    return { id: this.id, generation: this.generation, privateGeneration: this.privateGeneration };
   }
   async clear(): Promise<void> {
     await this.ready;
@@ -53,7 +56,7 @@ export class SessionStore {
   invalidatePrivate(): void {
     this.privateGeneration++;
   }
-  isCurrent(snapshot: SessionSnapshot, privateRequest = false): boolean {
+  isCurrent(snapshot: SessionSnapshot, privateRequest: boolean): boolean {
     return (
       snapshot.generation === this.generation &&
       (!privateRequest || snapshot.privateGeneration === this.privateGeneration)

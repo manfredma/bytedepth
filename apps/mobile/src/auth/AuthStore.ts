@@ -8,6 +8,7 @@ export interface AccountApi extends ApiPort {
 export class AuthStore {
   private user: MobileUser | null = null;
   private generation = 0;
+  private accountGeneration = 0;
   private readonly listeners = new Set<() => void>();
   private readonly privateListeners = new Set<(reason: PrivateClearReason) => void>();
   constructor(
@@ -32,6 +33,7 @@ export class AuthStore {
     };
   }
   clearPrivateState(reason: PrivateClearReason): void {
+    if (reason === "account-change" || reason === "logout") this.accountGeneration++;
     this.generation++;
     this.sessions.invalidatePrivate();
     this.user = null;
@@ -48,13 +50,13 @@ export class AuthStore {
   }
   async logout(): Promise<void> {
     this.clearPrivateState("logout");
-    const generation = this.generation;
+    const accountGeneration = this.accountGeneration;
     try {
       await this.api.request("/logout", { method: "POST", authenticated: true });
     } catch {
       /* Local credentials must be removed even if the server response is lost. */
     } finally {
-      if (generation === this.generation) await this.sessions.clear();
+      if (accountGeneration === this.accountGeneration) await this.sessions.clear();
     }
   }
   async revalidate(): Promise<void> {

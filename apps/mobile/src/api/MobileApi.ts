@@ -19,9 +19,15 @@ export interface TransportOptions {
   signal?: AbortSignal;
 }
 export type Transport = (url: string, options: TransportOptions) => Promise<TransportResponse>;
+interface PreparedSession {
+  snapshot: SessionSnapshot;
+  headerName: string;
+  token: string;
+}
 export class MobileApi implements ApiPort {
   private token: { headerName: string; token: string; generation: number } | null = null;
-  private csrfPending: { generation: number; promise: Promise<void> } | null = null;
+  private csrfPending: { generation: number; privateGeneration: number; promise: Promise<PreparedSession> } | null =
+    null;
   constructor(
     private readonly transport: Transport,
     private readonly sessions: SessionStore,
@@ -30,14 +36,11 @@ export class MobileApi implements ApiPort {
   async request<T>(path: string, options: MobileApiRequestOptions): Promise<T> {
     const url = this.url(path);
     const writing = options.method !== "GET";
-    if (writing) await this.csrf();
-    const snapshot = await this.sessions.snapshot();
+    const prepared = writing ? await this.ensureCsrf() : null;
+    const snapshot = prepared ? prepared.snapshot : await this.sessions.snapshot();
     const headers: Record<string, string> = { Accept: "application/json" };
     if ((writing || options.authenticated) && snapshot.id) headers["X-App-Session"] = snapshot.id;
-    if (writing) {
-      if (!this.token || this.token.generation !== snapshot.generation) throw new StaleResponseError();
-      headers[this.token.headerName] = this.token.token;
-    }
+    if (prepared) headers[prepared.headerName] = prepared.token;
     if (/^\/posts\/[1-9][0-9]*\/(rating|ratings)$/.test(path)) headers["X-App-Visitor"] = await this.visitor();
     let body: string | undefined;
     if (options.body !== undefined) {
@@ -65,7 +68,7 @@ export class MobileApi implements ApiPort {
     if (!this.sessions.isCurrent(snapshot, privateRequest)) throw new StaleResponseError();
     // A public response must not replace an independently authenticated account with an anonymous session.
     const current = privateRequest
-      ? await this.sessions.accept(snapshot, response.headers.get("X-App-Session"))
+      ? await this.sessions.accept(snapshot, response.headers.get("X-App-Session"), true)
       : snapshot;
     if (current.generation !== snapshot.generation) this.token = null;
     try {
@@ -85,18 +88,26 @@ export class MobileApi implements ApiPort {
     }
   }
   async csrf(): Promise<void> {
+    await this.ensureCsrf();
+  }
+  private async ensureCsrf(): Promise<PreparedSession> {
     const snapshot = await this.sessions.snapshot();
-    if (this.token?.generation === snapshot.generation) return;
-    if (this.csrfPending?.generation === snapshot.generation) return this.csrfPending.promise;
+    if (this.token?.generation === snapshot.generation)
+      return { snapshot, headerName: this.token.headerName, token: this.token.token };
+    if (
+      this.csrfPending?.generation === snapshot.generation &&
+      this.csrfPending.privateGeneration === snapshot.privateGeneration
+    )
+      return this.csrfPending.promise;
     const promise = this.loadCsrf(snapshot);
-    this.csrfPending = { generation: snapshot.generation, promise };
+    this.csrfPending = { generation: snapshot.generation, privateGeneration: snapshot.privateGeneration, promise };
     try {
-      await promise;
+      return await promise;
     } finally {
       if (this.csrfPending?.promise === promise) this.csrfPending = null;
     }
   }
-  private async loadCsrf(snapshot: SessionSnapshot): Promise<void> {
+  private async loadCsrf(snapshot: SessionSnapshot): Promise<PreparedSession> {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (snapshot.id) headers["X-App-Session"] = snapshot.id;
     const response = await this.transport(this.url("/csrf"), {
@@ -113,9 +124,10 @@ export class MobileApi implements ApiPort {
       value.token.length > 4096
     )
       throw new MobileRequestError(0, "INVALID_RESPONSE", "无法建立安全会话");
-    const current = await this.sessions.accept(snapshot, response.headers.get("X-App-Session"));
+    const current = await this.sessions.accept(snapshot, response.headers.get("X-App-Session"), true);
     if (!current.id) throw new MobileRequestError(0, "INVALID_RESPONSE", "无法建立安全会话");
     this.token = { headerName: value.headerName, token: value.token, generation: current.generation };
+    return { snapshot: current, headerName: value.headerName, token: value.token };
   }
   private url(path: string): string {
     if (!path.startsWith("/") || path.startsWith("//") || path.includes("#") || path.includes("\\"))
@@ -132,7 +144,8 @@ export class MobileApi implements ApiPort {
     let value: unknown;
     try {
       value = JSON.parse(await response.text());
-    } catch {
+    } catch (error) {
+      if (error instanceof MobileRequestError) throw error;
       throw new MobileRequestError(response.status, "INVALID_RESPONSE", "服务响应无法读取");
     }
     if (value === null || typeof value !== "object" || Array.isArray(value))
