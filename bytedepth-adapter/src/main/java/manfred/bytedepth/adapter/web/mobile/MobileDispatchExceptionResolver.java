@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import manfred.bytedepth.adapter.web.security.RouteSessionIdResolver;
-import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -21,7 +20,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class MobileDispatchExceptionResolver extends AbstractHandlerExceptionResolver {
     public MobileDispatchExceptionResolver() {
         // Package-scoped ControllerAdvice cannot own resource handlers or failed route selection.
-        setOrder(Ordered.HIGHEST_PRECEDENCE);
+        setOrder(HIGHEST_PRECEDENCE);
     }
 
     @Override

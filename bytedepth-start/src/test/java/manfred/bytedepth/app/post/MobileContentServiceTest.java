@@ -271,4 +271,59 @@ class MobileContentServiceTest {
         });
         assertThat(identity).isEqualTo("9007199254740993");
     }
+
+    @Test
+    void browserToleratedImageUrlsDoNotBlockPublishedContentOrState() throws Exception {
+        prepare();
+        var http = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(
+                        new manfred.bytedepth.adapter.web.mobile.MobileContentController(service))
+                .setControllerAdvice(new manfred.bytedepth.adapter.web.mobile.MobileExceptionHandler())
+                .build();
+        for (String source : List.of(
+                "https://cdn.example/100%.png",
+                "https://cdn.example/a[b].png",
+                "/uploads/100%.png",
+                "/uploads/a[b].png",
+                "https://[",
+                "//cdn.example/a[b].png",
+                "figures/a[b].png")) {
+            post = post(PostStatus.PUBLISHED, "Some readable text\n\n![diagram](" + source + ")");
+            http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                            "/api/mobile/v1/posts/9007199254740993/content"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                            .isOk())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
+                                    "$.document.text")
+                            .value(org.hamcrest.Matchers.containsString("Some readable text")))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
+                                    "$.resources[0].required")
+                            .value(true))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
+                                    "$.resources[0].url")
+                            .value(
+                                    source.startsWith("//")
+                                            ? "https:" + source
+                                            : source.startsWith("/")
+                                                    ? "https://bytedepth.cn" + source
+                                                    : source.startsWith("https://")
+                                                            ? source
+                                                            : "https://bytedepth.cn/" + source));
+            http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                            "/api/mobile/v1/posts/9007199254740993/state"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
+                            .isOk())
+                    .andExpect(
+                            org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.availability")
+                                    .value("AVAILABLE"));
+        }
+    }
+
+    @Test
+    void authoredDataImageIsRemovedByExistingMarkdownPolicy() {
+        prepare();
+        post = post(PostStatus.PUBLISHED, "Readable text\n\n![inline](data:image/png;base64,aGVsbG8=)");
+        var content = service.content(post.getId());
+        assertThat(content.html()).contains("Readable text").doesNotContain("data:image");
+        assertThat(content.resources()).isEmpty();
+    }
 }

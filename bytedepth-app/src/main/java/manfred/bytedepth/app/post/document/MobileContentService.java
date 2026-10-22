@@ -194,15 +194,28 @@ public class MobileContentService {
     private List<Resource> resources(String html) {
         var sources = new TreeSet<String>();
         var matcher = IMAGE.matcher(html);
-        while (matcher.find())
-            sources.add(siteOrigin
-                    .resolve(URI.create(Encoding.decodeHtml(matcher.group(1))))
-                    .normalize()
-                    .toASCIIString());
+        while (matcher.find()) sources.add(resourceUrl(Encoding.decodeHtml(matcher.group(1), true)));
         return sources.stream()
                 .map(url -> new Resource(sha256(url), url, "image", true, null, null))
                 .toList();
     }
+
+    private static final Pattern HTTP_SOURCE = Pattern.compile("(?i)^https?://");
+
+    private String resourceUrl(String source) {
+        try {
+            return siteOrigin.resolve(URI.create(source)).normalize().toASCIIString();
+        } catch (IllegalArgumentException invalidUri) {
+            // URI is stricter than browser URL parsing (e.g. literal % or [] in a path).
+            // Keep authored characters: encoding only this manifest would break reader src matching.
+            // Even an unusable URL remains required, so failed images cannot mark a cache complete.
+            if (HTTP_SOURCE.matcher(source).find()) return source;
+            if (source.startsWith("//")) return siteOrigin.getScheme() + ":" + source;
+            if (source.startsWith("/")) return siteOrigin.resolve("/").toASCIIString() + source.substring(1);
+            return siteOrigin.toASCIIString() + source;
+        }
+    }
+
     // Fixed field ordering plus length-prefixed UTF-8 avoids ambiguous delimiter concatenations.
     private static String pack(Object... fields) {
         var result = new StringBuilder();

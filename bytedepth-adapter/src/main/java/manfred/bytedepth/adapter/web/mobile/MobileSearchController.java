@@ -51,6 +51,7 @@ public class MobileSearchController {
     private static String plain(String value) {
         return value == null
                 ? ""
-                : org.owasp.html.Encoding.decodeHtml(TEXT.sanitize(value)).trim();
+                : org.owasp.html.Encoding.decodeHtml(TEXT.sanitize(value), false)
+                        .trim();
     }
 }
