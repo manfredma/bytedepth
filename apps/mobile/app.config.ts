@@ -22,6 +22,7 @@ const config: ExpoConfig = {
     ["expo-secure-store", { configureAndroidBackup: false }],
     "./plugins/withLocalDataPrivacy.cjs",
     "./plugins/withPinnedAndroidBuild.cjs",
+    "./plugins/withStagingInstrumentation.cjs",
   ],
 };
 export default config;
