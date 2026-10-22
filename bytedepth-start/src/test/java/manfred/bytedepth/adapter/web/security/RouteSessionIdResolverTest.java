@@ -35,7 +35,14 @@ class RouteSessionIdResolverTest {
             assertThat(response.getHeader("X-App-Session")).isEmpty();
             assertThat(response.getHeader("Set-Cookie")).isNull();
         }
-        for (String path : List.of("/", "/api/mobile/v10", "/api/mobile/v1other", "/api/mobile/v10/me")) {
+        for (String path : List.of(
+                "/",
+                "/api/mobile/v10",
+                "/api/mobile/v1other",
+                "/api/mobile/v10/me",
+                "/api%2fmobile/v1/me",
+                "/api/mobile/v1%2fme",
+                "/api/mobile/v1+extra/me")) {
             var request = new MockHttpServletRequest("GET", path);
             request.setCookies(new Cookie("SESSION", "web"));
             request.addHeader("X-App-Session", "mobile");

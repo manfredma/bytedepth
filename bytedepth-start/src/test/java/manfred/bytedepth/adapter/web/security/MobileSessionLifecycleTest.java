@@ -175,9 +175,17 @@ class MobileSessionLifecycleTest {
         SessionIdConfiguration.class,
         manfred.bytedepth.adapter.web.mobile.MobileAccountController.class,
         manfred.bytedepth.adapter.web.mobile.MobileExceptionHandler.class,
+        manfred.bytedepth.adapter.web.mobile.MobileDispatchExceptionResolver.class,
+        manfred.bytedepth.adapter.web.GlobalExceptionHandler.class,
         Probe.class
     })
-    static class Fixture {
+    static class Fixture implements org.springframework.web.servlet.config.annotation.WebMvcConfigurer {
+        @Override
+        public void addResourceHandlers(
+                org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
+            registry.addResourceHandler("/**").addResourceLocations("classpath:/static/");
+        }
+
         @Bean
         org.springframework.session.web.http.CookieSerializer cookieSerializer() {
             return new org.springframework.session.web.http.DefaultCookieSerializer();

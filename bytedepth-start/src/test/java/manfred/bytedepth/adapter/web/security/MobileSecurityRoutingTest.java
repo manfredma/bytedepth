@@ -101,4 +101,78 @@ class MobileSecurityRoutingTest extends MobileSessionLifecycleTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "POST,/api/mobile/v1/%6cogin,",
+        "POST,/api/mobile/v1/%72egistrations,",
+        "PUT,/api/mobile/v1/%70osts/1/%72ating,",
+        "POST,/api/mobile/v1/posts/1/%63omments,",
+        "POST,/api/mobile/v1/posts/1/%61nnotations,",
+        "PATCH,/api/mobile/v1/posts/1/%61nnotations/a,",
+        "DELETE,/api/mobile/v1/posts/1/%61nnotations/a,",
+        "POST,/api/%6dobile/v1/%6cogin,/blog",
+        "PUT,/%61pi/mobile/v1/posts/1/%72ating,/blog"
+    })
+    void encodedWriteRoutesCannotBypassQuotas(String method, String path, String contextPath) throws Exception {
+        var id = login(csrf(null)).getResponse().getHeader("X-App-Session");
+        var token = csrf(id);
+        var limiter = context.getBean(manfred.bytedepth.app.ratelimit.RateLimitPort.class);
+        org.mockito.Mockito.clearInvocations(limiter);
+        org.mockito.Mockito.when(limiter.tryConsume(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any()))
+                .thenReturn(manfred.bytedepth.app.ratelimit.RateLimitDecision.rejected(1_000_000_001));
+        String prefix = contextPath == null ? "" : contextPath;
+        mvc.perform(request(org.springframework.http.HttpMethod.valueOf(method), java.net.URI.create(prefix + path))
+                        .contextPath(prefix)
+                        .header("X-App-Session", id)
+                        .header("X-CSRF-TOKEN", token.token())
+                        .param("username", "reader")
+                        .param("password", "Password1"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
+                .andExpect(header().string("Retry-After", "2"))
+                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(result.getHandler())
+                        .isNull());
+        org.mockito.Mockito.verify(limiter)
+                .tryConsume(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verifyNoInteractions(context.getBean(manfred.bytedepth.app.user.RegisterUserCmdExe.class));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "/api/%6dobile/v1/me,",
+        "/%61pi/mobile/v1/me,/blog",
+        "/api/mobile/%761/me,/blog"
+    })
+    void encodedMobilePrefixStillIsolatesHeaderIdentity(String path, String contextPath) throws Exception {
+        var web = webLogin();
+        var id = login(csrf(null)).getResponse().getHeader("X-App-Session");
+        String prefix = contextPath == null ? "" : contextPath;
+        mvc.perform(get(java.net.URI.create(prefix + path)).contextPath(prefix).cookie(web))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+        mvc.perform(get(java.net.URI.create(prefix + path)).contextPath(prefix).header("X-App-Session", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("9007199254740993"))
+                .andExpect(header().doesNotExist("Set-Cookie"));
+    }
+
+    @Test
+    void encodedSeparatorRemainsRejectedByFirewallWithoutQuotaOrHandler() throws Exception {
+        var limiter = context.getBean(manfred.bytedepth.app.ratelimit.RateLimitPort.class);
+        org.mockito.Mockito.clearInvocations(limiter);
+        mvc.perform(put(java.net.URI.create("/api/mobile/v1/posts/a%2fb/rating")))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(result.getHandler())
+                        .isNull());
+        org.mockito.Mockito.verifyNoInteractions(limiter);
+    }
 }

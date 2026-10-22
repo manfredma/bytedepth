@@ -295,6 +295,20 @@ class RateLimitFilterTest {
         verify(rateLimitPort, never()).tryConsume(any(), anyLong(), any(), any());
     }
 
+    @Test
+    void encodedWebLoginRetainsSharedBucketAndHtmlRejection() throws Exception {
+        when(rateLimitPort.tryConsume(eq("login-ip"), anyLong(), any(), any()))
+                .thenReturn(RateLimitDecision.rejected(1));
+        var request = post("/blog/%6cogin", "203.0.113.11");
+        request.setContextPath("/blog");
+        var response = new MockHttpServletResponse();
+        filter.doFilter(request, response, filterChain);
+        assertThat(response.getStatus()).isEqualTo(429);
+        assertThat(response.getContentType()).startsWith("text/html");
+        verify(rateLimitPort).tryConsume(eq("login-ip"), anyLong(), any(), eq("203.0.113.11"));
+        verify(filterChain, never()).doFilter(any(), any());
+    }
+
     private MockHttpServletRequest post(String path, String remoteAddr) {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", path);
         request.setRemoteAddr(remoteAddr);

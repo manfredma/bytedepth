@@ -19,6 +19,8 @@ import manfred.bytedepth.app.ratelimit.RateLimitPort;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.pattern.PathPattern;
+import org.springframework.web.util.pattern.PathPatternParser;
 
 /** Applies the small set of public write quotas before authentication or controller execution. */
 @RequiredArgsConstructor
@@ -28,6 +30,23 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final RateLimitProperties.Rule READING_PROGRESS_RULE =
             new RateLimitProperties.Rule(30, Duration.ofMinutes(1));
     private static final String RATE_LIMIT_TEMPLATE = "classpath:rate-limit-page.html";
+
+    private static final PathPattern WEB_LOGIN = PathPatternParser.defaultInstance.parse("/login");
+    private static final PathPattern MOBILE_LOGIN = PathPatternParser.defaultInstance.parse("/api/mobile/v1/login");
+    private static final PathPattern WEB_REGISTER = PathPatternParser.defaultInstance.parse("/register");
+    private static final PathPattern MOBILE_REGISTER =
+            PathPatternParser.defaultInstance.parse("/api/mobile/v1/registrations");
+    private static final PathPattern MOBILE_RATING =
+            PathPatternParser.defaultInstance.parse("/api/mobile/v1/posts/{postId}/rating");
+    private static final PathPattern MOBILE_CREATE =
+            PathPatternParser.defaultInstance.parse("/api/mobile/v1/posts/{postId}/{action:comments|annotations}");
+    private static final PathPattern MOBILE_ANNOTATION =
+            PathPatternParser.defaultInstance.parse("/api/mobile/v1/posts/{postId}/annotations/{annotationId}");
+    private static final PathPattern WEB_INTERACTION =
+            PathPatternParser.defaultInstance.parse("/posts/{slug}/{action:comments|rating}");
+    private static final PathPattern WEB_READING =
+            PathPatternParser.defaultInstance.parse("/posts/{slug}/{action:reading-progress|reading-events}");
+    private static final PathPattern WEB_UPLOAD = PathPatternParser.defaultInstance.parse("/admin/images/upload");
 
     private final RateLimitPort rateLimitPort;
     private final RateLimitProperties properties;
@@ -66,21 +85,20 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private List<Attempt> matchingAttempts(HttpServletRequest request) {
-        String path = pathWithinApplication(request);
+        var path = RouteSessionIdResolver.pathWithinApplication(request);
         String ip = clientIp(request);
         if (RouteSessionIdResolver.isMobileRequest(request)) {
             String method = request.getMethod();
-            if (("PUT".equals(method) && path.matches("/api/mobile/v1/posts/[^/]+/rating"))
-                    || ("POST".equals(method) && path.matches("/api/mobile/v1/posts/[^/]+/(comments|annotations)"))
-                    || (("PATCH".equals(method) || "DELETE".equals(method))
-                            && path.matches("/api/mobile/v1/posts/[^/]+/annotations/[^/]+"))) {
+            if (("PUT".equals(method) && MOBILE_RATING.matches(path))
+                    || ("POST".equals(method) && MOBILE_CREATE.matches(path))
+                    || (("PATCH".equals(method) || "DELETE".equals(method)) && MOBILE_ANNOTATION.matches(path))) {
                 return List.of(new Attempt("comment-rating-ip", properties.getCommentRatingIp(), ip));
             }
         }
         if (!HttpMethod.POST.matches(request.getMethod())) {
             return List.of();
         }
-        if ("/login".equals(path) || "/api/mobile/v1/login".equals(path)) {
+        if (WEB_LOGIN.matches(path) || MOBILE_LOGIN.matches(path)) {
             List<Attempt> attempts = new ArrayList<>();
             attempts.add(new Attempt("login-ip", properties.getLoginIp(), ip));
             String username = request.getParameter("username");
@@ -92,16 +110,16 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
             return attempts;
         }
-        if ("/register".equals(path) || "/api/mobile/v1/registrations".equals(path)) {
+        if (WEB_REGISTER.matches(path) || MOBILE_REGISTER.matches(path)) {
             return List.of(new Attempt("register-ip", properties.getRegisterIp(), ip));
         }
-        if (path.matches("/posts/[^/]+/(comments|rating)")) {
+        if (WEB_INTERACTION.matches(path)) {
             return List.of(new Attempt("comment-rating-ip", properties.getCommentRatingIp(), ip));
         }
-        if (path.matches("/posts/[^/]+/(reading-progress|reading-events)")) {
+        if (WEB_READING.matches(path)) {
             return List.of(new Attempt("reading-progress-ip", READING_PROGRESS_RULE, ip));
         }
-        if ("/admin/images/upload".equals(path)) {
+        if (WEB_UPLOAD.matches(path)) {
             return List.of(new Attempt("upload-ip", properties.getUploadIp(), ip));
         }
         return List.of();
@@ -132,14 +150,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
         }
         return cachedTemplate.replace("{{retryAfterSeconds}}", Long.toString(retryAfterSeconds));
-    }
-
-    private String pathWithinApplication(HttpServletRequest request) {
-        String contextPath = request.getContextPath();
-        String requestUri = request.getRequestURI();
-        return contextPath != null && !contextPath.isEmpty() && requestUri.startsWith(contextPath)
-                ? requestUri.substring(contextPath.length())
-                : requestUri;
     }
 
     private String clientIp(HttpServletRequest request) {
