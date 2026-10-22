@@ -1,6 +1,6 @@
 # 独立阅读 App
 
-> 状态：Accepted，实施中。本文描述独立客户端的目标行为与系统边界，不代表已有移动 API、APK 或发布能力。
+> 状态：Accepted，实施中。移动 API 与客户端已有实现；本文定义目标行为与系统边界，不作为 staging、APK 或手机验收的完成证据。
 > 导航：[项目知识库](../README.md) · [架构概览](overview.md) · [统一语言](ubiquitous-language.md) · [移动端架构决策](decisions/0025-react-native-mobile-reader.md) · [批注锚定](annotation-anchoring.md)。
 
 ## 目标与范围
@@ -37,7 +37,7 @@ Android 独立阅读 App 首先以 APK 小范围试用，验证连续阅读、�
 | 现有 adapter      | `/api/mobile/v1` 输入输出、安全适配、JSON 错误                                | 不复制 app 用例或直接访问基础设施                          |
 | 现有 app/domain   | 公开内容查询、版本正文、搜索、专栏、评分、评论与批注规则                      | 不感知设备文件系统、WebView 或 APK                         |
 
-服务端不新增 Maven 模块，沿[现有依赖方向](overview.md)扩展。客户端源码放在 `apps/mobile/`，拥有自己的 package、lockfile、工具版本与依赖目录；不改根网页工程的依赖含义，也不共享 `node_modules`。Expo、React Native 及原生依赖在初始化时按兼容矩阵锁定，不使用浮动 `latest`。Expo 是框架与库的建议，并不授权绕过 canonical release-platform 使用另一套云端发布服务。
+服务端不新增 Maven 模块，沿[现有依赖方向](overview.md)扩展。客户端源码放在 `apps/mobile/`，拥有自己的 package、lockfile、工具版本与依赖目录；不改根网页工程的依赖含义，也不共享 `node_modules`。Expo、React Native 及原生依赖按兼容矩阵锁定，不使用浮动 `latest`。构建与质量检查入口见[移动端开发](../engineering/mobile-development.md)；正式发布使用 canonical release-platform。
 
 正文复用 app 层 `ArticleDocumentService` 与 `ArticleRevisionService`。它们已经提供 sanitized HTML、正文版本、投影版本、摘要和片段。普通 `PostController.detail` 同时增加 PV、发布访问事件并组装身份数据，因此不能作为下载或版本探测入口。新内容接口不产生这些页面访问副作用。
 
@@ -45,7 +45,7 @@ Android 独立阅读 App 首先以 APK 小范围试用，验证连续阅读、�
 
 正文包只包含已发布文章的公共信息：稳定文章 ID、当前 slug、标题和元信息、`contentVersion`、`projectionVersion`、文本摘要与片段、净化正文、阅读壳版本和资源 manifest。文章 ID 用于本机历史与缓存主键，slug 是可变链接信息。评分、评论、批注、用户身份、会话和 CSRF 不进入正文包。
 
-正文版本不等于整个表示的版本：当前 `contentVersion` 只在标题或 Markdown 变化时递增，下架状态必须独立核对。资源 manifest 与正文表示具有独立摘要，阅读壳版本也必须匹配；不能把 `ArticleDocument.digest` 当作所有元信息、图片字节与渲染运行时的摘要。条件请求和表示版本是拟新增能力，现有文章路由没有可复用的 ETag 协议。
+正文版本不等于整个表示的版本：当前 `contentVersion` 只在标题或 Markdown 变化时递增，下架状态必须独立核对。资源 manifest 与正文表示具有独立摘要，阅读壳版本也必须匹配；不能把 `ArticleDocument.digest` 当作所有元信息、图片字节与渲染运行时的摘要。移动内容接口实现独立的条件请求和表示版本，不复用网页文章路由。
 
 manifest 从净化后的正文生成，只列出实际引用的图片及固定版本阅读资源，不抓取整篇 SSR 的链接。所有正文图片均为离线完整性的必需资源，包括尚未滚入视口的懒加载图片，不能通过标为可选规避保存失败。每项具有规范化来源、资源角色、已知类型、可核验摘要或其缺失标记，以及本地映射键。不得递归抓取外链页面、任意 CSS 引用、动态 API 或私有资源。打包的固定脚本、字体与样式随客户端或明确版本正文资源交付，不按远程 HTML 的任意脚本地址执行。
 
@@ -102,7 +102,7 @@ manifest 从净化后的正文生成，只列出实际引用的图片及固定�
 
 文章评论要求登录且具备 `blog:comment:create`，当前业务规则直接生成已批准评论；列表与提交结果用原生组件展示。评论和评分不依赖文字坐标，可在联网时操作，但服务端每次提交仍须重新确认文章已发布，不能凭旧副本放行。评分允许匿名，1–5 分，每 App 安装访客身份对每篇文章一票、可以改分，与网页访客分别计票。访客身份独立于账号，清除 App 数据或重装重建身份，不以设备硬件标识替代；这不是每个真实人只能一票的保证。凭据存储在卸载后可能保留的平台上，安装标记必须阻止旧评分身份被恢复。网络不确定时先重新读取当前评分，再决定重试，避免把失败响应当作成功。
 
-账号沿用 [Spring Session 与 CSRF](../security/authentication.md)，移动端按 [ADR-0025 的拟议会话协议](decisions/0025-react-native-mobile-reader.md)使用显式会话请求头；凭据由原生网络层持有，所有写操作携带有效 CSRF，不引入 JWT。此扩展需与网页 Cookie 会话隔离，验证登录/退出轮换、会话失效、限流与错误格式后才能使用。注册仍为账号申请：`PENDING` 等待管理员审核、`ACTIVE` 可登录、`BANNED` 被拒绝；密码规则以现有服务端为准，不复制网页过时提示。
+账号沿用 [Spring Session 与 CSRF](../security/authentication.md)，移动端按 [ADR-0025](decisions/0025-react-native-mobile-reader.md)使用显式会话请求头；凭据由原生网络层持有，所有写操作携带有效 CSRF，不引入 JWT。移动头与网页 Cookie 会话按路径隔离，登录/退出轮换、会话失效、限流与错误格式由配置、生命周期和路由回归测试约束，真实运行还须 staging 验证。注册仍为账号申请：`PENDING` 等待管理员审核、`ACTIVE` 可登录、`BANNED` 被拒绝；密码规则以现有服务端为准，不复制网页过时提示。
 
 认证端点均位于 `/api/mobile/v1`：先 `GET /csrf` 建立匿名 Session 并获取 CSRF，再以表单 `POST /login` 提交用户名、密码与 CSRF，由标准 Spring Security 认证过滤器处理；成功后接收轮换后的 `X-App-Session` 并重新 `GET /csrf`。`GET /me` 返回当前账号及权限，`POST /logout` 校验 CSRF 后销毁 Session。移动请求只使用显式会话头，不回退网站 Cookie；登录失败、过期与退出均返回 JSON/HTTP 状态。首次匿名评分也先获取 CSRF；安装评分身份与匿名 Session 分别管理。
 
@@ -114,9 +114,9 @@ WebView 不持有 Session、CSRF、评分身份，不共享已登录浏览器 Co
 
 bridge 只接受当前文章与 generation 的固定消息类型：就绪、位置、目录、选区、打开已解析链接和渲染失败。原生校验消息 schema、长度、文章 ID、版本及允许动作；拒绝任意 URL fetch、任意 JS 执行、文件路径与请求头透传。服务端仍核验所有写操作，bridge 的选区校验不能替代服务端权限与版本校验。Android/iOS 的本地资源映射和 WebView 隔离均须以正式开发构建验证，Expo Go 运行成功不代表此边界成立。
 
-## 拟议移动 API
+## 移动 API
 
-以下全部是 `/api/mobile/v1` 下的接口设计，当前未实现；路径与方法按下表固定，完整 DTO 字段与错误码在实施计划中明确，并由契约测试约束。JSON 返回明确错误码，API 不返回登录页重定向。现有网页接口保持各自协议。
+以下接口位于 `/api/mobile/v1`，路径与方法按下表固定；完整 DTO 字段与错误码见[移动 API 契约](mobile-api.md)，由契约测试约束。JSON 返回明确错误码，API 不返回登录页重定向。现有网页接口保持各自协议。
 
 | 能力与建议路径                                                                            | 请求/响应核心                                  | 复用与边界                                                                 |
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------- |
@@ -134,7 +134,7 @@ bridge 只接受当前文章与 generation 的固定消息类型：就绪、位�
 | `POST /logout`                                                                            | 当前会话与 CSRF，返回退出结果                  | 销毁 Session，客户端无论响应是否到达都清理本地会话与私有内存；响应禁止缓存 |
 | `POST /registrations`                                                                     | 用户名、密码、待审核结果                       | `RegisterUserCmdExe`；不自动登录待审核账号                                 |
 
-不新增移动阅读历史、续读位置或阅读事件 API。公共正文与个人互动响应分别定义缓存策略；客户端不能仅因同源或 GET 就写入缓存。评分与批注新路由需按“HTTP 方法 + 路径”配置限流；现有 `RateLimitFilter` 会跳过非 POST 请求，仅新增 URL 匹配无法覆盖 PUT/PATCH/DELETE，必须同时修改方法筛选并补测试。列表分页、资源下载上限、错误结构、客户端兼容版本和条件请求语义应有契约测试；API 返回 schema 版本不得由数据库实体序列化意外决定。
+不新增移动阅读历史、续读位置或阅读事件 API。公共正文与个人互动响应分别定义缓存策略；客户端不能仅因同源或 GET 就写入缓存。`RateLimitFilter` 按“HTTP 方法 + 路径”匹配移动路由，测试覆盖 PUT/PATCH/DELETE 和编码路径；不能恢复为只匹配 POST。列表分页、资源下载上限、错误结构、客户端兼容版本和条件请求语义由契约测试约束；API 返回 schema 版本不得由数据库实体序列化意外决定。
 
 ## 发布与平台前置门禁
 

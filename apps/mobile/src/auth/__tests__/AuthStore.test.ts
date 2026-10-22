@@ -201,7 +201,7 @@ it.each(["background", "offline", "page-destroyed"] as const)(
     const auth = new AuthStore(
       {
         csrf: async () => {},
-        request: async <T>() => {
+        request: async () => {
           started();
           await new Promise<void>((r) => {
             finish = r;

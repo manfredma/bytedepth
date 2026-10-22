@@ -1,6 +1,8 @@
 module.exports = {
   clearMocks: true,
   watchman: false,
+  collectCoverageFrom: ["App.tsx", "plugins/**/*.cjs", "src/**/*.{ts,tsx,js}", "!src/**/__tests__/**"],
+  coverageThreshold: { global: { statements: 100, branches: 100, functions: 100, lines: 100 } },
   projects: [
     {
       displayName: "native",

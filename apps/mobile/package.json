@@ -37,14 +37,14 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
+    "android": "npm run android:build --",
+    "ios": "bash ../../scripts/with-mobile-toolchain-lock.sh npm exec --no -- expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "lint": "eslint . --max-warnings=0",
-    "android:build": "expo run:android --variant debug",
-    "prebuild:android": "expo prebuild --platform android --no-install"
+    "android:build": "bash ../../scripts/with-mobile-toolchain-lock.sh npm exec --no -- expo run:android --variant debug",
+    "prebuild:android": "bash ../../scripts/with-mobile-toolchain-lock.sh npm exec --no -- expo prebuild --platform android --no-install"
   },
   "private": true,
   "engines": {

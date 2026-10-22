@@ -15,6 +15,8 @@ bash scripts/test-format-code.sh
 bash scripts/test-warning-policy.sh
 bash scripts/test-agent-delivery-workflow.sh
 bash scripts/test-handoff-documentation.sh
+bash scripts/test-run-mobile-quality.sh
+node --test scripts/test-fixtures/mobile/*.test.mjs
 bash scripts/test-run-local-quality.sh
 bash scripts/test-local-quality-runner-boundary.sh
 bash scripts/test-release-platform-only.sh
@@ -39,4 +41,5 @@ python3 scripts/verify-annotation-unit-evidence.py \
   --cases scripts/test-fixtures/annotation/unit-cases.json \
   --run-context "$ANNOTATION_RUN_DIR/run.json" --seal "$ANNOTATION_RUN_DIR/seal.json" --record-seal
 python3 scripts/test-annotation-mutations.py
+bash scripts/run-mobile-quality.sh
 git diff --check

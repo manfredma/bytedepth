@@ -41,4 +41,4 @@
 | [ADR-0022](0022-pr-candidate-staging-before-merge.md)          | PR 候选先 staging 验收再合并并提升同一制品        | Accepted   | 2026-10-04 |
 | [ADR-0023](0023-reading-history-event-projections.md)          | 以阅读事件驱动个人阅读历史投影                    | Accepted   | 2026-10-07 |
 | [ADR-0024](0024-versioned-annotation-selectors.md)             | 阅读批注采用版本化文字锚点与独立定位状态          | Accepted   | 2026-10-16 |
-| [ADR-0025](0025-react-native-mobile-reader.md)                 | React Native 独立阅读客户端与移动接口边界         | Proposed   | 2026-10-22 |
+| [ADR-0025](0025-react-native-mobile-reader.md)                 | React Native 独立阅读客户端与移动接口边界         | Accepted   | 2026-10-22 |

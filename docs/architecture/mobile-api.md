@@ -1,6 +1,6 @@
 # 移动 API 契约
 
-> 状态：已确认的 v1 契约，实施中；不代表全部路由已提供或通过 staging 验证。
+> 状态：已确认并实现的 v1 契约；真实环境验证以对应候选的 staging evidence 为准。
 > 导航：[项目知识库](../README.md) · [移动阅读客户端](mobile-reader.md) · [ADR-0025](decisions/0025-react-native-mobile-reader.md) · [批注锚定](annotation-anchoring.md)。
 
 接口统一位于 `/api/mobile/v1`，由现有 adapter 暴露 JSON，复用 app/domain 用例。正文接口不调用网页详情 Controller，不产生网页 PV、阅读事件或历史记录。客户端没有服务端阅读历史、续读或离线队列接口。
@@ -48,6 +48,8 @@ state 返回 200，公开时为 `{schemaVersion:1,postId,availability:"AVAILABLE
 
 公共正文包包含 schemaVersion、正文身份、slug、title、publishedAt、category、series、净化 html、ArticleDocument 与 resources。manifest 每项为 `{key,url,role:"image",required:true,mediaType,sha256}`，所有正文图片均必需，包括懒加载图；类型/摘要未知时显式 null。服务端不递归抓站外页面，不夹带账号、评分、评论、批注、Session 或 CSRF。
 
+正文中的 HTTP/HTTPS 图片地址可能含浏览器容忍而严格 URI 解析器拒绝的字符。manifest 保留这些必需资源及来源，不能因坏图片地址使整篇正文接口失败，也不能删掉资源后误报完整。客户端把来源作为数据解析，由独立下载器检查实际 HTTPS 地址和字节；失败显示占位并保持未完整保存。服务端仅报告图片地址，不主动抓取。
+
 ## 在线互动
 
 | 方法与路径                                      | 请求/成功响应                                                    |
@@ -65,5 +67,7 @@ state 返回 200，公开时为 `{schemaVersion:1,postId,availability:"AVAILABLE
 评分身份为 `X-App-Visitor: app:<UUID>`，按安装而非账号管理，与 Web 访客身份分别计票；同身份同文章可改分。首次评分仍建立匿名 Session 和 CSRF。清数据/重装重建安装身份；这不保证真人去重。评论要求登录且具有 `blog:comment:create`；批注写入要求登录并验证所有权。每次移动写入都在应用边界重新确认文章已发布，不改变 Web 草稿主人批注规则。
 
 批注 envelope 携带 `{schemaVersion,postId,contentVersion,projectionVersion,digest,annotations}`。三项版本/摘要必须与当前正文一致才绘制覆盖层，旧正文只显示列表与原始引用。新建严格沿用 ADR-0024 的 anchor、片段范围、Unicode 码点与请求 UUID：相同请求同载荷可重放，异载荷 409 `REQUEST_REUSED`、旧版 409 `STALE_REVISION`、已删除请求 410 `DELETED_REQUEST`、非法 anchor 422 `INVALID_ANCHOR`。exact 最多 500 码点，批注文字最多 2000 UTF-16 单元；不把 PATCH 描述为已有正文版本冲突保护。
+
+首次访问可能初始化正文修订并迁移旧批注。必须在同一文章锁内先完成迁移，再读取供 placement 使用的不可变批注行；列表分页和 PATCH 返回值均遵守此顺序，避免将迁移前快照写成错误的 placement 缓存。
 
 互动响应不进入公共正文缓存；私有内容只在线保存在当前账号/页面 generation 的内存。退出、换号、后台、离线、失效或页面销毁清除私有内容与草稿，迟到结果不能恢复它们。

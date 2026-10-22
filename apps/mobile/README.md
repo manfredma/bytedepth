@@ -5,13 +5,15 @@ Independent Expo 58 / React Native package. The API origin in `src/config.ts` is
 Use Node **22.22.1** (`.nvmrc` and engine-strict), JDK **17** for Android only, and the generated Android SDK/NDK requirements. SDK 58 currently generates Gradle 9.4.1, AGP 9.2.1, compile SDK 37, target SDK 36, Build Tools 37.0.0 and NDK 27.1.12297006. Keep backend commands on Java 25. Install package dependencies independently:
 
 ```sh
-npm ci --ignore-scripts --no-audit --no-fund
+bash ../../scripts/with-mobile-toolchain-lock.sh npm ci --ignore-scripts --no-audit --no-fund
 npm run typecheck
 npm test -- --runInBand
 npm run lint
 npm run prebuild:android
 npm run android:build
 ```
+
+Run dependency installation and native builds serially. The mobile quality runner and npm native scripts share an exclusive worktree lock; a live owner must finish before retrying. A stale lock requires checking the interrupted process first. Run long native builds/downloads in the coordinating process because worker lifetimes may terminate their child processes.
 
 Keep Gradle wrapper preflight and builds serial: the first wrapper invocation downloads its pinned distribution under an exclusive lock; a second invocation can time out while that download is healthy. Wait for the first terminal result before retrying.
 
