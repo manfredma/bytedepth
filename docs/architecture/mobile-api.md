@@ -9,7 +9,7 @@
 
 所有数据库 ID 使用十进制字符串，不能经 JavaScript Number 转换。时间使用 ISO-8601 UTC 字符串；现有不含时区的业务时间按 Asia/Shanghai 转换。正文、状态与批注 envelope 的 `schemaVersion` 为 1。API 的 DTO 是白名单，不能直接序列化领域聚合、principal、密码哈希或匿名所有权摘要。
 
-分页格式为 `{items,page,pageSize,total,totalPages,hasNext}`，page 从 1 开始，pageSize 默认 10、范围 1–50。搜索与专栏沿用既有固定页长 10，其他页长返回 400。分类与标签不能同时筛选。搜索 query 去首尾空白，长度 1–200。
+分页格式为 `{items,page,pageSize,total,totalPages,hasNext}`，page 从 1 开始，pageSize 默认 10、范围 1–50。搜索与专栏沿用既有固定页长 10，其他页长返回 400。调用现有 int-offset 后端前，`(page-1)*pageSize` 必须以 long 计算且不超过 `Integer.MAX_VALUE`，超出返回 400；内存分页也先用 long 检查范围，再缩窄为索引。分类与标签不能同时筛选。搜索 query 去首尾空白，长度 1–200。
 
 失败响应为 `{code,message}`。400 表示无效输入，401 表示需登录，403 区分 `CSRF_INVALID` 与 `FORBIDDEN`，429 使用 `RATE_LIMITED` 并携带 `Retry-After`；未知异常为 500 `INTERNAL_ERROR`，不向客户端返回内部异常。过滤器与 MVC 均须使用这一格式，移动端不收到 HTML 登录跳转。账号、CSRF、个人互动响应禁止缓存，客户端仅允许公共正文包进入离线仓储。
 

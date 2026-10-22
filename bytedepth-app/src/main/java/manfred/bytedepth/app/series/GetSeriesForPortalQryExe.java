@@ -18,16 +18,24 @@ public class GetSeriesForPortalQryExe {
 
     private static final int PAGE_SIZE = 10;
 
+    public SeriesPortalDTO execute(Long id, int page) {
+        return portal(seriesRepository.findById(id).orElseThrow(() -> new NoSuchElementException("专栏不存在")), page);
+    }
+
     public SeriesPortalDTO execute(String slug, int page) {
         Series series =
                 seriesRepository.findBySlug(slug).orElseThrow(() -> new NoSuchElementException("专栏不存在: " + slug));
 
+        return portal(series, page);
+    }
+
+    private SeriesPortalDTO portal(Series series, int page) {
         List<SeriesPostItem> allPosts = seriesRepository.findPublishedPostsBySeries(series.getId());
         long total = allPosts.size();
         long totalPages = Math.max(1, (total + PAGE_SIZE - 1) / PAGE_SIZE);
-        int from = (page - 1) * PAGE_SIZE;
+        long from = (long) (page - 1) * PAGE_SIZE;
         int to = (int) Math.min(from + PAGE_SIZE, total);
-        List<SeriesPostItem> pagePosts = from < total ? allPosts.subList(from, to) : List.of();
+        List<SeriesPostItem> pagePosts = from < total ? allPosts.subList((int) from, to) : List.of();
 
         List<SeriesPortalPostDTO> postDTOs = pagePosts.stream()
                 .map(item -> {
