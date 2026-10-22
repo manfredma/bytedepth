@@ -21,6 +21,8 @@
 
 ## 构建与测试
 
+- 使用 `page.route()` 人为延迟资源的 E2E 必须在该用例上下文显式设置 `serviceWorkers: "block"`，并断言预置页未被 Service Worker 控制。本项目首页 load 后注册的 Service Worker 会接管指纹静态资源，绕过 page route；无上限的 Promise 等待会表现为整例超时且没有具体失败步骤。用限时 `expect.poll` 验证拦截确实发生，再做加载前断言，不用延长 timeout 或盲目重试掩盖。`article-loading.spec.js` 的导航初始化用例覆盖此边界。依据：[Playwright 网络拦截与 Service Worker](https://playwright.dev/docs/network#missing-network-events-and-service-workers)。
+
 - 所有 Maven 命令都显式使用 Java 25，并带 `-Dsort.skip=true`；完整命令见 [Maven 指南](../agent-guides/maven.md)。
 - 修改 Controller 构造器或应用接口时，同步修改 `@WebMvcTest` 的 mock；接口或返回类型变更要检查全部调用方。
 - 不以编译代替测试；生产 Java 改动还必须通过变更覆盖率门禁。
