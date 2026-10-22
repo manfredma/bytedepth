@@ -43,10 +43,39 @@ body {
   margin: 16px auto;
 }
 #post-article .content pre {
+  background: var(--bd-surface-muted);
   overflow-x: auto;
   max-width: 100%;
   font-size: 0.8em;
   line-height: 1.6;
+}
+/* Prism ships a light-only base; keep its foreground and shadows inside reader theme boundaries. */
+#post-article .content pre,
+#post-article .content code {
+  color: var(--bd-text);
+  text-shadow: none;
+}
+#post-article .content code {
+  background: transparent;
+}
+#post-article .content code * {
+  text-shadow: none;
+}
+html[data-theme="midnight"] #post-article .content code .token {
+  color: var(--bd-info-text);
+  background: transparent;
+}
+html[data-theme="midnight"] #post-article .content code .token.comment,
+html[data-theme="midnight"] #post-article .content code .token.prolog,
+html[data-theme="midnight"] #post-article .content code .token.doctype,
+html[data-theme="midnight"] #post-article .content code .token.cdata {
+  color: var(--bd-text-muted);
+}
+html[data-theme="midnight"] #post-article .content code .token.punctuation,
+html[data-theme="midnight"] #post-article .content code .token.operator,
+html[data-theme="midnight"] #post-article .content code .token.entity,
+html[data-theme="midnight"] #post-article .content code .token.url {
+  color: var(--bd-text);
 }
 #post-article .content table {
   display: block;

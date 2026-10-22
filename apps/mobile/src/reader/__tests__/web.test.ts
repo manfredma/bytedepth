@@ -646,3 +646,58 @@ test("an opaque invalid manifest image does not prevent matching a neighboring v
   const { root } = boot("rich", "", { image: "data:image/png;base64,YQ==" }, { content });
   expect(root.querySelector("img")?.getAttribute("src")).toBe("data:image/png;base64,YQ==");
 });
+test("reader code follows the real light/dark CSS cascade without Prism shadows or external style changes", () => {
+  const runtime = JSON.parse(read("apps/mobile/assets/reader/runtime.json"));
+  const style = document.createElement("style");
+  style.textContent = [runtime.theme, runtime.prismCss, runtime.codeCss, runtime.css].join("\n");
+  document.head.append(style);
+  try {
+    const { w, root } = boot(
+      "rich",
+      '<div class="bd-code-block"><div class="bd-code-block__body"><pre><code class="language-java">// comment\nclass Greeter { String s = "hello"; boolean b = true; }</code></pre></div></div><p><code class="language-java">inline</code></p><pre><code class="language-text">plain text</code></pre>',
+    );
+    w.Prism = { manual: true };
+    w.eval(runtime.prism);
+    w.eval(runtime.codeBlocks);
+    const outside = document.createElement("code");
+    outside.className = "language-java";
+    outside.textContent = "outside reader";
+    document.body.append(outside);
+    const keyword = root.querySelector("code .token.keyword")!;
+    const comment = root.querySelector("code .token.comment")!;
+    const operator = root.querySelector("code .token.operator")!;
+    expect(keyword).not.toBeNull();
+    expect(comment).not.toBeNull();
+    expect(operator).not.toBeNull();
+    expect(getComputedStyle(root.querySelector("code.language-text")!).color).toBe("var(--bd-text)");
+    for (const theme of ["dark", "light", "dark"]) {
+      w.MobileReader.configure({ theme, fontScale: 1 });
+      expect(getComputedStyle(document.documentElement).getPropertyValue("--bd-text").trim()).toBe(
+        theme === "dark" ? "#e5e7eb" : "#1a1a2e",
+      );
+      for (const element of root.querySelectorAll("pre,code")) {
+        expect(getComputedStyle(element).color).toBe("var(--bd-text)");
+        expect(getComputedStyle(element).textShadow).toBe("none");
+      }
+      for (const element of root.querySelectorAll("pre"))
+        expect(getComputedStyle(element).background).toBe("var(--bd-surface-muted)");
+      for (const element of root.querySelectorAll("code"))
+        expect(getComputedStyle(element).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+      for (const element of root.querySelectorAll("code *")) expect(getComputedStyle(element).textShadow).toBe("none");
+      if (theme === "dark") {
+        expect(getComputedStyle(keyword).color).toBe("var(--bd-info-text)");
+        expect(getComputedStyle(comment).color).toBe("var(--bd-text-muted)");
+        expect(getComputedStyle(operator).color).toBe("var(--bd-text)");
+        for (const token of root.querySelectorAll("code .token"))
+          expect(getComputedStyle(token).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+      } else {
+        expect(getComputedStyle(keyword).color).toBe("rgb(0, 119, 170)");
+        expect(getComputedStyle(comment).color).toBe("rgb(112, 128, 144)");
+      }
+      expect(getComputedStyle(outside).color).toBe("rgb(0, 0, 0)");
+      expect(getComputedStyle(outside).textShadow).toBe("0 1px white");
+    }
+  } finally {
+    style.remove();
+  }
+});

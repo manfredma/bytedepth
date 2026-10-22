@@ -11,8 +11,8 @@
     {
       "name": "css",
       "path": "apps/mobile/src/reader/web/reader.css",
-      "sha256": "88a10e76ffc4f1af290e7602ca2f5644403041f8917ba2c121960c2514bf45f7",
-      "bytes": 2433
+      "sha256": "978e8c53c562a471e46f1a3c71e1cfb3af63b53682ef73991863901f8ef788b1",
+      "bytes": 3552
     },
     {
       "name": "theme",
