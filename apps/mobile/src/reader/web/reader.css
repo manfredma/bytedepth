@@ -3,7 +3,7 @@ html {
   color-scheme: light;
   background: var(--bd-surface);
 }
-html[data-theme="dark"] {
+html[data-theme="midnight"] {
   color-scheme: dark;
 }
 body {

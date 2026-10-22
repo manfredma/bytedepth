@@ -23,6 +23,7 @@ export interface ReaderWebViewProps {
   annotations?: AnnotationEnvelope | null;
   theme?: "light" | "dark";
   fontScale?: number;
+  jumpTo?: { segmentId: string; request: number };
   onMessage: (message: ReaderBridgeMessage) => void;
 }
 // Cache bounds raw bytes. The in-memory envelope additionally holds base64 expansion and JSON.
@@ -123,7 +124,15 @@ export function ReaderWebView(props: ReaderWebViewProps) {
       `window.MobileReader.setImages(${inlineJson(images)},${inlineJson(context)});window.MobileReader.setAnnotations(${inlineJson(envelope)});window.MobileReader.configure(${inlineJson(settings)});true;`,
     );
   }, [annotations, content, theme, fontScale, imageDataUris, generation]);
+  const jumpTo = props.jumpTo;
+  const jump = useCallback(() => {
+    if (jumpTo)
+      webview.current?.injectJavaScript(
+        `window.MobileReader.jumpToSegment(${inlineJson(jumpTo.segmentId)},${inlineJson({ postId: content.postId, contentVersion: content.contentVersion, generation })});true;`,
+      );
+  }, [jumpTo, content.postId, content.contentVersion, generation]);
   useEffect(updateLayers, [updateLayers]);
+  useEffect(jump, [jump]);
   return (
     <WebView<object>
       ref={webview}
@@ -153,7 +162,10 @@ export function ReaderWebView(props: ReaderWebViewProps) {
           generation: props.generation,
         });
         if (message) {
-          if (message.type === "ready") updateLayers();
+          if (message.type === "ready") {
+            updateLayers();
+            jump();
+          }
           props.onMessage(message);
         }
       }}

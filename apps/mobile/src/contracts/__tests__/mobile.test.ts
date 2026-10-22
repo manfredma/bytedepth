@@ -255,3 +255,11 @@ it("acceptsProjectionSeparatorsBetweenSelectedSegments", () => {
   };
   expect(parseBridgeMessage(JSON.stringify(message), context)).toEqual(message);
 });
+it("keeps malformed authored HTTPS images opaque so readable body is not rejected", () => {
+  const resources = ["https://cdn.example/100%.png", "https://cdn.example/a[b].png", "https://["].map((url, i) => ({
+    ...content.resources[0],
+    key: `bad-${i}`,
+    url,
+  }));
+  expect(parsePublicContent({ ...content, resources }).resources).toEqual(resources);
+});

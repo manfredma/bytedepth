@@ -270,3 +270,27 @@ test("entire data envelope is bounded even when temporary annotation data is unu
     }),
   ).toThrow("envelope");
 });
+test("TOC jump injects a bounded action without replacing the page", async () => {
+  const view = await render(<ReaderWebView content={content} generation={2} imageDataUris={{}} onMessage={() => {}} />);
+  const source = mockProps.source;
+  await view.rerender(
+    <ReaderWebView
+      content={content}
+      generation={2}
+      imageDataUris={{}}
+      jumpTo={{ segmentId: "s0", request: 1 }}
+      onMessage={() => {}}
+    />,
+  );
+  expect(mockProps.source).toBe(source);
+  expect(mockInject.mock.calls.at(-1)[0]).toContain(
+    'jumpToSegment("s0",{"postId":"1","contentVersion":7,"generation":2})',
+  );
+  mockProps.onMessage({
+    nativeEvent: {
+      data: JSON.stringify({ type: "ready", postId: "1", contentVersion: 7, generation: 2, payload: {} }),
+    },
+  });
+  expect(mockInject.mock.calls.at(-1)[0]).toContain("jumpToSegment");
+  await view.unmount();
+});

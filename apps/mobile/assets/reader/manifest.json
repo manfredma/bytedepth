@@ -11,8 +11,8 @@
     {
       "name": "css",
       "path": "apps/mobile/src/reader/web/reader.css",
-      "sha256": "449527cd2ec58754b315216abba0b7c7c24d0fc5afd74edc2b0d70ec306be010",
-      "bytes": 2429
+      "sha256": "88a10e76ffc4f1af290e7602ca2f5644403041f8917ba2c121960c2514bf45f7",
+      "bytes": 2433
     },
     {
       "name": "theme",
@@ -65,8 +65,8 @@
     {
       "name": "reader",
       "path": "apps/mobile/src/reader/web/reader.js",
-      "sha256": "dd70b51939da0bc0ca2f33bc19603d000a7f4a8937d97163da5162980c6c4de6",
-      "bytes": 14877
+      "sha256": "c2018a68a07f1517fadb4874fabcaa084d5b19581aea88ae7e19a8b786301ef9",
+      "bytes": 15611
     },
     {
       "name": "codeBlocks",

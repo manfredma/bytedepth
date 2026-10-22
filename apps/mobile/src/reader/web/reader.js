@@ -52,7 +52,13 @@
   function imageResource(src) {
     try {
       const absolute = new URL(src, input.siteOrigin).href;
-      return input.content.resources.find((resource) => new URL(resource.url, input.siteOrigin).href === absolute);
+      return input.content.resources.find((resource) => {
+        try {
+          return new URL(resource.url, input.siteOrigin).href === absolute;
+        } catch {
+          return false;
+        }
+      });
     } catch {
       return undefined;
     }
@@ -226,7 +232,7 @@
     disposed = false;
     input = value;
     root = document.querySelector("#post-article .content");
-    document.documentElement.dataset.theme = value.theme;
+    document.documentElement.dataset.theme = value.theme === "dark" ? "midnight" : "daylight";
     document.documentElement.style.setProperty("--reader-scale", String(value.fontScale));
     const template = document.createElement("template");
     template.innerHTML = value.content.html;
@@ -326,6 +332,22 @@
     position();
     send("ready", {});
   }
+  function jumpToSegment(segmentId, context) {
+    if (
+      disposed ||
+      context.postId !== input.content.postId ||
+      context.contentVersion !== input.content.contentVersion ||
+      context.generation !== input.generation ||
+      !input.content.document.segments.some((segment) => segment.id === segmentId)
+    )
+      return;
+    const element = segmentElement(segmentId);
+    if (!element) return;
+    stopCorrection();
+    element.scrollIntoView();
+    anchor = { segmentId, codePointOffset: 0, viewportRatio: 0 };
+    position();
+  }
   function setImages(images, context) {
     if (
       disposed ||
@@ -375,7 +397,7 @@
   function configure(settings) {
     if (disposed) return;
     anchor = capture() || anchor;
-    document.documentElement.dataset.theme = settings.theme;
+    document.documentElement.dataset.theme = settings.theme === "dark" ? "midnight" : "daylight";
     document.documentElement.style.setProperty("--reader-scale", String(settings.fontScale));
     correct();
   }
@@ -394,5 +416,5 @@
     document.getElementById("reader-marks")?.replaceChildren();
     document.getElementById("reader-preview")?.replaceChildren();
   }
-  window.MobileReader = Object.freeze({ mount, start, setImages, setAnnotations, configure, dispose });
+  window.MobileReader = Object.freeze({ mount, start, jumpToSegment, setImages, setAnnotations, configure, dispose });
 })();

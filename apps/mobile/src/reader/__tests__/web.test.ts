@@ -470,7 +470,7 @@ test("native layer/theme updates preserve DOM/anchor, clear private marks immedi
   expect(document.querySelector(".reader-mark--green")).not.toBeNull();
   w.MobileReader.configure({ theme: "dark", fontScale: 1.4 });
   expect(root.firstChild).toBe(original);
-  expect(document.documentElement.dataset.theme).toBe("dark");
+  expect(document.documentElement.dataset.theme).toBe("midnight");
   w.MobileReader.setAnnotations(null);
   expect(document.querySelector(".reader-mark")).toBeNull();
   window.dispatchEvent(new Event("scroll"));
@@ -487,7 +487,7 @@ test("native layer/theme updates preserve DOM/anchor, clear private marks immedi
   await Promise.resolve();
   w.MobileReader.setAnnotations({});
   w.MobileReader.configure({ theme: "dark", fontScale: 2 });
-  expect(document.documentElement.dataset.theme).toBe("light");
+  expect(document.documentElement.dataset.theme).toBe("daylight");
   rects.mockRestore();
 });
 test("canonical Mermaid renderer preserves source and falls back visibly on failure without affecting neighboring selections", async () => {
@@ -600,4 +600,49 @@ test("relative authored image sources match the server's canonical absolute mani
   expect(root.querySelectorAll("img")).toHaveLength(1);
   expect(root.querySelectorAll(".reader-image-missing")).toHaveLength(1);
   expect(messages.filter((m) => m.payload.message === "IMAGE_UNAVAILABLE:unlisted")).toHaveLength(1);
+});
+test("native table of contents navigation accepts only current model segments and cancels stale correction", () => {
+  const { w, root, model, messages } = boot();
+  const segment = model.segments[0];
+  const element = root.querySelector(`[data-annotation-segment="${segment.id}"]`)!;
+  element.scrollIntoView = jest.fn();
+  const context = { postId: "1", contentVersion: 7, generation: 3 };
+  for (const changed of [{ postId: "2" }, { contentVersion: 8 }, { generation: 4 }])
+    w.MobileReader.jumpToSegment(segment.id, { ...context, ...changed });
+  w.MobileReader.jumpToSegment("unknown", context);
+  expect(element.scrollIntoView).not.toHaveBeenCalled();
+  w.MobileReader.jumpToSegment(segment.id, context);
+  expect(element.scrollIntoView).toHaveBeenCalledTimes(1);
+  expect(messages.at(-1).type).toBe("position");
+  element.remove();
+  w.MobileReader.jumpToSegment(segment.id, context);
+  w.MobileReader.dispose();
+  w.MobileReader.jumpToSegment(segment.id, context);
+});
+test("dark reader selects the actual canonical dark surface and text palette", () => {
+  const style = document.createElement("style");
+  style.textContent = read(staticRoot + "css/theme.css") + read("apps/mobile/src/reader/web/reader.css");
+  document.head.append(style);
+  const { w } = boot("rich", "", {}, { theme: "dark" });
+  expect(getComputedStyle(document.documentElement).getPropertyValue("--bd-surface").trim()).toBe("#172033");
+  expect(getComputedStyle(document.documentElement).getPropertyValue("--bd-text").trim()).toBe("#e5e7eb");
+  w.MobileReader.configure({ theme: "light", fontScale: 1 });
+  expect(getComputedStyle(document.documentElement).getPropertyValue("--bd-surface").trim()).toBe("#ffffff");
+  style.remove();
+});
+test("an opaque invalid manifest image does not prevent matching a neighboring valid image", () => {
+  const model = JSON.parse(read("scripts/test-fixtures/annotation/rich-document.json"));
+  const content = {
+    ...model,
+    postId: "1",
+    contentVersion: 7,
+    document: model,
+    html: read("scripts/test-fixtures/annotation/rich-page.html"),
+    resources: [
+      { key: "bad", url: "https://[" },
+      { key: "image", url: "https://staging-bytedepth.bytedepth.cn/image.png" },
+    ],
+  };
+  const { root } = boot("rich", "", { image: "data:image/png;base64,YQ==" }, { content });
+  expect(root.querySelector("img")?.getAttribute("src")).toBe("data:image/png;base64,YQ==");
 });

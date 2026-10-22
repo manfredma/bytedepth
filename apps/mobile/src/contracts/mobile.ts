@@ -365,18 +365,6 @@ function utc(value: unknown): value is string {
     Number.isFinite(Date.parse(value))
   );
 }
-function networkUrl(value: unknown, allowHttp = false, allowUserinfo = false): value is string {
-  if (!string(value)) return false;
-  try {
-    const url = new URL(value);
-    return (
-      (url.protocol === "https:" || (allowHttp && url.protocol === "http:")) &&
-      (allowUserinfo || (!url.username && !url.password))
-    );
-  } catch {
-    return false;
-  }
-}
 function identity(value: unknown): ContentIdentity {
   const v = record(value);
   keys(v, ["postId", "contentVersion", "projectionVersion", "digest", "representationHash", "shellVersion"]);
@@ -496,7 +484,8 @@ export function parsePublicContent(value: unknown): PublicContent {
       nonempty(r.key) &&
         !resourceKeys.has(r.key) &&
         // Authored image URLs are opaque here; the downloader rejects unsafe transport/userinfo.
-        networkUrl(r.url, true, true) &&
+        string(r.url) &&
+        /^https?:\/\//i.test(r.url) &&
         r.role === "image" &&
         r.required === true &&
         (r.mediaType === null || nonempty(r.mediaType)) &&
@@ -611,7 +600,8 @@ export function parseBridgeMessage(value: string, context: BridgeContext): Reade
       keys(p, ["href"]);
       requireValid(nonempty(p.href));
       // Relative article/fragment links remain resolvable, while executable/custom schemes never cross the bridge.
-      requireValid(networkUrl(new URL(p.href, "https://staging-bytedepth.bytedepth.cn/").href));
+      const link = new URL(p.href, "https://staging-bytedepth.bytedepth.cn/");
+      requireValid(link.protocol === "https:" && !link.username && !link.password);
       break;
     case "renderError":
       keys(p, ["message"]);
