@@ -46,6 +46,7 @@ start ───────────▶ adapter + infrastructure
 
 ## 延伸阅读
 
+- [移动阅读客户端设计（提案）](mobile-reader.md)
 - [架构决策记录（ADR）](decisions/README.md)
 - [后台布局](admin-layout.md)
 - [前端模式](../engineering/frontend-patterns.md)

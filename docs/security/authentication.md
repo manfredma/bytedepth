@@ -2,6 +2,8 @@
 
 网页端使用 Spring Security 表单登录 + CSRF + HttpSession，不引入 JWT。认证与 CSRF 配置位于 `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/security/SecurityConfig.java`。
 
+独立移动客户端的显式会话传递与网页隔离方案见 [ADR-0025（提案，尚未实现）](../architecture/decisions/0025-react-native-mobile-reader.md)。
+
 ## 共享 Session
 
 多实例共享 Spring Session Redis，负载均衡无需 sticky session。配置见 `bytedepth-start/src/main/resources/application.yml`：

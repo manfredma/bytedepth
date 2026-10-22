@@ -1,6 +1,6 @@
 # 路由一览
 
-bytedepth 是 Thymeleaf SSR 应用，所有 Controller 返回视图名或重定向。
+bytedepth 以 Thymeleaf SSR 页面为主；评分、阅读事件和批注等端点也返回 JSON。独立客户端的移动接口方案见[移动阅读客户端设计（提案，尚未实现）](mobile-reader.md)。
 
 ## 前台页面
 
