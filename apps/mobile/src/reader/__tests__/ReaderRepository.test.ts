@@ -1,4 +1,5 @@
 import { LocalReaderRepository } from "../ReaderRepository";
+import { MobileRequestError } from "../../api/errors";
 import { CacheIndex } from "../../storage/CacheIndex";
 import { HistoryStore } from "../../storage/HistoryStore";
 import { MemoryDatabase, MemoryFiles, content, hash, now } from "../../storage/__tests__/fixtures";
@@ -756,4 +757,140 @@ test("withdrawal cleanup failure after page release cannot revive the closed str
   repository.release("1");
   finish();
   expect((await stream.next()).done).toBe(true);
+});
+
+describe("Task 6 review regression", () => {
+  test("a history failure after promotion cannot leave the removed old version marked complete", async () => {
+    const { repository, index, files, setBody } = setup();
+    await index.promote(content(), [], 0, now);
+    const oldBody = (await index.db.readCache()).copies["1"].body;
+    setBody(content("1", 2));
+    const stream = repository.open("1")[Symbol.asyncIterator]();
+    await until(stream, (snapshot) => snapshot.checkState === "UPDATE_AVAILABLE");
+    const position = {
+      postId: "1",
+      contentVersion: 1,
+      projectionVersion: 1,
+      segmentId: "p1",
+      codePointOffset: 2,
+      blockKind: "paragraph",
+      blockText: "Hello",
+      precedingHeadings: [],
+      viewportRatio: 0.2,
+      progress: 0.3,
+      updatedAt: now,
+    };
+    await repository.savePosition(position);
+    const record = repository.dependencies.history.record.bind(repository.dependencies.history);
+    repository.dependencies.history.record = async (publicContent, timestamp) => {
+      if (publicContent.contentVersion === 2) throw new Error("history disk full after index commit");
+      await record(publicContent, timestamp);
+    };
+    await repository.refresh("1");
+    const failed = await until(stream, (snapshot) => snapshot.checkState === "FAILED");
+    const durable = await index.get("1");
+    expect(files.values.has(oldBody)).toBe(false);
+    expect(durable?.content.contentVersion).toBe(2);
+    expect(failed.content?.contentVersion).toBe(durable?.content.contentVersion);
+    expect(failed.copyState).toBe("OFFLINE_READY");
+    expect((await repository.listRecent())[0].position).toEqual(position);
+    repository.release("1");
+  });
+
+  test("AVAILABLE state followed by structured content POST_UNAVAILABLE withdraws the old copy", async () => {
+    const { repository, index, api, setBody } = setup();
+    await index.promote(content(), [], 0, now);
+    setBody(content("1", 2));
+    const stream = repository.open("1")[Symbol.asyncIterator]();
+    await until(stream, (snapshot) => snapshot.checkState === "UPDATE_AVAILABLE");
+    const request = api.request.bind(api);
+    api.request = async <T>(path: string, options: MobileApiRequestOptions): Promise<T> => {
+      if (path.endsWith("/content")) throw new MobileRequestError(404, "POST_UNAVAILABLE", "withdrawn after state");
+      return request<T>(path, options);
+    };
+    await repository.refresh("1");
+    const terminal = await until(
+      stream,
+      (snapshot) => snapshot.checkState === "FAILED" || snapshot.copyState === "UNAVAILABLE",
+    );
+    expect(terminal.copyState).toBe("UNAVAILABLE");
+    expect(terminal.content).toBeNull();
+    expect(await index.get("1")).toBeNull();
+    expect(await index.unavailable("1")).toBe(true);
+    expect(await index.generation("1")).toBe(1);
+    expect((await repository.listRecent())[0]).toMatchObject({ title: "Title 1", copyState: "UNAVAILABLE" });
+    repository.release("1");
+  });
+});
+
+describe("Task 6 review withdrawal trust boundary", () => {
+  test.each([
+    ["ordinary structured 404", new MobileRequestError(404, "INTERNAL_ERROR", "gateway unavailable")],
+    ["401 with unavailable-looking code", new MobileRequestError(401, "POST_UNAVAILABLE", "session expired")],
+    ["503 with unavailable-looking code", new MobileRequestError(503, "POST_UNAVAILABLE", "gateway failure")],
+    ["transport failure", new Error("network disconnected")],
+    ["unvalidated error-shaped object", { status: 404, code: "POST_UNAVAILABLE" }],
+  ])("%s cannot withdraw an existing copy", async (_label, failure) => {
+    const { repository, index, api, setBody } = setup();
+    await index.promote(content(), [], 0, now);
+    setBody(content("1", 2));
+    const stream = repository.open("1")[Symbol.asyncIterator]();
+    await until(stream, (snapshot) => snapshot.checkState === "UPDATE_AVAILABLE");
+    const request = api.request.bind(api);
+    api.request = async <T>(path: string, options: MobileApiRequestOptions): Promise<T> => {
+      if (path.endsWith("/content")) throw failure;
+      return request<T>(path, options);
+    };
+    await repository.refresh("1");
+    const failed = await until(stream, (snapshot) => snapshot.checkState === "FAILED");
+    expect(failed.copyState).toBe("OFFLINE_READY");
+    expect(failed.content?.contentVersion).toBe(1);
+    expect((await index.get("1"))?.content.contentVersion).toBe(1);
+    expect(await index.unavailable("1")).toBe(false);
+    expect(await index.generation("1")).toBe(0);
+    repository.release("1");
+  });
+
+  test("a late structured content withdrawal cannot invalidate a reopened newer session", async () => {
+    const { repository, index, api, setBody } = setup();
+    await index.promote(content(), [], 0, now);
+    setBody(content("1", 2));
+    const oldStream = repository.open("1")[Symbol.asyncIterator]();
+    await until(oldStream, (snapshot) => snapshot.checkState === "UPDATE_AVAILABLE");
+    let rejectOld!: (reason: unknown) => void;
+    let started!: () => void;
+    const pending = new Promise<never>((_resolve, reject) => {
+      rejectOld = reject;
+    });
+    const fetching = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const request = api.request.bind(api);
+    let oldRequestPending = true;
+    api.request = async <T>(path: string, options: MobileApiRequestOptions): Promise<T> => {
+      if (path.endsWith("/content") && oldRequestPending) {
+        oldRequestPending = false;
+        started();
+        return pending;
+      }
+      return request<T>(path, options);
+    };
+    const oldRefresh = repository.refresh("1");
+    await fetching;
+    repository.release("1");
+    const reopened = repository.open("1")[Symbol.asyncIterator]();
+    await until(reopened, (snapshot) => snapshot.checkState === "UPDATE_AVAILABLE");
+    await repository.refresh("1");
+    await until(
+      reopened,
+      (snapshot) => snapshot.copyState === "OFFLINE_READY" && snapshot.content?.contentVersion === 2,
+    );
+    rejectOld(new MobileRequestError(404, "POST_UNAVAILABLE", "old response"));
+    await oldRefresh;
+    expect((await index.get("1"))?.content.contentVersion).toBe(2);
+    expect(await index.unavailable("1")).toBe(false);
+    expect(await index.generation("1")).toBe(0);
+    expect((await oldStream.next()).done).toBe(true);
+    repository.release("1");
+  });
 });

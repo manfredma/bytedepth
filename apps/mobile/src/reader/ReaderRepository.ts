@@ -11,6 +11,7 @@ import {
   type PublicContent,
 } from "../contracts/mobile";
 import type { AssetDownloader, DownloadedAsset } from "../api/AssetDownloader";
+import { MobileRequestError } from "../api/errors";
 import { CacheIndex, CommittedCopyCleanupError, imageDataUri } from "../storage/CacheIndex";
 import { openLocalDatabase } from "../storage/database";
 import { createNativeFileStore } from "../storage/FileStore";
@@ -151,21 +152,25 @@ export class LocalReaderRepository implements ReaderRepository {
     session.controller = controller;
     this.publish(session, { checkState: "CHECKING" });
     let withdrawing = false;
+    const withdraw = async () => {
+      withdrawing = true;
+      session.epoch++;
+      controller.abort();
+      this.publish(session, {
+        copyState: "UNAVAILABLE",
+        checkState: "CURRENT",
+        content: null,
+        lastConfirmedAt: this.clock.now(),
+      });
+      await this.dependencies.index.invalidate(session.postId);
+    };
     try {
       const raw = await this.checkWithTimeout(session.postId, controller);
       if (!current()) return;
       const state = parsePostState(raw);
       if (state.postId !== session.postId) throw new Error("Article identity mismatch");
       if (state.availability === "UNAVAILABLE") {
-        withdrawing = true;
-        session.epoch++;
-        this.publish(session, {
-          copyState: "UNAVAILABLE",
-          checkState: "CURRENT",
-          content: null,
-          lastConfirmedAt: this.clock.now(),
-        });
-        await this.dependencies.index.invalidate(session.postId);
+        await withdraw();
         return;
       }
       await this.dependencies.index.allow(session.postId);
@@ -182,12 +187,20 @@ export class LocalReaderRepository implements ReaderRepository {
         return;
       }
       const generation = await this.dependencies.index.generation(session.postId);
-      const content = parsePublicContent(
-        await this.dependencies.api.request<unknown>(`/posts/${session.postId}/content`, {
+      let rawContent: unknown;
+      try {
+        rawContent = await this.dependencies.api.request<unknown>(`/posts/${session.postId}/content`, {
           method: "GET",
           signal: controller.signal,
-        }),
-      );
+        });
+      } catch (error) {
+        if (!current()) return;
+        if (!(error instanceof MobileRequestError) || error.status !== 404 || error.code !== "POST_UNAVAILABLE")
+          throw error;
+        await withdraw();
+        return;
+      }
+      const content = parsePublicContent(rawContent);
       if (!current()) return;
       if (!sameRepresentation(content, state.identity)) throw new Error("Content changed during check");
       // Existing complete content remains displayed until a new complete package is committed.
@@ -210,9 +223,9 @@ export class LocalReaderRepository implements ReaderRepository {
       const saved = await this.dependencies.index.promote(content, assets, generation, now);
       if (!current()) return;
       if (!saved) throw new Error("No room for complete offline copy");
+      // The committed identity must be visible before fallible history bookkeeping.
+      this.publish(session, { content, copyState: "OFFLINE_READY", checkState: "CURRENT", lastConfirmedAt: now });
       await this.dependencies.history.record(content, now);
-      if (current())
-        this.publish(session, { content, copyState: "OFFLINE_READY", checkState: "CURRENT", lastConfirmedAt: now });
     } catch (error) {
       if (withdrawing) {
         if (!session.released) this.publish(session, { checkState: "FAILED" });
