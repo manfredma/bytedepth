@@ -1,6 +1,8 @@
 package manfred.bytedepth.adapter.web.portal;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import manfred.bytedepth.app.analytics.PostViewLogPort;
 import manfred.bytedepth.app.analytics.ReadingProgressTokenPort;
 import manfred.bytedepth.app.post.query.GetPostQryExe;
@@ -21,9 +23,14 @@ public class PostReadingController {
     private final GetPostQryExe getPostQryExe;
     private final PostViewLogPort postViewLogPort;
     private final ReadingProgressTokenPort readingProgressTokenPort;
+    private final VisitRequestFilter visitRequestFilter;
 
     @PostMapping("/{slug}/reading-progress")
-    public ResponseEntity<Void> recordProgress(@PathVariable String slug, @RequestBody ReadingProgressRequest request) {
+    public ResponseEntity<Void> recordProgress(
+            @PathVariable String slug, @RequestBody ReadingProgressRequest request, HttpServletRequest httpRequest) {
+        if (!visitRequestFilter.shouldRecord(VisitRequestFilter.Request.from(httpRequest))) {
+            return ResponseEntity.noContent().build();
+        }
         if (request.visitToken() == null
                 || request.visitToken().length() > 64
                 || request.activeReadSeconds() < 0

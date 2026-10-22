@@ -1,3 +1,4 @@
+import { newVerificationContext } from "./helpers/verification-traffic.js";
 import { loginAsAdmin } from "./helpers/admin-auth.js";
 import { expect, test } from "@playwright/test";
 
@@ -93,55 +94,61 @@ test("文章远处图片在滚动后加载，首图和图片预览保持可用",
   }
 });
 
-test("文章延迟脚本尚未完成时手机导航已收起且可以操作", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "mobile-chromium", "mobile initial layout");
-  await page.goto("/");
-  const article = await page.locator(".bd-home-article h3 a").first().getAttribute("href");
-  expect(article).toBeTruthy();
-  await page.addInitScript(() => {
-    window.articleDomReady = false;
-    document.addEventListener(
-      "DOMContentLoaded",
-      () => {
-        window.articleDomReady = true;
-      },
-      { once: true },
-    );
+test.describe("脚本延迟下的导航初始化", () => {
+  // Service Worker fetch handlers bypass page.route; this case needs a real paused request.
+  test.use({ serviceWorkers: "block" });
+
+  test("文章延迟脚本尚未完成时手机导航已收起且可以操作", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-chromium", "mobile initial layout");
+    await page.goto("/");
+    expect(await page.evaluate(() => navigator.serviceWorker.controller)).toBeNull();
+    const article = await page.locator(".bd-home-article h3 a").first().getAttribute("href");
+    expect(article).toBeTruthy();
+    await page.addInitScript(() => {
+      window.articleDomReady = false;
+      document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+          window.articleDomReady = true;
+        },
+        { once: true },
+      );
+    });
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    let requested = false;
+    await page.route("**/vendor/prism/*.js", async (route) => {
+      requested = true;
+      await gate;
+      await route.continue();
+    });
+    try {
+      await page.goto(article, { waitUntil: "commit" });
+      await expect.poll(() => requested, { message: "Prism 请求必须进入拦截，才能验证脚本加载前的导航" }).toBe(true);
+      const toggle = page.locator(".nav-toggle");
+      await expect(page.locator(".content")).toBeAttached();
+      expect(await page.evaluate(() => window.articleDomReady)).toBe(false);
+      await expect(page.locator(".nav-panel")).toBeHidden();
+      await toggle.click();
+      await expect(page.locator(".nav-panel")).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(page.locator(".nav-panel")).toBeHidden();
+      await expect(toggle).toBeFocused();
+      await page.screenshot({ path: testInfo.outputPath("navigation-before-dom-ready.png") });
+    } finally {
+      release();
+      await page.unrouteAll({ behavior: "wait" });
+    }
   });
-  let release;
-  const gate = new Promise((resolve) => {
-    release = resolve;
-  });
-  let observed;
-  const requested = new Promise((resolve) => {
-    observed = resolve;
-  });
-  await page.route("**/vendor/prism/*.js", async (route) => {
-    observed();
-    await gate;
-    await route.continue();
-  });
-  try {
-    await page.goto(article, { waitUntil: "commit" });
-    await requested;
-    const toggle = page.locator(".nav-toggle");
-    await expect(page.locator(".content")).toBeAttached();
-    expect(await page.evaluate(() => window.articleDomReady)).toBe(false);
-    await expect(page.locator(".nav-panel")).toBeHidden();
-    await toggle.click();
-    await expect(page.locator(".nav-panel")).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(page.locator(".nav-panel")).toBeHidden();
-    await expect(toggle).toBeFocused();
-    await page.screenshot({ path: testInfo.outputPath("navigation-before-dom-ready.png") });
-  } finally {
-    release();
-    await page.unrouteAll({ behavior: "wait" });
-  }
 });
 
 test("禁用脚本仍能访问导航入口", async ({ browser }, testInfo) => {
-  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  const context = await newVerificationContext(browser, {
+    javaScriptEnabled: false,
+    viewport: { width: 390, height: 844 },
+  });
   const page = await context.newPage();
   try {
     await page.goto(

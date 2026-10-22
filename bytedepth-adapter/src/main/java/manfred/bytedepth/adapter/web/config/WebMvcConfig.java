@@ -3,6 +3,7 @@ package manfred.bytedepth.adapter.web.config;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import manfred.bytedepth.adapter.web.util.PageViewInterceptor;
+import manfred.bytedepth.adapter.web.util.ReadingPrivacy;
 import manfred.bytedepth.adapter.web.util.VisitRequestFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -33,6 +34,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new ReadingPrivacy());
         registry.addInterceptor(pageViewInterceptor)
                 .addPathPatterns(
                         "/",

@@ -1,3 +1,4 @@
+import { newVerificationContext } from "./helpers/verification-traffic.js";
 import { expect } from "@playwright/test";
 import {
   test,
@@ -162,7 +163,7 @@ test("匿名身份与登录身份对已定位及未定位私有记录保持隔�
   });
   const privateA = await createAnnotation(page, "批注测试正文", "匿名A私有", "PRIVATE");
   const publicA = await createAnnotation(page, "第二段独立内容", "匿名A公开", "PUBLIC");
-  const secondContext = await browser.newContext({ baseURL });
+  const secondContext = await newVerificationContext(browser, { baseURL });
   article.contexts.add(secondContext);
   const second = await secondContext.newPage();
   article.readers.add(second);

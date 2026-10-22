@@ -3,7 +3,6 @@ package manfred.bytedepth.adapter.web.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import manfred.bytedepth.domain.stats.PageViewedEvent;
 import org.junit.jupiter.api.Test;
@@ -24,8 +23,8 @@ class PageViewInterceptorTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
-    @Mock
-    private HttpServletRequest request;
+    private org.springframework.mock.web.MockHttpServletRequest request =
+            new org.springframework.mock.web.MockHttpServletRequest();
 
     @Mock
     private HttpServletResponse response;
@@ -44,7 +43,7 @@ class PageViewInterceptorTest {
 
     @Test
     void preHandle_filteredRequest_skips() {
-        when(request.getHeader("User-Agent")).thenReturn("bot");
+        request.addHeader("User-Agent", "bot");
         when(visitRequestFilter.shouldRecord(any())).thenReturn(false);
 
         boolean result = interceptor.preHandle(request, response, mock(HandlerMethod.class));
@@ -55,11 +54,10 @@ class PageViewInterceptorTest {
 
     @Test
     void preHandle_validRequest_publishesEvent() {
-        when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
-        when(request.getHeader("Referer")).thenReturn("https://google.com");
-        when(request.getHeader("X-Forwarded-For")).thenReturn(null);
-        when(request.getRemoteAddr()).thenReturn("8.8.8.8");
-        when(request.getRequestURI()).thenReturn("/about");
+        request.addHeader("User-Agent", "Mozilla/5.0");
+        request.addHeader("Referer", "https://google.com");
+        request.setRemoteAddr("8.8.8.8");
+        request.setRequestURI("/about");
         when(visitRequestFilter.shouldRecord(any())).thenReturn(true);
 
         boolean result = interceptor.preHandle(request, response, mock(HandlerMethod.class));

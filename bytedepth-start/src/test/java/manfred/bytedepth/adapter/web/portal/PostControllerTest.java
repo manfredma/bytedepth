@@ -512,7 +512,8 @@ class PostControllerTest {
         when(visitRequestFilter.shouldRecord(any())).thenReturn(false);
 
         mockMvc.perform(get("/posts/filtered-visitor").header("User-Agent", "Python-urllib/3.12"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("recordReading", false));
 
         verify(postViewCounter, never()).increment(4L);
         assertThat(applicationEvents.stream(PostViewedEvent.class).count()).isZero();

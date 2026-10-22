@@ -174,7 +174,9 @@ public class PostController {
         // only for its owner or an administrator.
         model.addAttribute("canPublish", isDraft);
         String userAgent = WebUtils.truncate(request.getHeader("User-Agent"), 512);
-        if (visitRequestFilter.shouldRecord(new VisitRequestFilter.Request(userAgent))) {
+        boolean recordReading = visitRequestFilter.shouldRecord(VisitRequestFilter.Request.from(request));
+        model.addAttribute("recordReading", recordReading);
+        if (recordReading) {
             String visitToken = UUID.randomUUID().toString();
             postViewCounter.increment(id);
             eventPublisher.publishEvent(new PostViewedEvent(

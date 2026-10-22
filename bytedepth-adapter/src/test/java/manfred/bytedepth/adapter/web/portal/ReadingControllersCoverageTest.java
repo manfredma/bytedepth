@@ -33,18 +33,47 @@ class ReadingControllersCoverageTest {
     @Test
     void readingEventControllerCoversUnauthenticatedAcceptedAndInvalidPaths() {
         var command = mock(RecordReadingEventCmdExe.class);
-        var controller = new ReadingEventController(command);
+        var controller = new ReadingEventController(
+                command,
+                new manfred.bytedepth.adapter.web.util.VisitRequestFilter(
+                        new manfred.bytedepth.adapter.web.util.VisitFilterProperties()));
         var request = request();
 
-        assertThat(controller.record("java", request).getStatusCode().value()).isEqualTo(401);
+        assertThat(controller
+                        .record("java", request, new org.springframework.mock.web.MockHttpServletRequest())
+                        .getStatusCode()
+                        .value())
+                .isEqualTo(401);
 
         authenticate();
-        assertThat(controller.record("java", request).getStatusCode().value()).isEqualTo(202);
+        assertThat(controller
+                        .record("java", request, new org.springframework.mock.web.MockHttpServletRequest())
+                        .getStatusCode()
+                        .value())
+                .isEqualTo(202);
 
         when(command.execute(any(Long.class), any(String.class), any())).thenThrow(IllegalArgumentException.class);
-        assertThat(controller.record("java", request).getStatusCode().value()).isEqualTo(400);
+        assertThat(controller
+                        .record("java", request, new org.springframework.mock.web.MockHttpServletRequest())
+                        .getStatusCode()
+                        .value())
+                .isEqualTo(400);
         assertThat(new ReadingEventController.RecordReadingEventRequest(null, null, null, 0, 0, null).eventId())
                 .isNull();
+    }
+
+    @Test
+    void privacyPreferenceChangesOnlyTheBrowserAndRedirectsToHistory() {
+        var controller = new ReadingHistoryController(mock(ListReadingHistoryQryExe.class), mock(PostRepository.class));
+        var request = new org.springframework.mock.web.MockHttpServletRequest();
+        var response = new org.springframework.mock.web.MockHttpServletResponse();
+        assertThat(controller.privacy(true, request, response)).isEqualTo("redirect:/reading-history");
+        assertThat(response.getHeader("Set-Cookie"))
+                .contains("bd_reading_mode=private")
+                .doesNotContain("Max-Age");
+        response = new org.springframework.mock.web.MockHttpServletResponse();
+        assertThat(controller.privacy(false, request, response)).isEqualTo("redirect:/reading-history");
+        assertThat(response.getHeader("Set-Cookie")).contains("Max-Age=0");
     }
 
     @Test

@@ -37,6 +37,9 @@
       return false;
     }
   }
+  function isPrivate() {
+    return /(?:^|;\s*)bd_reading_mode=(?:private|verification)(?:;|$)/.test(global.document.cookie);
+  }
   function create(options) {
     const store = storage();
     const authenticated = options.authenticated === true;
@@ -60,6 +63,9 @@
       write(store, HISTORY_KEY, history);
     }
     function enqueue(type, activeSecondsDelta, maxScrollDepth) {
+      if (isPrivate()) {
+        return history[postSlug] || null;
+      }
       const now = new Date().toISOString();
       const event = {
         eventId: crypto.randomUUID(),
@@ -92,10 +98,13 @@
       return current;
     }
     async function flush() {
-      if (!authenticated || !eventsUrl || typeof fetch !== "function") {
+      if (isPrivate() || !authenticated || !eventsUrl || typeof fetch !== "function") {
         return;
       }
       for (const event of outbox.filter((item) => item.serverOwned)) {
+        if (isPrivate()) {
+          return;
+        }
         try {
           const response = await fetch(eventsUrl, {
             method: "POST",
@@ -117,7 +126,9 @@
         }
       }
     }
-    prune();
+    if (!isPrivate()) {
+      prune();
+    }
     return {
       recordOpen: () => enqueue("READ_OPEN", 0, 0),
       recordHeartbeat: (seconds, depth) => enqueue("READ_HEARTBEAT", seconds, depth),
@@ -128,5 +139,5 @@
       flushAuthenticatedOutbox: flush,
     };
   }
-  global.ReadingHistoryStore = { create };
+  global.ReadingHistoryStore = { create, isPrivate };
 })(window);

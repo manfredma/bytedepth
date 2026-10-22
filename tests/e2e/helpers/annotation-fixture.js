@@ -1,3 +1,4 @@
+import { newVerificationContext } from "./verification-traffic.js";
 import { expect, test as base } from "@playwright/test";
 import { loginAsAdmin } from "./admin-auth.js";
 import { submitOwnedForm as form } from "./owned-form.js";
@@ -137,7 +138,7 @@ export async function postAnnotation(page, payload) {
 
 export const test = base.extend({
   article: async ({ browser, page, baseURL }, use, testInfo) => {
-    const adminContext = await browser.newContext({ baseURL });
+    const adminContext = await newVerificationContext(browser, { baseURL });
     const adminPage = await adminContext.newPage();
     let article;
     let published = false;

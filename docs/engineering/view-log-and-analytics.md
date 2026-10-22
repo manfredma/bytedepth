@@ -2,6 +2,25 @@
 
 本文记录访问日志、阅读进度上报和首页排序的稳定口径与降级约定，供后续修改分析或排序逻辑时参考。术语定义见 [统一语言](../architecture/ubiquitous-language.md) 的访问与阅读分析上下文。
 
+## 无痕阅读与验证流量
+
+阅读历史页的“无痕阅读”开关同时暂停当前浏览器的站点访问统计和新增个人阅读记录；匿名和登录读者均可使用。已有记录不清理、不回算。该功能不承诺清除浏览器历史、访问代理或服务器运行日志，也不改变权限、评论、评分和批注行为。
+
+- 手动开启通过受 CSRF 保护的 `POST /reading-history/privacy`，使用当前浏览器的会话 Cookie；手动关闭删除 Cookie。浏览器会话恢复可能保留会话 Cookie，以页面开关状态为准。
+- Agent、同步脚本和浏览器回读使用 `?bd_traffic=verification`。已有参数时用 `&bd_traffic=verification`，参数放在 `#fragment` 前，保留原参数与片段。首个请求立即排除，并写入 30 分钟的验证 Cookie；后续导航和上报自动携带。不因普通请求续期，不缩短用户已手动开启的会话偏好。
+- `?bd_traffic=normal` 清除浏览器模式并让当前请求按普通规则判断；它不能覆盖独立携带的验证请求头或命中的 UA 规则。
+- 脚本/可控制的自动化上下文可使用 `X-Bytedepth-Traffic: verification`，只对携带该头的请求生效，不写浏览器偏好。仓库 Playwright 默认携带，自建上下文通过 `newVerificationContext` 统一注入，ESLint 阻止绕过该入口；验证统计与开关的专项用例显式使用无该头的独立上下文。
+- `bd_reading_mode` Cookie 只允许 `private`（会话）和 `verification`（30 分钟），限制为当前主机、`Path=/`、`SameSite=Lax`，HTTPS 下 `Secure`。这是可由客户端读取的非敏感统计偏好，让已打开的文章页同步停止本地记录；它不是授权凭据。同一浏览器配置的本站标签页共享此偏好。
+- 原有 `bytedepth.visit-filter` 配置继续过滤 UA，补充 Codex 和 Obsidian；缺失或空 UA 不据此推断为自动化。`enabled` 控制 UA 规则，显式无痕/验证请求始终排除。可识别的 Obsidian 内真人阅读也按用户确认的口径排除；普通浏览器 UA 本身不能证明来自 Codex 或 Obsidian。
+
+统一排除文章计数、文章/页面访问事件、分析明细及其归档/排序来源。文章页向前端传递 `recordReading=false`，停止创建本地事件和上传；服务端阅读事件与阅读进度入口再次过滤，包括使用早先普通访问令牌的请求。已有普通页面通过偏好 Cookie 在记录/上报前检测模式，暂停无痕期间时长与滚动完成度，避免退出后补写无痕期间的完成事件；从无痕页恢复正常后，重新打开文章才建立新阅读会话。无痕期间不补传已有队列，队列每次发送前重新检查偏好，避免等待上条响应时切换模式后继续发送并错误删除旧事件；退出后仍按原有重试规则处理旧的正常阅读事件。
+
+验证期间优先使用专用浏览器上下文。相关 skills 和同步脚本必须携带验证标记；直接打开或新标签访问站内链接时继续使用带标记入口，普通点击由 Cookie 覆盖。验证结束在同一上下文访问 `?bd_traffic=normal`；临近超时的长任务重新使用带标记入口。交付文章链接、正文链接、canonical URL 和同步状态均保留干净 URL，不把验证标记写入内容。操作规则由本文统一定义，skills 只引用并落实到自己的访问入口。
+
+页面偏好只注入阅读历史模板的模型；禁止向 redirect 模型注入布尔偏好，Spring MVC 会把它追加到重定向 URL。`ReadingPrivacyTest` 与现有路由测试检查干净重定向。
+
+实现入口：`ReadingPrivacy`、`VisitRequestFilter`、`PostController`、`PageViewInterceptor`、`ReadingEventController`、`PostReadingController` 和 `reading-history-store.js`。离线回归覆盖查询/请求头/Cookie、首请求与后续请求、退出与会话/过期 Cookie、个人阅读不写入、旧 token 拒绝和普通访问恢复；真实桌面/移动渲染与计数由 staging 的 `reading-privacy.spec.js` 验证。
+
 ## 访问日志
 
 - 异步写入：`@Async @EventListener` 监听 `PostViewedEvent`，不阻塞用户请求线程；异步写库失败只打 ERROR 日志，不影响用户访问。

@@ -11,11 +11,13 @@ const storeSource = fs.readFileSync(
 describe("reading history event upload", () => {
   beforeEach(() => {
     localStorage.clear();
+    document.cookie = "bd_reading_mode=; Max-Age=0; Path=/";
     document.head.innerHTML = '<meta name="_csrf" content="session-token">';
     eval(storeSource);
   });
 
   afterEach(() => {
+    document.cookie = "bd_reading_mode=; Max-Age=0; Path=/";
     vi.unstubAllGlobals();
     delete window.ReadingHistoryStore;
   });
@@ -139,5 +141,58 @@ describe("reading history event upload", () => {
 
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(JSON.parse(localStorage.getItem("bytedepth.reading-events.v1"))[0].serverOwned).toBe(false);
+  });
+  test.each(["private", "verification"])(
+    "an already-open page stops recording and flushing in %s mode",
+    async (mode) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true, status: 202 })),
+      );
+      const options = { authenticated: true, eventsUrl: "/posts/java/reading-events", postSlug: "java" };
+      const store = window.ReadingHistoryStore.create(options);
+      const before = { ...localStorage };
+      document.cookie = `bd_reading_mode=${mode}; Path=/`;
+      store.recordOpen();
+      store.recordHeartbeat(15, 80);
+      store.recordClose(15, 80);
+      await store.flushAuthenticatedOutbox();
+      expect({ ...localStorage }).toEqual(before);
+      expect(fetch).not.toHaveBeenCalled();
+      document.cookie = "bd_reading_mode=; Max-Age=0; Path=/";
+      store.recordOpen();
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+      expect(store.getSummary().readCount).toBe(1);
+    },
+  );
+  test("enabling privacy while an old queue is uploading leaves later events pending", async () => {
+    const pending = [1, 2].map((id) => ({
+      eventId: String(id),
+      postSlug: "java",
+      serverOwned: true,
+      createdAt: Date.now(),
+    }));
+    localStorage.setItem("bytedepth.reading-events.v1", JSON.stringify(pending));
+    let finish;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      ),
+    );
+    const store = window.ReadingHistoryStore.create({
+      authenticated: true,
+      eventsUrl: "/posts/java/reading-events",
+      postSlug: "java",
+    });
+    const flushing = store.flushAuthenticatedOutbox();
+    document.cookie = "bd_reading_mode=private; Path=/";
+    finish({ ok: true, status: 202 });
+    await Promise.race([flushing, new Promise((resolve) => setTimeout(resolve, 20))]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(localStorage.getItem("bytedepth.reading-events.v1"))).toEqual([pending[1]]);
   });
 });

@@ -7,6 +7,16 @@ export default [
     },
     js.configs.recommended,
     {
+        files: ['tests/e2e/**/*.js'],
+        ignores: ['tests/e2e/helpers/verification-traffic.js'],
+        rules: {
+            'no-restricted-syntax': ['error', {
+                selector: "CallExpression[callee.property.name='newContext']",
+                message: 'Use newVerificationContext so validation traffic is excluded; statistics tests use an explicitly unmarked fixture.'
+            }]
+        }
+    },
+    {
         files: ['bytedepth-start/src/main/resources/static/js/**/*.js'],
         languageOptions: {
             ecmaVersion: 'latest',

@@ -104,6 +104,14 @@ bytedepth:
   visit-filter:
     enabled: true
     rules:
+      - id: codex
+        field: user-agent
+        match: contains
+        value: codex
+      - id: obsidian
+        field: user-agent
+        match: contains
+        value: obsidian
       - id: python-urllib
         field: user-agent
         match: prefix
