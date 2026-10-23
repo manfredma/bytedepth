@@ -47,3 +47,9 @@ native-stack 会保留被遮挡页面。一次阅读会话以页面 focus 为边
 测试夹具和 DOM 模拟不能替代 Android WebView。模拟器连接 staging 验证选区、续读、旋转、键盘、安全区、代码、表格、Mermaid、图片/SVG、进程重启及断网；同时核对网络中没有阅读位置上报或凭据外泄。可执行用例、受管夹具与同签名升级流程见 [Android staging instrumentation](mobile-instrumentation.md)。具体矩阵以[客户端设计](../architecture/mobile-reader.md#验收矩阵)为准。
 
 服务端候选、客户端完整 SHA、APK 摘要、证书、版本、不可变下载地址和 mobile evidence 必须对应。正式构建与受管签名由 canonical release-platform 和 Host Agent 执行；不存在平台回执时保持未就绪。手机验收只在 staging 自测及签名 APK 证据齐全后发起。
+
+## 首版 Mac 签名试用包（2026-10-23 授权）
+
+项目所有者已明确同意首版先用现有 Mac 签名试用包。此例外只用于 Android 首版手机验收：本机使用持久测试证书签署 release、versionCode=1 升级夹具及 AndroidTest APK，连接当前已验证 staging，逐项执行 [九项真实 Android 用例](mobile-instrumentation.md#执行与判定)，再交付实际 APK、完整源码 SHA、APK SHA-256、公开证书 SHA-256、版本、后端 Deployment/SHA/digest 与原始测试记录。私钥和口令保留在本机用户私有目录，权限分别为 0700/0600，不进仓库或日志，不复用 Android debug key。
+
+这不是 canonical 平台制品，不生成或伪装 Host evidence、平台 manifest 或发布回执；手机验收前仍须核对实际签名、安装、同签名覆盖升级、离线 bundle 和九项断言。服务端发布仍由 release-platform 编排，staging 仍是唯一集成与验收环境。Linux 自动构建、KVM 模拟器及正式平台 APK 分发延后，不是本次手机验收的前置条件；后续正式发布恢复既有平台流程，保持证书身份或明确迁移方案，避免试用数据被无意清除。

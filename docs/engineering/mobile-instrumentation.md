@@ -82,3 +82,7 @@ npm run lint
 Node 使用实际 annotation runtime 检查这一映射，同时检查 fixture 绑定、owned 生命周期、部分失败与可重试 cleanup 边界；Jest 检查插件配置、幂等性及 AndroidTest 源目录。上述检查不会启动浏览器、模拟器或原生构建，因此不能勾选真实 staging 验证。
 
 新增 Kotlin instrumentation 文件需通过 Node fixture 中的尾随空白检查，并在暂存后执行 `git diff --cached --check`；未跟踪文件不会被普通 `git diff --check` 覆盖。
+
+## 首版 Mac 执行
+
+按[首版授权](mobile-development.md#首版-mac-签名试用包2026-10-23-授权)，相同 fixture 助手在 macOS 使用已安装的 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`，Linux 仍使用原受管 Chromium；不下载浏览器。模拟器使用现有 API36 arm64 AVD 与 macOS Hypervisor.Framework，无需 KVM。所有九项断言、versionCode=1→2 的 `install -r`、凭据保护、owned 数据清理和真实 staging 绑定要求保留。原始 instrumentation 日志是本机测试证据，不能上传伪装成平台 Host evidence。

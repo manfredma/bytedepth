@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
   fixtureContent,
+  fixtureBrowserOptions,
   validateFixtureInput,
   validateOwnedArticle,
   prepareFixtures,
@@ -476,4 +477,16 @@ test("actual user cleanup validates normal owned card ID and submits its existin
   } finally {
     boundary.close();
   }
+});
+
+test("fixture browser uses existing Mac Chrome or managed Linux Chrome and rejects other hosts", () => {
+  assert.deepEqual(fixtureBrowserOptions("darwin"), {
+    headless: true,
+    executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  });
+  assert.deepEqual(fixtureBrowserOptions("linux"), {
+    headless: true,
+    executablePath: "/opt/shared-e2e/chrome-linux64/chrome",
+  });
+  assert.throws(() => fixtureBrowserOptions("win32"), /Unsupported mobile fixture host/);
 });

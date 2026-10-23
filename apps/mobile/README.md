@@ -19,7 +19,7 @@ Keep Gradle wrapper preflight and builds serial: the first wrapper invocation do
 
 `android/` and `ios/` are generated and ignored. Configure native behavior through `app.config.ts`; regenerate after config or native dependency changes. The pinned Android plugin verifies the generated wrapper URL/checksum and disables the template release debug-key signing. The Host builds unsigned release bytes, then signs with the managed preview key after the source build exits. Version code 2 is reserved in source for the first trial; upgrade verification requires a separately defined version-1 fixture with the same application ID/key. This declaration alone does not prove upgrade preservation.
 
-Local developer build output is not a signed distribution or a release-platform receipt. Do not use EAS or upload builds from this workspace.
+Local developer build output is not a release-platform receipt. The owner approved a first-trial exception on 2026-10-23: a persistent Mac test certificate may sign the APK for phone acceptance after all nine real Android staging cases pass. See [the scoped trial rules](../../docs/engineering/mobile-development.md#首版-mac-签名试用包2026-10-23-授权). This does not authorize EAS or production publication.
 
 A development build needs Metro: run `npm start` with the same fixed Node environment. Use the existing JDK 25 environment for Android tooling; a second JDK installation is not required.
 

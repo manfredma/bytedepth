@@ -164,6 +164,15 @@ export async function removeOwnedUser(page, expect, owned) {
   }, id);
   if (!status) throw Error("Owned user cleanup failed");
 }
+export function fixtureBrowserOptions(platform = process.platform) {
+  if (platform !== "darwin" && platform !== "linux") throw Error("Unsupported mobile fixture host");
+  return {
+    headless: true,
+    executablePath: platform === "darwin"
+      ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      : "/opt/shared-e2e/chrome-linux64/chrome",
+  };
+}
 async function realAdapter(baseURL) {
   const { chromium, expect } = await import("@playwright/test");
   const { createArticle, deleteArticle, createAnnotation, ready } = await import(
@@ -171,7 +180,7 @@ async function realAdapter(baseURL) {
   );
   const { authenticationCookies } = await import("../tests/e2e/helpers/admin-auth.js");
   const { submitOwnedForm } = await import("../tests/e2e/helpers/owned-form.js");
-  const browser = await chromium.launch({ headless: true, executablePath: "/opt/shared-e2e/chrome-linux64/chrome" });
+  const browser = await chromium.launch(fixtureBrowserOptions());
   const context = await browser.newContext({ baseURL });
   const page = await context.newPage();
   let secondContext;
