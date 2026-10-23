@@ -50,9 +50,10 @@ it("copies reviewed Kotlin only into androidTest and applies the generated Groov
 });
 
 it("keeps trial release classes available to the separately built instrumentation APK", () => {
-  const result = plugin.instrumentationGradle("android {}");
-  expect(result).toContain("minifyEnabled false");
-  expect(result).toContain("shrinkResources false");
+  const pinned = jest.requireActual("../../plugins/withPinnedAndroidBuild.cjs");
+  const result = pinned.unsignedRelease(plugin.instrumentationGradle("android {}"));
+  expect(result).toContain("android.buildTypes.release.minifyEnabled = false");
+  expect(result).toContain("android.buildTypes.release.shrinkResources = false");
   expect(result).toContain("debuggable = false");
   expect(result).not.toContain("staging-instrumentation.pro");
 });

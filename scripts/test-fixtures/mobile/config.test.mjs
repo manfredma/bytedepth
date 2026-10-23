@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { verifyMobileConfig } from "../../verify-mobile-config.mjs";
 const config = {
   name: "ByteDepth 试用",
+  extra: { releaseChannel: "preview", apiOrigin: "https://staging-bytedepth.bytedepth.cn" },
   version: "0.1.0",
   android: {
     package: "cn.bytedepth.reader.preview",
@@ -77,4 +78,17 @@ test("rejects losing pinned wrapper and managed-only release signing", () => {
       plugins: config.plugins.filter((p) => p !== "./plugins/withPinnedAndroidBuild.cjs"),
     }),
   );
+});
+
+test("accepts the production identity only with the matching trusted origin and channel", () => {
+  const production = {
+    ...config,
+    name: "ByteDepth",
+    android: { ...config.android, package: "cn.bytedepth.reader", versionCode: 1 },
+    extra: { releaseChannel: "production", apiOrigin: "https://bytedepth.cn" },
+  };
+  assert.doesNotThrow(() => verifyMobileConfig(production));
+  assert.throws(() => verifyMobileConfig({ ...production, extra: { ...production.extra, apiOrigin: "https://staging-bytedepth.bytedepth.cn" } }));
+  assert.throws(() => verifyMobileConfig({ ...production, android: config.android }));
+  assert.throws(() => verifyMobileConfig({ ...production, extra: { ...production.extra, releaseChannel: "prod" } }));
 });

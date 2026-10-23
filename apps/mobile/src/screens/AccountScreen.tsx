@@ -1,5 +1,6 @@
 import { MobileRequestError } from "../api/errors";
 import packageInfo from "../../package.json";
+import { MOBILE_RELEASE } from "../config";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArticleRow,
@@ -250,7 +251,9 @@ export function AccountScreen({ navigation }: { navigation: Navigation }) {
       <Group>
         <ReadingSettings />
       </Group>
-      <Label muted>ByteDepth 试用版 {packageInfo.version}</Label>
+      <Label muted>
+        {MOBILE_RELEASE.name} {packageInfo.version}
+      </Label>
     </Page>
   );
 }

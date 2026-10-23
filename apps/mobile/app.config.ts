@@ -1,13 +1,15 @@
 import packageManifest from "./package.json";
 import type { ExpoConfig } from "expo/config";
+import { mobileRelease } from "./src/releaseProfile";
+const release = mobileRelease(process.env.EXPO_PUBLIC_RELEASE_CHANNEL);
 const config: ExpoConfig = {
-  name: "ByteDepth 试用",
+  name: release.name,
   slug: "bytedepth-reader-preview",
   version: packageManifest.version,
   icon: "./assets/icon.png",
   android: {
-    package: "cn.bytedepth.reader.preview",
-    versionCode: 3,
+    package: release.applicationId,
+    versionCode: release.versionCode,
     allowBackup: false,
     blockedPermissions: [
       "android.permission.READ_EXTERNAL_STORAGE",
@@ -16,13 +18,14 @@ const config: ExpoConfig = {
       "android.permission.VIBRATE",
     ],
   },
-  ios: { bundleIdentifier: "cn.bytedepth.reader.preview", supportsTablet: true },
+  ios: { bundleIdentifier: release.applicationId, supportsTablet: true },
+  extra: { releaseChannel: release.channel, apiOrigin: release.origin },
   plugins: [
     "expo-sqlite",
     ["expo-secure-store", { configureAndroidBackup: false }],
     "./plugins/withLocalDataPrivacy.cjs",
     "./plugins/withPinnedAndroidBuild.cjs",
-    "./plugins/withStagingInstrumentation.cjs",
+    ...(release.channel === "preview" ? ["./plugins/withStagingInstrumentation.cjs"] : []),
   ],
 };
 export default config;

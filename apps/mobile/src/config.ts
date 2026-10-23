@@ -1,5 +1,7 @@
+import { mobileRelease } from "./releaseProfile";
 export { API_SCHEMA_VERSION } from "./contracts/mobile";
-export const API_ORIGIN = "https://staging-bytedepth.bytedepth.cn";
+export const MOBILE_RELEASE = mobileRelease(process.env.EXPO_PUBLIC_RELEASE_CHANNEL);
+export const API_ORIGIN = MOBILE_RELEASE.origin;
 export const API_BASE_PATH = "/api/mobile/v1";
 export const CACHE_BUDGET_BYTES = 268_435_456;
 export const ARTICLE_BODY_BUDGET_BYTES = 2_097_152;

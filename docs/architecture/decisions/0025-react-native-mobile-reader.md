@@ -57,6 +57,10 @@ bytedepth 需要独立的读者 App，先以 Android APK 小范围验证，再�
 - 首版 Session 到期后需重新登录；若产品未来要求长期登录，需单独设计可撤销机制。
 - 当前 release-platform 对 APK 签名、制品保存与分发的支持尚未核实，不能把现有 JAR 发布流程视作已支持 App 发布。
 
+## 首个正式包身份补充（2026-10-23，Accepted）
+
+项目所有者确认正式包使用 `cn.bytedepth.reader`，与 `cn.bytedepth.reader.preview` 并存；正式环境只连接生产站点，试用环境只连接 staging。选择独立身份利用系统应用沙箱隔离会话与缓存，避免覆盖试用身份后携带测试数据；代价是首次正式安装不继承试用阅读位置。首次正式 Mac 构建签名的授权范围和固定配置以[移动开发说明](../../engineering/mobile-development.md#首个正式-apk-的固定环境与-mac-签名例外)为准，不扩展为通用绕过平台权限。
+
 ## 假设
 
 | 假设                                            | 可证伪信号（出现时重评）                           |

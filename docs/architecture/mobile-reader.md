@@ -144,9 +144,9 @@ bridge 只接受当前文章与 generation 的固定消息类型：就绪、位�
 
 首版手机验收按项目所有者 2026-10-23 授权，采用[Mac 持久证书签名试用包](../engineering/mobile-development.md#首版-mac-签名试用包2026-10-23-授权)；下述 canonical 正式发布要求保留用于后续正式交付。本次本机包仍须完成同一 staging 上的九项真实 Android 验证，不能声称具有平台正式 evidence。
 
-Android 先交付签名 APK 小范围试用。正式产物必须能够核对源码完整 SHA、客户端版本、包名、签名证书指纹、APK digest、关联服务端 API 版本与验证 evidence。安装升级保留本机数据；降级或不兼容数据库迁移不能默认清空历史。
+Android 先交付签名 APK 小范围试用。首个正式包使用独立身份 `cn.bytedepth.reader` 与固定生产环境，与试用数据隔离，具体取舍见 [ADR-0025](decisions/0025-react-native-mobile-reader.md#首个正式包身份补充2026-10-23accepted)，首个正式 Mac 例外见[移动开发说明](../engineering/mobile-development.md#首个正式-apk-的固定环境与-mac-签名例外)。正式产物必须能够核对源码完整 SHA、客户端版本、包名、签名证书指纹、APK digest、关联服务端 API 版本与验证 evidence。安装升级保留本机数据；降级或不兼容数据库迁移不能默认清空历史。
 
-当前仓库与[发布说明](../../deploy/README.md)只证明 JVM JAR、宿主机 systemd 和网页验证链。release-platform 是否支持 React Native 构建、Android SDK/NDK 版本、APK 签名密钥隔离、不可变制品与下载分发尚未知。相关能力及测试 runner 未被平台正式验证前，不宣称可以交付正式 APK，不借用 JAR 发布链，也不从工作区直接发布。发布仍由 canonical release-platform 与 Host Agent 编排。
+当前仓库与[发布说明](../../deploy/README.md)只证明 JVM JAR、宿主机 systemd 和网页验证链。release-platform 是否支持 React Native 构建、Android SDK/NDK 版本、APK 签名密钥隔离、不可变制品与下载分发尚未知。除项目所有者已明确授权的[首个正式 Mac 例外](../engineering/mobile-development.md#首个正式-apk-的固定环境与-mac-签名例外)外，相关能力及测试 runner 未被平台正式验证前，不宣称可以交付正式 APK，不借用 JAR 发布链，也不从工作区直接发布。发布仍由 canonical release-platform 与 Host Agent 编排。
 
 本机模拟器和临时构建探针仅证明开发工具可用，不能当作 staging 验收或已签名试用包证据。staging 是唯一集成、端到端与验收环境；客户端测试连接 staging API，发布验收绑定同一服务端候选及客户端制品，遵守[项目发布边界](../engineering/release-platform-only.md)。
 
