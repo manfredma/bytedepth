@@ -2,7 +2,7 @@
 
 > 导航：[知识库](../README.md) · [阅读客户端设计](../architecture/mobile-reader.md) · [API 契约](../architecture/mobile-api.md) · [发布边界](release-platform-only.md)。
 
-客户端位于 `apps/mobile/`，独立维护 package、lockfile 和 `node_modules`。Node 版本以该目录的 `.nvmrc` 为准，依赖按 lockfile 安装；Android 使用 JDK 17，服务端仍使用仓库要求的 Java 25。原生 SDK、NDK 与 Gradle 固定输入由 `apps/mobile/android-toolchain.json` 声明，生成工程及 Host preflight 必须核对一致，当前版本见 [App README](../../apps/mobile/README.md)。不修改全局 Java 选择来适配单个工具。
+客户端位于 `apps/mobile/`，独立维护 package、lockfile 和 `node_modules`。Node 版本以该目录的 `.nvmrc` 为准，依赖按 lockfile 安装；Android 与服务端统一使用 Java 25；已在本机用现有 JDK25 完成 release、AndroidTest 与 upgradeFixture 构建，Linux Host 的正式构建仍须独立验证。原生 SDK、NDK 与 Gradle 固定输入由 `apps/mobile/android-toolchain.json` 声明，生成工程及 Host preflight 必须核对一致，当前版本见 [App README](../../apps/mobile/README.md)。不修改全局 Java 选择来适配单个工具。
 
 ## 本地检查与构建
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "nodeVersion": "22.22.1",
-  "javaMajorVersion": 17,
+  "javaMajorVersion": 25,
   "minSdk": 24,
   "compileSdk": 37,
   "targetSdk": 36,

@@ -2,7 +2,7 @@
 
 Independent Expo 58 / React Native package. The API origin in `src/config.ts` is the staging HTTPS origin. This scaffold does not prove staging API integration or device acceptance.
 
-Use Node **22.22.1** (`.nvmrc` and engine-strict), JDK **17** for Android only, and the source-controlled `android-toolchain.json` inputs. SDK 58 currently generates Gradle 9.4.1, AGP 9.2.1, compile SDK 37, target SDK 36, Build Tools 37.0.0 and NDK 27.1.12297006. Keep backend commands on Java 25. Install package dependencies independently:
+Use Node **22.22.1** (`.nvmrc` and engine-strict), JDK **25** for Android and backend, and the source-controlled `android-toolchain.json` inputs. SDK 58 currently generates Gradle 9.4.1, AGP 9.2.1, compile SDK 37, target SDK 36, Build Tools 37.0.0 and NDK 27.1.12297006. The release and instrumentation APKs have been built locally with JDK 25; Linux Host verification remains a separate gate. Install package dependencies independently:
 
 ```sh
 bash ../../scripts/with-mobile-toolchain-lock.sh npm ci --ignore-scripts --no-audit --no-fund
@@ -21,7 +21,7 @@ Keep Gradle wrapper preflight and builds serial: the first wrapper invocation do
 
 Local developer build output is not a signed distribution or a release-platform receipt. Do not use EAS or upload builds from this workspace.
 
-A development build needs Metro: run `npm start` with the same fixed Node environment. Only start Android tooling in its JDK 17 environment; do not change the backend's shell-wide Java selection.
+A development build needs Metro: run `npm start` with the same fixed Node environment. Use the existing JDK 25 environment for Android tooling; a second JDK installation is not required.
 
 The template and SDK-compatible dependencies are locked. React DOM 19.3.0 is an explicit test peer so npm cannot resolve React DOM 19.3.1 against React 19.3.0. RN's test preset and Expo's jsdom environment currently pull deprecated `inflight`, `glob@7`, and `whatwg-encoding`; these warnings are upstream test tooling debt and are reported rather than hidden with forced peer resolution or blanket overrides.
 
