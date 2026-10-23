@@ -190,3 +190,13 @@ it("rejects XML 1.1 instead of serializing its controls into an XML 1.0 image", 
   await expect(download(svg)).rejects.toBeDefined();
   expect(() => rendered(encode(svg))).toThrow();
 });
+it("caches the site's passive SVG favicon without exposing accessibility metadata in the image document", async () => {
+  const source = readFileSync(
+    join(__dirname, "../../../../../bytedepth-start/src/main/resources/static/icons/favicon.svg"),
+    "utf8",
+  );
+  const asset = await download(source);
+  expect(asset.bytes).toEqual(encode(source));
+  expect(rendered(asset.bytes)).toContain("<circle");
+  expect(rendered(asset.bytes)).not.toMatch(/\s(?:role|aria-label)=/);
+});

@@ -701,3 +701,31 @@ test("reader code follows the real light/dark CSS cascade without Prism shadows 
     style.remove();
   }
 });
+test("layout-generated scrolling preserves the saved character until the reader intentionally scrolls", () => {
+  jest.useFakeTimers();
+  jest
+    .spyOn(Range.prototype, "getClientRects")
+    .mockReturnValue([{ top: 200, bottom: 220, left: 22, width: 10 }] as any);
+  const { w, root, messages } = boot(
+    "rich",
+    "",
+    {},
+    {
+      resume: { kind: "exact", target: { segmentId: "s1", codePointOffset: 1, viewportRatio: 0.25 } },
+    },
+  );
+  const node = root.querySelector('[data-annotation-segment="s1"]')!.firstChild!;
+  w.document.caretRangeFromPoint = () => {
+    const range = document.createRange();
+    range.setStart(node, 0);
+    range.collapse(true);
+    return range;
+  };
+  window.dispatchEvent(new Event("resize"));
+  window.dispatchEvent(new Event("scroll"));
+  expect(messages.filter((m) => m.type === "position").at(-1).payload.codePointOffset).toBe(1);
+  window.dispatchEvent(new Event("touchstart"));
+  window.dispatchEvent(new Event("scroll"));
+  jest.advanceTimersByTime(160);
+  expect(messages.filter((m) => m.type === "position").at(-1).payload.codePointOffset).toBe(0);
+});

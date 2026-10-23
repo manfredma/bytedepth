@@ -16,6 +16,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.UiScrollable
@@ -98,11 +99,25 @@ class MobileReaderStagingTest {
     private fun relaunch() { scenario.close(); launch() }
     private fun article(key: String = "primary") = fixture.getJSONObject("articles").getJSONObject(key)
     private fun node(text: String): UiObject2 {
-        return device.wait(Until.findObject(By.desc(text)), 15000)
-            ?: device.wait(Until.findObject(By.text(text)), 15000)
-            ?: error("Required UI control unavailable")
+        var found: UiObject2? = null
+        await("Required UI control unavailable", 15000) {
+            found = device.findObject(By.desc(text)) ?: device.findObject(By.text(text))
+            found != null
+        }
+        return found!!
     }
-    private fun click(text: String) { node(text).click(); device.waitForIdle() }
+    private fun click(text: String) {
+        for (attempt in 1..3) {
+            try {
+                node(text).click()
+                device.waitForIdle()
+                return
+            } catch (error: StaleObjectException) {
+                // Orientation/navigation replaced the node before the touch was issued.
+                if (attempt == 3) throw error
+            }
+        }
+    }
     private fun visible(text: String) = device.hasObject(By.textContains(text)) || device.hasObject(By.descContains(text))
     private fun await(message: String, timeout: Long = 20000, check: () -> Boolean) {
         val until = SystemClock.elapsedRealtime() + timeout
@@ -118,7 +133,10 @@ class MobileReaderStagingTest {
         val search = node("搜索关键词"); search.click(); search.text = article(key).getString("title")
         device.pressBack() // dismiss the IME, retain search route
         click("搜索")
-        node(article(key).getString("title")).click()
+        // The search input contains the same text; wait for the result's button label.
+        val result = device.wait(Until.findObject(By.desc(article(key).getString("title"))), 15000)
+            ?: error("Search result button unavailable")
+        result.click()
         await("actual reader mounted") { runCatching { js("!!window.MobileReader && !!document.querySelector('#post-article .content [data-annotation-segment]')") == true }.getOrDefault(false) }
     }
 
@@ -183,15 +201,15 @@ class MobileReaderStagingTest {
     }
     private fun guestReading() {
         click("我")
-        assertTrue(visible("游客阅读"))
+        node("游客阅读")
         click("发现")
         open()
         assertTrue(js("document.querySelector('.content').textContent.includes(${JSONObject.quote(fixture.getString("exactQuote"))})") == true)
         verifiedCopy()
         assertNotNull(history())
         device.pressBack(); device.pressBack(); click("最近")
-        assertTrue(visible(article().getString("title")))
-        assertTrue(visible("离线可读"))
+        await("recent article is visible") { visible(article().getString("title")) }
+        await("recent copy is offline ready") { visible("离线可读") }
     }
     private fun publicContent() {
         open()
@@ -220,6 +238,7 @@ class MobileReaderStagingTest {
         try {
             online(false)
             relaunch(); click("最近"); click(article().getString("title"))
+            await("offline reader mounted") { runCatching { js("!!window.MobileReader && !!document.querySelector('#post-article .content [data-annotation-segment]')") == true }.getOrDefault(false) }
             await("offline body and images readable") { js("document.querySelectorAll('img[data-resource-key]').length === 2 && Array.from(document.querySelectorAll('img[data-resource-key]')).every(i => i.complete && i.naturalWidth > 0)") == true }
             assertEquals(previous, verifiedCopy().getString("body"))
             await("offline visibility check must remain unconfirmed") { visible("暂未确认更新") }
@@ -234,11 +253,28 @@ class MobileReaderStagingTest {
         } finally { online(true) }
     }
     private fun scrollPosition(): JSONObject {
-        js("(window.scrollTo(0,document.documentElement.scrollHeight*0.55), true)")
-        await("nonzero precise position persisted") { (history()?.optJSONObject("position")?.optDouble("progress") ?: 0.0) > 0.25 }
+        val before = history()?.optJSONObject("position")
+        val fraction = if ((before?.optDouble("progress") ?: 0.0) in 0.5..0.6) 0.7 else 0.55
+        js("(window.dispatchEvent(new Event('touchstart')),window.scrollTo(0,document.documentElement.scrollHeight*$fraction), true)")
+        await("new precise position persisted after scrolling") {
+            val current = history()?.optJSONObject("position")
+            current != null && current.optString("updatedAt") != before?.optString("updatedAt") && current.optDouble("progress") > 0.25
+        }
+        var position = history()!!.getJSONObject("position")
+        var stableSince = SystemClock.elapsedRealtime()
+        await("scroll anchor settled after layout") {
+            val current = history()!!.getJSONObject("position")
+            if (current.getString("segmentId") != position.getString("segmentId") || current.getInt("codePointOffset") != position.getInt("codePointOffset")) {
+                position = current
+                stableSince = SystemClock.elapsedRealtime()
+            }
+            SystemClock.elapsedRealtime() - stableSince >= 600
+        }
         return history()!!.getJSONObject("position")
     }
     private fun assertPosition(expected: JSONObject) {
+        // Durable history exists before the asynchronous native reader mounts.
+        await("resumed reader mounted") { runCatching { js("!!window.MobileReader && !!document.querySelector('#post-article .content [data-annotation-segment]')") == true }.getOrDefault(false) }
         await("canonical segment and offset must survive reflow") {
             val position = history()?.optJSONObject("position")
             position != null && position.getString("segmentId") == expected.getString("segmentId") && kotlin.math.abs(position.getInt("codePointOffset") - expected.getInt("codePointOffset")) <= 2
@@ -269,10 +305,13 @@ class MobileReaderStagingTest {
         await("landscape recreation") { target.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE }
         assertPosition(position)
         scenario.onActivity { it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
+        await("portrait recreation") { target.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT }
         relaunch(); click("最近"); click(article().getString("title")); assertPosition(position)
     }
     private fun login(account: JSONObject) {
         click("我")
+        await("account screen ready") { visible("用户名") || visible("退出登录") }
+        if (visible("退出登录")) click("退出登录")
         val username = node("用户名"); username.click(); username.text = account.getString("username")
         val password = node("密码"); password.click(); password.text = account.getString("password")
         device.pressBack(); click("登录账号")
@@ -312,7 +351,9 @@ class MobileReaderStagingTest {
         assertNoPrivateOnDisk(); logout()
     }
     private fun rating(): JSONObject {
-        val identity = File(target.filesDir, ".installation/marker").readText()
+        val marker = File(target.filesDir, ".installation/marker")
+        await("rating installation identity persisted") { marker.isFile }
+        val identity = marker.readText()
         assertTrue(Regex("app:[a-f0-9-]{36}").matches(identity))
         return JSONObject(get("/api/mobile/v1/posts/${article().getString("id")}/ratings", mapOf("X-App-Visitor" to identity)))
     }
@@ -431,7 +472,11 @@ class MobileReaderStagingTest {
         } finally {
             scenario.close()
             setVersion(1)
-            launch()
+            db().use { database ->
+                database.rawQuery("PRAGMA user_version", null).use { cursor ->
+                    assertTrue(cursor.moveToFirst()); assertEquals(1, cursor.getInt(0))
+                }
+            }
         }
     }
 }

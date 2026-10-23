@@ -76,6 +76,8 @@ export function normalizeSvg(bytes: Uint8Array): Uint8Array {
       if (names.has(local)) throw unsafe();
       names.add(local);
       if (!parent && local === "content") continue; // draw.io editor metadata is never rendered.
+      // Image-context accessibility metadata has no visual effect; discard it.
+      if (["role", "aria-label", "aria-labelledby", "aria-describedby", "aria-hidden"].includes(local)) continue;
       if (!attributes.has(local) && !/^data-[a-z0-9-]+$/.test(local)) throw unsafe();
       if (local === "target") {
         if (tag.local !== "a" || value !== "_blank") throw unsafe();

@@ -310,7 +310,9 @@
         if (interacting) {
           stopCorrection();
           anchor = capture();
-        } else anchor = capture() || anchor;
+        }
+        // Reflow/correction scroll events must not replace the saved character.
+        // Touch, wheel, keyboard and explicit TOC jumps own intentional movement.
         position();
         paint();
       },

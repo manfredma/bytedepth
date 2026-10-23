@@ -48,3 +48,11 @@ it("copies reviewed Kotlin only into androidTest and applies the generated Groov
     "reviewed Kotlin",
   );
 });
+
+it("keeps trial release classes available to the separately built instrumentation APK", () => {
+  const result = plugin.instrumentationGradle("android {}");
+  expect(result).toContain("minifyEnabled false");
+  expect(result).toContain("shrinkResources false");
+  expect(result).toContain("debuggable = false");
+  expect(result).not.toContain("staging-instrumentation.pro");
+});

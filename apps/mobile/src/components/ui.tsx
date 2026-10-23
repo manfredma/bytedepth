@@ -28,14 +28,17 @@ export function Label({
   children,
   muted = false,
   heading = false,
+  numberOfLines,
 }: {
   children: React.ReactNode;
   muted?: boolean;
   heading?: boolean;
+  numberOfLines?: number;
 }) {
   const p = usePalette();
   return (
     <Text
+      numberOfLines={numberOfLines}
       accessibilityRole={heading ? "header" : undefined}
       style={{
         color: muted ? p.muted : p.text,
@@ -173,6 +176,7 @@ export function ArticleRow({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={title}
       accessibilityState={{ disabled }}
       onPress={onPress}
       disabled={disabled}
@@ -184,8 +188,12 @@ export function ArticleRow({
         opacity: disabled ? 0.5 : 1,
       }}
     >
-      <Label>{title}</Label>
-      {detail && <Label muted>{detail}</Label>}
+      <Label numberOfLines={2}>{title}</Label>
+      {detail && (
+        <Label muted numberOfLines={3}>
+          {detail}
+        </Label>
+      )}
     </Pressable>
   );
 }

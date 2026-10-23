@@ -65,8 +65,8 @@
     {
       "name": "reader",
       "path": "apps/mobile/src/reader/web/reader.js",
-      "sha256": "c2018a68a07f1517fadb4874fabcaa084d5b19581aea88ae7e19a8b786301ef9",
-      "bytes": 15611
+      "sha256": "b0dafc38304edec9438dc83e020b4e98c9b09265c3771f24307bb781513326f2",
+      "bytes": 15740
     },
     {
       "name": "codeBlocks",

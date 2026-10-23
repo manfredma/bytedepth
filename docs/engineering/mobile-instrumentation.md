@@ -86,3 +86,10 @@ Node 使用实际 annotation runtime 检查这一映射，同时检查 fixture �
 ## 首版 Mac 执行
 
 按[首版授权](mobile-development.md#首版-mac-签名试用包2026-10-23-授权)，相同 fixture 助手在 macOS 使用已安装的 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`，Linux 仍使用原受管 Chromium；不下载浏览器。模拟器使用现有 API36 arm64 AVD 与 macOS Hypervisor.Framework，无需 KVM。所有九项断言、versionCode=1→2 的 `install -r`、凭据保护、owned 数据清理和真实 staging 绑定要求保留。原始 instrumentation 日志是本机测试证据，不能上传伪装成平台 Host evidence。
+
+## 设备回归注意事项
+
+- 首版 release 与升级夹具关闭 R8 裁剪和资源收缩，仍为非 debug、内置 JS bundle 的 release 包。独立 AndroidTest APK 会调用目标 APK 中的共享运行库；裁剪可能移除仅被测试使用的 API，导致 AndroidJUnitRunner 在断言前因 Trace/LazyKt 缺失崩溃。插件回归约束这一配置；后续启用优化须重新证明两个目标 variant 与完整设备矩阵兼容，不能仅凭编译通过恢复。
+- UI 原生空闲不等于 React 页面、WebView 或异步安装身份已就绪。用例等待实际控件/阅读壳/持久化结果；搜索结果使用文章按钮的无障碍名称，避免误点含相同标题的输入框。旋转后重新查找失效节点，仅对 StaleObjectException 最多三次，不重试业务断言。
+- 滚动准备必须等待本次新位置写入并稳定，不能把旧的非零进度当作本次结果。重启和旋转同时核对持久坐标与实际字符的 viewport fraction。数据库未来版本用例 finally 直接恢复并核验 schema，不通过额外 UI 启动掩盖原始失败。
+- 长时间排查后，独立网站 session 可能失效。设备用例前确认 `/reading-history` 的真实 authenticated 标记，必要时使用同一既有账号重新登录并私密更新 fixture 的 webCookie；不跳过认证断言或用移动 session 代替。凭据文件始终 0600，最终仍清理 owned 文章、账号与设备临时文件。

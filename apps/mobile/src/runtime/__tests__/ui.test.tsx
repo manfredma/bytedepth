@@ -50,3 +50,14 @@ it("supports an Android sheet keyboard layout", async () => {
   expect(close).toHaveBeenCalled();
   jest.restoreAllMocks();
 });
+it("bounds long article previews and gives the reading target a stable accessible name", async () => {
+  const f = await createFixture();
+  const title = "A long technical article";
+  const detail = "Long preview paragraph. ".repeat(300);
+  const open = jest.fn();
+  await render(<ArticleRow title={title} detail={detail} onPress={open} />, { wrapper: f.provider });
+  expect(screen.getByText(title)).toHaveProp("numberOfLines", 2);
+  expect(screen.getByText(detail)).toHaveProp("numberOfLines", 3);
+  await fireEvent.press(screen.getByRole("button", { name: title }));
+  expect(open).toHaveBeenCalledTimes(1);
+});
