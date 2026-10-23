@@ -19,6 +19,7 @@ bash scripts/test-run-mobile-quality.sh
 bash scripts/test-run-local-quality.sh
 bash scripts/test-local-quality-runner-boundary.sh
 bash scripts/test-release-platform-only.sh
+bash scripts/test-hearth-oidc-contract.sh
 bash scripts/test-staging-platform-contract.sh
 bash scripts/test-staging-runtime-preparation.sh
 bash scripts/test-staging-test-config.sh

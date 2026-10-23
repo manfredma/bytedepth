@@ -2,6 +2,14 @@
 
 网页端使用 Spring Security 表单登录 + CSRF + HttpSession，不引入 JWT。认证与 CSRF 配置位于 `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/security/SecurityConfig.java`。
 
+## Hearth OIDC
+
+Hearth OIDC 是可配置的统一认证入口，使用 `BYTEDEPTH_HEARTH_OIDC_ENABLED=true` 开启。Client registration 名称固定为 `hearth`，由 Hearth issuer、client ID、client secret 和标准回调地址组成；生产环境只通过未跟踪的运行时环境注入 secret。
+
+OIDC 成功后 bytedepth 以当前 issuer 的 `iss + sub` 查找 `user_identity`，首次登录创建无本地密码的 `PENDING` 用户，管理员激活后才能使用本地业务权限。用户名、邮箱和 Hearth 的 `role_key` 不作为跨系统身份或 bytedepth 权限来源。
+
+Hearth 只负责认证、应用访问和统一登录生命周期。bytedepth 继续从本地 `user_role`、`role_permission` 和 `permission` 加载角色与权限；本地 Session、CSRF、文章所有权和数据授权不变。登出先清理 bytedepth Session，再使用 Hearth 的 RP-Initiated Logout。
+
 移动接口使用独立安全链与显式 Session 头，边界见 [ADR-0025](../architecture/decisions/0025-react-native-mobile-reader.md) 与 [移动 API 契约](../architecture/mobile-api.md)。网页 Cookie 不认证移动接口，移动头不认证网页；两者均保留 CSRF。
 
 ## 共享 Session

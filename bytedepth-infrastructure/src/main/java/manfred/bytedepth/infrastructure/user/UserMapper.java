@@ -9,6 +9,9 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface UserMapper extends BaseMapper<UserDO> {
 
+    @Select("SELECT * FROM `user` WHERE username = #{username}")
+    UserDO selectByUsername(String username);
+
     @Select("SELECT p.code FROM permission p "
             + "JOIN role_permission rp ON rp.permission_id = p.id "
             + "JOIN user_role ur ON ur.role_id = rp.role_id "

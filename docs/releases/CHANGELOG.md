@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Added
+
+- 接入可选的 Hearth OIDC 统一认证；首次 Hearth 登录创建等待审核的 bytedepth 本地身份映射，业务角色、权限和数据授权仍由 bytedepth 自己维护。
+
 ## [v2.33.0] - 2026-10-23
 
 ### Added

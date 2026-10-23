@@ -423,5 +423,6 @@ V10 引入统一 `user` 表后，`admin_user` 的数据已迁移到 `user`，该
 | V27  | add_reading_history                     | 登录阅读事件与用户-文章长期阅读历史投影                                                              |
 
 | V29 | versioned_annotation_anchors | post_annotation 原始锚点及迁移基线；post_content_revision、annotation_request、annotation_placement |
+| V30 | add_hearth_oidc_identity | user_identity：Hearth issuer + subject 到本地 user 的唯一映射 |
 
 V5、V7、V8、V9、V16、V17 为种子数据迁移（分类、权限），不涉及表结构变更。
