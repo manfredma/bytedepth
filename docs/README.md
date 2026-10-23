@@ -24,6 +24,7 @@
 - 修改阅读批注的定位、正文版本或渲染映射：先读 [批注锚定设计](architecture/annotation-anchoring.md) 与 [ADR-0024](architecture/decisions/0024-versioned-annotation-selectors.md)。
 - 构建、测试、覆盖率：读 [Maven 指南](agent-guides/maven.md)。
 - 收到开发任务、跨会话接手、调整需求范围、准备交付或判断何时停下：读 [人与 Agent 的职责边界](agent-guides/agent-responsibility-boundary.md)。
+- 判断阻塞、选择工具链或配套工作挤占交付主线：读 [主线优先与 backlog](agent-guides/agent-responsibility-boundary.md#主线优先与-backlog)。
 - 创建 worktree、分支、PR 与受控发布：读 [Git 工作流](engineering/git-workflow.md)。
 - 新项目接入与执行共同质量、staging、Tag 和生产流程：读 [统一发布流程](engineering/unified-release-pipeline.md)。
 - 同步 Obsidian 笔记：读 [同步指南](agent-guides/obsidian-sync.md)。

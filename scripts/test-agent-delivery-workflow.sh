@@ -41,6 +41,15 @@ require_text '没有新证据时停止重复执行同一方法' "$SOURCE_ROOT/do
 require_text '#任务追踪与范围变更' "$SOURCE_ROOT/docs/engineering/gotchas.md"
 require_text '#诊断与重试' "$GUIDE"
 
+# Keep the critical-path lesson in the existing task guide, not a second workflow.
+require_text '## 主线优先与 backlog' "$GUIDE"
+require_text '阻止哪一步、实际证据、最小解除动作' "$GUIDE"
+require_text '未知项先安排最小验证，不直接宣称阻塞' "$GUIDE"
+require_text '优先验证现有运行时和工具链' "$GUIDE"
+require_text '主流程跑通后再处理 backlog' "$GUIDE"
+require_text '已投入的时间、已批准的方案或局部测试通过都不能证明剩余工作仍属主线' "$GUIDE"
+require_text '#主线优先与-backlog' "$SOURCE_ROOT/docs/README.md"
+
 for file in \
   "$SOURCE_ROOT/docs/README.md" \
   "$SOURCE_ROOT/docs/engineering/git-workflow.md" \
