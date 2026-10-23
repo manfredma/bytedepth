@@ -5,7 +5,7 @@
 
 `apps/mobile/plugins/withStagingInstrumentation.cjs` 在 Expo 生成工程中配置 AndroidX 标准 `androidx.test.runner.AndroidJUnitRunner`，仅把 `testing/android/MobileReaderStagingTest.kt` 复制到 `app/src/androidTest`，仅使用 `androidTestImplementation` 测试依赖。正式 APK 不包含测试凭据、fixture JSON、测试 HTTP 入口或专用 JS bridge。Android 生成目录仍不入库。
 
-构建输入冻结在客户端源码 SHA：正式 `versionCode=2`；`upgradeFixture` 从 release 初始化，保持相同 applicationId/versionName，唯一版本覆盖为 `versionCode=1`，不签名、不 debuggable。React Native 对该非 debug variant 打包 JS；Host 仍须核对 APK 确实含离线 bundle，不能用 Metro 运行结果替代。
+构建输入冻结在客户端源码 SHA：正式 versionCode 读取 `apps/mobile/app.config.ts`（当前为 3）；`upgradeFixture` 从 release 初始化，保持相同 applicationId/versionName，唯一版本覆盖为 `versionCode=1`，不签名、不 debuggable。React Native 对该非 debug variant 打包 JS；Host 仍须核对 APK 确实含离线 bundle，不能用 Metro 运行结果替代。
 
 | Gradle task                       | unsigned output                                                                 |
 | --------------------------------- | ------------------------------------------------------------------------------- |
@@ -85,7 +85,7 @@ Node 使用实际 annotation runtime 检查这一映射，同时检查 fixture �
 
 ## 首版 Mac 执行
 
-按[首版授权](mobile-development.md#首版-mac-签名试用包2026-10-23-授权)，相同 fixture 助手在 macOS 使用已安装的 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`，Linux 仍使用原受管 Chromium；不下载浏览器。模拟器使用现有 API36 arm64 AVD 与 macOS Hypervisor.Framework，无需 KVM。所有九项断言、versionCode=1→2 的 `install -r`、凭据保护、owned 数据清理和真实 staging 绑定要求保留。原始 instrumentation 日志是本机测试证据，不能上传伪装成平台 Host evidence。
+按[首版授权](mobile-development.md#首版-mac-签名试用包2026-10-23-授权)，相同 fixture 助手在 macOS 使用已安装的 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`，Linux 仍使用原受管 Chromium；不下载浏览器。模拟器使用现有 API36 arm64 AVD 与 macOS Hypervisor.Framework，无需 KVM。所有九项断言、versionCode=1→当前版本 的 `install -r`、凭据保护、owned 数据清理和真实 staging 绑定要求保留。原始 instrumentation 日志是本机测试证据，不能上传伪装成平台 Host evidence。
 
 ## 设备回归注意事项
 

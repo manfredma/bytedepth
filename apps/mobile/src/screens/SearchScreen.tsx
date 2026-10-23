@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArticleRow, Button, Field, Label, Loading, Notice, Page, Row } from "../components/ui";
+import { ArticleRow, Button, Field, Label, Loading, Notice, Page, Row, PageHeading } from "../components/ui";
 import type { MobilePage, PostSummary, SearchResult } from "../contracts/mobile";
 import type { Navigation, RootStackParams } from "../navigation/types";
 import { useQuery } from "../runtime/useQuery";
@@ -25,7 +25,7 @@ export function SearchScreen({
   const online = useOnline();
   return (
     <Page>
-      <Label heading>{browsing ? "文章" : "搜索"}</Label>
+      <PageHeading title={browsing ? "文章" : "搜索"} eyebrow="FIND SOMETHING TO READ" />
       {!browsing && (
         <>
           <Field

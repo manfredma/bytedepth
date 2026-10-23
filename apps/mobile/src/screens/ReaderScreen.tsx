@@ -1,7 +1,8 @@
+import { List, Highlighter, MessageCircle, Star, SlidersHorizontal } from "lucide-react-native";
 import { useIsFocused } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Linking, useColorScheme, useWindowDimensions, View } from "react-native";
-import { ArticleRow, Button, Label, Loading, Notice, Page, Row, Sheet } from "../components/ui";
+import { Linking, useColorScheme, useWindowDimensions, Text, View } from "react-native";
+import { ArticleRow, Button, Label, Loading, Notice, Page, Row, Sheet, Tool, usePalette } from "../components/ui";
 import type {
   ArticleDocument,
   PublicContent,
@@ -158,6 +159,7 @@ function ArticleReader({
   const online = useOnline();
   const user = useUser();
   const prefs = usePreferences();
+  const p = usePalette();
   const dimensions = useWindowDimensions();
   const system = useColorScheme();
   const content = state.snapshot.content!;
@@ -292,8 +294,18 @@ function ArticleReader({
             : "正文可读，正在自动保存";
   return (
     <Page scroll={false}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <Label>{content.title}</Label>
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          backgroundColor: p.surface,
+          borderBottomWidth: 1,
+          borderBottomColor: p.border,
+        }}
+      >
+        <Text style={{ color: p.text, fontSize: 20, lineHeight: 28, fontWeight: "500", marginBottom: 4 }}>
+          {content.title}
+        </Text>
         <Row>
           <Label muted>{status}</Label>
           <Button
@@ -341,12 +353,22 @@ function ArticleReader({
           onMessage={handle}
         />
       </View>
-      <Row style={{ justifyContent: "space-evenly" }}>
-        <Button title="目录" onPress={() => setPanel("toc")} />
-        <Button title="评注" onPress={() => setPanel("annotations")} />
-        <Button title="评论" onPress={() => setPanel("comments")} />
-        <Button title="评分" onPress={() => setPanel("rating")} />
-        <Button title="设置" onPress={() => setPanel("settings")} />
+      <Row
+        style={{
+          justifyContent: "space-evenly",
+          paddingVertical: 8,
+          paddingHorizontal: 4,
+          gap: 2,
+          backgroundColor: p.surface,
+          borderTopWidth: 1,
+          borderTopColor: p.border,
+        }}
+      >
+        <Tool title="目录" icon={List} onPress={() => setPanel("toc")} />
+        <Tool title="评注" icon={Highlighter} onPress={() => setPanel("annotations")} />
+        <Tool title="评论" icon={MessageCircle} onPress={() => setPanel("comments")} />
+        <Tool title="评分" icon={Star} onPress={() => setPanel("rating")} />
+        <Tool title="设置" icon={SlidersHorizontal} onPress={() => setPanel("settings")} />
       </Row>
       {position && <View accessibilityLabel={`阅读进度 ${Math.round(position.progress * 100)}%`} />}
       {panel && (

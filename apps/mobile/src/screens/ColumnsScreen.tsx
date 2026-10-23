@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArticleRow, Button, Label, Loading, Notice, Page, Row } from "../components/ui";
+import { ArticleRow, Button, Label, Loading, Notice, Page, Row, PageHeading, ColumnCard } from "../components/ui";
 import type { MobilePage, ColumnSummary, ColumnDetail } from "../contracts/mobile";
 import type { Navigation } from "../navigation/types";
 import { useQuery } from "../runtime/useQuery";
@@ -10,7 +10,7 @@ export function ColumnsScreen({ navigation }: { navigation: Navigation }) {
   const online = useOnline();
   return (
     <Page>
-      <Label heading>专栏</Label>
+      <PageHeading title="专栏" eyebrow="READ IN SEQUENCE" subtitle="沿着一条线索，把知识连起来。" />
       {!online && <Label muted>专栏目录需要联网，已保存文章可从「最近」打开。</Label>}
       {loading && <Loading />}
       <Notice message={error} />
@@ -19,10 +19,11 @@ export function ColumnsScreen({ navigation }: { navigation: Navigation }) {
         <>
           {data.items.length === 0 && <Label muted>暂时没有专栏</Label>}
           {data.items.map((column) => (
-            <ArticleRow
+            <ColumnCard
               key={column.id}
               title={column.name}
-              detail={`${column.postCount} 篇 · ${column.description ?? ""}`}
+              description={column.description}
+              count={column.postCount}
               onPress={() => navigation.navigate("Column", { columnId: column.id })}
             />
           ))}
@@ -53,13 +54,14 @@ export function ColumnScreen({
       {error && <Button title="重试" onPress={reload} />}
       {data && (
         <>
-          <Label heading>{data.name}</Label>
+          <PageHeading title={data.name} eyebrow="READ IN SEQUENCE" />
           <Label muted>{data.description}</Label>
           {data.posts.items.length === 0 && <Label muted>暂时没有文章</Label>}
-          {data.posts.items.map((post) => (
+          {data.posts.items.map((post, index) => (
             <ArticleRow
               key={post.id}
               title={post.title}
+              ordinal={index + 1}
               detail={post.summary}
               onPress={() => navigation.navigate("Reader", { postId: post.id })}
             />

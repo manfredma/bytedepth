@@ -6,6 +6,7 @@ module.exports = {
   projects: [
     {
       displayName: "native",
+      moduleNameMapper: { "^lucide-react-native$": require.resolve("lucide-react-native") },
       preset: "jest-expo",
       testMatch: ["**/__tests__/**/*.test.[jt]s?(x)"],
       testPathIgnorePatterns: ["/node_modules/", "/web.test.ts$"],

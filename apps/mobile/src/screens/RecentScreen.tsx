@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useIsFocused } from "@react-navigation/native";
-import { ArticleRow, Button, Label, Loading, Notice, Page } from "../components/ui";
+import { ArticleRow, Button, Label, Loading, Notice, Page, PageHeading } from "../components/ui";
 import type { RecentEntry } from "../contracts/mobile";
 import type { Navigation } from "../navigation/types";
 import { useRuntime } from "../runtime/Runtime";
@@ -31,7 +31,7 @@ export function RecentScreen({ navigation }: { navigation: Navigation }) {
   }, [reader, focused, revision]);
   return (
     <Page>
-      <Label heading>最近阅读</Label>
+      <PageHeading title="最近阅读" eyebrow="PICK UP WHERE YOU LEFT OFF" subtitle="回到上次停下的地方。" />
       <Label muted>只保存在这台设备，登录后也不会上传。</Label>
       {!entries && !error && <Loading />}
       <Notice message={error} />
@@ -46,6 +46,7 @@ export function RecentScreen({ navigation }: { navigation: Navigation }) {
               ? "文章已不可访问"
               : `${entry.position ? Math.round(entry.position.progress * 100) : 0}% · ${entry.copyState === "OFFLINE_READY" ? "离线可读" : "需要联网打开"}`
           }
+          progress={entry.position?.progress}
           disabled={entry.copyState === "UNAVAILABLE"}
           onPress={() => navigation.navigate("Reader", { postId: entry.postId })}
         />

@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, act } from "@testing-library/react-native";
+import { render, screen, fireEvent, act, within } from "@testing-library/react-native";
 import { AccountScreen } from "../AccountScreen";
 import { createFixture, navigation } from "./fixtures";
 import { Preferences } from "../../runtime/Preferences";
@@ -8,6 +8,8 @@ it("registers an account application without pretending it is an authenticated a
   const f = await createFixture();
   f.request.mockImplementation(async (path: string) => (path === "/registrations" ? { status: "PENDING" } : undefined));
   await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  if (screen.queryByRole("button", { name: "登录网站账号" }))
+    await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
   await fireEvent.press(screen.getByRole("button", { name: "申请账号" }));
   await fireEvent.changeText(screen.getByLabelText("用户名"), "reader");
   await fireEvent.changeText(screen.getByLabelText("密码"), "abc123456");
@@ -26,6 +28,8 @@ it("logs in, reads own annotation references online, and removes them immediatel
       : base(path),
   );
   await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  if (screen.queryByRole("button", { name: "登录网站账号" }))
+    await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
   await fireEvent.changeText(screen.getByLabelText("用户名"), "reader");
   await fireEvent.changeText(screen.getByLabelText("密码"), "abc123456");
   await fireEvent.press(screen.getByRole("button", { name: "登录账号" }));
@@ -40,6 +44,8 @@ it("changes only the local reading preferences and exposes a logout action", asy
   const f = await createFixture();
   await f.auth.login("reader", "password");
   await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  if (screen.queryByRole("button", { name: "登录网站账号" }))
+    await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
   const count = f.request.mock.calls.length;
   await fireEvent.press(screen.getByRole("button", { name: "深色" }));
   await fireEvent.press(screen.getByRole("button", { name: "放大字号" }));
@@ -58,6 +64,8 @@ it("discards a delayed login error after the app loses connectivity", async () =
       }),
   );
   await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  if (screen.queryByRole("button", { name: "登录网站账号" }))
+    await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
   await fireEvent.changeText(screen.getByLabelText("用户名"), "reader");
   await fireEvent.changeText(screen.getByLabelText("密码"), "abc123456");
   await fireEvent.press(screen.getByRole("button", { name: "登录账号" }));
@@ -70,6 +78,8 @@ it("shows registration uncertainty and login failures without retaining the pass
   const f = await createFixture();
   f.request.mockResolvedValueOnce({ status: "UNKNOWN" });
   await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  if (screen.queryByRole("button", { name: "登录网站账号" }))
+    await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
   await fireEvent.press(screen.getByRole("button", { name: "申请账号" }));
   await fireEvent.changeText(screen.getByLabelText("用户名"), "reader");
   await fireEvent.changeText(screen.getByLabelText("密码"), "abc123456");
@@ -93,6 +103,8 @@ it("retries own annotations, pages their references and opens the source article
       : { items: [{ id: "1", postId: "9", selectedText: "原文依据", annotationText: "我的思考" }], hasNext: true };
   });
   await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  if (screen.queryByRole("button", { name: "登录网站账号" }))
+    await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
   await fireEvent.press(screen.getByRole("button", { name: "本人批注" }));
   await screen.findByText("本人批注暂不可读");
   fail = false;
@@ -110,6 +122,8 @@ it("reports a failed preference write and keeps font controls within the support
   const write = jest.fn().mockRejectedValueOnce(new Error("设置暂不可保存")).mockResolvedValue(undefined);
   f.runtime.preferences = await Preferences.open({ read: async () => null, write });
   await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  if (screen.queryByRole("button", { name: "登录网站账号" }))
+    await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
   await fireEvent.press(screen.getByRole("button", { name: "浅色" }));
   await screen.findByText("设置暂不可保存");
   await fireEvent.press(screen.getByRole("button", { name: "跟随系统" }));
@@ -129,6 +143,8 @@ it("does not display an old registration result after leaving online account sta
       }),
   );
   await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  if (screen.queryByRole("button", { name: "登录网站账号" }))
+    await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
   await fireEvent.press(screen.getByRole("button", { name: "申请账号" }));
   await fireEvent.changeText(screen.getByLabelText("用户名"), "reader");
   await fireEvent.changeText(screen.getByLabelText("密码"), "abc123456");
@@ -158,6 +174,8 @@ it("does not revive cleared own annotations while the same account fresh request
     return base(path, options);
   });
   await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  if (screen.queryByRole("button", { name: "登录网站账号" }))
+    await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
   await fireEvent.press(screen.getByRole("button", { name: "本人批注" }));
   await screen.findByText("必须清除的私有旧文字");
   await act(() => f.setOnline(false));
@@ -180,6 +198,8 @@ it.each(["login", "register"] as const)(
       path === "/registrations" ? Promise.resolve({ status: "PENDING" }) : base(path, options),
     );
     await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+    if (screen.queryByRole("button", { name: "登录网站账号" }))
+      await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
     if (mode === "register") await fireEvent.press(screen.getByRole("button", { name: "申请账号" }));
     await fireEvent.changeText(screen.getByLabelText("用户名"), "reader");
     await fireEvent.changeText(screen.getByLabelText("密码"), "abc123456");
@@ -201,3 +221,45 @@ it.each(["login", "register"] as const)(
     time.mockRestore();
   },
 );
+it("keeps guest preferences available before opening login and clears a dismissed password", async () => {
+  const f = await createFixture();
+  await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  expect(screen.queryByLabelText("密码")).toBeNull();
+  expect(screen.getByRole("button", { name: "深色" })).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
+  await fireEvent.changeText(screen.getByLabelText("密码"), "temporary-password");
+  await fireEvent.press(screen.getByRole("button", { name: "关闭" }));
+  await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
+  expect(screen.getByLabelText("密码").props.value).toBe("");
+});
+
+it("ignores an old registration result after closing and reopening the login panel", async () => {
+  const f = await createFixture();
+  let resolve!: (value: unknown) => void;
+  f.request.mockImplementation(
+    async () =>
+      new Promise((r) => {
+        resolve = r;
+      }),
+  );
+  await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
+  await fireEvent.press(screen.getByRole("button", { name: "申请账号" }));
+  await fireEvent.changeText(screen.getByLabelText("用户名"), "reader");
+  await fireEvent.changeText(screen.getByLabelText("密码"), "first-password");
+  await fireEvent.press(screen.getByRole("button", { name: "提交申请" }));
+  await fireEvent.press(screen.getByRole("button", { name: "关闭" }));
+  await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
+  await fireEvent.press(screen.getByRole("button", { name: "登录" }));
+  await fireEvent.changeText(screen.getByLabelText("密码"), "new-draft");
+  await act(() => resolve({ status: "PENDING" }));
+  expect(screen.getByLabelText("密码").props.value).toBe("new-draft");
+  expect(screen.queryByText("申请已提交，等待管理员审核后才能登录。")).toBeNull();
+});
+it("explains disabled offline submission inside the active login panel", async () => {
+  const f = await createFixture();
+  await render(<AccountScreen navigation={navigation as never} />, { wrapper: f.provider });
+  await fireEvent.press(screen.getByRole("button", { name: "登录网站账号" }));
+  await act(() => f.setOnline(false));
+  expect(within(screen.getByTestId("reader-sheet")).getByText("账号与互动功能需要联网")).toBeOnTheScreen();
+});

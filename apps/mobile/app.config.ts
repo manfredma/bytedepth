@@ -7,7 +7,7 @@ const config: ExpoConfig = {
   icon: "./assets/icon.png",
   android: {
     package: "cn.bytedepth.reader.preview",
-    versionCode: 2,
+    versionCode: 3,
     allowBackup: false,
     blockedPermissions: [
       "android.permission.READ_EXTERNAL_STORAGE",

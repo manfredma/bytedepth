@@ -55,3 +55,9 @@ native-stack 会保留被遮挡页面。一次阅读会话以页面 focus 为边
 这不是 canonical 平台制品，不生成或伪装 Host evidence、平台 manifest 或发布回执；手机验收前仍须核对实际签名、安装、同签名覆盖升级、离线 bundle 和九项断言。服务端发布仍由 release-platform 编排，staging 仍是唯一集成与验收环境。Linux 自动构建、KVM 模拟器及正式平台 APK 分发延后，不是本次手机验收的前置条件；后续正式发布恢复既有平台流程，保持证书身份或明确迁移方案，避免试用数据被无意清除。
 
 首版已知取舍：release 暂不启用 R8 裁剪/资源收缩，以保持独立 AndroidTest 与低版本升级夹具的共享运行库可用；这会增加包体，正式优化兼容性在 APK 主线完成后处理。阅读器布局重排产生的滚动事件不改写精确字符锚点，只有用户移动或目录跳转更新位置；该行为由阅读壳回归和真实横竖屏用例共同保护。文章列表标题最多两行、摘要最多三行，防止长搜索摘要撑满屏幕。SVG 图片丢弃 role/aria 元信息后渲染，缓存仍保留原始摘要绑定字节，危险属性规则不放宽。
+
+## 与手机网站保持一致的视觉
+
+原生导航与公共组件映射网站 `static/css/theme.css` 的 default / midnight 语义变量，配色对应关系由 `runtime/__tests__/ui.test.tsx` 校验；不要沿用 React Navigation 默认蓝色或另设深色主题。页面遵守[前端设计语言](../architecture/frontend-design-language.md)，首页沿用网站编辑式标题，品牌资源复用网站图标。空栏目不展示标题，重复品牌不占正文空间。功能测试通过不代表视觉验收通过；交付前在真实 Android 运行时逐页检查浅色、深色、长文本、键盘与安全区，并保存截图供手机验收对照。
+
+原生图标沿用已确认原型的 Lucide 线性图标，仅增加 `lucide-react-native` 与 Expo 固定矩阵中的 `react-native-svg`，不引入整套 UI 框架。Jest 使用 Lucide 官方 CommonJS 入口（该包的 react-native export 为 `.mjs`），实际 Metro 构建继续使用其原生入口；不得以全量图标 mock 绕过真实组件测试。

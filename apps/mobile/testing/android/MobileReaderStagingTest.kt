@@ -310,8 +310,9 @@ class MobileReaderStagingTest {
     }
     private fun login(account: JSONObject) {
         click("我")
-        await("account screen ready") { visible("用户名") || visible("退出登录") }
+        await("account screen ready") { visible("登录网站账号") || visible("退出登录") }
         if (visible("退出登录")) click("退出登录")
+        click("登录网站账号")
         val username = node("用户名"); username.click(); username.text = account.getString("username")
         val password = node("密码"); password.click(); password.text = account.getString("password")
         device.pressBack(); click("登录账号")
@@ -319,7 +320,7 @@ class MobileReaderStagingTest {
         assertTrue(visible(account.getString("username")))
         click("发现")
     }
-    private fun logout() { relaunch(); click("我"); click("退出登录"); node("登录账号"); click("发现") }
+    private fun logout() { relaunch(); click("我"); click("退出登录"); node("登录网站账号"); click("发现") }
     private fun annotationVisible(own: String, absent: String) {
         open(); click("评注")
         await("own private fixture must be visible") { visible(own) }

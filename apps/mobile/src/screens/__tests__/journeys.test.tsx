@@ -1,4 +1,5 @@
 import React from "react";
+import { Platform } from "react-native";
 import { render, screen, fireEvent, act } from "@testing-library/react-native";
 import { DiscoveryScreen } from "../DiscoveryScreen";
 import { SearchScreen } from "../SearchScreen";
@@ -25,6 +26,7 @@ async function setup(online = true) {
 }
 it("lets a guest open an article using its string ID", async () => {
   const { runtime, navigation } = await setup();
+  jest.replaceProperty(Platform, "OS", "android");
   await render(
     <RuntimeContext.Provider value={runtime}>
       <DiscoveryScreen navigation={navigation as never} />
@@ -34,6 +36,13 @@ it("lets a guest open an article using its string ID", async () => {
   await fireEvent.press(screen.getByText("技术长文"));
   expect(navigation.navigate).toHaveBeenCalledWith("Reader", { postId: "9007199254740993" });
   expect(screen.queryByText("请先登录")).toBeNull();
+  expect(screen.queryByText("精选")).toBeNull();
+  expect(screen.queryByText("分类")).toBeNull();
+  expect(screen.queryByText("标签")).toBeNull();
+  expect(screen.queryByText("ByteDepth")).toBeNull();
+  expect(screen.getByText("记录系统，")).toBeOnTheScreen();
+  expect(screen.getByText("理解复杂。")).toBeOnTheScreen();
+  jest.restoreAllMocks();
 });
 it("explains that full-site search requires a connection and sends no request offline", async () => {
   const { runtime, request, navigation } = await setup(false);
