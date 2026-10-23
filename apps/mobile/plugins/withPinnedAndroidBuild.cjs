@@ -19,7 +19,8 @@ function unsignedRelease(contents) {
   if (contents.includes(unsigned)) return contents;
   // The Expo template signs release with the debug key. Only the trusted Host
   // signer may sign distributed bytes; keep debug builds usable locally.
-  return `${contents.trimEnd()}\n\n// Managed preview signing happens outside the source build.\n${unsigned}\n`;
+  return `${contents.trimEnd()}\n\n// Signing happens outside the source build. Keep the validated runtime
+// identical across preview/production; R8 optimization remains deferred.\n${unsigned}\nandroid.buildTypes.release.minifyEnabled = false\nandroid.buildTypes.release.shrinkResources = false\n`;
 }
 function withPinnedAndroidBuild(config) {
   config = withAppBuildGradle(config, (mod) => {

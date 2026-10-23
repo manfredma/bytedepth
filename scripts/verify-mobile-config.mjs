@@ -1,17 +1,20 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
+import { mobileRelease } from "../apps/mobile/src/releaseProfile.js";
 export function verifyMobileConfig(config) {
+  const release = mobileRelease(config.extra?.releaseChannel);
   const android = config.android;
   if (
-    config.name !== "ByteDepth 试用" ||
+    config.name !== release.name ||
+    config.extra?.apiOrigin !== release.origin ||
     typeof config.version !== "string" ||
     !/^\d+\.\d+\.\d+$/.test(config.version) ||
-    android?.package !== "cn.bytedepth.reader.preview" ||
+    android?.package !== release.applicationId ||
     !Number.isSafeInteger(android.versionCode) ||
     android.versionCode < 1 ||
     android.allowBackup !== false
   )
-    throw new Error("Unexpected mobile preview identity or backup policy.");
+    throw new Error("Unexpected mobile identity or backup policy.");
   for (const permission of ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "SYSTEM_ALERT_WINDOW", "VIBRATE"])
     if (!android.blockedPermissions?.includes(`android.permission.${permission}`))
       throw new Error(`Unexpected Android permission: ${permission}`);
@@ -26,5 +29,5 @@ export function verifyMobileConfig(config) {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   verifyMobileConfig(JSON.parse(fs.readFileSync(process.argv[2], "utf8")));
-  console.log("Mobile preview identity, permissions and backup policy verified.");
+  console.log("Mobile identity, permissions and backup policy verified.");
 }

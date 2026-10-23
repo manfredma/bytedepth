@@ -26,3 +26,7 @@ A development build needs Metro: run `npm start` with the same fixed Node enviro
 The template and SDK-compatible dependencies are locked. React DOM 19.3.0 is an explicit test peer so npm cannot resolve React DOM 19.3.1 against React 19.3.0. RN's test preset and Expo's jsdom environment currently pull deprecated `inflight`, `glob@7`, and `whatwg-encoding`; these warnings are upstream test tooling debt and are reported rather than hidden with forced peer resolution or blanket overrides.
 
 Jest disables Watchman for deterministic one-shot tests. Metro can continue using its own watcher.
+
+## Production APK
+
+The first production APK is ByteDepth (`cn.bytedepth.reader`), version 0.1.0/code1. Set `EXPO_PUBLIC_RELEASE_CHANNEL=production` for both Expo prebuild and Gradle bundling. The default remains preview/staging. The two package identities isolate all local data; no trial history or login state is migrated. Fixed identity/origin pairs live in `src/releaseProfile.js`. See [authorized signing and verification](../../docs/engineering/mobile-development.md#首个正式-apk-的固定环境与-mac-签名例外).

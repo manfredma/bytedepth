@@ -31,6 +31,8 @@ it("overrides the Expo template release debug signing without changing debug bui
     "android { buildTypes { debug { signingConfig signingConfigs.debug } release { signingConfig signingConfigs.debug } } }";
   const result = plugin.unsignedRelease(gradle);
   expect(result).toContain("android.buildTypes.release.signingConfig = null");
+  expect(result).toContain("android.buildTypes.release.minifyEnabled = false");
+  expect(result).toContain("android.buildTypes.release.shrinkResources = false");
   expect(result).toContain("debug { signingConfig signingConfigs.debug }");
   expect(plugin.unsignedRelease(result)).toBe(result);
 });

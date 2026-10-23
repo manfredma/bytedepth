@@ -61,3 +61,13 @@ native-stack 会保留被遮挡页面。一次阅读会话以页面 focus 为边
 原生导航与公共组件映射网站 `static/css/theme.css` 的 default / midnight 语义变量，配色对应关系由 `runtime/__tests__/ui.test.tsx` 校验；不要沿用 React Navigation 默认蓝色或另设深色主题。页面遵守[前端设计语言](../architecture/frontend-design-language.md)，首页沿用网站编辑式标题，品牌资源复用网站图标。空栏目不展示标题，重复品牌不占正文空间。功能测试通过不代表视觉验收通过；交付前在真实 Android 运行时逐页检查浅色、深色、长文本、键盘与安全区，并保存截图供手机验收对照。
 
 原生图标沿用已确认原型的 Lucide 线性图标，仅增加 `lucide-react-native` 与 Expo 固定矩阵中的 `react-native-svg`，不引入整套 UI 框架。Jest 使用 Lucide 官方 CommonJS 入口（该包的 react-native export 为 `.mjs`），实际 Metro 构建继续使用其原生入口；不得以全量图标 mock 绕过真实组件测试。
+
+## 首个正式 APK 的固定环境与 Mac 签名例外
+
+项目所有者于 2026-10-23 明确确认：首个正式版继续使用现有 Mac 与持久证书签名，APK 直接分发；名称 `ByteDepth`，独立包名 `cn.bytedepth.reader`，连接生产站点。此项授权扩展此前只限手机验收的 Mac 例外，仅覆盖首个正式版；后续 canonical Host 构建要求保留。不得把本机包登记为平台构建或编造 mobile evidence。
+
+环境与身份唯一来源是 `apps/mobile/src/releaseProfile.js`。默认 `preview` 使用原试用身份和 staging；显式设置 `EXPO_PUBLIC_RELEASE_CHANNEL=production` 才生成正式身份和生产 API。原生配置与运行时使用同一映射，拒绝未知环境和任意域名；公开配置检查拒绝身份、名称或 API 混用。两种 applicationId 的本机缓存、会话、匿名评分身份及偏好由操作系统隔离，不迁移试用数据；两包可并存。正式包首次 versionCode=1，显示版本沿用 package version。
+
+构建前在固定工具链内设置 `EXPO_PUBLIC_RELEASE_CHANNEL=production`，执行 `expo prebuild --platform android --clean --no-install`，再从 `android/` 运行 `./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a`。首个直装正式包只包含 ARM64，与本轮实际设备/模拟器一致；x86_64 不在本次分发兼容范围，需要时另行构建。切换环境必须重新生成，不能复用旧 namespace；生产构建不挂载 staging instrumentation plugin。共同 pinned plugin 保持未经 R8 裁剪的既有 release 运行库，避免首次正式发布同时引入未经验证的裁剪变更。
+
+集成和端到端继续只在 staging 执行；生产安装验证只做只读启动、发现、搜索和公开文章阅读，不提交评分、评论或登录写操作，不拿生产烟测代替 staging 测试。交付分别记录客户端源 SHA、生产后端 SHA/API 版本、APK/证书摘要及真实测试范围；缺失的 Android 账号回归不能标为通过。

@@ -5,7 +5,7 @@
 
 `apps/mobile/plugins/withStagingInstrumentation.cjs` 在 Expo 生成工程中配置 AndroidX 标准 `androidx.test.runner.AndroidJUnitRunner`，仅把 `testing/android/MobileReaderStagingTest.kt` 复制到 `app/src/androidTest`，仅使用 `androidTestImplementation` 测试依赖。正式 APK 不包含测试凭据、fixture JSON、测试 HTTP 入口或专用 JS bridge。Android 生成目录仍不入库。
 
-构建输入冻结在客户端源码 SHA：正式 versionCode 读取 `apps/mobile/app.config.ts`（当前为 3）；`upgradeFixture` 从 release 初始化，保持相同 applicationId/versionName，唯一版本覆盖为 `versionCode=1`，不签名、不 debuggable。React Native 对该非 debug variant 打包 JS；Host 仍须核对 APK 确实含离线 bundle，不能用 Metro 运行结果替代。
+构建输入冻结在客户端源码 SHA：本页 staging 用 preview versionCode 由 `apps/mobile/src/releaseProfile.js` 定义、经 `app.config.ts` 应用（当前为 3）；独立 production 包首次为 1，不使用本页 staging fixture；`upgradeFixture` 从 release 初始化，保持相同 applicationId/versionName，唯一版本覆盖为 `versionCode=1`，不签名、不 debuggable。React Native 对该非 debug variant 打包 JS；Host 仍须核对 APK 确实含离线 bundle，不能用 Metro 运行结果替代。
 
 | Gradle task                       | unsigned output                                                                 |
 | --------------------------------- | ------------------------------------------------------------------------------- |

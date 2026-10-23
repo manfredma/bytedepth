@@ -13,12 +13,6 @@ android {
     }
     testBuildType = "release"
     buildTypes {
-        release {
-            // Trial instrumentation shares runtime classes with both target variants.
-            // R8 can remove APIs used only by the separately built test APK.
-            minifyEnabled false
-            shrinkResources false
-        }
         upgradeFixture {
             initWith release
             matchingFallbacks = ['release']
