@@ -198,7 +198,10 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   const p = usePalette();
   return (
     <Modal testID="reader-sheet" transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: "#00000055", justifyContent: "flex-end" }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1, backgroundColor: "#00000055", justifyContent: "flex-end" }}
+      >
         <SafeAreaView
           style={{
             maxHeight: "88%",
@@ -220,13 +223,15 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
             <Label heading>{title}</Label>
             <Button title="关闭" onPress={onClose} />
           </Row>
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, paddingBottom: 36 }}>
-              {children}
-            </ScrollView>
-          </KeyboardAvoidingView>
+          <ScrollView
+            style={{ flexShrink: 1 }}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ padding: 20, paddingBottom: 36 }}
+          >
+            {children}
+          </ScrollView>
         </SafeAreaView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
