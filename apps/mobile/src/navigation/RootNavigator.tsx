@@ -3,7 +3,7 @@ import { Compass, Library, History, UserRound } from "lucide-react-native";
 import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { usePalette } from "../components/ui";
@@ -18,16 +18,23 @@ import type { RootStackParams } from "./types";
 const Stack = createNativeStackNavigator<RootStackParams>();
 const Tab = createBottomTabNavigator();
 function Home() {
+  const insets = useSafeAreaInsets();
   const p = usePalette();
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { minHeight: 60, backgroundColor: p.surface, borderTopColor: p.border },
+        tabBarStyle: {
+          height: 68 + insets.bottom,
+          paddingTop: 6,
+          paddingBottom: insets.bottom + 6,
+          backgroundColor: p.surface,
+          borderTopColor: p.border,
+        },
         tabBarActiveTintColor: p.accent,
         tabBarInactiveTintColor: p.muted,
         tabBarActiveBackgroundColor: p.accentSoft,
-        tabBarItemStyle: { marginHorizontal: 4, marginTop: 8, marginBottom: 4, borderRadius: 6 },
+        tabBarItemStyle: { marginHorizontal: 4, borderRadius: 6 },
         tabBarLabelStyle: { fontSize: 13, fontWeight: "600" },
       }}
     >
