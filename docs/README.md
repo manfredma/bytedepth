@@ -28,6 +28,7 @@
 - 收到开发任务、跨会话接手、调整需求范围、准备交付或判断何时停下：读 [人与 Agent 的职责边界](agent-guides/agent-responsibility-boundary.md)。
 - 判断阻塞、选择工具链或配套工作挤占交付主线：读 [主线优先与 backlog](agent-guides/agent-responsibility-boundary.md#主线优先与-backlog)。
 - 创建 worktree、分支、PR 与受控发布：读 [Git 工作流](engineering/git-workflow.md)。
+- 调用 release-platform API、恢复发布、排查 401/403 或判断缺少凭据：先读并执行[发布 Agent 鉴权步骤](engineering/release-platform-only.md#发布-agent-鉴权先读在线手册再验证)，按其中在线手册完成验证。
 - 新项目接入与执行共同质量、staging、Tag 和生产流程：读 [统一发布流程](engineering/unified-release-pipeline.md)。
 - 同步 Obsidian 笔记：读 [同步指南](agent-guides/obsidian-sync.md)。
 - 部署、回滚和生产与 staging 验收：只读 [部署手册](../deploy/README.md)。

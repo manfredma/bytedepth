@@ -22,7 +22,19 @@
 
 ## Agent 交接摘要
 
-Agent 开始发布时只需确认以下信息，然后进入 release-platform Agent 手册：
+### 发布 Agent 鉴权：先读在线手册，再验证
+
+开始或恢复平台 API 操作、当前进程缺少凭据、收到 401/403，或准备报告鉴权阻塞时，必须先完整读取 [canonical Agent 鉴权手册](https://devops.bytedepth.cn/manual/agent/auth)，再按该页当前步骤执行官方鉴权入口和验证。链接是执行前置条件，不能只搜索本仓库或依赖会话记忆。确认已读到鉴权步骤正文；仅取得页面 HTML 壳不算完成读取。手册无法读取时，报告读取失败与尚未验证的状态，不能据此推断凭据不存在。
+
+官方脚本的发现、安装、凭据读取、当前进程验证、后续 API 调用和失效恢复均以在线手册为准。本仓库只维护链接与执行要求，不复制下载命令、脚本内容、Token 导入方式或鉴权请求头，也不维护项目侧鉴权封装；临时目录脚本和其他会话的 wrapper 不能替代官方入口。
+
+完成条件是按手册取得当前调用进程的真实 API 验证结果；只有环境变量检查或脚本文件存在，不算鉴权通过。仅当前 shell 未读取到凭据，或无鉴权请求返回 401，均不足以证明系统缺少凭据。官方验证失败后，按手册排查并遵循[诊断与重试](gotchas.md#诊断与重试)，保留非敏感的失败步骤、HTTP 状态和 request ID；确认需要人工初始化或权限处理后，才按[真实阻塞规则](../agent-guides/agent-responsibility-boundary.md#默认交付终点与授权范围)交接。凭据值不得进入聊天、日志或仓库。
+
+本节处理控制面发布 Agent 身份。站点与移动端用户登录见[会话与认证](../security/authentication.md)；Host Agent 执行身份与 staging 测试账号见下文，两者均不能充作控制面鉴权成功的证据。
+
+自动检查：`bash scripts/test-agent-delivery-workflow.sh` 保留必读链接、验证完成条件和各入口导航，并拒绝项目侧复制鉴权命令。该静态检查不访问平台，不证明实际鉴权成功。
+
+完成鉴权后确认以下项目参数，并继续读取 [Agent 使用手册](https://devops.bytedepth.cn/manual/agent) 中本次操作对应的页面：
 
 ```text
 project=bytedepth
@@ -52,24 +64,7 @@ bash scripts/prepare-release.sh --version v2.27.0  # 初始化或纠正版本
 
 staging 完成 integration/E2E 后，release-platform 会将 candidate 置为 `PENDING_ACCEPTANCE`。这里的“人工验收”是业务授权边界，不要求项目所有者打开页面点击按钮。
 
-AI Agent 按本项目的[交付授权规则](../agent-guides/agent-responsibility-boundary.md#默认交付终点与授权范围)确认人工验收通过或本任务明确免人工验收，核对 staging 门禁与证据后，调用既有 canonical API。此处只描述 CI/CD 接口，不另行定义开发流程的授权或停点：
-
-```http
-POST https://devops.bytedepth.cn/api/v1/candidates/{candidateId}/acceptance
-Authorization: Bearer $RELEASE_PLATFORM_AGENT_TOKEN
-X-Request-Id: <uuid>
-Idempotency-Key: acceptance-<candidateId>-<releaseTag>
-Content-Type: application/json
-
-{"decision":"ACCEPTED","releaseTag":"v1.2.3"}
-```
-
-`releaseTag` 必须是 SemVer。Agent Token 是控制面管理员 API Token，不是 Host Agent Token；网络超时重试时复用相同的 `Idempotency-Key`。成功后的状态链为：
-
-```text
-PENDING_ACCEPTANCE → ACCEPTED → FAST_FORWARD_MERGING → TAGGED
-→ PRODUCTION_DEPLOYING → PRODUCTION_VERIFIED → SUCCEEDED
-```
+AI Agent 按本项目的[交付授权规则](../agent-guides/agent-responsibility-boundary.md#默认交付终点与授权范围)确认人工验收通过或本任务明确免人工验收，核对 staging 门禁与证据后，按 [canonical production 手册](https://devops.bytedepth.cn/manual/agent/production)提交 acceptance 并跟踪晋级。操作前先完成本文件的发布 Agent 鉴权步骤；请求、角色、幂等规则和状态链均读取平台当前手册，不在本仓库维护副本。项目的版本准备与验收授权规则继续由本仓库定义。
 
 acceptance 成功后由平台 Worker 自动执行 fast-forward、annotated tag、production task 和 verification。AI Agent 不打开页面、不 SSH、不执行 bytedepth 部署脚本，也不直接调用 production promotion import 接口；只轮询 canonical `release-view`、`release-tasks` 和 `release-operations` API，并记录 candidateId、commitSha、artifact digest、taskId、requestId、releaseTag 和最终状态。
 

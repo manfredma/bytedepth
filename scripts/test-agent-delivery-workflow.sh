@@ -60,4 +60,36 @@ for file in \
   require_text 'agent-responsibility-boundary.md' "$file"
 done
 
+# Preserve the canonical auth pointer; implementation belongs to the platform.
+readonly RELEASE_GUIDE="$SOURCE_ROOT/docs/engineering/release-platform-only.md"
+readonly AUTH_ANCHOR='#发布-agent-鉴权先读在线手册再验证'
+require_text 'https://devops.bytedepth.cn/manual/agent/auth' "$RELEASE_GUIDE"
+require_text '必须先完整读取' "$RELEASE_GUIDE"
+require_text '完成条件是按手册取得当前调用进程的真实 API 验证结果' "$RELEASE_GUIDE"
+require_text '均不足以证明系统缺少凭据' "$RELEASE_GUIDE"
+require_text '不复制下载命令、脚本内容、Token 导入方式或鉴权请求头' "$RELEASE_GUIDE"
+for file in \
+  "$SOURCE_ROOT/AGENTS.md" \
+  "$SOURCE_ROOT/docs/README.md" \
+  "$GUIDE" \
+  "$SOURCE_ROOT/docs/engineering/gotchas.md" \
+  "$SOURCE_ROOT/docs/releases/README.md" \
+  "$SOURCE_ROOT/deploy/README.md" \
+  "$SOURCE_ROOT/docs/security/authentication.md"; do
+  require_text "$AUTH_ANCHOR" "$file"
+done
+if rg -n 'launchctl (getenv|setenv) RELEASE_PLATFORM_AGENT_TOKEN|export RELEASE_PLATFORM_AGENT_TOKEN|/tmp/bytedepth-platform-request\.py|agent-auth/bootstrap-script' \
+  "$SOURCE_ROOT/AGENTS.md" "$SOURCE_ROOT/docs/README.md" "$SOURCE_ROOT/deploy/README.md" \
+  "$SOURCE_ROOT/docs/engineering" "$SOURCE_ROOT/docs/agent-guides" \
+  "$SOURCE_ROOT/docs/releases/README.md" "$SOURCE_ROOT/docs/security" --glob '*.md'; then
+  printf 'Platform auth commands belong to the canonical Agent auth manual.\n' >&2
+  exit 1
+fi
+# User-facing authentication may document its own headers; only platform guides
+# delegate their Bearer examples to the external manual.
+if rg -n 'Authorization: Bearer' "$RELEASE_GUIDE" "$SOURCE_ROOT/docs/releases/README.md" "$SOURCE_ROOT/deploy/README.md"; then
+  printf 'Platform auth headers belong to the canonical Agent auth manual.\n' >&2
+  exit 1
+fi
+
 printf 'Agent delivery workflow documentation check passed.\n'

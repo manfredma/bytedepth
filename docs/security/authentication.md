@@ -1,5 +1,7 @@
 # 会话与认证
 
+本文描述站点与移动端用户身份。调用 release-platform 发布 API 的 Agent 鉴权，先读并执行[发布 Agent 鉴权步骤](../engineering/release-platform-only.md#发布-agent-鉴权先读在线手册再验证)，按其在线手册完成验证。
+
 网页端使用 Spring Security 表单登录 + CSRF + HttpSession，不引入 JWT。认证与 CSRF 配置位于 `bytedepth-adapter/src/main/java/manfred/bytedepth/adapter/web/security/SecurityConfig.java`。
 
 移动接口使用独立安全链与显式 Session 头，边界见 [ADR-0025](../architecture/decisions/0025-react-native-mobile-reader.md) 与 [移动 API 契约](../architecture/mobile-api.md)。网页 Cookie 不认证移动接口，移动头不认证网页；两者均保留 CSRF。

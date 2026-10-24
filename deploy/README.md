@@ -6,11 +6,9 @@ ByteDepth 的 staging、production 构建、制品生成、环境绑定、发布
 
 ## 发布操作
 
-1. 在 release-platform 的“项目”页面绑定 `manfredma/bytedepth` 和可用代码账户。
-2. 确认 staging 与 production 环境绑定既有主机；不要在 ByteDepth 仓库中修改主机、目录或 systemd 配置。
-3. 在“构建”页面输入完整 commit SHA，查看 QUALITY、BUILD 日志和制品摘要。
-4. 在构建详情页创建 staging 发布，等待部署、验证和页面验收证据完成。
-5. staging 验收通过后，在“发布”页面将同一不可变制品提升到 production。
+Agent 调用平台 API 前，先执行[发布 Agent 鉴权步骤](../docs/engineering/release-platform-only.md#发布-agent-鉴权先读在线手册再验证)，读取并执行其中 canonical 在线手册，取得实际验证结果。构建、staging、验收与 production 操作继续按[平台发布说明](../docs/engineering/release-platform-only.md)进入对应平台手册；人类可在控制面页面查看状态。
+
+项目仓库、完整候选 SHA、版本准备与人工验收授权由 bytedepth 定义；环境绑定、平台鉴权、任务和制品状态由 canonical control plane 定义。确认 staging 与 production 绑定既有主机，不在 ByteDepth 仓库中修改主机、目录或 systemd 配置。
 
 平台使用项目与环境元数据配置模块布局、制品、runner、native 运行时、端口、数据目录和 systemd unit，阶段算法不按项目名称分流。历史发布说明只用于追溯，不得照此执行。
 
