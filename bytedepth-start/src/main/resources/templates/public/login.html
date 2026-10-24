@@ -52,6 +52,15 @@
     <div class="error" th:if="${param.error}">
         用户名或密码错误，或账号待审核 / 已封禁。
     </div>
+    <div class="success" th:if="${param.oidc == 'pending'}">
+        Hearth 身份已验证，但 bytedepth 本地账号仍在等待管理员审核。
+    </div>
+    <div class="error" th:if="${param.oidc == 'blocked'}">
+        该 bytedepth 账号已被封禁，请联系管理员。
+    </div>
+
+    <a th:if="${@environment.getProperty('bytedepth.hearth-oidc.enabled', 'false') == 'true'}"
+       th:href="@{/oauth2/authorization/hearth}" class="btn">使用统一身份登录</a>
 
     <form th:action="@{/login}" method="post">
         <div class="field">

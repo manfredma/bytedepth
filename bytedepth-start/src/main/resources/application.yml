@@ -76,6 +76,11 @@ mybatis-plus:
 
 bytedepth:
   environment: ${BYTEDEPTH_ENVIRONMENT:production}
+  hearth-oidc:
+    enabled: ${BYTEDEPTH_HEARTH_OIDC_ENABLED:false}
+    issuer: ${BYTEDEPTH_HEARTH_OIDC_ISSUER:}
+    client-id: ${BYTEDEPTH_HEARTH_OIDC_CLIENT_ID:}
+    client-secret: ${BYTEDEPTH_HEARTH_OIDC_CLIENT_SECRET:}
   redis:
     key-namespace: ${BYTEDEPTH_REDIS_KEY_NAMESPACE:}
   analytics:

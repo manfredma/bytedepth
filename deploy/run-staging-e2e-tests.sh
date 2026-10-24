@@ -281,6 +281,73 @@ require_deployed_commit() {
   staging_platform_require_candidate "$1"
 }
 
+verify_deployed_hearth_entry() {
+  local response authorization_url
+  # Check the deployed app, outside the isolated local-login test slot. Do not
+  # follow redirects or log state/nonce/session values from the authorization URL.
+  response="$(curl --silent --show-error --connect-timeout 3 --max-time 10 \
+    --resolve "$E2E_LOCAL_RESOLVE" --header 'X-Bytedepth-Traffic: verification' \
+    --output /dev/null --write-out '%{http_code}\n%{redirect_url}' \
+    "$E2E_BASE_URL/oauth2/authorization/hearth")" || return 1
+  authorization_url="$(printf '%s' "$response" | python3 -c '
+import re
+import sys
+from urllib.parse import parse_qs, urlsplit
+
+def valid_redirect(response):
+    status, separator, location = response.partition("\n")
+    if not separator or status != "302":
+        return False
+    url = urlsplit(location)
+    query = parse_qs(url.query)
+    required = {
+        "client_id": ["bytedepth-staging"],
+        "response_type": ["code"],
+        "redirect_uri": ["https://staging-bytedepth.bytedepth.cn/login/oauth2/code/hearth"],
+        "code_challenge_method": ["S256"],
+    }
+    return (
+        url.scheme == "https"
+        and url.netloc == "staging-hearth.bytedepth.cn"
+        and url.path == "/oauth2/authorize"
+        and not url.fragment
+        and all(query.get(key) == value for key, value in required.items())
+        and len(query.get("scope", [])) == 1
+        and "openid" in query["scope"][0].split()
+        and len(query.get("state", [])) == 1
+        and len(query.get("nonce", [])) == 1
+        and len(query.get("code_challenge", [])) == 1
+        and re.fullmatch(r"[A-Za-z0-9_-]{43}", query["code_challenge"][0]) is not None
+    )
+
+try:
+    response = sys.stdin.read()
+    valid = valid_redirect(response)
+except ValueError:
+    valid = False
+if not valid:
+    sys.exit("Refusing: deployed Hearth entry must redirect to the staging client with state, nonce and PKCE S256.")
+print(response.partition("\n")[2])
+')" || return 1
+  response="$(curl --silent --show-error --connect-timeout 3 --max-time 10 \
+    --output /dev/null --write-out '%{http_code}\n%{redirect_url}' "$authorization_url")" || return 1
+  printf '%s' "$response" | python3 -c '
+import sys
+from urllib.parse import urlsplit
+
+status, separator, location = sys.stdin.read().partition("\n")
+try:
+    url = urlsplit(location)
+    valid = (separator and status == "302" and url.scheme == "https"
+             and url.netloc == "staging-hearth.bytedepth.cn" and url.path == "/login")
+except ValueError:
+    valid = False
+if not valid:
+    sys.exit("Refusing: Hearth rejected the staging client or authorization request.")
+print("Deployed Hearth entry and registered client passed (authorization request only; not a completed login).")
+'
+}
+
 invalidate_evidence() {
   rm -f "$EVIDENCE_DIR/staging-e2e"
 }
@@ -331,6 +398,7 @@ fi
 invalidate_evidence
 tested_commit="$STAGING_PLATFORM_COMMIT"
 require_deployed_commit "$tested_commit"
+verify_deployed_hearth_entry
 ensure_staging_runtime "$RUNTIME_MANIFEST" "$SOURCE_ROOT"
 load_resource_credentials
 
@@ -409,5 +477,6 @@ cleanup_slot
   printf 'Refusing: E2E cleanup, staging restoration, or test-slot warning check failed.\n' >&2
   exit 1
 }
+verify_deployed_hearth_entry
 write_evidence "$tested_commit" "$manifest_sha"
 printf 'Staging E2E tests passed.\n'

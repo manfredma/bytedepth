@@ -242,6 +242,10 @@ cat > "$FAKE_BIN/curl" << 'SCRIPT'
 printf '%s\n' "$@" > "$STAGING_E2E_CURL_ARGS"
 if [[ "${*: -1}" == */health ]]; then
     printf 'E2E_SEARCH_DIAGNOSTIC health http=200 seconds=0.01\n'
+elif [[ "${*: -1}" == */oauth2/authorization/hearth ]]; then
+    printf '%s\n%s' "${STAGING_E2E_OIDC_STATUS:-302}" "${STAGING_E2E_OIDC_LOCATION:-https://staging-hearth.bytedepth.cn/oauth2/authorize?response_type=code&client_id=bytedepth-staging&redirect_uri=https%3A%2F%2Fstaging-bytedepth.bytedepth.cn%2Flogin%2Foauth2%2Fcode%2Fhearth&scope=openid%20profile%20email&state=fixture-state&nonce=fixture-nonce&code_challenge_method=S256&code_challenge=abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG}"
+elif [[ "${*: -1}" == https://staging-hearth.bytedepth.cn/oauth2/authorize\?* ]]; then
+    printf '%s\n%s' "${STAGING_E2E_HEARTH_STATUS:-302}" 'https://staging-hearth.bytedepth.cn/login?continue=fixture'
 elif [[ "${*: -1}" == */tasks/7295 ]]; then
     output=''
     authenticated=0
@@ -463,6 +467,39 @@ grep -Fqx 'runtime_mode=host-native' "$EVIDENCE_DIR/staging-e2e"
 grep -Fqx 'cleanup=result=passed' "$EVIDENCE_DIR/staging-e2e"
 grep -Fqx -- '-o' "$INSTALL_ARGS"
 grep -Fqx 'ubuntu' "$INSTALL_ARGS"
+
+# A healthy app with Hearth disabled must not retain PASS from local-login E2E.
+if STAGING_E2E_OIDC_STATUS=404 run_runner; then
+  printf 'Expected missing Hearth authorization entry to block staging acceptance.\n' >&2
+  exit 1
+fi
+[[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
+
+# Local redirects alone do not prove the client is registered with Hearth.
+if STAGING_E2E_HEARTH_STATUS=403 run_runner; then
+  printf 'Expected an unregistered Hearth client to block staging acceptance.\n' >&2
+  exit 1
+fi
+[[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
+
+# Change one boundary at a time so missing state/PKCE cannot hide a wrong client.
+good_redirect='https://staging-hearth.bytedepth.cn/oauth2/authorize?response_type=code&client_id=bytedepth-staging&redirect_uri=https%3A%2F%2Fstaging-bytedepth.bytedepth.cn%2Flogin%2Foauth2%2Fcode%2Fhearth&scope=openid%20profile%20email&state=fixture-state&nonce=fixture-nonce&code_challenge_method=S256&code_challenge=abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG'
+for location in \
+  "${good_redirect/staging-hearth/hearth}" \
+  "${good_redirect/client_id=bytedepth-staging/client_id=release-platform-staging}" \
+  "${good_redirect/staging-bytedepth.bytedepth.cn/bytedepth.cn}" \
+  "${good_redirect/response_type=code/response_type=token}" \
+  "${good_redirect/code_challenge_method=S256/code_challenge_method=plain}" \
+  "${good_redirect/code_challenge=abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG/code_challenge=short}" \
+  "${good_redirect/&state=fixture-state/}" \
+  "${good_redirect/&nonce=fixture-nonce/}" \
+  "${good_redirect/scope=openid%20profile%20email/scope=profile}"; do
+  if STAGING_E2E_OIDC_LOCATION="$location" run_runner; then
+    printf 'Expected invalid Hearth redirect to block staging acceptance.\n' >&2
+    exit 1
+  fi
+  [[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
+done
 
 # An outer verifier already owns the lock: the runner must not acquire it again.
 rm -f "$FLOCK_ARGS"
