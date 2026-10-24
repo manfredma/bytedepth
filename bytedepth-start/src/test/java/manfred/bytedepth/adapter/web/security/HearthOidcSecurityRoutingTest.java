@@ -1,11 +1,15 @@
 package manfred.bytedepth.adapter.web.security;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,7 +44,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
 @WebMvcTest(useDefaultFilters = false, excludeAutoConfiguration = DataSourceAutoConfiguration.class)
-@Import({SecurityConfig.class, HearthOidcSecurityConfiguration.class})
+@Import({
+    SecurityConfig.class,
+    HearthOidcSecurityConfiguration.class,
+    manfred.bytedepth.adapter.web.portal.LoginController.class
+})
 @TestPropertySource(properties = "bytedepth.hearth-oidc.enabled=true")
 class HearthOidcSecurityRoutingTest {
 
@@ -70,6 +78,41 @@ class HearthOidcSecurityRoutingTest {
 
     @MockitoBean
     private BuildProperties buildProperties;
+
+    @Test
+    void normalLoginUsesHearthPageInsteadOfLocalCredentials() throws Exception {
+        mockMvc.perform(get("/login"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/oauth2/authorization/hearth"));
+        mockMvc.perform(get("/admin/users"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/oauth2/authorization/hearth"));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"pending", "blocked"})
+    void localAccountOutcomesDoNotRestartAuthenticationOrShowPasswordForm(String outcome) throws Exception {
+        mockMvc.perform(get("/login").param("oidc", outcome))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/oauth2/authorization/hearth")))
+                .andExpect(content().string(not(containsString("name=\"password\""))))
+                .andExpect(content().string(containsString(outcome.equals("pending") ? "等待审核" : "已被封禁")));
+    }
+
+    @Test
+    void failedAuthenticationShowsResultWithoutRedirectLoop() throws Exception {
+        mockMvc.perform(get("/login").param("error", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("登录未完成")))
+                .andExpect(content().string(not(containsString("name=\"password\""))));
+    }
+
+    @Test
+    void rejectedOAuthCallbackUsesFailureResultPage() throws Exception {
+        mockMvc.perform(get("/login/oauth2/code/hearth").param("error", "access_denied"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/login?error"));
+    }
 
     @Test
     void enabledHearthConfigurationBuildsTheSecurityContext() {

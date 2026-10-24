@@ -283,6 +283,15 @@ require_deployed_commit() {
 
 verify_deployed_hearth_entry() {
   local response authorization_url
+  # The public login entry must start SSO, not render a local password form.
+  response="$(curl --silent --show-error --connect-timeout 3 --max-time 10 \
+    --resolve "$E2E_LOCAL_RESOLVE" --header 'X-Bytedepth-Traffic: verification' \
+    --output /dev/null --write-out '%{http_code}\n%{redirect_url}' \
+    "$E2E_BASE_URL/login")" || return 1
+  if [[ "$response" != $'302\n'"$E2E_BASE_URL/oauth2/authorization/hearth" ]]; then
+    printf 'Refusing: deployed login must start Hearth SSO instead of rendering a local password form.\n' >&2
+    return 1
+  fi
   # Check the deployed app, outside the isolated local-login test slot. Do not
   # follow redirects or log state/nonce/session values from the authorization URL.
   response="$(curl --silent --show-error --connect-timeout 3 --max-time 10 \

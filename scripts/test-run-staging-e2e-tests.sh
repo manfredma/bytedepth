@@ -242,6 +242,8 @@ cat > "$FAKE_BIN/curl" << 'SCRIPT'
 printf '%s\n' "$@" > "$STAGING_E2E_CURL_ARGS"
 if [[ "${*: -1}" == */health ]]; then
     printf 'E2E_SEARCH_DIAGNOSTIC health http=200 seconds=0.01\n'
+elif [[ "${*: -1}" == https://staging-bytedepth.bytedepth.cn/login ]]; then
+    printf '%s\n%s' "${STAGING_E2E_LOGIN_STATUS:-302}" "${STAGING_E2E_LOGIN_LOCATION:-https://staging-bytedepth.bytedepth.cn/oauth2/authorization/hearth}"
 elif [[ "${*: -1}" == */oauth2/authorization/hearth ]]; then
     printf '%s\n%s' "${STAGING_E2E_OIDC_STATUS:-302}" "${STAGING_E2E_OIDC_LOCATION:-https://staging-hearth.bytedepth.cn/oauth2/authorize?response_type=code&client_id=bytedepth-staging&redirect_uri=https%3A%2F%2Fstaging-bytedepth.bytedepth.cn%2Flogin%2Foauth2%2Fcode%2Fhearth&scope=openid%20profile%20email&state=fixture-state&nonce=fixture-nonce&code_challenge_method=S256&code_challenge=abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG}"
 elif [[ "${*: -1}" == https://staging-hearth.bytedepth.cn/oauth2/authorize\?* ]]; then
@@ -467,6 +469,18 @@ grep -Fqx 'runtime_mode=host-native' "$EVIDENCE_DIR/staging-e2e"
 grep -Fqx 'cleanup=result=passed' "$EVIDENCE_DIR/staging-e2e"
 grep -Fqx -- '-o' "$INSTALL_ARGS"
 grep -Fqx 'ubuntu' "$INSTALL_ARGS"
+
+# An authorization button on the old password page is not centralized login.
+if STAGING_E2E_LOGIN_STATUS=200 run_runner; then
+  printf 'Expected local password login page to block Hearth staging acceptance.\n' >&2
+  exit 1
+fi
+[[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
+if STAGING_E2E_LOGIN_LOCATION=https://staging-bytedepth.bytedepth.cn/login run_runner; then
+  printf 'Expected a login redirect loop to block Hearth staging acceptance.\n' >&2
+  exit 1
+fi
+[[ ! -e "$EVIDENCE_DIR/staging-e2e" ]]
 
 # A healthy app with Hearth disabled must not retain PASS from local-login E2E.
 if STAGING_E2E_OIDC_STATUS=404 run_runner; then

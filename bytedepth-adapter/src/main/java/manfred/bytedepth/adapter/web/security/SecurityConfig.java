@@ -64,7 +64,8 @@ public class SecurityConfig {
             PasswordEncoder passwordEncoder,
             RateLimitFilter rateLimitFilter,
             @Value("${BYTEDEPTH_REMEMBER_ME_KEY:bytedepth-local-remember-me-key}") String rememberMeKey,
-            @Value("${BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE:false}") boolean rememberMeCookieSecure)
+            @Value("${BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE:false}") boolean rememberMeCookieSecure,
+            @Value("${bytedepth.hearth-oidc.enabled:false}") boolean hearthEnabled)
             throws Exception {
         AbstractRememberMeServices rememberMeServices =
                 rememberMeServices(rememberMeKey, userDetailsService, rememberMeCookieSecure);
@@ -111,7 +112,8 @@ public class SecurityConfig {
                         .permitAll())
                 .rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices))
                 .logout(logout -> logout.logoutSuccessUrl("/").permitAll())
-                .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendRedirect("/login"))
+                .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) ->
+                                res.sendRedirect(hearthEnabled ? "/oauth2/authorization/hearth" : "/login"))
                         .accessDeniedHandler((req, res, ex) -> res.sendError(HttpServletResponse.SC_FORBIDDEN)));
         return http.build();
     }

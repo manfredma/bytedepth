@@ -40,7 +40,7 @@ class SimplePortalControllerCoverageTest {
     @Test
     void staticAndProjectRoutesReturnExpectedViewsAndModel() {
         assertThat(new AboutController().about()).isEqualTo("public/about");
-        assertThat(new LoginController().login()).isEqualTo("public/login");
+        assertThat(new LoginController(false).login(null, null)).isEqualTo("public/login");
 
         ListProjectsQryExe projects = mock(ListProjectsQryExe.class);
         when(projects.execute()).thenReturn(List.of());

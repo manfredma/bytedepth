@@ -34,7 +34,8 @@ public class HearthOidcSecurityConfiguration {
                 .oauth2Login(oauth -> oauth.loginPage("/oauth2/authorization/hearth")
                         .authorizationEndpoint(endpoint ->
                                 endpoint.authorizationRequestResolver(pkceAuthorizationRequestResolver(registrations)))
-                        .successHandler(successHandler))
+                        .successHandler(successHandler)
+                        .failureUrl("/login?error"))
                 .logout(logoutSpec -> logoutSpec
                         .deleteCookies("bytedepth-remember-me")
                         .logoutSuccessHandler((request, response, authentication) -> {

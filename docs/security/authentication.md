@@ -6,6 +6,8 @@
 
 Hearth OIDC 是可配置的统一认证入口，使用 `BYTEDEPTH_HEARTH_OIDC_ENABLED=true` 开启。Client registration 名称固定为 `hearth`，由 Hearth issuer、client ID、client secret 和标准回调地址组成；生产环境只通过未跟踪的运行时环境注入 secret。
 
+启用 Hearth 后，网页正常登录入口 `/login` 以及匿名访问受保护网页均直接进入 `/oauth2/authorization/hearth`，凭证输入、记住我和认证界面由 Hearth 提供；不得在 bytedepth 继续显示本地登录表单并仅附加统一登录按钮。`/login?oidc=pending`、`/login?oidc=blocked` 和 `/login?error` 仅展示业务认证结果和重新登录入口，不自动重新授权，避免已有 Hearth 会话导致循环。关闭 OIDC 时保留本地登录；移动登录安全链不变。该入口行为由 `HearthOidcSecurityRoutingTest` 验证，部署门禁在隔离测试前及恢复后拒绝 `/login` 返回本地表单或重定向循环。
+
 OIDC 成功后 bytedepth 以当前 issuer 的 `iss + sub` 查找 `user_identity`，首次登录创建无本地密码的 `PENDING` 用户，管理员激活后才能使用本地业务权限。用户名、邮箱和 Hearth 的 `role_key` 不作为跨系统身份或 bytedepth 权限来源。
 
 staging 必须在 Hearth 的真实客户端登记中存在独立的 `bytedepth-staging`，授权回调为 `https://staging-bytedepth.bytedepth.cn/login/oauth2/code/hearth`，退出返回为 `https://staging-bytedepth.bytedepth.cn/login`。运行环境须同时提供启用开关、staging issuer、client ID 和 secret；Hearth 首页的应用卡片不证明 OAuth Client 已登记。secret 只在创建响应中返回一次，必须通过正式基础设施配置流程保存，不能写进仓库、聊天或测试日志。

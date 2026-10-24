@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <th:block th:replace="~{fragments/favicon-head :: favicon}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+    <script th:src="@{/js/theme-switcher.js}"></script>
+    <title>认证结果 - bytedepth</title>
+    <style>
+        .auth-result-page { margin: 0; min-height: 100vh; display: grid; place-items: center;
+            padding: 24px; box-sizing: border-box; background: var(--bd-nav-bg, #1a1a2e);
+            color: var(--bd-text, #1a1a2e); font: 16px/1.6 var(--serif, serif); }
+        .auth-result-card { box-sizing: border-box; width: 100%; max-width: 460px;
+            padding: 32px; border-radius: 12px; background: var(--bd-surface, white); }
+        .auth-result-brand { margin: 0 0 24px; font-size: 18px; font-weight: 700; }
+        .auth-result-title { margin: 0 0 16px; font-size: 24px; }
+        .auth-result-message { margin: 0 0 24px; color: var(--bd-text-muted, #555); }
+        .auth-result-retry { display: flex; align-items: center; justify-content: center;
+            box-sizing: border-box; min-height: 48px; padding: 12px 16px; border-radius: 6px;
+            background: var(--bd-accent, #e94560); color: var(--bd-accent-text, white);
+            text-decoration: none; font-weight: 600; text-align: center; }
+        .auth-result-home { display: block; margin-top: 20px; text-align: center;
+            color: var(--bd-text-muted, #555); text-decoration: none; }
+        .auth-result-retry:focus-visible, .auth-result-home:focus-visible {
+            outline: 3px solid var(--bd-accent, #e94560); outline-offset: 4px; }
+        @media (max-width: 390px) { .auth-result-card { padding: 24px; } }
+    </style>
+</head>
+<body class="auth-result-page">
+<main class="auth-result-card">
+    <p class="auth-result-brand">bytedepth · 认证结果</p>
+    <th:block th:if="${param.oidc != null and param.oidc[0] == 'pending'}">
+        <h1 class="auth-result-title">等待审核</h1>
+        <p class="auth-result-message">Hearth 身份已验证，bytedepth 本地账号仍在等待管理员审核。审核通过后可重新登录。</p>
+    </th:block>
+    <th:block th:if="${param.oidc != null and param.oidc[0] == 'blocked'}">
+        <h1 class="auth-result-title">账号已被封禁</h1>
+        <p class="auth-result-message">Hearth 身份已验证，但该 bytedepth 本地账号已被封禁，请联系业务系统管理员。</p>
+    </th:block>
+    <th:block th:if="${param.oidc == null or (param.oidc[0] != 'pending' and param.oidc[0] != 'blocked')}">
+        <h1 class="auth-result-title">登录未完成</h1>
+        <p class="auth-result-message">系统尚未建立有效会话。请重新登录；如果问题持续，请联系管理员。</p>
+    </th:block>
+    <a class="auth-result-retry" th:href="@{/oauth2/authorization/hearth}">重新前往 Hearth 登录</a>
+    <a class="auth-result-home" th:href="@{/}">返回首页</a>
+</main>
+</body>
+</html>
