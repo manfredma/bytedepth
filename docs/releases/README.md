@@ -32,7 +32,7 @@ bash scripts/prepare-release.sh --version v2.27.0
 
 `buildVersion` 表示真实 Maven 坐标，可以与应用发布版本不同；`commitId` 和 `builtAt` 表示完整源码 SHA 与实际构建时间。版本展示不能替代平台 SHA/digest 校验。历史不可变 JAR 的 `unknown` 不会因平台升级自动改变，必须使用新候选正常构建和发布，不覆盖或重新构建旧 SHA 的制品。
 
-Agent 使用 canonical API 编排构建、发布、重试和验证，并核对平台的候选、制品、日志与任务记录；人类可在 release-platform 页面查看。鉴权与 API 的唯一操作来源为 [Agent 使用手册](https://devops.bytedepth.cn/manual/agent)。
+Agent 使用 canonical API 编排构建、发布、重试和验证，并核对平台的候选、制品、日志与任务记录；人类可在 release-platform 页面查看。调用前先执行[发布 Agent 鉴权步骤](../engineering/release-platform-only.md#发布-agent-鉴权先读在线手册再验证)，读取其在线手册并完成验证；后续 API 操作读取 [Agent 使用手册](https://devops.bytedepth.cn/manual/agent) 的对应页面。
 
 仓库内的 Agent 准备 PR、完整 commit SHA 和触发参数后，按手册调用平台 API 并持续跟踪；不能执行主机部署命令，也不能把本地脚本输出当成平台触发回执。
 

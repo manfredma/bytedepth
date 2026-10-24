@@ -46,7 +46,7 @@ Spring Boot 多模块博客（DDD 分层）与 Obsidian 笔记同步项目。项
 - **Maven、Java 25、测试和覆盖率**：[`docs/agent-guides/maven.md`](docs/agent-guides/maven.md)、[`docs/agent-guides/code-quality.md`](docs/agent-guides/code-quality.md)
 - **代码格式化与 IntelliJ 对齐**：[`docs/engineering/code-formatting.md`](docs/engineering/code-formatting.md)
 - **PR、分支、worktree 和合并**：[`docs/engineering/git-workflow.md`](docs/engineering/git-workflow.md)
-- **release-platform API、验收、production 和故障处理**：[`docs/engineering/release-platform-only.md`](docs/engineering/release-platform-only.md)
+- **release-platform API、鉴权、401/403、验收、production 和故障处理**：先读并执行[`平台发布说明的 Agent 鉴权步骤`](docs/engineering/release-platform-only.md#发布-agent-鉴权先读在线手册再验证)，其中在线手册是必读执行入口。
 - **运行时、主机、共享基础设施和 staging 辅助约定**：[`deploy/README.md`](deploy/README.md)、[`docs/engineering/gotchas.md`](docs/engineering/gotchas.md)
 - **版本、变更记录、发布和回滚**：[`docs/releases/README.md`](docs/releases/README.md)
 - **前端公共组件和资源归属**：[`docs/agent-guides/frontend-components.md`](docs/agent-guides/frontend-components.md)
