@@ -55,8 +55,10 @@ public final class HearthOidcAuthenticationSuccessHandler implements Authenticat
             return;
         }
         SiteUserDetails principal = toPrincipal(local);
-        Authentication localAuthentication =
-                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        var localAuthentication = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        // Keep the verified protocol identity only for RP-Initiated Logout.
+        // Business authorization continues to use the local principal/authorities.
+        localAuthentication.setDetails(token);
         SecurityContextHolder.getContext().setAuthentication(localAuthentication);
         securityContextRepository.saveContext(SecurityContextHolder.getContext(), request, response);
         redirect.onAuthenticationSuccess(request, response, localAuthentication);

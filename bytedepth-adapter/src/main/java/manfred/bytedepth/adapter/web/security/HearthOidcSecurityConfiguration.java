@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
@@ -34,7 +35,18 @@ public class HearthOidcSecurityConfiguration {
                         .authorizationEndpoint(endpoint ->
                                 endpoint.authorizationRequestResolver(pkceAuthorizationRequestResolver(registrations)))
                         .successHandler(successHandler))
-                .logout(logoutSpec -> logoutSpec.logoutSuccessHandler(logout).permitAll());
+                .logout(logoutSpec -> logoutSpec
+                        .deleteCookies("bytedepth-remember-me")
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            // The application uses SiteUserDetails after login. Recover only
+                            // the verified OIDC identity needed by the protocol logout handler.
+                            var protocolAuthentication = authentication != null
+                                            && authentication.getDetails() instanceof OAuth2AuthenticationToken oidc
+                                    ? oidc
+                                    : authentication;
+                            logout.onLogoutSuccess(request, response, protocolAuthentication);
+                        })
+                        .permitAll());
         return http.build();
     }
 

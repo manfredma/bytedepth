@@ -8,7 +8,13 @@ Hearth OIDC 是可配置的统一认证入口，使用 `BYTEDEPTH_HEARTH_OIDC_EN
 
 OIDC 成功后 bytedepth 以当前 issuer 的 `iss + sub` 查找 `user_identity`，首次登录创建无本地密码的 `PENDING` 用户，管理员激活后才能使用本地业务权限。用户名、邮箱和 Hearth 的 `role_key` 不作为跨系统身份或 bytedepth 权限来源。
 
+staging 必须在 Hearth 的真实客户端登记中存在独立的 `bytedepth-staging`，授权回调为 `https://staging-bytedepth.bytedepth.cn/login/oauth2/code/hearth`，退出返回为 `https://staging-bytedepth.bytedepth.cn/login`。运行环境须同时提供启用开关、staging issuer、client ID 和 secret；Hearth 首页的应用卡片不证明 OAuth Client 已登记。secret 只在创建响应中返回一次，必须通过正式基础设施配置流程保存，不能写进仓库、聊天或测试日志。
+
+`deploy/run-staging-e2e-tests.sh` 在测试槽启动前及恢复真实应用后检查授权跳转，并向 Hearth 验证该匿名授权请求可进入登录页；404、错误环境/客户端/回调、缺少 PKCE 或 Hearth 拒绝未登记客户端均阻断 PASS。该检查只证明授权请求被接受，不能校验 client secret 或完成登录；验收仍需真实 Hearth 登录、授权回调、本地 PENDING/封禁处理、权限边界和退出链路的证据。隔离槽中的本地表单登录及通用 integration/E2E PASS 不能替代这些证据。离线回归入口为 `bash scripts/test-run-staging-e2e-tests.sh`。
+
 Hearth 只负责认证、应用访问和统一登录生命周期。bytedepth 继续从本地 `user_role`、`role_permission` 和 `permission` 加载角色与权限；本地 Session、CSRF、文章所有权和数据授权不变。登出先清理 bytedepth Session，再使用 Hearth 的 RP-Initiated Logout。
+
+转换为本地 `SiteUserDetails` 后，原始且已验证的 OIDC Authentication 只作为本地 Authentication 的服务端 details 保留，用于退出时提供 registration 与 ID token，不参与本地权限计算。退出安全链同时删除本地记住我 Cookie；本地登录及匿名退出不发起 OIDC 退出。`HearthOidcSecurityRoutingTest` 通过实际安全链验证转换后退出、Session 失效及 Cookie 清理。
 
 移动接口使用独立安全链与显式 Session 头，边界见 [ADR-0025](../architecture/decisions/0025-react-native-mobile-reader.md) 与 [移动 API 契约](../architecture/mobile-api.md)。网页 Cookie 不认证移动接口，移动头不认证网页；两者均保留 CSRF。
 
