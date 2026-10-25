@@ -1,19 +1,124 @@
 #!/usr/bin/env python3
-"""Kill known annotation safety regressions using the formal unit suites."""
-import argparse
+"""Validate actual unit executions and coverage, bound to one fresh quality run."""
 from dataclasses import dataclass
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+from pathlib import Path
+import time
+import uuid
 import xml.etree.ElementTree as ET
 
-ROOT = Path(__file__).resolve().parent.parent
+from . import ROOT
+from .process import ToolError, atomic_write, digest, warning_lines
+
+MODULES = ('annotation.js', 'annotation-document.js', 'annotation-display.js',
+           'annotation-render-lifecycle.js', 'post-mermaid.js', 'sw.js')
+CASE_IDS = {f'U{i:02}' for i in range(1, 47)}
 JS = 'bytedepth-start/src/main/resources/static/js/'
 APP = 'bytedepth-app/src/main/java/manfred/bytedepth/app/annotation/'
 TEST_JS = 'bytedepth-start/src/test/js/'
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def load(path):
+    return json.loads(path.read_text())
+
+
+def report_paths(args):
+    xmls = sorted(args.surefire_root.glob('*/target/surefire-reports/TEST-*.xml'))
+    require(xmls, 'No Surefire reports executed')
+    return [args.vitest.resolve(), args.coverage.resolve(), *(p.resolve() for p in xmls)]
+
+
+def verify_fresh(paths, context):
+    require(context.get('runId') and isinstance(context.get('startedAtNs'), int), 'Invalid run context')
+    for path in paths:
+        require(path.stat().st_mtime_ns >= context['startedAtNs'], f'Stale report: {path}')
+
+
+def verify(args):
+    context = load(args.run_context)
+    paths = report_paths(args)
+    verify_fresh(paths, context)
+    expected_seal = {'runId': context['runId'], 'reports': {str(p): digest(p) for p in paths}}
+    if not args.record_seal:
+        seal = load(args.seal)
+        require(seal.get('runId') == context['runId'], 'Report runId mismatch')
+        require(seal.get('reports') == expected_seal['reports'], 'Report seal changed or incomplete')
+
+    manifest = load(args.cases)
+    require(manifest.get('schemaVersion') == 1 and set(manifest.get('cases', {})) == CASE_IDS,
+            'Expected exactly U01-U46 (including U15) in unit manifest')
+    vitest = load(args.vitest)
+    require(vitest.get('success') is True and vitest.get('numTotalTests', 0) > 0, 'Vitest failed or zero tests')
+    require(vitest.get('startTime', 0) * 1_000_000 >= context['startedAtNs'] - 1_000_000,
+            'Stale Vitest startTime')
+    require(all(vitest.get(k, 0) == 0 for k in ['numFailedTests', 'numPendingTests', 'numTodoTests']),
+            'Vitest has failures, skip or todo')
+    executed = set()
+    total = 0
+    for suite in vitest['testResults']:
+        for case in suite['assertionResults']:
+            require(case['status'] == 'passed', f'Vitest case did not pass: {case["fullName"]}')
+            executed.add(('vitest', Path(suite['name']).as_posix(), case['fullName']))
+            total += 1
+    require(total == vitest['numTotalTests'] == vitest['numPassedTests'], 'Vitest execution count mismatch')
+    java_total = 0
+    for path in paths[2:]:
+        suite = ET.parse(path).getroot()
+        cases = list(suite.iter('testcase'))
+        require(int(suite.get('tests', -1)) == len(cases), f'Surefire execution count mismatch: {path}')
+        require(all(int(suite.get(k, 0)) == 0 for k in ['failures', 'errors', 'skipped']),
+                f'Surefire failures or skip: {path}')
+        for case in cases:
+            require(not any(case.find(k) is not None for k in ['failure', 'error', 'skipped']),
+                    f'Surefire case did not pass: {case.get("name")}')
+            executed.add(('surefire', case.attrib['classname'], case.attrib['name']))
+            java_total += 1
+    require(java_total > 0, 'Zero Java unit tests')
+    for case_id, references in manifest['cases'].items():
+        require(isinstance(references, list) and references, f'{case_id}: no tests mapped')
+        for ref in references:
+            runner, suite, name = ref['runner'], ref['suite'], ref['name']
+            require(runner in ('vitest', 'surefire'), f'{case_id}: unknown runner')
+            found = any(r == runner and n == name and (s == suite if runner == 'surefire'
+                        else s.endswith('/'+suite)) for r, s, n in executed)
+            require(found, f'{case_id}: case not executed and passed: {suite} :: {name}')
+
+    coverage = load(args.coverage)
+    for module in MODULES:
+        suffix = '/bytedepth-start/src/main/resources/static/'+('' if module == 'sw.js' else 'js/')+module
+        matches = [value for path, value in coverage.items() if path.replace('\\', '/').endswith(suffix)]
+        require(len(matches) == 1, f'Missing or duplicate product coverage: {module}')
+        record = matches[0]
+        for counts, mapping in [('s', 'statementMap'), ('b', 'branchMap'), ('f', 'fnMap')]:
+            require(record.get(counts) and set(record[counts]) == set(record.get(mapping, {})),
+                    f'Empty or inconsistent {counts} coverage: {module}')
+            values = record[counts].values()
+            if counts == 'b':
+                require(all(isinstance(value, list) and value for value in values), f'Empty branch: {module}')
+                values = [n for value in record[counts].values() for n in value]
+            require(all(isinstance(n, (int, float)) and n > 0 for n in values),
+                    f'Uncovered {counts}: {module}')
+    if args.record_seal:
+        require(expected_seal['reports'] == {str(p): digest(p) for p in paths}, 'Reports changed during verification')
+        atomic_write(args.seal, json.dumps(expected_seal, indent=2) + '\n')
+    print(f'Annotation unit evidence PASS: U01-U46, {total} JS / {java_total} Java cases, '
+          f'{len(MODULES)} product modules fully covered, runId={context["runId"]}')
+
+
+
+def begin(path):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write(path, json.dumps({'runId': str(uuid.uuid4()), 'startedAtNs': time.time_ns()}) + '\n')
 
 
 @dataclass(frozen=True)
@@ -121,18 +226,18 @@ def self_test():
     print('Mutation checker self-test PASS (missing site, survivor and syntax/runtime errors rejected)', flush=True)
 
 
-def run():
+def mutations(root=ROOT):
     self_test()
-    java_home = subprocess.check_output(['bash', '-c',
-        'source "$1/scripts/lib/java-25.sh"; resolve_java_25', '--', str(ROOT)], text=True).strip()
-    env = dict(os.environ, JAVA_HOME=java_home)
+    from .quality import java_home
+    resolved_java = java_home()
+    env = dict(os.environ, JAVA_HOME=resolved_java)
     with tempfile.TemporaryDirectory(prefix='bytedepth-annotation-mutations-') as temp:
         sandbox = Path(temp)/'repo'
         # Copy only reviewed source inputs, never ignored credentials or runtime artifacts.
         names = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
-                                        cwd=ROOT).decode().split('\0')
+                                        cwd=root).decode().split('\0')
         for name in set(names) - {''}:
-            source = ROOT/name
+            source = root/name
             if source.is_file():
                 destination = sandbox/name
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -140,7 +245,7 @@ def run():
         def execute(command, log):
             with log.open('w') as output:
                 result = subprocess.run(command, cwd=sandbox, env=env, stdout=output, stderr=subprocess.STDOUT)
-            if 'WARNING' in log.read_text():
+            if warning_lines(log.read_text()):
                 raise RuntimeError(f'Warning during mutation verification: {log.read_text()[-4000:]}')
             return result.returncode
         log = Path(temp)/'install.log'
@@ -171,12 +276,3 @@ def run():
             print(f'KILLED {mutation.name}: baseline PASS -> assertion FAIL -> restored PASS', flush=True)
     print(f'Annotation mutations PASS: {len(MUTATIONS)}/{len(MUTATIONS)} killed by formal unit assertions', flush=True)
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--self-test', action='store_true')
-    args = parser.parse_args()
-    if args.self_test:
-        self_test()
-    else:
-        run()

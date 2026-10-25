@@ -33,4 +33,4 @@ release-platform API 是标准控制面接口：候选使用 `POST /api/v1/proje
 
 - 项目知识库中的 Git 工作流、职责边界和发布说明均描述同一顺序。
 - release-platform 页面/API 回执包含候选 SHA、flow 状态、artifact、staging evidence 和合并后的 `main` SHA 校验结果。
-- `scripts/check-staging-checklist.sh` 和本地质量门禁在触发平台流程前通过；本地结果不替代 staging evidence。
+- `python3 -m tools.bytedepth test` 和本地质量门禁在触发平台流程前通过；本地结果不替代 staging evidence。

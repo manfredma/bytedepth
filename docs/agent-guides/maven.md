@@ -2,7 +2,7 @@
 
 系统默认 Java 8，所有 `mvn` 命令必须加 `JAVA_HOME` 前缀。
 仓库的 `.mvn/jvm.config` 固定 Java 25 的兼容参数；不得改为依赖调用者手工设置
-`MAVEN_OPTS`，运行 `bash scripts/test-maven-runtime.sh` 会验证该自动化约束。
+`MAVEN_OPTS`，运行 `python3 -m tools.bytedepth test` 会验证该自动化约束。
 
 ## 告警零容忍
 
@@ -23,10 +23,10 @@ JAVA_HOME=$(/usr/libexec/java_home -v 25) ./mvnw test -Dsort.skip=true
 所有生产 Java 类必须达到行、分支、方法 100% 覆盖率。脚本会先执行完整测试、合并跨模块执行数据，再逐模块执行全量校验：
 
 ```bash
-bash scripts/verify-changed-coverage.sh
+python3 -m tools.bytedepth coverage
 ```
 
-必须在每次生产 Java 改动完成后、更新发布记录和运行 Release Plugin 前独立执行该脚本；不得把首次执行留到发布流程。脚本默认依据最近正式 Tag 自动识别变更类，并将工作区中尚未提交的生产 Java 改动一并纳入校验。需要清理历史覆盖债务时可显式执行 `COVERAGE_INCLUDES='**' bash scripts/verify-changed-coverage.sh`。
+必须在每次生产 Java 改动完成后、更新发布记录和运行 Release Plugin 前独立执行该脚本；不得把首次执行留到发布流程。脚本默认依据最近正式 Tag 自动识别变更类，并将工作区中尚未提交的生产 Java 改动一并纳入校验。需要清理历史覆盖债务时可显式执行 `COVERAGE_INCLUDES='**' python3 -m tools.bytedepth coverage`。
 
 聚合 XML 和 HTML 报告位于 `bytedepth-start/target/site/jacoco-aggregate/`；门禁要求每个生产类的行、分支、方法均为零遗漏。
 

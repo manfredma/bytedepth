@@ -30,6 +30,6 @@ bytedepth 曾通过 `.github/workflows/quality.yml` 在 PR 上重复执行本地
 ## 验证
 
 - 不存在 `.github/workflows/quality.yml` 和 `scripts/test-github-quality-workflow.sh`。
-- `scripts/check-staging-checklist.sh` 不再调用 GitHub Actions workflow 契约。
+- `python3 -m tools.bytedepth test` 不再调用 GitHub Actions workflow 契约。
 - `bash scripts/run-local-quality.sh` 与 `bash scripts/format-check.sh --all` 在本地通过。
 - release-platform 侧以 flow/stage/artifact/evidence API 和页面记录验证合并 SHA 的执行状态。

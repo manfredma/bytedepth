@@ -61,6 +61,9 @@ def main(argv=None):
             if bool(args.paths) == bool(args.scope):
                 raise ToolError("Choose explicit paths, --all or --changed", 2)
             format_files(ROOT, args.scope or "paths", args.paths, args.check)
+        elif args.command in ("quality", "coverage"):
+            from . import quality
+            {"quality": quality.quality, "coverage": quality.coverage}[args.command](ROOT)
         elif args.command == "release":
             from . import release
             if args.action == "check":

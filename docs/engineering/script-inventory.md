@@ -1,77 +1,37 @@
-# 脚本与配置资产清单
+# 工程工具与配置资产
 
-本文是 bytedepth 仓库脚本、运行时辅助文件和契约检查的维护入口。发布执行由 release-platform 页面和 Host Agent 负责；本仓库的脚本只能属于本地质量门禁、平台边界检查或 Host Agent 需要的 staging 测试辅助路径。
+工程命令使用 `python3 -m tools.bytedepth`，由 [ADR-0026](../architecture/decisions/0026-standard-library-project-tools.md) 定义实现边界。维护目标是减少重复规则和调用关系；测试文件、框架插件和上游 Wrapper 不通过改名或搬目录计作复杂度降低。
+
+## 本地入口与职责
+
+| 入口                                                                       | 实现与边界                                                                         |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `bash scripts/run-local-quality.sh` / `python3 -m tools.bytedepth quality` | `tools/bytedepth/quality.py` 编排本地检查，不运行部署、Host runner 或跨进程 IT/E2E |
+| `bash scripts/format-code.sh`、`bash scripts/format-check.sh`              | 固定兼容入口；`formatting.py` 共用范围、忽略规则与固定 formatter                   |
+| `python3 -m tools.bytedepth coverage`                                      | 使用既有 Java 25、仓库 Maven Wrapper 与 changed-coverage 门禁                      |
+| `python3 -m tools.bytedepth release check/prepare/order/change/source`     | `release.py` 统一 Changelog 模型、版本准备和候选绑定，不发布或创建 Tag             |
+| `python3 -m tools.bytedepth test`                                          | 自动发现 `tests/engineering/test_*.py`；未发现用例或任何失败均返回非零             |
+
+`process.py` 维护子进程、输出脱敏、告警规则、原子写入和互斥锁；`evidence.py` 维护批注实际执行/覆盖率报告、runId、seal 与 mutation 检查。Java 25 解析由 `quality.java_home` 提供，不再单独维护 Shell 版本。
+
+## 测试与约束
+
+测试按职责归入 process、release、formatting、evidence、quality 和 repository 套件，直接测试参数、执行顺序、失败路径和隔离夹具。文档检查保护完整 SHA、职责与有效入口，不绑定主机 IP；真实业务行为仍由 Java/JS 测试和 staging 验证。
+
+本地质量入口也执行保留在 `scripts/test-*.sh` 中的 Host 与移动工具离线回归；这些回归通过假进程和临时文件验证 Host 行为，不对本机执行真实部署。
+
+## Host 与框架资产
+
+`deploy/run-staging-integration-tests.sh` 和 `deploy/run-staging-e2e-tests.sh` 是 release-platform 以完整候选 SHA 调用的固定入口。运行时准备、隔离资源和相关库只供 Host Agent 编排，详见 [部署手册](../../deploy/README.md)。项目工作区不得运行这些命令替代平台验证。
+
+Maven Wrapper、Expo plugins、systemd/Nginx 模板与 `config/git-hooks/pre-commit` 按其框架职责维护，不额外包一层项目执行框架。Git hook 安装使用 [Git 工作流](git-workflow.md) 中的直接配置命令。
 
 ## 维护规则
 
-- 新脚本必须在文件头说明：用途、调用者、是否允许本机执行、是否触碰远程环境，以及输出的证据或退出契约。
-- 任何脚本删除前，必须搜索 `AGENTS.md`、`docs/`、`deploy/`、`scripts/`、`pom.xml`、`package.json` 和 release-platform 适配器中的引用。
-- `scripts/test-*.sh` 是契约检查，不代表脚本一定会被主质量入口调用；未被入口调用的检查必须在本文说明保留理由。
-- `deploy/` 中的 staging integration/E2E runner 和依赖库由 release-platform Host Agent 通过平台编排调用，不是项目仓库的人工发布入口。
-- 旧的项目侧安装、部署、证书同步、production SSH 和合并发布脚本不得恢复。
-- 文档检查锁定项目职责、完整 SHA 和有效入口，不要求固定主机 IP；环境绑定由 CI/CD 配置管理。`prepare-release.sh` 只准备本地版本记录，不是部署入口。交接检查规则变更必须通过 fixture 验证，避免用过期文本断言阻塞交付。
+- 新功能归入已有职责，不为单条命令或每项检查新增独立脚本。
+- 固定适配器只允许定位源目录并 exec，不包含策略、状态或任务编排。
+- 删除接口前核对源码、文档、POM、package.json、产品测试、许可证复现命令和 release-platform 的消费者；无仓库引用不等于无外部消费者。
+- 所有有效约束随实现迁移；没有替代测试之前不得删除检查。命令示例随调用方一起更新。
+- 配置、版本、工具 pin 与发布状态各自保持一个事实源；Host evidence 只能由正式平台任务生成。
 
-## 保留资产
-
-### 本地 Agent 质量入口
-
-| 路径                                                                            | 调用者                            | 边界                                     |
-| ------------------------------------------------------------------------------- | --------------------------------- | ---------------------------------------- |
-| `scripts/run-local-quality.sh`                                                  | AI Agent / 开发者                 | 本地 worktree；不访问 staging/production |
-| `scripts/format-code.sh`、`scripts/format-check.sh`                             | AI Agent / `run-local-quality.sh` | 本地格式化与检查；不执行 Git 写操作      |
-| `tools/bytedepth/formatting.py`                                                 | 格式化入口                        | 共享收集、忽略和 formatter helper        |
-| `scripts/lib/java-25.sh`                                                        | Maven 入口                        | 解析跨平台 Java 25；不写用户环境变量     |
-| `scripts/verify-changed-coverage.sh`                                            | 本地质量入口                      | 只验证变更覆盖率，不部署                 |
-| `scripts/check-release-readiness.sh`                                            | 本地候选门禁                      | 检查 Changelog/候选冻结元数据，不发布    |
-| `scripts/check-changelog-order.sh`、`scripts/check-staging-changelog-change.sh` | readiness 门禁和契约测试          | 只读检查版本说明                         |
-
-### 平台边界与契约检查
-
-| 路径                                      | 保留理由                                                                                             |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `scripts/check-staging-checklist.sh`      | 汇总本地质量、平台边界、Maven 与文档契约                                                             |
-| `scripts/test-release-platform-only.sh`   | 防止项目侧部署入口、Tag、SSH 发布路径复活                                                            |
-| `scripts/test-run-local-quality.sh`       | 锁定本地质量顺序和依赖预热约束                                                                       |
-| `scripts/test-agent-delivery-workflow.sh` | 本地质量入口调用；检查项目 Agent 默认停点、授权与免人工验收规则                                      |
-| `scripts/test-maven-runtime.sh`           | 锁定 Maven Wrapper、Java 25 和 staging offline 约束                                                  |
-| `scripts/test-platform-portability.sh`    | 检查 macOS/Linux 脚本可移植性                                                                        |
-| `scripts/test-host-native-docs.sh`        | 检查 Host Agent 所需运行时文档契约                                                                   |
-| `scripts/test-handoff-documentation.sh`   | 本地质量入口和交接 checklist 调用；验证无固定 IP、允许本地版本准备，仍拒绝失效部署入口与缺失完整 SHA |
-| `scripts/test-staging-checklist.sh`       | 检查 active staging 文档不暴露项目发布入口                                                           |
-
-### staging 测试辅助与运行时库
-
-`deploy/bootstrap-staging-runtime.sh`、`deploy/run-staging-integration-tests.sh`、`deploy/run-staging-e2e-tests.sh` 以及它们直接 source 的 `deploy/lib/*.sh`、Nginx 模板、systemd 模板和配置示例继续保留。它们描述平台 Host Agent 执行所需的依赖预热、隔离 test slot、集成测试和 E2E 运行边界；不允许在项目工作区直接执行生产发布。
-
-下列契约测试继续保留，用于保护这些运行时辅助能力：
-
-- `test-run-staging-integration-tests.sh`
-- `test-run-staging-e2e-tests.sh`
-- `test-staging-test-slot.sh`
-- `test-test-resource-isolation.sh`
-- `test-warning-policy.sh`
-- `test-timing.sh`
-- `test-flyway-migration-warning-safety.sh`
-- `test-view-log-archive.sh`
-
-### 一次性工具
-
-- `scripts/configure-git-hooks.sh`：只配置仓库级 `config/git-hooks`，不参与发布。
-
-## 已删除资产
-
-`scripts/selfhost-fonts.py` 已完成一次性字体导入并删除；字体文件与 `fonts.css` 作为普通静态资源维护，不需要在构建或发布阶段重新生成。
-
-以下检查曾引用已经删除的项目侧安装、部署、证书同步或合并脚本，无法代表当前 release-platform-only 架构，已删除：
-
-- `scripts/test-host-native-runtime.sh`
-- `scripts/test-production-runtime.sh`
-- `scripts/test-project-ownership.sh`
-- `scripts/test-staging-native-stack.sh`
-- `scripts/test-staging-preview-route.sh`
-- `scripts/test-staging-search-isolation.sh`
-- `scripts/test-staging-e2e-credential-injection.sh`
-- `scripts/test-sync-staging-certificate.sh`
-- `scripts/test-merge-main-after-quality.sh`
-
-删除这些契约测试不会删除 Host Agent 的运行时资产；真正仍被平台调用的 staging runner、库、systemd 模板和 Nginx 模板仍由上面的保留清单覆盖。
+返回 [知识库入口](../README.md)。

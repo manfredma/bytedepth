@@ -43,9 +43,8 @@ shfmt 使用固定版本并校验 SHA-256，二进制缓存位于用户或 relea
 Java 也可以直接通过 Maven Wrapper 调用 Spotless：
 
 ```bash
-source scripts/lib/java-25.sh
-JAVA_HOME="$(resolve_java_25)" ./mvnw \
-  com.diffplug.spotless:spotless-maven-plugin:3.10.2:check
+# 已配置的 JAVA_HOME 必须为 Java 25。
+./mvnw com.diffplug.spotless:spotless-maven-plugin:3.10.2:check
 ```
 
 Java 的唯一格式化实现是根 `pom.xml` 中固定版本的 Palantir Java Format。它采用 4 空格缩进和 120 列布局，并针对 lambda 与链式调用做了更适合代码审查的换行。IntelliJ IDEA 必须安装同版本的 `palantir-java-format` 插件并启用它，`⌘⌥L` / `Ctrl+Alt+L` 才会与 Spotless 使用同一套格式化算法；IDEA 自带 Java Formatter 不作为仓库格式化器。

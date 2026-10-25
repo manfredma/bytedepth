@@ -24,6 +24,7 @@
 - 新增后台权限或调整授权分层：读 [角色与权限模型](security/rbac.md)。
 - 批注与划线写操作的权限管理：读 [批注写操作权限管理](security/annotation-write-permissions.md)。
 - 修改阅读批注的定位、正文版本或渲染映射：先读 [批注锚定设计](architecture/annotation-anchoring.md) 与 [ADR-0024](architecture/decisions/0024-versioned-annotation-selectors.md)。
+- 维护工程命令、脚本与配置资产：读 [工程工具清单](engineering/script-inventory.md)。
 - 构建、测试、覆盖率：读 [Maven 指南](agent-guides/maven.md)。
 - 收到开发任务、跨会话接手、调整需求范围、准备交付或判断何时停下：读 [人与 Agent 的职责边界](agent-guides/agent-responsibility-boundary.md)。
 - 判断阻塞、选择工具链或配套工作挤占交付主线：读 [主线优先与 backlog](agent-guides/agent-responsibility-boundary.md#主线优先与-backlog)。

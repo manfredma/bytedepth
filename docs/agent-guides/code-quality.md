@@ -25,12 +25,12 @@ Maven、Java 25、完整测试与变更覆盖率的唯一说明见 [maven.md](ma
 
 严重锚定错误必须在无远程凭据的单测环节失败，staging IT/E2E 只补充数据库与浏览器事实。`scripts/test-fixtures/annotation/unit-cases.json` 将 U01–U46 映射到实际 Vitest/Surefire 完整测试名；变更测试名时同步维护该清单，不能把源码字符串断言当成行为用例。
 
-`npm test` 统计 `annotation.js`、映射、显示、渲染生命周期和 Mermaid 适配器的真实执行，输出 JSON 测试与覆盖报告；自有模块不得放入 vendor、改用 eval 或缩小 include 逃避 100% 门禁。`run-local-quality.sh` 为本次测试建立 runId/时间上下文，清理自有前端报告，执行 Java 与前端完整门禁后对报告集合记录摘要并校验。`verify-annotation-unit-evidence.py` 拒绝缺失场景、零执行、skip/todo/失败、无覆盖模块、未覆盖分支、陈旧或被替换的报告。旧报告、旧 runId 和仅有成功退出码均不能证明通过；检查器自身用 `test-annotation-unit-evidence.sh` 回归。
+`npm test` 统计 `annotation.js`、映射、显示、渲染生命周期和 Mermaid 适配器的真实执行，输出 JSON 测试与覆盖报告；自有模块不得放入 vendor、改用 eval 或缩小 include 逃避 100% 门禁。`run-local-quality.sh` 为本次测试建立 runId/时间上下文，清理自有前端报告，执行 Java 与前端完整门禁后对报告集合记录摘要并校验。`tools/bytedepth/evidence.py` 拒绝缺失场景、零执行、skip/todo/失败、无覆盖模块、未覆盖分支、陈旧或被替换的报告。旧报告、旧 runId 和仅有成功退出码均不能证明通过；检查器自身由 `tests/engineering/test_evidence.py` 回归；只有全部报告校验成功后才原子写入 seal，失败不得覆盖上一次已验证 seal。
 
-`test-annotation-mutations.py` 在临时副本中依次移除引用核验、恢复整页 textContent、歧义取首项、未定位删除、忽略版本和接受旧实例结果。每项必须得到“原版通过 → 正式断言失败 → 恢复通过”；语法、编译或非断言运行时异常不能计为拦截。脚本按 lockfile 为该副本单独安装前端依赖，不污染工作区，也不连接 staging。若变异点因重构失配，门禁失败并要求审阅更新，不允许静默跳过。
+`evidence.mutations` 在临时副本中依次移除引用核验、恢复整页 textContent、歧义取首项、未定位删除、忽略版本和接受旧实例结果。每项必须得到“原版通过 → 正式断言失败 → 恢复通过”；语法、编译或非断言运行时异常不能计为拦截。脚本按 lockfile 为该副本单独安装前端依赖，不污染工作区，也不连接 staging。若变异点因重构失配，门禁失败并要求审阅更新，不允许静默跳过。
 
 跨进程补充入口为 `AnnotationContentUpdateIT`、`AnnotationRevisionTransactionIT` 和 `tests/e2e/annotation*.spec.js`，仅由 staging Host Agent 执行。数据库测试在 run 隔离 schema 内，以独立表名前缀和独立 Flyway history 复现旧批注表升级，不清理应用的历史表；正常启动仍执行完整迁移。浏览器用例为每次执行新建自有文章并追踪读者身份，不能依赖固定文章 ID 或已有批注。测试发现、编译或本机 DOM 模拟不能替代这两类 staging evidence。
 
-本地入口可以执行名称含 staging 的**静态契约检查**，但不得直接执行 Host runner、跨进程 IT/E2E 或主机命令。`test-run-local-quality.sh` 用显式失败分支执行该边界检查；不能仅依赖 `set -e` 与 `! command`，因为取反命令不触发自动退出。`test-local-quality-runner-boundary.sh` 向完整入口副本注入远程命令、Host runner、IT profile 和 E2E 命令，逐项要求拒绝，防止检查器假通过。
+本地入口可以执行名称含 staging 的离线回归，但不得直接执行 Host runner、跨进程 IT/E2E 或主机命令。`tests/engineering/test_quality.py` 验证执行顺序、依赖失败后的停止行为以及命令不包含 SSH、Host runner、IT profile 或 E2E。进程调用使用参数数组并显式检查退出码，不能依赖 Shell 取反命令触发自动退出。
 
 批注 staging IT 共用 `AnnotationITSupport` 的 Spring Boot 上下文；静态边界检查同时检查基类注解和两个具体用例的继承关系，不要求重复注解。

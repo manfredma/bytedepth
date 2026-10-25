@@ -11,3 +11,5 @@ Agent 对提交、推送、PR 和交付终点的默认授权，统一见[Agent �
 5. 合并必须保持已验收候选 SHA 不变，平台校验 `main` HEAD 后才能提升同一不可变制品到 production。
 
 项目仓库中保留的测试或运行时辅助脚本，不构成发布入口；它们只能由平台适配器或质量流程按约定调用。
+
+本地启用仓库防护 hook：`git config core.hooksPath config/git-hooks`。hook 只防止直接在主线提交，不执行格式化或发布。

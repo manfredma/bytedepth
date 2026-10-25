@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Exercise the evidence verifier with independent report fixtures."""
+from contextlib import redirect_stdout
 import copy
+import io
+import importlib
+from types import SimpleNamespace
+import xml.etree.ElementTree as ET
 import hashlib
 import json
 import os
@@ -10,7 +15,7 @@ import tempfile
 import time
 import unittest
 
-CHECKER = Path(__file__).with_name('verify-annotation-unit-evidence.py').resolve()
+CHECKER = None
 MODULES = ['annotation.js', 'annotation-document.js', 'annotation-display.js',
            'annotation-render-lifecycle.js', 'post-mermaid.js', 'sw.js']
 
@@ -36,7 +41,7 @@ class EvidenceTest(unittest.TestCase):
             'branchMap': {'0': {}}, 'fnMap': {'0': {}}} for name in MODULES}
         self.xml = '<testsuite tests="1" failures="0" errors="0" skipped="0"><testcase classname="example.UnitTest" name="behavior"/></testsuite>'
 
-    def invoke(self, *, stale=False, wrong_run=False, corrupt=False):
+    def invoke(self, *, stale=False, wrong_run=False, corrupt=False, record_seal=False, existing_seal=None):
         reports = self.root / 'module/target/surefire-reports'
         reports.mkdir(parents=True, exist_ok=True)
         paths = [self.root/'vitest.json', self.root/'coverage.json', reports/'TEST-example.UnitTest.xml']
@@ -51,28 +56,36 @@ class EvidenceTest(unittest.TestCase):
         seal = {'runId': 'wrong' if wrong_run else 'run-current', 'reports': {
             str(p.resolve()): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}}
         (self.root/'seal.json').write_text(json.dumps(seal))
+        if existing_seal is not None:
+            (self.root/'seal.json').write_text(existing_seal)
         if corrupt:
             paths[0].write_text(paths[0].read_text()+' ')
-        return subprocess.run(['python3', str(CHECKER), '--vitest', str(paths[0]),
-            '--surefire-root', str(self.root), '--coverage', str(paths[1]),
-            '--cases', str(self.root/'cases.json'), '--run-context', str(self.root/'context.json'),
-            '--seal', str(self.root/'seal.json')], capture_output=True, text=True)
+        verify = importlib.import_module('tools.bytedepth.evidence').verify
+        args = SimpleNamespace(vitest=paths[0], surefire_root=self.root, coverage=paths[1],
+            cases=self.root/'cases.json', run_context=self.root/'context.json', seal=self.root/'seal.json', record_seal=record_seal)
+        try:
+            with redirect_stdout(io.StringIO()):
+                verify(args)
+            return 0
+        except (ValueError, OSError, KeyError, TypeError, ET.ParseError):
+            return 1
+
 
     def test_complete_reports_pass(self):
         result = self.invoke()
-        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertEqual(result, 0)
 
     def test_missing_u15_rejected(self):
         del self.cases['cases']['U15']
-        self.assertNotEqual(self.invoke().returncode, 0)
+        self.assertNotEqual(self.invoke(), 0)
 
     def test_zero_tests_rejected(self):
         self.vitest.update(numTotalTests=0, numPassedTests=0, testResults=[])
-        self.assertNotEqual(self.invoke().returncode, 0)
+        self.assertNotEqual(self.invoke(), 0)
 
     def test_each_required_case_must_execute(self):
         self.cases['cases']['U15'][0]['name']='not executed'
-        self.assertNotEqual(self.invoke().returncode, 0)
+        self.assertNotEqual(self.invoke(), 0)
 
     def test_skipped_or_failed_reports_rejected(self):
         original=copy.deepcopy(self.vitest)
@@ -80,12 +93,12 @@ class EvidenceTest(unittest.TestCase):
             with self.subTest(status=status):
                 self.vitest=copy.deepcopy(original)
                 self.vitest['testResults'][0]['assertionResults'][0]['status']=status
-                self.assertNotEqual(self.invoke().returncode, 0)
+                self.assertNotEqual(self.invoke(), 0)
         self.vitest=original
         for tag in ['skipped','failure','error']:
             with self.subTest(tag=tag):
                 self.xml=f'<testsuite tests="1"><testcase classname="example.UnitTest" name="behavior"><{tag}/></testcase></testsuite>'
-                self.assertNotEqual(self.invoke().returncode, 0)
+                self.assertNotEqual(self.invoke(), 0)
 
     def test_missing_or_empty_or_uncovered_product_module_rejected(self):
         original=copy.deepcopy(self.coverage)
@@ -98,12 +111,27 @@ class EvidenceTest(unittest.TestCase):
                     elif mutation=='empty': self.coverage[key]['s']={}
                     elif mutation=='uncovered': self.coverage[key]['b']['0'][0]=0
                     else: self.coverage[key]['f']['0']=0
-                    self.assertNotEqual(self.invoke().returncode, 0)
+                    self.assertNotEqual(self.invoke(), 0)
 
     def test_stale_mismatched_or_changed_reports_rejected(self):
-        self.assertNotEqual(self.invoke(stale=True).returncode,0)
-        self.assertNotEqual(self.invoke(wrong_run=True).returncode,0)
-        self.assertNotEqual(self.invoke(corrupt=True).returncode,0)
+        self.assertNotEqual(self.invoke(stale=True),0)
+        self.assertNotEqual(self.invoke(wrong_run=True),0)
+        self.assertNotEqual(self.invoke(corrupt=True),0)
+
+    def test_rejected_reports_do_not_replace_previous_seal(self):
+        previous = '{"runId":"previous-verified-run"}\n'
+        self.vitest['success'] = False
+        self.assertNotEqual(self.invoke(record_seal=True, existing_seal=previous), 0)
+        self.assertEqual((self.root/'seal.json').read_text(), previous)
+
+    def test_successful_reports_can_be_sealed(self):
+        self.assertEqual(self.invoke(record_seal=True, existing_seal='{}'), 0)
+        self.assertEqual(json.loads((self.root/'seal.json').read_text())['runId'], 'run-current')
+
+    def test_mutation_syntax_error_and_survivor_are_rejected(self):
+        from tools.bytedepth.evidence import self_test
+        with redirect_stdout(io.StringIO()):
+            self_test()
 
 
 if __name__=='__main__':

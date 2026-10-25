@@ -13,13 +13,13 @@ ByteDepth 的发布生命周期完全由 release-platform 管理。本仓库不�
 
 ```bash
 # 普通功能发布：默认升级 minor，例如 v2.26.5 → v2.27.0
-bash scripts/prepare-release.sh
+python3 -m tools.bytedepth release prepare
 
 # bug 修复：升级 patch，例如 v2.26.5 → v2.26.6
-bash scripts/prepare-release.sh --patch
+python3 -m tools.bytedepth release prepare --patch
 
 # 初始化版本或修正已有版本号
-bash scripts/prepare-release.sh --version v2.27.0
+python3 -m tools.bytedepth release prepare --version v2.27.0
 ```
 
 脚本会把非空的 `## Unreleased` 固化为 `## [vX.Y.Z] - YYYY-MM-DD`，并在顶部保留新的空 `## Unreleased`。完成后将 changelog 变更提交到 PR；release-platform 使用当前 PR head 的完整 SHA 创建 candidate，先完成 staging 集成/E2E，再按[Agent 交付授权规则](../agent-guides/agent-responsibility-boundary.md#默认交付终点与授权范围)处理人工验收或本任务明确免人工验收。acceptance 的 `releaseTag` 必须与 changelog 正式版本一致；验收状态登记后由平台将同一 SHA fast-forward 合并到 main，再提升同一 artifact 到 production。版本号计算只读取本地 changelog，不访问线上服务。
