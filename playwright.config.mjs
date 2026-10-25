@@ -1,33 +1,33 @@
 import { verificationHeaders } from "./tests/e2e/helpers/verification-traffic.js";
-import {defineConfig, devices} from '@playwright/test';
+import { defineConfig, devices } from "@playwright/test";
 
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 const localHostResolverRule = process.env.E2E_LOCAL_HOST_RESOLVER_RULE;
 const chromiumLaunchOptions = {
-    launchOptions: {
-        ignoreDefaultArgs: ['--hide-scrollbars'],
-        ...(chromiumExecutablePath ? {executablePath: chromiumExecutablePath} : {}),
-        ...(localHostResolverRule ? {args: [`--host-resolver-rules=${localHostResolverRule}`]} : {})
-    }
+  launchOptions: {
+    ignoreDefaultArgs: ["--hide-scrollbars"],
+    ...(chromiumExecutablePath ? { executablePath: chromiumExecutablePath } : {}),
+    ...(localHostResolverRule ? { args: [`--host-resolver-rules=${localHostResolverRule}`] } : {}),
+  },
 };
 
 export default defineConfig({
-    testDir: './tests/e2e',
-    globalSetup: './tests/e2e/global-setup.js',
-    workers: 1,
-    timeout: 30_000,
-    forbidOnly: Boolean(process.env.CI),
-    retries: process.env.CI ? 2 : 0,
-    reporter: process.env.CI ? [['html', {open: 'never'}], ['list']] : 'list',
-    use: {
-        baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:8080',
-        extraHTTPHeaders: verificationHeaders,
-        trace: 'retain-on-failure',
-        screenshot: 'only-on-failure',
-        video: 'retain-on-failure'
-    },
-    projects: [
-        {name: 'chromium', use: {...devices['Desktop Chrome'], ...chromiumLaunchOptions}},
-        {name: 'mobile-chromium', use: {...devices['Pixel 5'], ...chromiumLaunchOptions}}
-    ]
+  testDir: "./tests/e2e",
+  globalSetup: "./tests/e2e/global-setup.js",
+  workers: 1,
+  timeout: 30_000,
+  forbidOnly: Boolean(process.env.CI),
+  retries: process.env.CI ? 2 : 0,
+  reporter: process.env.CI ? [["html", { open: "never" }], ["list"]] : "list",
+  use: {
+    baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:8080",
+    extraHTTPHeaders: verificationHeaders,
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
+  },
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"], ...chromiumLaunchOptions } },
+    { name: "mobile-chromium", use: { ...devices["Pixel 5"], ...chromiumLaunchOptions } },
+  ],
 });
