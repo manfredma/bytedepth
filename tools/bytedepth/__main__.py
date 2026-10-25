@@ -1,6 +1,7 @@
 """One command surface for project tools, runnable without npm dependencies."""
 
 import argparse
+from pathlib import Path
 import sys
 import unittest
 
@@ -20,12 +21,49 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="ByteDepth project tools")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("test", help="Run offline engineering tests")
-    for name in ("quality", "format", "coverage", "release", "assets", "mobile", "host"):
+    release = commands.add_parser("release", help="Check and prepare release metadata without deploying")
+    actions = release.add_subparsers(dest="action", required=True)
+    check = actions.add_parser("check")
+    check.add_argument("--target", default="HEAD")
+    check.add_argument("--base", default="origin/main")
+    check.add_argument("--mode", choices=("candidate", "frozen-candidate", "release"), default="candidate")
+    check.add_argument("--expected-release", default="")
+    prepare = actions.add_parser("prepare")
+    kind = prepare.add_mutually_exclusive_group()
+    kind.add_argument("--kind", choices=("major", "minor", "patch"))
+    for name in ("major", "minor", "patch"):
+        kind.add_argument("--" + name, dest="kind", action="store_const", const=name)
+    kind.add_argument("--version")
+    prepare.add_argument("--date")
+    prepare.add_argument("--changelog", type=Path, default=Path("docs/releases/CHANGELOG.md"))
+    order = actions.add_parser("order")
+    order.add_argument("changelog", nargs="?", type=Path, default=Path("docs/releases/CHANGELOG.md"))
+    source = actions.add_parser("source")
+    source.add_argument("pr")
+    source.add_argument("sha")
+    change = actions.add_parser("change")
+    change.add_argument("--target", required=True)
+    change.add_argument("--base", required=True)
+    for name in ("quality", "format", "coverage", "assets", "mobile", "host"):
         commands.add_parser(name, help=f"{name} operations")
     args = parser.parse_args(argv)
     try:
         if args.command == "test":
             test()
+        elif args.command == "release":
+            from . import release
+            if args.action == "check":
+                release.check(Path.cwd(), args.target, args.base, args.mode, args.expected_release)
+            elif args.action == "prepare":
+                version = release.prepare(args.changelog, args.kind or "minor", args.version, args.date)
+                print(f"Prepared release {version}; commit the Changelog before creating a candidate.")
+            elif args.action == "order":
+                release.check_order(args.changelog)
+            elif args.action == "source":
+                release.check_source(Path.cwd(), args.pr, args.sha)
+            elif args.action == "change":
+                release.check_change(Path.cwd(), args.target, args.base)
+            print("Release metadata check passed.")
         else:
             raise ToolError(f"Command migration pending: {args.command}", 2)
     except (ToolError, OSError, ValueError) as error:
