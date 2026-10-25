@@ -5,6 +5,12 @@ dist/
 coverage/
 generated/
 vendor/
+.git/
+.worktrees/
+.superpowers/
+apps/mobile/.expo/
+apps/mobile/android/
+apps/mobile/ios/
 *.min.js
 *.min.css
 *.map

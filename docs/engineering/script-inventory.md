@@ -19,7 +19,7 @@
 | ------------------------------------------------------------------------------- | --------------------------------- | ---------------------------------------- |
 | `scripts/run-local-quality.sh`                                                  | AI Agent / 开发者                 | 本地 worktree；不访问 staging/production |
 | `scripts/format-code.sh`、`scripts/format-check.sh`                             | AI Agent / `run-local-quality.sh` | 本地格式化与检查；不执行 Git 写操作      |
-| `scripts/lib/format-common.sh`                                                  | 格式化入口                        | 共享收集、忽略和 formatter helper        |
+| `tools/bytedepth/formatting.py`                                                 | 格式化入口                        | 共享收集、忽略和 formatter helper        |
 | `scripts/lib/java-25.sh`                                                        | Maven 入口                        | 解析跨平台 Java 25；不写用户环境变量     |
 | `scripts/verify-changed-coverage.sh`                                            | 本地质量入口                      | 只验证变更覆盖率，不部署                 |
 | `scripts/check-release-readiness.sh`                                            | 本地候选门禁                      | 检查 Changelog/候选冻结元数据，不发布    |

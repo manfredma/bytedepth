@@ -44,12 +44,23 @@ def main(argv=None):
     change = actions.add_parser("change")
     change.add_argument("--target", required=True)
     change.add_argument("--base", required=True)
-    for name in ("quality", "format", "coverage", "assets", "mobile", "host"):
+    formatting = commands.add_parser("format", help="Format explicit files, all files or changed files")
+    formatting.add_argument("--check", action="store_true")
+    scope = formatting.add_mutually_exclusive_group()
+    scope.add_argument("--all", dest="scope", action="store_const", const="all")
+    scope.add_argument("--changed", dest="scope", action="store_const", const="changed")
+    formatting.add_argument("paths", nargs="*")
+    for name in ("quality", "coverage", "assets", "mobile", "host"):
         commands.add_parser(name, help=f"{name} operations")
     args = parser.parse_args(argv)
     try:
         if args.command == "test":
             test()
+        elif args.command == "format":
+            from .formatting import format_files
+            if bool(args.paths) == bool(args.scope):
+                raise ToolError("Choose explicit paths, --all or --changed", 2)
+            format_files(ROOT, args.scope or "paths", args.paths, args.check)
         elif args.command == "release":
             from . import release
             if args.action == "check":

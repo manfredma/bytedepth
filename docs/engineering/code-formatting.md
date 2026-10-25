@@ -6,18 +6,20 @@
 
 ## 工具与规则
 
-| 文件                                                   | 工具                            | 规则                                                            |
-| ------------------------------------------------------ | ------------------------------- | --------------------------------------------------------------- |
-| Java                                                   | Spotless + palantir-java-format | 根 `pom.xml` 统一配置；4 空格缩进、120 列目标行宽               |
-| JavaScript/TypeScript/HTML/CSS/SCSS/JSON/YAML/Markdown | Prettier                        | `.prettierrc.json`，目标行宽 120；Markdown `proseWrap=preserve` |
-| Shell                                                  | shfmt 3.11.0                    | 2 空格缩进、case 缩进、语法感知换行                             |
-| 通用文本                                               | `.editorconfig`                 | UTF-8、LF、文件末尾换行、行尾空格和基础缩进                     |
+| 文件                                                                 | 工具                            | 规则                                                            |
+| -------------------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------- |
+| Java                                                                 | Spotless + palantir-java-format | 根 `pom.xml` 统一配置；4 空格缩进、120 列目标行宽               |
+| JavaScript（含 mjs/cjs）/TypeScript/HTML/CSS/SCSS/JSON/YAML/Markdown | Prettier                        | `.prettierrc.json`，目标行宽 120；Markdown `proseWrap=preserve` |
+| Shell                                                                | shfmt 3.11.0                    | 2 空格缩进、case 缩进、语法感知换行                             |
+| 通用文本                                                             | `.editorconfig`                 | UTF-8、LF、文件末尾换行、行尾空格和基础缩进                     |
 
 Markdown 的 Mermaid、Obsidian 特殊语法必须先通过 fixture 验证；锁文件、生成物、依赖目录、压缩文件和二进制文件不纳入格式化。移动端 `apps/mobile/.expo/`、`android/` 和 `ios/` 是生成目录，必须同时从全树扫描与显式路径收集中排除；质量检查重复执行不得因上一次生成的 public config 失败，插件与测试源码仍要检查。
 
 带 Thymeleaf 等服务端模板语法的 HTML（`**/src/main/resources/templates/**/*.html`）显式保护，不交给纯 HTML formatter 解析；这类模板必须由对应模板工具或人工维护。
 
 ## 命令
+
+格式化由 `tools.bytedepth.formatting` 实现，两个 Shell 路径仅作为兼容入口。忽略规则统一读取 `.prettierignore`，全量扫描与显式路径使用同一规则；不跟随符号链接。工程回归使用 `python3 -m unittest discover -s tests/engineering -p test_formatting.py`，覆盖坏输入、只读检查和幂等。
 
 统一入口不依赖 Git，按路径工作：
 
