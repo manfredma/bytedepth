@@ -50,7 +50,13 @@ def main(argv=None):
     scope.add_argument("--all", dest="scope", action="store_const", const="all")
     scope.add_argument("--changed", dest="scope", action="store_const", const="changed")
     formatting.add_argument("paths", nargs="*")
-    for name in ("quality", "coverage", "assets", "mobile", "host"):
+    assets = commands.add_parser("assets", help="Build or verify pinned generated assets")
+    assets.add_argument("target", choices=("prism", "hypothesis", "mobile"))
+    assets.add_argument("action", choices=("build", "check"))
+    mobile = commands.add_parser("mobile", help="Mobile quality, native inputs, receipts and fixtures")
+    mobile.add_argument("action", choices=("quality", "run", "verify-delivery", "fixtures"))
+    mobile.add_argument("arguments", nargs=argparse.REMAINDER)
+    for name in ("quality", "coverage", "host"):
         commands.add_parser(name, help=f"{name} operations")
     args = parser.parse_args(argv)
     try:
@@ -64,6 +70,26 @@ def main(argv=None):
         elif args.command in ("quality", "coverage"):
             from . import quality
             {"quality": quality.quality, "coverage": quality.coverage}[args.command](ROOT)
+        elif args.command == "assets":
+            from .process import run
+            if args.target == "mobile":
+                command = ["node", "apps/mobile/tools/assets.mjs"] + (["--check"] if args.action == "check" else [])
+            else:
+                command = ["node", "tools/assets.mjs", args.target, args.action]
+            run(command, ROOT, warnings=True)
+        elif args.command == "mobile":
+            from . import mobile
+            from .process import run
+            arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
+            if args.action == "quality":
+                if arguments:
+                    raise ToolError("mobile quality takes no extra arguments", 2)
+                mobile.quality(ROOT)
+            elif args.action == "run":
+                mobile.native(ROOT, arguments)
+            else:
+                name = "delivery" if args.action == "verify-delivery" else "fixtures"
+                run(["node", f"apps/mobile/tools/{name}.mjs", *arguments], ROOT, warnings=True)
         elif args.command == "release":
             from . import release
             if args.action == "check":

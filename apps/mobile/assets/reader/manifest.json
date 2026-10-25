@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedBy": "scripts/sync-mobile-reader-assets.mjs",
+  "generatedBy": "apps/mobile/tools/assets.mjs",
   "sources": [
     {
       "name": "template",
@@ -53,8 +53,8 @@
     {
       "name": "prism",
       "path": "bytedepth-start/src/main/resources/static/vendor/prism/prism-common.min.js",
-      "sha256": "8fc81c7fd992b56001e2a43af8d247c002c772e3ab8ec03528f448181c132cb5",
-      "bytes": 120591
+      "sha256": "c20719dd9e9e69620700483fa53ea4ac3d4b181ec4ee8bdfc73eefb49a36c22d",
+      "bytes": 120596
     },
     {
       "name": "mermaid",
@@ -89,13 +89,13 @@
     {
       "name": "hypothesisNotice",
       "path": "bytedepth-start/src/main/resources/static/vendor/hypothesis-anchoring/NOTICE",
-      "sha256": "c9186310f28b67212fe56236a00f3cc7cbeb08def6d12500afc6e4ab03db60da",
-      "bytes": 1154
+      "sha256": "0aa18245ba2e093070cdb4d2fad6964bd6f0e79a1a7bfdb058b2eaf8284c59cb",
+      "bytes": 1161
     },
     {
       "name": "hypothesisManifest",
       "path": "bytedepth-start/src/main/resources/static/vendor/hypothesis-anchoring/manifest.json",
-      "sha256": "d5442bb534f2adab181773f34d771ba7deadb5e56af8e366524209dc285aa221",
+      "sha256": "adbeee0880aae64698c694e1dc48074ea58e6f46fd42a6516104b1843a446496",
       "bytes": 1092
     },
     {

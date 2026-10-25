@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { verifyMobileConfig } from "../../verify-mobile-config.mjs";
+import privacy from "../../../../apps/mobile/plugins/withLocalDataPrivacy.cjs";
+import { verifyMobileConfig } from "../checks.mjs";
 const config = {
   name: "ByteDepth 试用",
   extra: { releaseChannel: "preview", apiOrigin: "https://staging-bytedepth.bytedepth.cn" },
@@ -36,7 +37,6 @@ test("rejects shared backup or lost native privacy plugin", () => {
   assert.throws(() => verifyMobileConfig({ ...config, android: { ...config.android, allowBackup: true } }));
   assert.throws(() => verifyMobileConfig({ ...config, plugins: ["expo-sqlite"] }));
 });
-import privacy from "../../../apps/mobile/plugins/withLocalDataPrivacy.cjs";
 test("excludes all local domains from cloud and device transfer", () => {
   const rules = privacy.backupRules;
   for (const mode of ["cloud-backup", "device-transfer"]) {
@@ -64,11 +64,11 @@ test("native manifest explicitly disables backup and references extraction rules
 });
 test("all native npm entry points use the dependency input lock", () => {
   const { scripts } = JSON.parse(
-    fs.readFileSync(new URL("../../../apps/mobile/package.json", import.meta.url), "utf8"),
+    fs.readFileSync(new URL("../../../../apps/mobile/package.json", import.meta.url), "utf8"),
   );
   assert.equal(scripts.android, "npm run android:build --");
   for (const key of ["android:build", "prebuild:android", "ios"])
-    assert.ok(scripts[key].startsWith("bash ../../scripts/with-mobile-toolchain-lock.sh "));
+    assert.ok(scripts[key].startsWith("cd ../.. && python3 -m tools.bytedepth mobile run -- "));
 });
 
 test("rejects losing pinned wrapper and managed-only release signing", () => {
@@ -88,7 +88,12 @@ test("accepts the production identity only with the matching trusted origin and 
     extra: { releaseChannel: "production", apiOrigin: "https://bytedepth.cn" },
   };
   assert.doesNotThrow(() => verifyMobileConfig(production));
-  assert.throws(() => verifyMobileConfig({ ...production, extra: { ...production.extra, apiOrigin: "https://staging-bytedepth.bytedepth.cn" } }));
+  assert.throws(() =>
+    verifyMobileConfig({
+      ...production,
+      extra: { ...production.extra, apiOrigin: "https://staging-bytedepth.bytedepth.cn" },
+    }),
+  );
   assert.throws(() => verifyMobileConfig({ ...production, android: config.android }));
   assert.throws(() => verifyMobileConfig({ ...production, extra: { ...production.extra, releaseChannel: "prod" } }));
 });

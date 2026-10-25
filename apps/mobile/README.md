@@ -5,7 +5,7 @@ Independent Expo 58 / React Native package. The API origin in `src/config.ts` is
 Use Node **22.22.1** (`.nvmrc` and engine-strict), JDK **25** for Android and backend, and the source-controlled `android-toolchain.json` inputs. SDK 58 currently generates Gradle 9.4.1, AGP 9.2.1, compile SDK 37, target SDK 36, Build Tools 37.0.0 and NDK 27.1.12297006. The release and instrumentation APKs have been built locally with JDK 25; Linux Host verification remains a separate gate. Install package dependencies independently:
 
 ```sh
-bash ../../scripts/with-mobile-toolchain-lock.sh npm ci --ignore-scripts --no-audit --no-fund
+cd ../.. && python3 -m tools.bytedepth mobile run -- npm ci --ignore-scripts --no-audit --no-fund
 npm run typecheck
 npm test -- --runInBand
 npm run lint

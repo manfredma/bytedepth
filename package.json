@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "lint": "eslint bytedepth-start/src/main/resources/static/js/ tests/ playwright.config.mjs",
     "test:e2e": "env -u NO_COLOR -u FORCE_COLOR playwright test",
-    "build:prism": "node scripts/build-prism.mjs"
+    "build:prism": "node tools/assets.mjs prism build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

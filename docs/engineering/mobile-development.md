@@ -6,12 +6,12 @@
 
 ## 本地检查与构建
 
-完整入口为 `bash scripts/run-local-quality.sh`，包含移动配置夹具和 `bash scripts/run-mobile-quality.sh`。移动入口先执行独立的 `npm ci --ignore-scripts --no-audit --no-fund`，再进行类型、lint、全量测试及覆盖率、固定阅读资源一致性与 Expo 公开配置检查。依赖 Expo plugin 的根配置夹具在移动入口完成安装与检查后运行，干净 worktree 也遵守这一顺序。`verify-mobile-coverage.mjs` 从源码清单检查每个业务文件的实际计数，缺失报告不能算通过。离线单测不调用 staging、部署、集成测试或 E2E。
+完整入口为 `bash scripts/run-local-quality.sh`，包含移动配置夹具和 `python3 -m tools.bytedepth mobile quality`。移动入口先执行独立的 `npm ci --ignore-scripts --no-audit --no-fund`，再进行类型、lint、全量测试及覆盖率、固定阅读资源一致性与 Expo 公开配置检查。依赖 Expo plugin 的根配置夹具在移动入口完成安装与检查后运行，干净 worktree 也遵守这一顺序。`apps/mobile/tools/checks.mjs` 从源码清单检查每个业务文件的实际计数，缺失报告不能算通过。离线单测不调用 staging、部署、集成测试或 E2E。
 
 在固定移动工具环境中，从 `apps/mobile/` 运行：
 
 ```sh
-bash ../../scripts/with-mobile-toolchain-lock.sh npm ci --ignore-scripts --no-audit --no-fund
+cd ../.. && python3 -m tools.bytedepth mobile run -- npm ci --ignore-scripts --no-audit --no-fund
 npm run prebuild:android
 npm run android:build
 ```
@@ -71,3 +71,5 @@ native-stack 会保留被遮挡页面。一次阅读会话以页面 focus 为边
 构建前在固定工具链内设置 `EXPO_PUBLIC_RELEASE_CHANNEL=production`，执行 `expo prebuild --platform android --clean --no-install`，再从 `android/` 运行 `./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a`。首个直装正式包只包含 ARM64，与本轮实际设备/模拟器一致；x86_64 不在本次分发兼容范围，需要时另行构建。切换环境必须重新生成，不能复用旧 namespace；生产构建不挂载 staging instrumentation plugin。共同 pinned plugin 保持未经 R8 裁剪的既有 release 运行库，避免首次正式发布同时引入未经验证的裁剪变更。
 
 集成和端到端继续只在 staging 执行；生产安装验证只做只读启动、发现、搜索和公开文章阅读，不提交评分、评论或登录写操作，不拿生产烟测代替 staging 测试。交付分别记录客户端源 SHA、生产后端 SHA/API 版本、APK/证书摘要及真实测试范围；缺失的 Android 账号回归不能标为通过。
+
+自有源码覆盖率校验由 `apps/mobile/tools/checks.mjs` 负责：缺失报告、计数与插桩映射不一致以及未覆盖计数均失败；无分支函数和纯类型文件的空映射属于合法情况，不能强行要求不存在的分支执行。安装阶段既有 npm 弃用通知的来源与处理边界见 [TD-0007](technical-debt.md#td-0007移动端测试工具链的既有-npm-弃用通知)。

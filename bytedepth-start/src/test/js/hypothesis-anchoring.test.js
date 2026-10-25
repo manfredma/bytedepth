@@ -43,7 +43,7 @@ test("U16_upstreamPureRootOffsetsSurviveWrappingAndTrimming", () => {
 });
 
 test("U46_tamperedLicenseSourceRuntimeHashAndPatchAreRejected", async () => {
-  const script = "scripts/verify-hypothesis-anchoring.mjs";
+  const script = "tools/assets.mjs";
   expect(fs.existsSync(script), "executable vendor integrity check").toBe(true);
   const path = await import("node:path");
   const { verifyHypothesisSources } = await import(path.resolve(script));
@@ -66,7 +66,7 @@ test("U46_tamperedLicenseSourceRuntimeHashAndPatchAreRejected", async () => {
 test("U46_changedGeneratorClaimsAndHiddenAlgorithmPatchesAreRejected", async () => {
   const path = await import("node:path");
   const os = await import("node:os");
-  const { verifyHypothesisSources } = await import(path.resolve("scripts/verify-hypothesis-anchoring.mjs"));
+  const { verifyHypothesisSources } = await import(path.resolve("tools/assets.mjs"));
   for (const change of [
     (m) => {
       m.commit = "main";
@@ -103,7 +103,7 @@ test("U46_changedGeneratorClaimsAndHiddenAlgorithmPatchesAreRejected", async () 
 test("U46_rehashingAnUnreviewedSourceOrRuntimeCannotBypassProvenance", async () => {
   const path = await import("node:path");
   const os = await import("node:os");
-  const { verifyHypothesisSources } = await import(path.resolve("scripts/verify-hypothesis-anchoring.mjs"));
+  const { verifyHypothesisSources } = await import(path.resolve("tools/assets.mjs"));
   for (const file of ["LICENSE", "upstream/text-range.ts", "text-range.js"]) {
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), "annotation-vendor-"));
     try {

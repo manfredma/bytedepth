@@ -9,7 +9,7 @@ transformer (1.2.5, target es2022); remove ESM export keywords; replace the one
 trim-range import with the local global namespace; wrap each result in an IIFE
 and expose frozen HypothesisTrimRange/HypothesisTextRange globals. No algorithm,
 matching policy, ignored-node filter or coordinate rule is changed. Reproduce
-runtime outputs with node scripts/build-hypothesis-anchoring.mjs. Runtime has no
+runtime outputs with python3 -m tools.bytedepth assets hypothesis build. Runtime has no
 compiler, build tool, CDN, hosted account or upstream application dependency.
 
 Use these helpers ONLY within validated pure-content roots. Unicode codepoint

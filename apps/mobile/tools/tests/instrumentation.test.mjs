@@ -9,7 +9,7 @@ import {
   prepareFixtures,
   cleanupFixtures,
   removeOwnedUser,
-} from "../../mobile-staging-fixtures.mjs";
+} from "../fixtures.mjs";
 const input = {
   schemaVersion: 1,
   origin: "https://staging-bytedepth.bytedepth.cn",
@@ -120,7 +120,7 @@ test("preparation supplies same-account credentials, distinct reader and owned i
 });
 test("instrumentation source asserts Android UI, WebView, SQLite, backend counters, network and upgrade rather than emitting unconditional PASS", () => {
   const source = fs.readFileSync(
-    new URL("../../../apps/mobile/testing/android/MobileReaderStagingTest.kt", import.meta.url),
+    new URL("../../../../apps/mobile/testing/android/MobileReaderStagingTest.kt", import.meta.url),
     "utf8",
   );
   for (const name of [
@@ -232,7 +232,7 @@ test("cleanup rejects foreign post title/path/ID without touching it and still c
 
 test("owned Android instrumentation source has no trailing whitespace", () => {
   const source = fs.readFileSync(
-    new URL("../../../apps/mobile/testing/android/MobileReaderStagingTest.kt", import.meta.url),
+    new URL("../../../../apps/mobile/testing/android/MobileReaderStagingTest.kt", import.meta.url),
     "utf8",
   );
   assert.equal(/[\t ]+$/m.test(source), false, "Android instrumentation must have no trailing whitespace");
@@ -241,12 +241,12 @@ test("owned Android instrumentation source has no trailing whitespace", () => {
 test("Kotlin precise-resume projection retains a numeric revision through the actual annotation mapping runtime", async () => {
   const { JSDOM } = await import("jsdom");
   const source = fs.readFileSync(
-    new URL("../../../apps/mobile/testing/android/MobileReaderStagingTest.kt", import.meta.url),
+    new URL("../../../../apps/mobile/testing/android/MobileReaderStagingTest.kt", import.meta.url),
     "utf8",
   );
   const accessor = /put\("revision", content\.(getString|getLong)\("contentVersion"\)\)/.exec(source);
   assert.ok(accessor, "exercise the actual JSONObject construction in the Kotlin assertion");
-  const read = (relative) => fs.readFileSync(new URL(`../../../${relative}`, import.meta.url), "utf8");
+  const read = (relative) => fs.readFileSync(new URL(`../../../../${relative}`, import.meta.url), "utf8");
   const projection = JSON.parse(read("scripts/test-fixtures/annotation/unicode-document.json"));
   const content = { contentVersion: 7, document: projection };
   // JSONObject getString serializes a string; getLong serializes a JSON number.

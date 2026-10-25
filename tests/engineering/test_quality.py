@@ -14,10 +14,10 @@ class QualityTests(unittest.TestCase):
         events = []
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            fixture = root / "scripts/test-fixtures/mobile/example.test.mjs"
+            fixture = root / "apps/mobile/tools/tests/example.test.mjs"
             fixture.parent.mkdir(parents=True)
             fixture.touch()
-            with patch.object(quality, "run", side_effect=lambda args, *a, **kw: events.append(args)), patch.object(quality, "java_home", return_value="/existing/java25"), patch.object(quality, "engineering_tests", side_effect=lambda *a: events.append(["engineering-tests"])), patch.object(quality, "coverage", side_effect=lambda *a: events.append(["coverage"])), patch("tools.bytedepth.release.check", side_effect=lambda *a: events.append(["release-check"])), patch("tools.bytedepth.formatting.format_files", side_effect=lambda *a, **kw: events.append(["format-check"])), patch("tools.bytedepth.evidence.begin"), patch("tools.bytedepth.evidence.verify"), patch("tools.bytedepth.evidence.mutations"):
+            with patch.object(quality, "run", side_effect=lambda args, *a, **kw: events.append(args)), patch.object(quality, "java_home", return_value="/existing/java25"), patch.object(quality, "engineering_tests", side_effect=lambda *a: events.append(["engineering-tests"])), patch.object(quality, "coverage", side_effect=lambda *a: events.append(["coverage"])), patch("tools.bytedepth.release.check", side_effect=lambda *a: events.append(["release-check"])), patch("tools.bytedepth.formatting.format_files", side_effect=lambda *a, **kw: events.append(["format-check"])), patch("tools.bytedepth.evidence.begin"), patch("tools.bytedepth.evidence.verify"), patch("tools.bytedepth.evidence.mutations"), patch("tools.bytedepth.mobile.quality"):
                 quality.quality(root)
         self.assertEqual(events[0], ["release-check"])
         npm = ["npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"]

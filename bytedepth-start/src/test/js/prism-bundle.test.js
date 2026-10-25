@@ -53,8 +53,8 @@ test("unknown language keeps its readable source when highlighted", () => {
 
 test("committed bundle matches the pinned language manifest and dependency graph", () => {
   const { execFileSync } = require("node:child_process");
-  expect(() => execFileSync(process.execPath, ["scripts/build-prism.mjs", "--check"], { cwd: root })).not.toThrow();
-  const manifest = JSON.parse(fs.readFileSync(path.join(root, "scripts/prism-languages.json"), "utf8"));
+  expect(() => execFileSync(process.execPath, ["tools/assets.mjs", "prism", "check"], { cwd: root })).not.toThrow();
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, "config/prism-languages.json"), "utf8"));
   const prism = loadPrism();
   for (const language of manifest.languages) {
     expect(prism.languages[language], language).toBeDefined();

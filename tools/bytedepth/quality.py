@@ -75,9 +75,9 @@ def quality(root=ROOT):
     run(["npm", "run", "lint"], root, warnings=True)
     evidence.verify(SimpleNamespace(vitest=root / "target/annotation-unit-evidence/vitest.json", surefire_root=root, coverage=root / "coverage/coverage-final.json", cases=root / "scripts/test-fixtures/annotation/unit-cases.json", run_context=context, seal=context.with_name("seal.json"), record_seal=True))
     evidence.mutations(root)
-    # Replaced by the mobile module in its dependent migration task.
-    run(["bash", "scripts/run-mobile-quality.sh"], root, warnings=True)
-    tests = sorted(root.glob("scripts/test-fixtures/mobile/*.test.mjs"))
+    from . import mobile
+    mobile.quality(root)
+    tests = sorted(root.glob("apps/mobile/tools/tests/*.test.mjs"))
     if not tests:
         raise ToolError("No mobile engineering tests discovered")
     run(["node", "--test", *map(str, tests)], root, warnings=True)

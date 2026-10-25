@@ -56,6 +56,13 @@ class ProcessTests(unittest.TestCase):
             with self.subTest(bad=bad):
                 self.assertTrue(warnings(bad))
 
+    def test_npm_deprecation_exception_matches_only_reviewed_notice(self):
+        warning = "npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported"
+        warnings = self.api().warning_lines
+        self.assertEqual(warnings(warning), [])
+        self.assertTrue(warnings(warning.replace("7.2.3", "8.0.0")))
+        self.assertTrue(warnings(warning + " WARNING unexpected failure"))
+
     def test_log_is_redacted_and_unknown_warning_rejected(self):
         api = self.api()
         log = self.root / "run.log"

@@ -10,6 +10,12 @@ import subprocess
 import sys
 import tempfile
 
+# TD-0007: pre-existing Jest/jsdom tool dependencies, not runtime warnings.
+NPM_DEPRECATIONS = {
+    "npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.",
+    "npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation",
+    "npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported",
+}
 
 class ToolError(Exception):
     def __init__(self, message, status=1):
@@ -21,6 +27,8 @@ def warning_lines(text):
     """TD-0006 allowlist, shared by local commands and formal Host logs."""
     blocked = []
     for number, line in enumerate(text.splitlines(), 1):
+        if line in NPM_DEPRECATIONS:
+            continue
         lower = line.lower()
         if not re.search(r"(^|[^a-z])warn(?:ing)?([^a-z]|$)", lower):
             continue

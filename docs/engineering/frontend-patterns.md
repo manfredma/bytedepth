@@ -109,7 +109,7 @@ filterBar(action, fields)
 
 文章统一加载本地 `vendor/prism/prism-common.min.js`，然后初始化代码块交互。高亮包由 lockfile 固定的 Prism 1.29.0 构建，语言清单和自定义别名唯一来源是 `scripts/prism-languages.json`；使用 Prism 自带的依赖解析器确定加载顺序，不能手工拼接依赖或只增加语言标签。
 
-更新方法：先执行 `npm ci --ignore-scripts --no-audit --no-fund`，修改语言清单后执行 `npm run build:prism`，将生成物一并提交。`node scripts/build-prism.mjs --check` 校验生成物与固定依赖一致，已由 `prism-bundle.test.js` 纳入本地质量门禁。浏览器无需访问 CDN 或按文章请求语言模块；Spring 静态资源指纹随内容更新。
+更新方法：先执行 `npm ci --ignore-scripts --no-audit --no-fund`，修改语言清单后执行 `npm run build:prism`，将生成物一并提交。`python3 -m tools.bytedepth assets prism check` 校验生成物与固定依赖一致，已由 `prism-bundle.test.js` 纳入本地质量门禁。浏览器无需访问 CDN 或按文章请求语言模块；Spring 静态资源指纹随内容更新。
 
 2026-10-15 扫描 Obsidian 笔记库的围栏代码块后，除现有 Java、Go、Python、JavaScript/TypeScript 等语言外，补齐 C/C++、Rust、Coq、Scheme/Racket、YAML、Dockerfile、Kotlin 等已使用且 Prism 支持的语言。扫描中 C 为 1878 块、Go 为 319 块、Rust 为 55 块；清单包含 48 种显式语言，连同自动依赖共 50 个语法模块。Prism 原生别名保留，额外兼容 `make` → `makefile` 和 `proto` → `protobuf`。
 
