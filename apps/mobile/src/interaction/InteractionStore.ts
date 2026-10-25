@@ -25,7 +25,7 @@ export interface InteractionState {
   annotations: AnnotationEnvelope | null;
   draft: CreateAnnotationRequest | null;
 }
-/** Online interaction memory belongs to one article/page and account generation. */
+/** 在线交互内存归属于特定文章、页面及账号代次。 */
 export class InteractionStore {
   private value: InteractionState = {
     rating: null,

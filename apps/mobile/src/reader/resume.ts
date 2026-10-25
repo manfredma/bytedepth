@@ -38,7 +38,7 @@ export function resolveResume(
     position.viewportRatio > 1
   )
     return start;
-  // Work is bounded. A missing old snapshot never becomes evidence for a guessed match.
+  // 工作量有明确上限；旧快照缺失不能作为猜测匹配的依据。
   if (
     previous.segments.length + next.segments.length > 10000 ||
     Array.from(previous.text).length + Array.from(next.text).length > 2000000

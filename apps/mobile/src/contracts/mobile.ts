@@ -1,4 +1,4 @@
-/** Wire IDs remain decimal strings: a Java long can exceed Number's precision. */
+/** 传输 ID 保持十进制字符串形式；Java long 可能超出 Number 的精度。 */
 export type PostId = string;
 export type DatabaseId = string;
 export type UtcTimestamp = string;
@@ -416,7 +416,7 @@ function series(value: unknown): void {
   if (v.next !== null) seriesPost(v.next);
 }
 
-/** Parse strictly at trust boundaries; unknown fields cannot smuggle private state into disk or WebView. */
+/** 在信任边界严格解析，防止未知字段将私有状态带入磁盘或 WebView。 */
 export function parsePublicContent(value: unknown): PublicContent {
   const v = record(value);
   keys(v, [
@@ -483,7 +483,7 @@ export function parsePublicContent(value: unknown): PublicContent {
     requireValid(
       nonempty(r.key) &&
         !resourceKeys.has(r.key) &&
-        // Authored image URLs are opaque here; the downloader rejects unsafe transport/userinfo.
+        // 此处将文章图片 URL 视为不透明值；下载器负责拒绝不安全传输或用户信息。
         string(r.url) &&
         /^https?:\/\//i.test(r.url) &&
         r.role === "image" &&
@@ -514,10 +514,10 @@ function spans(value: unknown, start: number, end: number): void {
     requireValid(nonempty(s.segmentId) && integer(s.start) && integer(s.end) && s.end > s.start);
     length += s.end - s.start;
   }
-  // Projection separators (newlines/tabs) have document offsets but belong to no segment.
+  // 投影分隔符（换行和制表符）具有文档偏移，但不属于任何片段。
   requireValid(length <= end - start);
 }
-/** Bytes, not UTF-16 length: avoid accepting oversized messages made of multibyte text. */
+/** 按字节而非 UTF-16 长度计数，避免接收由多字节文本组成的超大消息。 */
 function utf8Bytes(value: string): number {
   let size = 0;
   for (const point of value) {
@@ -599,7 +599,7 @@ export function parseBridgeMessage(value: string, context: BridgeContext): Reade
     case "link":
       keys(p, ["href"]);
       requireValid(nonempty(p.href));
-      // Relative article/fragment links remain resolvable, while executable/custom schemes never cross the bridge.
+      // 保留相对文章和片段链接的解析能力；可执行或自定义协议不得穿过桥接边界。
       const link = new URL(p.href, "https://staging-bytedepth.bytedepth.cn/");
       requireValid(link.protocol === "https:" && !link.username && !link.password);
       break;

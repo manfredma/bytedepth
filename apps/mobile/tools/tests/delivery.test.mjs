@@ -134,10 +134,14 @@ test("CLI requires bounded JSON inputs and reports only verified public receipt 
     const bindings = path.join(dir, "expected.json");
     const apk = path.join(dir, "fixture-bytes.apk");
     const run = (...args) =>
-      spawnSync(process.execPath, [fileURLToPath(new URL("../delivery.mjs", import.meta.url)), ...args], {
-        encoding: "utf8",
-      });
-    // Opaque unit fixture only; this proves byte hashing, never actual APK signing/installability.
+      spawnSync(
+        process.execPath,
+        [fileURLToPath(new URL("../../../../tools/node.mjs", import.meta.url)), "mobile", "delivery", ...args],
+        {
+          encoding: "utf8",
+        },
+      );
+    // 仅使用不透明单测夹具，验证字节摘要；不证明真实 APK 的签名或可安装性。
     const bytes = Buffer.from("fixture bytes for a consumer digest test");
     const digest = createHash("sha256").update(bytes).digest("hex");
     const receipt = structuredClone(valid);

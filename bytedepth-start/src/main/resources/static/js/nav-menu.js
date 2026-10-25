@@ -16,7 +16,7 @@
     toggle.querySelector(".nav-toggle-label").textContent = open ? "收起" : "菜单";
     panel.hidden = mobile.matches && !open;
     if (!open) {
-      // Nested menus must not reopen unexpectedly after collapsing or resizing.
+      // 折叠或调整尺寸后，嵌套菜单不得意外重新打开。
       panel.querySelectorAll("details[open]").forEach((menu) => {
         menu.open = false;
       });

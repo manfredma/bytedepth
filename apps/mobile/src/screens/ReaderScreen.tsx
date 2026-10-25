@@ -28,7 +28,7 @@ interface OpenState {
   previousDocument: ArticleDocument | null;
 }
 export function ReaderScreen(props: { navigation: Navigation; route: { params: { postId: string } } }) {
-  // Native-stack retains blurred routes; each focused visit owns its own reader consumer and private state.
+  // 原生导航栈保留失焦路由；每次聚焦访问各自拥有阅读消费者及私有状态。
   const focused = useIsFocused();
   return focused ? <ReaderSession key={props.route.params.postId} {...props} /> : null;
 }

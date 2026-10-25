@@ -1,4 +1,4 @@
-"""Immutable candidate, installed configuration and dependency runtime contracts."""
+"""不可变候选、已安装配置及依赖运行时的契约。"""
 import contextlib
 import fcntl
 import hashlib
@@ -92,8 +92,8 @@ def test_configuration(environment):
 
 
 def native_configuration(io):
-    # Installed native configuration is trusted Bash, not dotenv. Execute exactly
-    # that grammar and export only the established native fields, never eval data.
+    # 已安装的原生配置使用可信 Bash 语法，必须按该语法执行，
+    # 仅导出约定字段，不将数据交给 eval。
     names = ['BYTEDEPTH_NATIVE_' + name for name in ('STACK_MODE', 'ROOT', 'APP_PORT', 'MYSQL_PORT', 'REDIS_PORT', 'MEILI_PORT', 'EDGE_PORT')]
     config = io.env.get('BYTEDEPTH_STAGING_NATIVE_CONFIG', '/etc/bytedepth/staging-native.conf')
     require(Path(config).is_file(), 'Staging native configuration is missing')
@@ -183,15 +183,15 @@ def hearth_authorization(response):
 
 
 class Host:
-    """Single subprocess/HTTP boundary; tests replace this object, never sudo."""
+    """统一子进程与 HTTP 边界；测试替换此对象，不调用 sudo。"""
     def __init__(self, root, env, native=True):
         self.root, self.env = Path(root), dict(env)
         self.native = native_configuration(self) if native else {}
 
     def call(self, args, data=None, env=None):
         result = subprocess.run(args, cwd=self.root, env=self.env if env is None else env, input=data, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # Secrets (SQL/passwords, bearer headers, redirect state) are never printed
-        # from this boundary. Callers report the failing operation, not its args.
+        # 此边界不输出 SQL、密码、Bearer 请求头或重定向状态等秘密；
+        # 调用方只报告失败操作，不报告其参数。
         require(result.returncode == 0, f'Host command failed: {Path(args[0]).name}')
         require(not warning_lines(result.stderr), f'Host command emitted an unallowlisted warning: {Path(args[0]).name}')
         return result.stdout

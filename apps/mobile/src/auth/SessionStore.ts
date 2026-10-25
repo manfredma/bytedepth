@@ -40,7 +40,7 @@ export class SessionStore {
   }
   async clear(): Promise<void> {
     await this.ready;
-    // Invalidate synchronously before storage I/O: late responses must not restore a logged-out session.
+    // 存储 I/O 前同步使会话失效，防止延迟响应恢复已退出的会话。
     this.generation++;
     this.privateGeneration++;
     this.id = null;
@@ -64,7 +64,7 @@ export class SessionStore {
   }
   private persist(): Promise<void> {
     const id = this.id;
-    // Serialize writes so a slow SecureStore set cannot finish after a later logout delete.
+    // 串行执行写入，避免缓慢的 SecureStore 写入在后续退出删除之后完成。
     const next = this.writes
       .catch(() => undefined)
       .then(() => (id === null ? this.values.remove("mobile-session") : this.values.set("mobile-session", id)));

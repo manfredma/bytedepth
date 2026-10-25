@@ -1,4 +1,4 @@
-"""Mobile input locks and quality failure boundaries with fake installed tools."""
+"""使用模拟安装工具验证移动端输入锁和质量失败边界。"""
 
 import importlib
 import os
@@ -37,7 +37,7 @@ class MobileToolTests(unittest.TestCase):
 
     def test_stage_failure_and_missing_dependencies_release_lock(self):
         api = self.api()
-        stages = ["ci", "typecheck", "lint", "test", "coverage", "assets.mjs", "exec", "config"]
+        stages = ["ci", "typecheck", "lint", "test", "coverage", "assets", "exec", "config"]
         for stage in stages:
             self.install()
             def run(args, *unused, **kwargs):

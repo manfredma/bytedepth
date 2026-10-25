@@ -16,7 +16,7 @@ import runtime from "../../assets/reader/runtime.json";
 export interface ReaderWebViewProps {
   content: PublicContent;
   generation: number;
-  /** Only verified passive image data from ReaderRepository.assetDataUris. No file/remote URIs. */
+  /** 仅接受 ReaderRepository.assetDataUris 提供的已验证被动图片数据，不接受文件或远程 URI。 */
   imageDataUris: Record<string, string>;
   resume?: ResumePosition | null;
   previousDocument?: ArticleDocument | null;
@@ -26,7 +26,7 @@ export interface ReaderWebViewProps {
   jumpTo?: { segmentId: string; request: number };
   onMessage: (message: ReaderBridgeMessage) => void;
 }
-// Cache bounds raw bytes. The in-memory envelope additionally holds base64 expansion and JSON.
+// 缓存限制原始字节；内存信封还需计入 base64 膨胀及 JSON 开销。
 const READER_ENVELOPE_BYTES = Math.ceil((ARTICLE_BUDGET_BYTES * 4) / 3) + 5 * ARTICLE_BODY_BUDGET_BYTES;
 const inlineScript = (source: string) =>
   `<script nonce="bd-reader-v1">${source.replace(/<\/script/gi, "<\\/script")}</script>`;
@@ -35,7 +35,7 @@ const inlineJson = (value: unknown) =>
     .replace(/</g, "\\u003c")
     .replace(/\u2028/g, "\\u2028")
     .replace(/\u2029/g, "\\u2029");
-/** Hermes does not require a TextEncoder polyfill for reader allocation bounds. */
+/** 阅读器内存分配限制无需为 Hermes 引入 TextEncoder 补丁。 */
 function utf8Bytes(data: string): number {
   let bytes = 0;
   for (const point of data) {

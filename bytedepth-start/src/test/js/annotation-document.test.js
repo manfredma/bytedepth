@@ -376,7 +376,7 @@ test("U30_dependencyReturningAWrongDomRangeIsRejectedBeforeDisplay", () => {
   const { w, root, map } = boot();
   const wrong = w.document.createRange();
   wrong.selectNodeContents(root.querySelector('[data-annotation-segment="s1"]'));
-  // Fault injection at the external helper boundary; all normal mapping tests execute the real helper.
+  // 在外部辅助函数边界注入故障；正常映射测试均执行真实辅助函数。
   w.HypothesisTextRange = { TextRange: { fromOffsets: () => ({ toRange: () => wrong }) } };
   expect(map.ranges([{ segmentId: "s1", start: 0, end: 1 }])).toHaveProperty("error");
 });

@@ -1,4 +1,4 @@
-"""Formatting scope and pinned tools, shared by apply and read-only checks."""
+"""格式化与只读检查共用文件范围和固定版本工具。"""
 
 import fnmatch
 import hashlib
@@ -36,7 +36,7 @@ def ignored(root, path):
             elif directory in Path(relative).parts:
                 return True
         else:
-            # gitignore's **/ also matches zero directory segments.
+            # gitignore 的 **/ 也匹配零层目录。
             variants = {pattern}
             pending = [pattern]
             while pending:
@@ -72,12 +72,12 @@ def collect(root, scope, paths=()):
             try:
                 path.absolute().relative_to(root)
             except ValueError:
-                # Explicit absolute files outside the project remain supported
-                # (formatter fixtures use this); project aliases cannot escape.
+                # 支持显式指定项目外的绝对文件路径，
+                # 用于格式化夹具；项目内别名不得越出边界。
                 return not path.is_symlink() and not ignored(root, canonical)
             raise ToolError(f"Formatting alias escapes the project: {path}") from None
-        # Only inspect ancestry inside the configured project. System aliases
-        # above it (macOS /var -> /private/var) remain valid.
+        # 仅检查项目内部的父目录；项目根以上的系统别名
+        # 仍可使用，例如 macOS 的 /var -> /private/var。
         ancestor = path.absolute()
         while True:
             if ancestor.is_symlink():

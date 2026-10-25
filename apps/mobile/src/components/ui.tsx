@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePreferences } from "../runtime/Runtime";
-// Mirrors default/midnight semantic tokens in the website's static/css/theme.css.
+// 对应网站 static/css/theme.css 中 default/midnight 的语义变量。
 const light = {
   background: "#f0f2f5",
   surface: "#ffffff",

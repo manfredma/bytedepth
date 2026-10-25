@@ -1,4 +1,4 @@
-"""Repository constraints and isolated handoff-document failure fixtures."""
+"""验证仓库约束及隔离的交接文档失败夹具。"""
 
 from pathlib import Path
 import re
@@ -183,3 +183,36 @@ class RepositoryTests(unittest.TestCase):
             if link.startswith(('https:', 'http:', '#')):
                 continue
             self.assertTrue((source.parent / link.split('#')[0]).exists(), link)
+
+    def test_operation_entrypoints_have_one_node_dispatcher(self):
+        for name in ['deploy/provision-staging-certificate.sh', 'deploy/provision-production-edge-staging-certificate.sh']:
+            self.assertFalse((ROOT / name).exists(), name)
+        self.assertTrue((ROOT / 'tools/node.mjs').is_file())
+        expected = {'tools/bytedepth/__main__.py', 'tools/node.mjs', 'scripts/run-local-quality.sh', 'scripts/format-code.sh', 'scripts/format-check.sh', 'scripts/run-mobile-quality.sh', 'scripts/mobile-staging-fixtures.mjs', 'deploy/run-staging-integration-tests.sh', 'deploy/run-staging-e2e-tests.sh', 'deploy/nginx/reload-nginx-deploy-hook.sh'}
+        actual = {'tools/bytedepth/__main__.py', 'tools/node.mjs'}
+        for directory in ['scripts', 'deploy']:
+            for path in (ROOT / directory).rglob('*'):
+                if path.suffix in {'.sh', '.mjs', '.py'} and 'test-fixtures' not in path.parts:
+                    actual.add(path.relative_to(ROOT).as_posix())
+        self.assertEqual(expected, actual)
+        self.assertEqual(10, len(actual))
+        for name in ['tools/assets.mjs', 'apps/mobile/tools/assets.mjs', 'apps/mobile/tools/checks.mjs', 'apps/mobile/tools/delivery.mjs', 'apps/mobile/tools/fixtures.mjs']:
+            text = (ROOT / name).read_text()
+            self.assertNotIn('process.argv', text, name)
+            self.assertNotIn('#!/usr/bin/env node', text, name)
+
+    def test_python_script_explanations_use_chinese(self):
+        import ast
+        import io
+        import tokenize
+        for directory in ['tools', 'tests/engineering']:
+            for path in (ROOT / directory).rglob('*.py'):
+                source = path.read_text()
+                explanations = [token.string for token in tokenize.generate_tokens(io.StringIO(source).readline) if token.type == tokenize.COMMENT and not token.string.startswith('#!')]
+                for node in ast.walk(ast.parse(source)):
+                    if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+                        doc = ast.get_docstring(node)
+                        if doc:
+                            explanations.append(doc)
+                for text in explanations:
+                    self.assertRegex(text, r'[\u3400-\u9fff]', str(path))

@@ -7,5 +7,5 @@ function newVerificationContext(browser, options = {}) {
   });
 }
 
-// Playwright's .mjs configuration imports this helper directly in the package's CommonJS scope.
+// Playwright 的 .mjs 配置直接在包的 CommonJS 范围中导入此辅助模块。
 module.exports = { verificationHeaders, newVerificationContext };

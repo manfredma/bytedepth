@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { createContext, Script } from "node:vm";
 
-// Execute the real worker, with only browser transport/storage replaced. Cache API
-// deliberately ignores HTTP no-store, just like the browser: the worker must decide.
+// 执行真实 Worker，仅替换浏览器传输和存储；Cache API
+// 与浏览器一样忽略 HTTP no-store，因此必须由 Worker 决策。
 const source = readFileSync("bytedepth-start/src/main/resources/static/sw.js", "utf8");
 function worker(responseOptions = {}) {
   const listeners = {},
@@ -96,7 +96,7 @@ function worker(responseOptions = {}) {
         },
         waitUntil: (p) => pending.push(p),
       });
-      // No interception means the browser performs the original network request.
+      // 没有拦截表示浏览器执行原始网络请求。
       const value = await (result || context.fetch(request));
       await Promise.all(pending);
       return value;
@@ -182,7 +182,7 @@ describe("real Service Worker cache boundary", () => {
       expect(w.stored.has("/projects")).toBe(false);
       expect((await w.request(path, { mode: "navigate" })).text).toBe("A:v1");
       expect(w.stored.has(`https://staging.example${path}`)).toBe(false);
-      // A historical worker may already have persisted another identity's HTML.
+      // 历史 Worker 可能已经持久化其他身份的 HTML。
       w.stored.set(`https://staging.example${path}`, w.response("old-private-html"));
       w.offline();
       expect((await w.request(path, { mode: "navigate" })).text).toBe("/offline.html");

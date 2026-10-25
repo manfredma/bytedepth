@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedBy": "apps/mobile/tools/assets.mjs",
+  "generatedBy": "python3 -m tools.bytedepth assets mobile build",
   "sources": [
     {
       "name": "template",
@@ -47,14 +47,14 @@
     {
       "name": "annotationDocument",
       "path": "bytedepth-start/src/main/resources/static/js/annotation-document.js",
-      "sha256": "8e5073e436f9d8e907e07f789011926ece5599fcae87cbf910364ef3f46cb990",
-      "bytes": 8578
+      "sha256": "73848328330b5d45336be497fd2cd68f690f8b55704a829c9c4e7b344a7f32e2",
+      "bytes": 8572
     },
     {
       "name": "prism",
       "path": "bytedepth-start/src/main/resources/static/vendor/prism/prism-common.min.js",
-      "sha256": "c20719dd9e9e69620700483fa53ea4ac3d4b181ec4ee8bdfc73eefb49a36c22d",
-      "bytes": 120596
+      "sha256": "866c7736e613fe4588e19d49c30e49dab67296e81af9011e84eabc8a25538613",
+      "bytes": 120622
     },
     {
       "name": "mermaid",
@@ -65,20 +65,20 @@
     {
       "name": "reader",
       "path": "apps/mobile/src/reader/web/reader.js",
-      "sha256": "b0dafc38304edec9438dc83e020b4e98c9b09265c3771f24307bb781513326f2",
-      "bytes": 15740
+      "sha256": "5063b02ba205bd21c3f8f4e7b32abdfb4cfeb744b502f0c7ccfc65fd0e4dfa14",
+      "bytes": 15711
     },
     {
       "name": "codeBlocks",
       "path": "bytedepth-start/src/main/resources/static/js/code-blocks.js",
-      "sha256": "5d463ca570dbb6c4e8ed5eb6915e650cb9c727d1f886eaf8e166b4d8560eb9fa",
-      "bytes": 3960
+      "sha256": "ada6241912324a96bb7f21984ce909dee463eaf14a9acd3644fb752abb392424",
+      "bytes": 3937
     },
     {
       "name": "postMermaid",
       "path": "bytedepth-start/src/main/resources/static/js/post-mermaid.js",
-      "sha256": "843726ac2daa8dcc438bc77b48363a344f7f965804b2bb52ad1d19ed8a4eb608",
-      "bytes": 4609
+      "sha256": "1a20d55a4c420653ea3fb931beb6baeb162996d839a135635653cbcf9786a6dd",
+      "bytes": 4597
     },
     {
       "name": "hypothesisLicense",

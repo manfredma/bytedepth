@@ -1,4 +1,4 @@
-"""Shared staging transaction: verify, test isolated resources, restore, attest."""
+"""共用 staging 事务：核验、隔离测试、恢复并生成证明。"""
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -34,7 +34,7 @@ def verify_hearth(io):
 
 def restore(io):
     failures = []
-    # Even when teardown has started the application, edge must also be restored.
+    # 即使清理阶段已启动应用，也必须恢复边缘路由。
     for action in [lambda: io.control('start', 'app'), lambda: io.wait('app', 'http://127.0.0.1:' + io.port('app')), lambda: io.control('start', 'edge'), lambda: io.wait('edge', 'http://127.0.0.1:' + io.port('edge'))]:
         try:
             action()
@@ -51,7 +51,7 @@ def load_profile(io, file, phase):
 
 
 def diagnostics(io, since):
-    # Read-only, bounded diagnostics; failure never changes the original result.
+    # 只读且有界的诊断；诊断失败不得改变原始结果。
     print('E2E_SEARCH_DIAGNOSTIC begin')
     for args in [
         ['timeout', '8', 'systemctl', 'show', io.service('meilisearch'), '--property=ActiveState,Result,NRestarts,ExecMainStatus,MemoryCurrent,MemoryPeak,MemoryMax,CPUUsageNSec'],
@@ -182,6 +182,6 @@ def execute(io, sha, phase, state_dir, evidence_dir, runtime_manifest):
     if phase == 'e2e':
         verify_hearth(io)
     runtime.candidate(io.root, sha, io.env)
-    # Only the successfully cleaned, immutable candidate can publish a receipt.
+    # 只有清理成功且身份不可变的候选才能生成回执。
     fields = {'commit': sha, 'command': f'run-staging-{phase}-tests', 'timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), 'result': 'passed', 'runtime_mode': 'host-native', 'run_id': run, 'test_resource_manifest_sha': manifest_sha, 'cleanup': 'result=passed', 'artifact_digest': io.env['ARTIFACT_DIGEST'], 'attempt_nonce': io.env['RELEASE_PLATFORM_TASK_NONCE'], 'tests_total': str(count)}
     runtime.write(evidence, ''.join(f'{key}={value}\n' for key, value in fields.items()))

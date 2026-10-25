@@ -1,4 +1,4 @@
-"""One command surface for project tools, runnable without npm dependencies."""
+"""项目工具的统一命令入口，无需 npm 依赖即可运行。"""
 
 import argparse
 from pathlib import Path
@@ -74,10 +74,7 @@ def main(argv=None):
             {"quality": quality.quality, "coverage": quality.coverage}[args.command](ROOT)
         elif args.command == "assets":
             from .process import run
-            if args.target == "mobile":
-                command = ["node", "apps/mobile/tools/assets.mjs"] + (["--check"] if args.action == "check" else [])
-            else:
-                command = ["node", "tools/assets.mjs", args.target, args.action]
+            command = ["node", str(ROOT / "tools/node.mjs"), "assets", args.target, args.action]
             run(command, ROOT, warnings=True)
         elif args.command == "mobile":
             from . import mobile
@@ -91,7 +88,7 @@ def main(argv=None):
                 mobile.native(ROOT, arguments)
             else:
                 name = "delivery" if args.action == "verify-delivery" else "fixtures"
-                run(["node", f"apps/mobile/tools/{name}.mjs", *arguments], ROOT, warnings=True)
+                run(["node", str(ROOT / "tools/node.mjs"), "mobile", name, *arguments], ROOT, warnings=True)
         elif args.command == "host":
             from .host.cli import main as host_main
             host_main(args.arguments)

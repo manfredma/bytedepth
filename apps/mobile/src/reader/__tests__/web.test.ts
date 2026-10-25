@@ -26,7 +26,7 @@ function boot(name = "rich", extraHtml = "", imageDataUris: Record<string, strin
   w.eval(read(staticRoot + "vendor/hypothesis-anchoring/text-range.js"));
   w.eval(read(staticRoot + "js/annotation-document.js"));
   jest.resetModules();
-  // The CommonJS load instruments the exact browser runtime, without a second test implementation.
+  // 通过 CommonJS 加载对真实浏览器运行时代码插桩，不维护第二套测试实现。
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require("../web/reader");
   const model = JSON.parse(read(`scripts/test-fixtures/annotation/${name}-document.json`));
@@ -421,7 +421,7 @@ test("caret codepoint conversion rejects a surrogate midpoint and preserves emoj
   offset = 2;
   window.dispatchEvent(new Event("keydown"));
   jest.advanceTimersByTime(160);
-  // Mid-surrogate is rejected by the canonical mapper; no unsafe coordinate is emitted.
+  // 统一映射器拒绝代理对中间位置，不输出不安全坐标。
   expect(messages.filter((m) => m.type === "position").at(-1).payload.codePointOffset).not.toBe(2);
   const count = messages.length;
   w.MobileReader.dispose();
@@ -477,7 +477,7 @@ test("native layer/theme updates preserve DOM/anchor, clear private marks immedi
   rects.mockReturnValue([] as any);
   window.dispatchEvent(new Event("scroll"));
   w.MobileReader.configure({ theme: "light", fontScale: 1 });
-  // Simulate callbacks already captured before disposal; cancellation alone is not the guard.
+  // 模拟释放前已捕获的回调；仅取消任务不足以构成保护。
   const timeout = jest.spyOn(window, "setTimeout");
   window.dispatchEvent(new Event("touchstart"));
   const settle = timeout.mock.calls.at(-1)![0] as () => void;

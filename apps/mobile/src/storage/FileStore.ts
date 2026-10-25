@@ -8,7 +8,7 @@ export interface FileStore {
   uri(name: string): string;
 }
 
-/** Only opaque index-controlled names may reach the native filesystem. */
+/** 仅由索引控制的不透明名称可以传入原生文件系统。 */
 export class NativeFileStore implements FileStore {
   constructor(
     private readonly directory: Directory,
@@ -44,7 +44,7 @@ export class NativeFileStore implements FileStore {
   }
 }
 export async function createNativeFileStore(): Promise<FileStore> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Metro lazy native boundary; injected stores require no native runtime.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Metro 按需加载原生边界；注入的存储不需要原生运行时。
   const { Directory, File, Paths }: typeof import("expo-file-system") = require("expo-file-system");
   const directory = new Directory(Paths.cache, "mobile-reader");
   directory.create({ idempotent: true, intermediates: true });

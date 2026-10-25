@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
-import { fileURLToPath } from "node:url";
 const origin = "https://staging-bytedepth.bytedepth.cn";
 export function validateFixtureInput(value) {
   if (
@@ -227,7 +226,7 @@ async function realAdapter(baseURL) {
         const action = await card.locator("form").first().getAttribute("action");
         if (!/^\/admin\/users\/[0-9]+\/activate$/.test(action)) throw Error("Owned user identity missing");
         const id = action.split("/")[3];
-        // Preserve exact ownership before activation so partial failures can be cleaned.
+        // 激活前持久化准确的所有权记录，确保部分失败后仍可清理。
         await recordOwned({ id, account });
         await card.locator(".btn-approve").click();
         return { id, account };
@@ -281,7 +280,7 @@ async function realAdapter(baseURL) {
       if (!/^[0-9]+$/.test(article.id) || article.editPath !== `/admin/posts/${article.id}/edit`)
         throw Error("Owned post cleanup identity mismatch");
       const response = await page.goto(article.editPath, { waitUntil: "domcontentloaded" });
-      // Only an exact, durably recorded owned deletion attempt may accept 404.
+      // 只有与持久化所有权记录精确匹配的删除尝试才能接受 404。
       if (response?.status() === 404 && article.cleanupStarted === true) return;
       await expect(page.locator('input[name="title"]')).toHaveValue(article.title);
       await deleteArticle(page, article);
@@ -342,7 +341,7 @@ export async function runFixtures(args) {
   try {
     if (command === "prepare") {
       const destination = path.resolve(flags.get("--output"));
-      // Refuse symlinks and existing files, including files not owned by this run.
+      // 拒绝符号链接和已存在的文件，包括不属于本轮运行的文件。
       const handle = await fs.open(destination, "wx", 0o600);
       await handle.close();
       await prepareFixtures(input, adapter, (state) => persistManaged(destination, state));
@@ -356,8 +355,3 @@ export async function runFixtures(args) {
     await adapter.close();
   }
 }
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  runFixtures(process.argv.slice(2)).catch(() => {
-    console.error("Managed mobile fixture operation failed; private input retained for owned cleanup");
-    process.exitCode = 1;
-  });

@@ -197,8 +197,8 @@
         let { start, end } = bounds(spans);
         const text = codepoints(model.text);
         if (options.trim) {
-          // Trim canonical edges, including virtual block separators. Native Range
-          // edges may be elements; upstream trimRange requires text-node edges.
+          // 裁剪标准边界，包括虚拟块分隔符；原生 Range
+          // 边界可能是元素，而上游 trimRange 要求文本节点边界。
           while (start < end && !text[start].trim()) {
             start += 1;
           }

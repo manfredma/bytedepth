@@ -52,8 +52,8 @@ export async function cleanupAnnotations(page, path) {
     await removeAnnotation(page, path, annotation.id);
 }
 
-// Restrict range construction to reviewed pure roots, independently of a whole-page
-// textContent counter. This exercises native selection and server validation.
+// 范围构造仅限已审阅的纯内容根节点，不依赖整页
+// textContent 计数，验证原生选择及服务端校验。
 export async function selectQuote(page, quote, occurrence = 0) {
   await page.locator("#post-article .content").evaluate(
     (content, { quote, occurrence }) => {
@@ -153,7 +153,7 @@ export const test = base.extend({
     } finally {
       try {
         if (article) {
-          // Only this fixture's article and the explicit reader identities are touched.
+          // 仅操作本夹具的文章及显式指定的阅读身份。
           const failures = [];
           for (const reader of published ? readers : []) {
             try {

@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { mobileRelease } from "../src/releaseProfile.js";
 export function verifyMobileConfig(config) {
   const release = mobileRelease(config.extra?.releaseChannel);
@@ -67,12 +66,4 @@ export function verifyMobileCoverage(directory) {
     }
   }
   console.log(`Mobile owned source coverage verified: ${source.length} files, 100% statements/branches/functions.`);
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const [kind, file, ...extra] = process.argv.slice(2);
-  if (!file || extra.length || !["config", "coverage"].includes(kind))
-    throw new Error("Usage: checks.mjs config|coverage PATH");
-  if (kind === "coverage") verifyMobileCoverage(file);
-  else verifyMobileConfig(JSON.parse(fs.readFileSync(file, "utf8")));
 }

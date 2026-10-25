@@ -1,1 +1,1 @@
-"""Host Agent implementation. Importing modules never operates services or resources."""
+"""Host Agent 实现；导入模块不操作服务或资源。"""

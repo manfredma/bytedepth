@@ -27,7 +27,7 @@ export interface LocalDatabase {
 }
 export const emptyCache = (): CacheData => ({ copies: {}, generations: {}, unavailable: {} });
 
-/** Versioned migrations never erase a database from a newer application. */
+/** 版本化迁移不得清除较新应用创建的数据库。 */
 export class SqliteLocalDatabase implements LocalDatabase {
   private tail: Promise<unknown> = Promise.resolve();
   constructor(private readonly sqlite: SQLiteDatabase) {}
@@ -89,11 +89,11 @@ export class SqliteLocalDatabase implements LocalDatabase {
     });
   }
 }
-/** Android app config disables cloud backup and device transfer for this persistent local DB. */
+/** Android 应用配置禁用此持久化本地数据库的云备份和设备迁移。 */
 export async function openLocalDatabase(): Promise<LocalDatabase> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Metro lazy native boundary; injected stores require no native runtime.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Metro 按需加载原生边界；注入的存储不需要原生运行时。
   const { openDatabaseAsync }: typeof import("expo-sqlite") = require("expo-sqlite");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Same lazy native boundary.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- 沿用相同的原生按需加载边界。
   const { Directory, Paths }: typeof import("expo-file-system") = require("expo-file-system");
   const directory = new Directory(Paths.document, "mobile-local");
   directory.create({ idempotent: true, intermediates: true });

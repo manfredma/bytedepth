@@ -2,7 +2,7 @@ const { withAppBuildGradle, withDangerousMod } = require("expo/config-plugins");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const marker = "// ByteDepth managed staging instrumentation";
-// AndroidComponents VariantOutput.versionCode is a Property<Int> in pinned AGP 9.2.
+// 固定版本 AGP 9.2 中的 AndroidComponents VariantOutput.versionCode 类型为 Property<Int>。
 // https://developer.android.com/reference/tools/gradle-api/9.2/com/android/build/api/variant/VariantOutput
 const gradle = `
 ${marker}

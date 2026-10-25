@@ -153,7 +153,7 @@ test("旧页面提交返回409并保留同一次操作的选区或评论草稿",
 test("匿名身份与登录身份对已定位及未定位私有记录保持隔离，草稿无泄露", async ({ page, browser, baseURL, article }) => {
   test.setTimeout(60000);
   await ready(page, article.postPath);
-  // Exercise the installed worker, rather than accidentally passing before it controls the page.
+  // 验证已安装的 Worker，避免在它尚未接管页面时意外通过。
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
     if (!navigator.serviceWorker.controller)

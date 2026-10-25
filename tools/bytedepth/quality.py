@@ -1,4 +1,4 @@
-"""Local quality operations; Host execution is deliberately outside this module."""
+"""本地质量操作；Host 执行不属于此模块职责。"""
 
 import os
 from pathlib import Path

@@ -14,7 +14,7 @@
 
 `process.py` 维护子进程、输出脱敏、告警规则、原子写入和互斥锁；`evidence.py` 维护批注实际执行/覆盖率报告、runId、seal 与 mutation 检查。Java 25 解析由 `quality.java_home` 提供，不再单独维护 Shell 版本。
 
-资源生成使用 `python3 -m tools.bytedepth assets <prism|hypothesis|mobile> <build|check>`；Prism 清单在 `config/prism-languages.json`。Node 库依赖保留在 `tools/assets.mjs` 和 `apps/mobile/tools/`。移动质量入口调用 `mobile quality`；原生命令使用 `mobile run -- <command...>` 共用包内输入锁。
+资源生成使用 `python3 -m tools.bytedepth assets <prism|hypothesis|mobile> <build|check>`；Prism 清单在 `config/prism-languages.json`。Node 命令统一经 `tools/node.mjs` 按需分派，库不再解析命令行或在导入时生成资源。Node 库依赖保留在 `tools/assets.mjs` 和 `apps/mobile/tools/`。移动质量入口调用 `mobile quality`；原生命令使用 `mobile run -- <command...>` 共用包内输入锁。
 
 发布平台仍调用 `scripts/run-mobile-quality.sh`、`scripts/mobile-staging-fixtures.mjs` 和 `scripts/test-fixtures/mobile/delivery.test.mjs`；这三处只转发到实现或标准测试，删除前必须迁移平台消费者。
 
@@ -30,14 +30,26 @@ Host 离线回归已归入 `tests/engineering/test_host_*.py`；移动 Node 测�
 
 Maven Wrapper、Expo plugins、systemd/Nginx 模板与 `config/git-hooks/pre-commit` 按其框架职责维护，不额外包一层项目执行框架。Git hook 安装使用 [Git 工作流](git-workflow.md) 中的直接配置命令。
 
-## 本次收敛的统计口径
+## 操作入口清单与统计口径
 
-以 `9085e26123dcc4ccf28760bcb11372412d7cbbb0` 为基线，原 `scripts/`、`deploy/` 的 77 个 Shell/Python/Node 文件为 8,465 行。迁移后把新增工具模块、移动 Node 模块和全部工程测试一起纳入，合计 46 个源文件、约 5,300 行；不把搬目录或拆成模块计为删除。上游 Maven Wrapper、Expo plugins 和纯配置均未纳入前后对比。
+以下 10 个操作入口各有明确消费者，工程实现模块及标准测试不计为独立操作脚本，也不将它们的移动计作删除：
 
-实际可执行操作文件从 30 个减到 16 个：主 Python CLI 1 个、依赖 Node/Expo 的实现入口 5 个、保留路径 10 个。后者包含三个 AGENTS 指定本地入口、三个平台移动接口中的两个操作入口、两个正式 Host runner、两个历史证书适配器和独立 Certbot hook；移动回执测试适配器另计为测试。设计中的不超过 10 个入口目标尚未达到：平台移动接口和无法证明退役的证书接口必须保留，Node 实现仍有可直接执行的入口。本轮如实保留这些维护面，不改名隐藏计数，也不修改其他项目或宿主机换取删文件指标。
+| 数量 | 入口                                                                                | 保留原因                             |
+| ---- | ----------------------------------------------------------------------------------- | ------------------------------------ |
+| 1    | `python3 -m tools.bytedepth`                                                        | 项目统一工程命令                     |
+| 1    | `node tools/node.mjs`                                                               | 按需加载 Node/Expo 库，统一参数分派  |
+| 3    | `scripts/run-local-quality.sh`、`scripts/format-code.sh`、`scripts/format-check.sh` | AGENTS 指定的本地操作入口            |
+| 2    | `scripts/run-mobile-quality.sh`、`scripts/mobile-staging-fixtures.mjs`              | release-platform 移动任务的固定接口  |
+| 2    | `deploy/run-staging-integration-tests.sh`、`deploy/run-staging-e2e-tests.sh`        | release-platform 正式 staging runner |
+| 1    | `deploy/nginx/reload-nginx-deploy-hook.sh`                                          | 安装后独立运行的 Certbot 续证回调    |
+
+两个旧证书包装器已移除；对应能力保留在 `python3 -m tools.bytedepth host certificate staging` 与 `host certificate legacy-edge`，仍仅由 Host Agent 按平台授权执行。仓库及 release-platform 源码未发现旧包装器消费者，不能据此推断未知外部手工调用不存在；这类调用须迁移到上述命令。已安装的续证 hook 不依赖旧包装器。
+
+以 `9085e26123dcc4ccf28760bcb11372412d7cbbb0` 为基线，原 `scripts/`、`deploy/` 的 77 个 Shell/Python/Node 文件为 8,465 行。实际操作入口 30→10；五个 Node 实现模块仍需维护，未计作删除。测试、库、上游 Maven Wrapper、Expo plugins 和纯配置须按各自职责审阅，不为达到入口数量而删除。
 
 ## 维护规则
 
+- 自有脚本、插件及 JS/TS 的说明性注释和 Python docstring 使用中文；shebang、lint/test 指令、来源 URL、上游源码及许可证保持其机器或法律含义。
 - 新功能归入已有职责，不为单条命令或每项检查新增独立脚本。
 - 固定适配器只允许定位源目录并 exec，不包含策略、状态或任务编排。
 - 子进程回收针对整个自有进程组，不能以父进程退出代替后代结束；日志写入失败必须先回收进程组，再释放输入锁。

@@ -1,4 +1,4 @@
-"""Host invariants are exercised without root, network, services or deployment."""
+"""不使用 root、网络、服务或部署操作，验证 Host 不变量。"""
 import json
 from pathlib import Path
 import tempfile

@@ -21,7 +21,7 @@
 
 固定 Hypothesis client `a7b7400d0d706d4357ec37c2a3610b25dcca89d5`，仅适配 `src/annotator/anchoring/text-range.ts` 与 `trim-range.ts` 的 DOM 范围转换。它们无外部运行时依赖，处理纯内容根中的文本节点拆分、合并和包装。
 
-实现放在 `static/vendor/hypothesis-anchoring/`，包含上游原始文件、完整许可证、SHA-256 来源清单，以及去除 TypeScript 类型和封装模块导出的 JavaScript 适配文件。保留原算法，局部改动逐项记录；运行时不从 CDN 或浮动分支加载。不为这两个工具引入完整应用构建系统。适配产物由 `node tools/assets.mjs hypothesis build` 复现，复用并显式固定现有开发工具 rolldown 1.2.5，仅用于类型擦除和模块包装；浏览器不加载编译工具。`node tools/assets.mjs hypothesis check` 校验完整上游文件、许可证、逐文件摘要与可复现产物。升级时必须运行上游适用测试与本设计矩阵。
+实现放在 `static/vendor/hypothesis-anchoring/`，包含上游原始文件、完整许可证、SHA-256 来源清单，以及去除 TypeScript 类型和封装模块导出的 JavaScript 适配文件。保留原算法，局部改动逐项记录；运行时不从 CDN 或浮动分支加载。不为这两个工具引入完整应用构建系统。适配产物由 `node tools/node.mjs assets hypothesis build` 复现，复用并显式固定现有开发工具 rolldown 1.2.5，仅用于类型擦除和模块包装；浏览器不加载编译工具。`node tools/node.mjs assets hypothesis check` 校验完整上游文件、许可证、逐文件摘要与可复现产物。升级时必须运行上游适用测试与本设计矩阵。
 
 上游 `html.anchor()`、`matchQuote()` 不直接接入。其默认近似匹配能把 `quick brown fox` 匹配到 `quick brown fax`，重复候选也可能由旧偏移决定；这是恢复率取舍，不满足本产品的严格身份规则。产品选择器解析和精确证据策略由独立适配层负责，不伪称来自上游保证。
 

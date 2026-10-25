@@ -404,7 +404,7 @@ describe("cancellation at asynchronous storage boundaries", () => {
       repository.release("1");
       barrier.finish();
       expect((await stream.next()).done).toBe(true);
-      // Drain late continuations through the real index serial boundary.
+      // 通过真实索引串行边界处理延迟到达的后续操作。
       await Promise.resolve();
       await index.get("1");
       expect((await stream.next()).done).toBe(true);

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the evidence verifier with independent report fixtures."""
+"""使用独立报告夹具验证证据校验器。"""
 from contextlib import redirect_stdout
 import copy
 import io

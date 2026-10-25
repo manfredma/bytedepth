@@ -46,8 +46,8 @@
         prism.highlightElement(code);
       }
     } catch {
-      // A failed renderer can leave half-written tokens. Restore the pure source
-      // before notifying annotations, so other content never waits for this block.
+      // 渲染失败可能留下未完成的标记；通知批注前恢复纯源码，
+      // 避免其他内容一直等待此代码块。
       code.textContent = source;
     } finally {
       contentRendered(code);

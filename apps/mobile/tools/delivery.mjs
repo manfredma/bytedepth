@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import { createHash } from "node:crypto";
-import { pathToFileURL } from "node:url";
 
 const commit = /^[0-9a-f]{40}$/;
 const sha256 = /^[0-9a-f]{64}$/;
@@ -24,7 +23,7 @@ function record(value, field) {
 function identifier(value, pattern, field) {
   requireValue(typeof value === "string" && pattern.test(value), field);
 }
-/** Validates the canonical receipt structure and bindings; it does not verify APK bytes or a digital signature. */
+/** 校验标准回执结构与绑定；APK 字节和数字签名需另行验证。 */
 export function validateMobileDelivery(manifest, expected) {
   record(manifest, "manifest");
   record(expected, "expected bindings");
@@ -69,7 +68,7 @@ export function validateMobileDelivery(manifest, expected) {
   }
   return manifest;
 }
-/** Checks the downloaded bytes against the receipt. Package/certificate verification belongs to Host apksigner. */
+/** 根据回执校验下载字节；包与证书的验证由 Host apksigner 完成。 */
 export async function verifyMobileApkDigest(file, expectedDigest) {
   identifier(expectedDigest, sha256, "download digest");
   const info = fs.lstatSync(file);
@@ -83,13 +82,13 @@ export async function verifyMobileApkDigest(file, expectedDigest) {
   }
   requireValue(bytes === info.size && hash.digest("hex") === expectedDigest, "download bytes digest");
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+export async function runDelivery([manifest, expected, apk]) {
   const load = (file) => {
     requireValue(file && fs.statSync(file).size <= 2_097_152, "bounded input file");
     return JSON.parse(fs.readFileSync(file, "utf8"));
   };
-  const value = validateMobileDelivery(load(process.argv[2]), load(process.argv[3]));
-  await verifyMobileApkDigest(process.argv[4], value.apkSha256);
+  const value = validateMobileDelivery(load(manifest), load(expected));
+  await verifyMobileApkDigest(apk, value.apkSha256);
   console.log(
     `Mobile receipt and download digest verified: ${value.applicationId} ${value.versionName} (${value.versionCode}), APK sha256:${value.apkSha256}`,
   );

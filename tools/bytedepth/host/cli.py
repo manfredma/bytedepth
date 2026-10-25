@@ -1,4 +1,4 @@
-"""Privileged command boundary. Project quality never imports or calls this CLI."""
+"""特权命令边界；项目质量检查不导入或调用此入口。"""
 import argparse
 import os
 from pathlib import Path
@@ -29,7 +29,7 @@ def main(argv):
     if args.action in ('integration', 'e2e'):
         require(len(args.commit_sha) == 1 and runtime.SHA.fullmatch(args.commit_sha[0]), 'Exactly one full --commit-sha is required')
     require(os.geteuid() == 0, 'Host operations require the signed Host Agent root task')
-    # SIGTERM must unwind the same cleanup transaction as an ordinary failure.
+    # SIGTERM 必须触发与普通失败相同的事务清理。
     def interrupted(signum, frame):
         raise KeyboardInterrupt('Host task interrupted')
     signal.signal(signal.SIGTERM, interrupted)

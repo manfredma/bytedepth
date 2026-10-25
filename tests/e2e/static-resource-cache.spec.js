@@ -21,7 +21,7 @@ test("公共静态资源缓存、错误指纹拒绝和压缩", async ({ request 
     headers: { "If-Modified-Since": icon.headers()["last-modified"] },
   });
   expect(checked.status()).toBe(304);
-  // Explicit encoding proves the deployed runtime compresses text, not just its configuration.
+  // 显式指定编码，证明已部署运行时确实压缩文本，而非仅有配置。
   const compressed = await request.get(theme, { headers: { "Accept-Encoding": "gzip" } });
   expect(compressed.headers()["content-encoding"]).toBe("gzip");
 });

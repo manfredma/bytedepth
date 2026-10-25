@@ -30,7 +30,7 @@ export class Preferences {
       const parsed: unknown = text === null ? null : JSON.parse(text);
       if (valid(parsed)) value = { theme: parsed.theme, fontScale: parsed.fontScale };
     } catch {
-      /* Unreadable preferences never block public reading. */
+      /* 偏好设置无法读取时，不阻断公开阅读。 */
     }
     return new Preferences(file, value);
   }

@@ -11,7 +11,7 @@ export class CommittedCopyCleanupError extends Error {
   }
 }
 
-/** One owner serializes disk mutation and index publication; network I/O never holds this lock. */
+/** 同一所有者串行执行磁盘变更和索引发布；网络 I/O 不持有此锁。 */
 export class CacheIndex {
   private tail: Promise<unknown> = Promise.resolve();
   private readonly active = new Set<string>();
@@ -111,7 +111,7 @@ export class CacheIndex {
     });
   }
   async invalidate(postId: string): Promise<void> {
-    // This synchronous generation barrier invalidates downloads even while disk cleanup waits.
+    // 即使磁盘清理仍在等待，同步代次屏障也会立即使下载失效。
     await this.db.changeCache((data) => {
       data.generations[postId] = (data.generations[postId] ?? 0) + 1;
       data.unavailable[postId] = true;
@@ -174,7 +174,7 @@ export class CacheIndex {
           };
           return true;
         });
-        // A crash here leaves only unreferenced immutable files, recovered on next start.
+        // 此处崩溃仅留下未被引用的不可变文件，下次启动时恢复处理。
         await this.collect();
         return committed;
       } catch (error) {

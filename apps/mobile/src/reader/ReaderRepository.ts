@@ -203,7 +203,7 @@ export class LocalReaderRepository implements ReaderRepository {
       const content = parsePublicContent(rawContent);
       if (!current()) return;
       if (!sameRepresentation(content, state.identity)) throw new Error("Content changed during check");
-      // Existing complete content remains displayed until a new complete package is committed.
+      // 新完整包提交前，继续显示现有完整内容。
       if (!old)
         this.publish(session, { content, copyState: "ONLINE_ONLY", checkState: "CURRENT", lastConfirmedAt: now });
       await this.dependencies.history.record(old ?? content, now);
@@ -223,7 +223,7 @@ export class LocalReaderRepository implements ReaderRepository {
       const saved = await this.dependencies.index.promote(content, assets, generation, now);
       if (!current()) return;
       if (!saved) throw new Error("No room for complete offline copy");
-      // The committed identity must be visible before fallible history bookkeeping.
+      // 可能失败的历史记录操作开始前，必须先公开已提交身份。
       this.publish(session, { content, copyState: "OFFLINE_READY", checkState: "CURRENT", lastConfirmedAt: now });
       await this.dependencies.history.record(content, now);
     } catch (error) {
@@ -233,7 +233,7 @@ export class LocalReaderRepository implements ReaderRepository {
       }
       if (!current()) return;
       if (error instanceof CommittedCopyCleanupError) {
-        // Publication already committed: reconcile the durable identity before reporting cleanup failure.
+        // 发布已提交；报告清理失败前，先核对持久化身份。
         try {
           const saved = await this.dependencies.index.get(session.postId);
           if (!current()) return;
@@ -247,7 +247,7 @@ export class LocalReaderRepository implements ReaderRepository {
             return;
           }
         } catch {
-          /* Storage could not confirm the committed copy; the visible body remains online only. */
+          /* 存储无法确认已提交副本；当前可见正文仍仅在线可用。 */
         }
         if (current()) this.publish(session, { copyState: "ONLINE_ONLY", checkState: "FAILED" });
         return;
@@ -328,9 +328,9 @@ export async function createNativeReaderRepository(
   api: MobileApi,
   downloader: Pick<AssetDownloader, "download">,
 ): Promise<LocalReaderRepository> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Keep native credentials outside injected repository initialization.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- 注入仓库初始化时不加载原生凭据。
   const { sha256 }: typeof import("../auth/nativeCredentials") = require("../auth/nativeCredentials");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Native decoder is only used by the native factory.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- 原生解码器仅由原生工厂使用。
   const { Image }: typeof import("react-native") = require("react-native");
   const index = new CacheIndex(await openLocalDatabase(), await createNativeFileStore(), sha256);
   await index.recover();
@@ -340,7 +340,7 @@ export async function createNativeReaderRepository(
     index,
     history: new HistoryStore(index.db),
     verifyAsset: async (asset) => {
-      // Passive SVG is decoded by the WebView img context; its error bridge invalidates the copy.
+      // 被动 SVG 由 WebView 图片上下文解码；错误桥接会使该副本失效。
       if (asset.mediaType === "image/svg+xml") return;
       const size = await Image.getSize(imageDataUri(asset));
       if (!Number.isFinite(size.width) || !Number.isFinite(size.height) || size.width <= 0 || size.height <= 0)

@@ -63,8 +63,8 @@
       if (disposed || !root.isConnected) {
         return;
       }
-      // Drain external mutations before disconnecting; otherwise a geometry update
-      // could swallow an earlier Prism replacement. Own synchronous paint is ignored.
+      // 断开监听前先处理外部变更，否则几何更新
+      // 可能吞掉之前的 Prism 替换；忽略自身同步绘制产生的变更。
       if (depth === 0) {
         changed(observer.takeRecords());
         observer.disconnect();

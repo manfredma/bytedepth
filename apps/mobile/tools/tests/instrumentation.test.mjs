@@ -249,7 +249,7 @@ test("Kotlin precise-resume projection retains a numeric revision through the ac
   const read = (relative) => fs.readFileSync(new URL(`../../../../${relative}`, import.meta.url), "utf8");
   const projection = JSON.parse(read("scripts/test-fixtures/annotation/unicode-document.json"));
   const content = { contentVersion: 7, document: projection };
-  // JSONObject getString serializes a string; getLong serializes a JSON number.
+  // JSONObject 的 getString 序列化为字符串，getLong 序列化为 JSON 数字。
   const model = {
     ...content.document,
     revision: accessor[1] === "getLong" ? Number(content.contentVersion) : String(content.contentVersion),
@@ -367,7 +367,7 @@ test("a lost completion write retries a previously owned deletion without accept
     remove: async (owned) => {
       assert.equal(owned.cleanupStarted, true, "deletion intent must already be persisted");
       assert.equal(durable.articles.primary.cleanupStarted, true);
-      if (!exists) return; // real adapter accepts the exact previously owned edit path's 404
+      if (!exists) return; // 真实适配器接受先前归属本次运行的准确编辑路径返回的 404
       exists = false;
     },
   };

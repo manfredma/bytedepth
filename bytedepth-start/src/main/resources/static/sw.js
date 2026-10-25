@@ -1,4 +1,4 @@
-// bytedepth Service Worker
+// bytedepth 的 Service Worker
 // 策略：明确的公共静态资源 cache-first，页面导航直达网络 + 中性离线页。
 // CSS / JS 的 URL 由 Spring 依据内容生成 hash；内容变更时自然使用新缓存键。
 

@@ -34,7 +34,7 @@ const escapeXml = (value: string) =>
     .replace(/\t/g, "&#9;")
     .replace(/\n/g, "&#10;")
     .replace(/\r/g, "&#13;");
-/** Parse without resolving DTDs, then emit only a passive image document. Source/cache bytes stay immutable. */
+/** 解析时不解析 DTD，仅输出被动图片文档；源码和缓存字节保持不可变。 */
 export function normalizeSvg(bytes: Uint8Array): Uint8Array {
   if (bytes.length > 8 * 1024 * 1024) throw unsafe();
   const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -75,8 +75,8 @@ export function normalizeSvg(bytes: Uint8Array): Uint8Array {
       if (attribute.uri && !(attribute.uri === XLINK && local === "href")) throw unsafe();
       if (names.has(local)) throw unsafe();
       names.add(local);
-      if (!parent && local === "content") continue; // draw.io editor metadata is never rendered.
-      // Image-context accessibility metadata has no visual effect; discard it.
+      if (!parent && local === "content") continue; // 不渲染 draw.io 编辑器元数据。
+      // 图片上下文中的无障碍元数据不影响视觉效果，直接丢弃。
       if (["role", "aria-label", "aria-labelledby", "aria-describedby", "aria-hidden"].includes(local)) continue;
       if (!attributes.has(local) && !/^data-[a-z0-9-]+$/.test(local)) throw unsafe();
       if (local === "target") {
@@ -112,7 +112,7 @@ export function normalizeSvg(bytes: Uint8Array): Uint8Array {
     append(`</${tag.tag}>`);
   });
   parser.on("text", (value) => {
-    // Character references are forbidden outside the document element, including encoded newlines.
+    // 文档元素外禁止字符引用，包括编码后的换行。
     if (stack.length) append(escapeXml(value));
   });
   parser.on("cdata", (value) => {
@@ -124,7 +124,7 @@ export function normalizeSvg(bytes: Uint8Array): Uint8Array {
   return result;
 }
 function passiveValue(value: string): void {
-  // Reject CSS escapes/comments before token checks; entities have already been decoded by the XML parser.
+  // 检查标记前拒绝 CSS 转义和注释；实体已由 XML 解析器解码。
   if (/[\\@<>]|\/\*|\*\//.test(value)) throw unsafe();
   const withoutUrls = value.replace(/url\(\s*(["']?)#[\w.:-]+\1\s*\)/gi, "");
   for (const match of withoutUrls.matchAll(/([\w-]+)\s*\(/g))

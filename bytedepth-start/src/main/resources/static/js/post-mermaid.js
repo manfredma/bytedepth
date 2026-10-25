@@ -1,4 +1,4 @@
-/* Mermaid owns only its generated containers; source segments remain immutable. */
+/* Mermaid 仅拥有其生成容器；源码片段保持不可变。 */
 (function () {
   "use strict";
   function create(root, library) {

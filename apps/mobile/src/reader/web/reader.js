@@ -1,4 +1,4 @@
-/* Native-only reader adapter. Projection and UTF-16 conversion belong to AnnotationDocument. */
+/* 仅用于原生阅读器的适配层；投影与 UTF-16 转换由 AnnotationDocument 负责。 */
 (function () {
   "use strict";
   let input;
@@ -26,7 +26,7 @@
       generation: input.generation,
       payload,
     });
-    // The native parser is authoritative. Avoid flooding it with an oversized local selection/TOC.
+    // 以原生解析器为准，避免发送过大的本地选区或目录。
     if (new TextEncoder().encode(raw).length <= 65536) window.ReactNativeWebView.postMessage(raw);
   }
   function listen(target, event, callback, options) {
@@ -114,7 +114,7 @@
   }
   function capture() {
     const segments = input.content.document.segments;
-    // Prefer Android's visible caret, with the canonical adapter handling surrogate boundaries.
+    // 优先采用 Android 的可见光标，由统一适配层处理代理对边界。
     const caret = document.caretRangeFromPoint && document.caretRangeFromPoint(24, window.innerHeight * 0.25);
     if (
       caret &&
@@ -311,8 +311,8 @@
           stopCorrection();
           anchor = capture();
         }
-        // Reflow/correction scroll events must not replace the saved character.
-        // Touch, wheel, keyboard and explicit TOC jumps own intentional movement.
+        // 重排或位置校正产生的滚动事件不得覆盖已保存的字符位置。
+        // 触摸、滚轮、键盘和显式目录跳转才表示主动移动。
         position();
         paint();
       },
@@ -358,7 +358,7 @@
       context.generation !== input.generation
     )
       return;
-    // Native supplies only verified data. Recheck the passive image transport before any DOM allocation.
+    // 原生侧仅提供已验证数据；分配 DOM 前再次校验被动图片传输。
     for (const target of root.querySelectorAll("[data-resource-key]")) {
       const key = target.dataset.resourceKey;
       const data = images[key];

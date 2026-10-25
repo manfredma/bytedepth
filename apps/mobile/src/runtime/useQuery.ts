@@ -24,7 +24,7 @@ export function useQuery<T>(path: string | null, authenticated = false, identity
     data: null,
     error: null,
   });
-  // User ID alone is not a private cache generation: the same account can return after clearing.
+  // 仅用户 ID 不能标识私有缓存代次；清理后同一账号可能再次登录。
   useEffect(() => {
     if (!authenticated) return;
     return runtime.auth.onPrivateClear(() => {
@@ -35,7 +35,7 @@ export function useQuery<T>(path: string | null, authenticated = false, identity
     });
   }, [runtime, authenticated, scope]);
   useEffect(() => {
-    // A reconnect or account transition cannot consume a server-mandated wait or trigger its retry.
+    // 重连或切换账号不得跳过服务端规定的等待，也不得触发其重试。
     if (!path || !online || cooldown) return;
     let current = true;
     const controller = new AbortController();

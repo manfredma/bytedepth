@@ -21,7 +21,7 @@ export class InstallIdentity {
     const id = `app:${this.uuid()}`;
     if (!/^app:[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(id))
       throw new Error("Invalid installation identity");
-    // A missing non-backed-up marker means reinstall, even if iOS Keychain retained a previous UUID.
+    // 未备份标记缺失表示重新安装，即使 iOS Keychain 仍保留旧 UUID。
     await this.secure.set("rating-install", id);
     await this.marker.set("install-marker", id);
     return id;

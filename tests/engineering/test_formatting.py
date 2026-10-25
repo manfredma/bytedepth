@@ -1,4 +1,4 @@
-"""Real pinned formatter fixtures plus deterministic file-scope checks."""
+"""使用固定版本格式化器的真实夹具，验证文件范围规则。"""
 
 import importlib
 from pathlib import Path

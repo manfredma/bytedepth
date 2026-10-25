@@ -231,7 +231,7 @@ test("U18_loadingPageWaitsForDomReadyExactlyOnce", async () => {
   vi.resetModules();
   await import("../../main/resources/static/js/post-mermaid.js");
   const init = vi.spyOn(window, "initPostMermaid");
-  // Listener captures the function at registration, so assert the rendering effect.
+  // 监听器在注册时捕获函数，因此验证实际渲染效果。
   document.body.innerHTML =
     '<article id="post-article"><div class="content"><pre><code class="language-mermaid">graph LR</code></pre></div></article>';
   window.mermaid = { initialize: vi.fn(), run: vi.fn().mockResolvedValue(undefined) };

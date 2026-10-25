@@ -1,4 +1,4 @@
-"""Shared certificate validation; infrastructure execution remains Host-only."""
+"""共用证书校验；基础设施操作仍仅由 Host 执行。"""
 from pathlib import Path
 import re
 from .runtime import require

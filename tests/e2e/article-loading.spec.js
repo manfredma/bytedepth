@@ -95,7 +95,7 @@ test("文章远处图片在滚动后加载，首图和图片预览保持可用",
 });
 
 test.describe("脚本延迟下的导航初始化", () => {
-  // Service Worker fetch handlers bypass page.route; this case needs a real paused request.
+  // Service Worker 的 fetch 处理会绕过 page.route；此用例需要真实暂停的请求。
   test.use({ serviceWorkers: "block" });
 
   test("文章延迟脚本尚未完成时手机导航已收起且可以操作", async ({ page }, testInfo) => {

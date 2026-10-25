@@ -1,4 +1,4 @@
-"""Resource isolation, SQL policy and failure recovery without live services."""
+"""在不连接真实服务的前提下验证资源隔离、SQL 策略和失败恢复。"""
 from pathlib import Path
 import tempfile
 import unittest
@@ -67,7 +67,7 @@ class ResourceTests(unittest.TestCase):
 
 
 class FakeHost:
-    """Stateful boundary double: real resource transaction runs against fake services."""
+    """有状态的边界替身：真实资源事务在模拟服务上运行。"""
     def __init__(self, root, failure=''):
         self.root = root
         self.native = {'BYTEDEPTH_NATIVE_ROOT': str(root)}

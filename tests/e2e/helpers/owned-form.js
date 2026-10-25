@@ -25,7 +25,7 @@ export async function updateOwnedArticle(page, article, content) {
   const categoryId = await page.locator('select[name="categoryId"] option:checked').getAttribute("value");
   const path = await page.locator("form.post-editor-form").getAttribute("action");
   await submitOwnedForm(page, path, { title: article.title, content, categoryId });
-  // A 200 after following a redirect alone is not evidence of a successful write.
+  // 仅凭跟随重定向后返回 200，不能证明写入成功。
   await page.goto(article.editPath, { waitUntil: "domcontentloaded" });
   const persisted = await page.locator("#content-editor").textContent();
   if (persisted !== content)

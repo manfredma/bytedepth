@@ -1,4 +1,4 @@
-"""Certificate helpers never operate real Certbot/Nginx in these tests."""
+"""证书辅助测试不操作真实的 Certbot 或 Nginx。"""
 from pathlib import Path
 import unittest
 from unittest.mock import Mock

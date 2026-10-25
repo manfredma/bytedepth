@@ -43,8 +43,8 @@ async function selectArticleText(page, start, length) {
 }
 
 async function waitForAnnotationReady(page) {
-  // Staging articles can be large enough for the mobile emulation to finish
-  // streaming the HTML after Playwright's default 5-second assertion timeout.
+  // staging 文章可能较大，移动模拟环境的 HTML 流式接收
+  // 可能超过 Playwright 默认的 5 秒断言超时。
   await expect(page.locator('#post-article[data-bd-annotation-ready="true"]')).toBeVisible({ timeout: 15_000 });
 }
 

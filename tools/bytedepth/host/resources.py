@@ -1,4 +1,4 @@
-"""One transaction for strictly scoped staging MySQL, Redis, Meili and images."""
+"""以同一事务管理严格限定范围的 staging MySQL、Redis、Meili 和图片资源。"""
 import hashlib
 import json
 from pathlib import Path
@@ -69,7 +69,7 @@ def redis(io, *args):
 
 
 def mysql(io, sql):
-    # SQL goes to stdin, so generated passwords never appear in process arguments.
+    # SQL 通过标准输入传递，生成的密码不出现在进程参数中。
     return io.call(['mysql', '--defaults-extra-file=' + io.env['BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE'], '--host=127.0.0.1', '--port=' + io.port('mysql'), '--batch', '--skip-column-names'], data=sql)
 
 

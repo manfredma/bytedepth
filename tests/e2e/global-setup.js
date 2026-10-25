@@ -2,8 +2,8 @@ import { newVerificationContext } from "./helpers/verification-traffic.js";
 import { chromium, expect } from "@playwright/test";
 import { authenticationCookies } from "./helpers/admin-auth.js";
 
-// One real credential login per complete run, across both device projects and
-// replacement workers. Never write a storageState file or log the run session.
+// 每次完整运行仅执行一次真实凭据登录，供两个设备项目及
+// 替换 Worker 共用；不写入 storageState 文件，也不记录运行会话。
 export default async function globalSetup(config) {
   delete process.env.E2E_ADMIN_COOKIES;
   const username = process.env.E2E_ADMIN_USERNAME;
@@ -23,7 +23,7 @@ export default async function globalSetup(config) {
       ),
       page.getByRole("button", { name: "登录", exact: true }).click(),
     ]);
-    // Report rate limits and authentication failures at their source, once.
+    // 在源头报告限流和认证失败，且仅报告一次。
     expect(response.status(), "Admin login must succeed without retrying rate limits").toBe(302);
     await page.goto("/admin/posts/new", { waitUntil: "domcontentloaded" });
     await expect(page.locator("form.post-editor-form")).toBeVisible();

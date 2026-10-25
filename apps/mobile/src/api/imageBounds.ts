@@ -1,5 +1,5 @@
 import { MobileRequestError } from "./errors";
-/** Bound decoded allocations before invoking a native image decoder. Byte limits alone do not bound pixels. */
+/** 调用原生图片解码器前限制解码后的内存分配；仅限制字节数无法限制像素数。 */
 export function assertImageBounds(bytes: Uint8Array, type: string): number {
   if (type === "image/svg+xml") return 0;
   const invalid = () => new MobileRequestError(0, "INVALID_RESOURCE", "图片尺寸无法确认");

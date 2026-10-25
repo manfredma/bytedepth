@@ -73,7 +73,7 @@ test("staging Chromium projects do not suppress native scrollbars in headless mo
     ],
     { cwd: path.resolve(__dirname, "../../../.."), encoding: "utf-8" },
   );
-  // Node loads this configuration outside Vitest's module transforms; warnings must fail the check.
+  // Node 在 Vitest 模块转换之外加载此配置；告警必须使检查失败。
   expect(result.status).toBe(0);
   expect(result.stderr).toBe("");
   const projectArguments = JSON.parse(result.stdout);

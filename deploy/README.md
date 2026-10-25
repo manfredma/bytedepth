@@ -43,7 +43,7 @@ integration 从本次 Maven Failsafe summary 统计 `completed - skipped`（执�
 
 本地防复发检查：`python3 -m tools.bytedepth test`，也纳入 `scripts/run-local-quality.sh`。Host 契约、运行时、资源事务、证书和 runner 测试位于 `tests/engineering/test_host_*.py`，使用临时文件和假进程/服务，不能当作线上 evidence。
 
-实现集中在 `tools/bytedepth/host/`：`runtime.py` 维护候选身份、配置、锁与依赖准备；`resources.py` 维护隔离资源和失败清理；`runners.py` 维护 IT/E2E 事务；`certificates.py` 共用证书校验。两个正式 runner 路径和两个历史证书路径为薄适配器。Certbot reload hook 仍可脱离源码快照独立运行。
+实现集中在 `tools/bytedepth/host/`：`runtime.py` 维护候选身份、配置、锁与依赖准备；`resources.py` 维护隔离资源和失败清理；`runners.py` 维护 IT/E2E 事务；`certificates.py` 共用证书校验。两个正式 runner 路径保留为薄适配器。旧证书包装路径已移除，对应操作由 Host Agent 调用 `python3 -m tools.bytedepth host certificate staging` 或 `host certificate legacy-edge`。Certbot reload hook 仍可脱离源码快照独立运行。
 
 既有 native `.conf` 是受信任的 Bash 配置，按原语法加载后只读取约定字段；项目测试 `.env` 是严格的字面量白名单数据。不能混用两种格式。Host 使用已有 Python 3 标准库，不安装 pip 依赖或第二套解释器。
 

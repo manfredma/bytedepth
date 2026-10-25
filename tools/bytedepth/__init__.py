@@ -1,4 +1,4 @@
-"""ByteDepth engineering tools. Product modules do not depend on this package."""
+"""ByteDepth 工程工具；产品模块不依赖此包。"""
 
 from pathlib import Path
 

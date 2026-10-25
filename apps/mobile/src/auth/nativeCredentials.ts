@@ -10,7 +10,7 @@ export const secureValues: SecureValues = {
 };
 const directory = new Directory(Paths.document, ".installation");
 const marker = new File(directory, "marker");
-// Persist beyond article eviction, exclude device migration, reset when application data is removed.
+// 文章被逐出后仍持久保留；不参与设备迁移，应用数据删除时重置。
 export const installMarker: SecureValues = {
   get: async () => (marker.exists ? marker.text() : null),
   set: async (_key, value) => {

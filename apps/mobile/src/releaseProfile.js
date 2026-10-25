@@ -1,4 +1,4 @@
-/** Fixed build identities: never accept an arbitrary API URL from the environment. */
+/** 固定构建身份，不接受环境中任意指定的 API 地址。 */
 function mobileRelease(channel) {
   if (channel === undefined || channel === "preview")
     return {

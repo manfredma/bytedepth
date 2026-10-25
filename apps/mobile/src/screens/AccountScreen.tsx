@@ -77,7 +77,7 @@ export function AccountScreen({ navigation }: { navigation: Navigation }) {
     user?.id ?? "",
   );
   const scope = useRef({ generation: 0 });
-  // Rate limits survive private-state clearing and reconnects; only an explicit submit after the deadline retries.
+  // 清理私有状态及重连后仍保留限流；截止时间之后显式提交才会重试。
   const deadlines = useRef(new Map<"login" | "register", { until: number; error: MobileRequestError }>());
   useEffect(() => {
     const activeScope = scope.current;

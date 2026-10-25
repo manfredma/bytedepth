@@ -66,7 +66,7 @@ export class MobileApi implements ApiPort {
       signal: options.signal,
     });
     if (!this.sessions.isCurrent(snapshot, privateRequest)) throw new StaleResponseError();
-    // A public response must not replace an independently authenticated account with an anonymous session.
+    // 公开响应不得以匿名会话替换独立认证的账号。
     const current = privateRequest
       ? await this.sessions.accept(snapshot, response.headers.get("X-App-Session"), true)
       : snapshot;

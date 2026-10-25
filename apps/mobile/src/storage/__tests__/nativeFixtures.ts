@@ -1,5 +1,5 @@
 import { emptyCache } from "../database";
-/** Native boundary substitutes: production SQLite adapter still owns migrations/transactions. */
+/** 替换原生边界；迁移与事务仍由生产 SQLite 适配器负责。 */
 export class SqliteDriver {
   version = 0;
   cache: string | null = null;

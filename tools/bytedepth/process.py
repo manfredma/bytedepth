@@ -1,4 +1,4 @@
-"""Shared subprocess, output policy and file operations; no deployment orchestration."""
+"""共用子进程、输出策略及文件操作，不编排部署。"""
 
 from contextlib import ExitStack
 import hashlib
@@ -10,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 
-# TD-0007: pre-existing Jest/jsdom tool dependencies, not runtime warnings.
+# TD-0007：既有 Jest/jsdom 工具依赖通知，不属于运行时告警。
 NPM_DEPRECATIONS = {
     "npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.",
     "npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation",
@@ -24,7 +24,7 @@ class ToolError(Exception):
 
 
 def warning_lines(text):
-    """TD-0006 allowlist, shared by local commands and formal Host logs."""
+    """TD-0006 允许列表，由本地命令与正式 Host 日志共用。"""
     blocked = []
     for number, line in enumerate(text.splitlines(), 1):
         if line in NPM_DEPRECATIONS:
@@ -58,8 +58,8 @@ def redact(text, secrets):
 
 
 def stop_child(child):
-    # The owned process group can outlive its session leader. Always signal it,
-    # including after poll()/wait() reports the leader has exited.
+    # 自有进程组可能在会话首进程退出后继续运行；必须始终发送信号，
+    # 即使 poll()/wait() 已报告首进程退出。
     try:
         os.killpg(child.pid, signal.SIGTERM)
     except ProcessLookupError:
@@ -78,7 +78,7 @@ def stop_child(child):
 
 
 def run(args, cwd, env=None, log=None, secrets=(), warnings=False):
-    """Stream a child, fail on exit/log errors, and never evaluate a shell string."""
+    """流式读取子进程；退出或日志错误立即失败，不执行 Shell 字符串。"""
     if isinstance(args, (str, bytes)):
         raise TypeError("Command arguments must be an array")
     blocked = []
@@ -134,7 +134,7 @@ def digest(path):
 
 
 class DirectoryLock:
-    """Mobile inputs use mkdir across processes; interrupted ownership is retained."""
+    """移动输入通过 mkdir 实现跨进程互斥；中断后保留所有权记录。"""
     def __init__(self, path):
         self.path = Path(path)
 

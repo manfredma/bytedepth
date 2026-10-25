@@ -1,4 +1,4 @@
-"""Verify the local command boundary without running tools or accessing a host."""
+"""不执行外部工具或访问主机，验证本地命令边界。"""
 
 from pathlib import Path
 import tempfile

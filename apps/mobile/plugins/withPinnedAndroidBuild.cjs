@@ -17,10 +17,10 @@ function pinWrapper(contents) {
 }
 function unsignedRelease(contents) {
   if (contents.includes(unsigned)) return contents;
-  // The Expo template signs release with the debug key. Only the trusted Host
-  // signer may sign distributed bytes; keep debug builds usable locally.
-  return `${contents.trimEnd()}\n\n// Signing happens outside the source build. Keep the validated runtime
-// identical across preview/production; R8 optimization remains deferred.\n${unsigned}\nandroid.buildTypes.release.minifyEnabled = false\nandroid.buildTypes.release.shrinkResources = false\n`;
+  // Expo 模板使用调试密钥签署发布包；分发包只允许由可信 Host
+  // 签名器签署，同时保留本地调试构建能力。
+  return `${contents.trimEnd()}\n\n// 签名在源码构建之外执行；preview 和 production 保持相同的已验证运行时。
+// R8 优化仍暂缓启用。\n${unsigned}\nandroid.buildTypes.release.minifyEnabled = false\nandroid.buildTypes.release.shrinkResources = false\n`;
 }
 function withPinnedAndroidBuild(config) {
   config = withAppBuildGradle(config, (mod) => {

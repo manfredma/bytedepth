@@ -1,4 +1,4 @@
-"""One Changelog model for preparation, candidate gates and legacy metadata."""
+"""版本准备、候选门禁与历史元数据共用 Changelog 模型。"""
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -119,7 +119,7 @@ def prepare(path, kind="minor", version=None, date=None):
         raise ToolError("Date must be YYYY-MM-DD", 2)
     datetime.strptime(release_date, "%Y-%m-%d")
     result = changelog.text.replace("## Unreleased\n", f"## Unreleased\n\n## [{next_version}] - {release_date}\n", 1)
-    Changelog(result)  # Validate before writing; rejection must not damage the input.
+    Changelog(result)  # 写入前完成校验；拒绝操作不得损坏输入。
     atomic_write(path, result)
     return next_version
 

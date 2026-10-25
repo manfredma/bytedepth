@@ -1,4 +1,4 @@
-"""Exercise real child processes and filesystem failures without Host access."""
+"""不访问 Host，验证真实子进程和文件系统失败。"""
 
 from contextlib import redirect_stdout
 import importlib

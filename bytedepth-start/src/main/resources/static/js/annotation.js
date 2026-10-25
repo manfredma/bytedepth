@@ -232,7 +232,7 @@ window.initAnnotations = function () {
       selection.removeAllRanges();
       ranges.forEach((range) => selection.addRange(range));
     } catch {
-      // A detached native Selection cannot invalidate the saved record.
+      // 已脱离文档的原生 Selection 不得使保存记录失效。
     }
   }
 

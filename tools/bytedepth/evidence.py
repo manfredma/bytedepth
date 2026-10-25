@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate actual unit executions and coverage, bound to one fresh quality run."""
+"""校验实际单测执行与覆盖率，并绑定当前质量运行。"""
 from dataclasses import dataclass
 import json
 import os
@@ -239,7 +239,7 @@ def mutations(root=ROOT):
     env = dict(os.environ, JAVA_HOME=resolved_java)
     with tempfile.TemporaryDirectory(prefix='bytedepth-annotation-mutations-') as temp:
         sandbox = Path(temp)/'repo'
-        # Copy only reviewed source inputs, never ignored credentials or runtime artifacts.
+        # 仅复制已审阅的源码输入，不复制被忽略的凭据或运行产物。
         names = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
                                         cwd=root).decode().split('\0')
         for name in set(names) - {''}:

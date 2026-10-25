@@ -54,7 +54,7 @@ export class AuthStore {
     try {
       await this.api.request("/logout", { method: "POST", authenticated: true });
     } catch {
-      /* Local credentials must be removed even if the server response is lost. */
+      /* 即使服务端响应丢失，也必须删除本地凭据。 */
     } finally {
       if (accountGeneration === this.accountGeneration) await this.sessions.clear();
     }

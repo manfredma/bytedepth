@@ -23,7 +23,7 @@
         window.localStorage.setItem(storageKey, theme);
       }
     } catch {
-      // Keep the visual change even when storage is unavailable.
+      // 存储不可用时仍保留视觉变化。
     }
   }
 

@@ -12,8 +12,8 @@ const annotationCss = fs.readFileSync(
   "utf-8",
 );
 
-// These existing interaction fixtures are a single plain segment. Canonical AST,
-// code/toolbars and Unicode seams use the reviewed cross-language golden suites.
+// 既有交互夹具只有一个普通片段；标准 AST、
+// 代码及工具栏和 Unicode 边界由已审阅的跨语言黄金用例覆盖。
 function protocolView(annotation) {
   if (annotation.anchor || annotation.placement) return annotation;
   const model = window.__ANNOTATION_DOCUMENT__;
@@ -726,7 +726,7 @@ describe("annotation sidebar", () => {
     chooseText();
     document.querySelector("[data-highlight]").click();
     const colorButton = document.querySelector(".bd-annotation-popup [data-color]");
-    // A detached, stale menu callback after cancelling the composer has no selection.
+    // 取消编辑器后，已脱离文档的过期菜单回调没有选区。
     document.querySelector(".bd-annotation-composer-cancel").click();
     colorButton.click();
     expect(window.fetch).not.toHaveBeenCalled();
@@ -835,7 +835,7 @@ describe("annotation sidebar", () => {
     expect(note.hidden).toBe(false);
     mark.getBoundingClientRect = () => ({ left: 12, top: window.innerHeight + 1, bottom: window.innerHeight + 21 });
     window.dispatchEvent(new Event("scroll"));
-    // Flush with resize's direct layout path plus the next actual frame.
+    // 通过 resize 的直接布局路径及下一真实帧完成刷新。
     return vi.waitFor(() => expect(note.hidden).toBe(true));
   });
 
@@ -2311,7 +2311,7 @@ describe("annotation sidebar", () => {
     expect(annotationCss).toContain("border-style: dashed");
     expect(annotationCss).toContain(".bd-annotation-comment-trigger");
     expect(annotationCss).toContain("transform: translateY(-50%);");
-    // Gutter geometry is asserted through the real display adapter behavior suite.
+    // 边栏几何通过真实显示适配层的行为测试验证。
     expect(annotationJs).toContain("item.hidden = false;");
     // 跟随型定位与 compact 重置两种分支并存。
     expect(annotationJs).toContain('item.style.transform = "";');

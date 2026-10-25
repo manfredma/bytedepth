@@ -39,7 +39,7 @@ export async function createNativeRuntime(): Promise<Runtime> {
       const session = await sessions.snapshot();
       if (active && current === generation && session.id) await auth.revalidate();
     } catch {
-      /* AuthStore clears expired identity; public reading continues. */
+      /* AuthStore 清理过期身份；公开阅读继续。 */
     }
   };
   const changed = (state: Network.NetworkState) => {

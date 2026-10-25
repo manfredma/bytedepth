@@ -113,8 +113,8 @@ for (const width of [320, 390, 768, 1280]) {
         expect(option.right, `theme option right on ${route}`).toBeLessThanOrEqual(option.viewport);
         if (width <= 1100) expect(option.height).toBeGreaterThanOrEqual(44);
       }
-      // The popup can exceed a narrow panel; its final option must remain
-      // reachable through panel scrolling, rather than only the first option.
+      // 弹出菜单可能超过窄面板；最后一个选项也必须能够
+      // 通过面板滚动访问，不能只保证首个选项可用。
       await nav.locator('[data-theme-option="rose"]').click();
       await expect(nav.locator(".theme-menu")).toBeHidden();
       await themeTrigger.click();
@@ -125,7 +125,7 @@ for (const width of [320, 390, 768, 1280]) {
       await expect(nav.getByRole("link", { name: "关于本站", exact: true })).toBeVisible();
       await nav.getByRole("link", { name: "版本", exact: true }).click();
       await expect(page).toHaveURL(/\/releases$/);
-      // Restore this route before measuring its navigation and homepage title.
+      // 测量导航和首页标题前先恢复此路由。
       await page.goto(route, { waitUntil: "domcontentloaded" });
       if (width <= 1100) await toggle.click();
       const outOfBounds = await nav.evaluate((element) =>
@@ -139,7 +139,7 @@ for (const width of [320, 390, 768, 1280]) {
       expect(outOfBounds, route).toEqual([]);
       if (route === "/" && width <= 768) {
         const title = page.locator("#home-title");
-        // Collapse before measuring the first-screen content placement.
+        // 测量首屏内容位置前先折叠。
         await toggle.click();
         const collapsedNav = await nav.boundingBox();
         const titleBox = await title.boundingBox();
@@ -148,8 +148,8 @@ for (const width of [320, 390, 768, 1280]) {
       }
     }
     if (width === 320) {
-      // staging normally omits RSS. Exercise the production-only control with
-      // the actual staged component CSS so its layout cannot escape validation.
+      // staging 通常不显示 RSS；使用实际部署组件的 CSS
+      // 验证生产环境专用控件，确保布局受到校验。
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await page.locator(".nav-toggle").click();
       await page.locator(".nav-utility").evaluate((utility) => {

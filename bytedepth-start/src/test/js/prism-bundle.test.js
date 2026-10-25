@@ -19,7 +19,7 @@ const loadPrism = () => {
   return context.Prism;
 };
 
-// Missing modules must fail on actual token output, even if language labels render correctly.
+// 即使语言标签显示正常，缺失模块也必须通过实际标记输出触发失败。
 test.each([
   ["c", "#include <stdint.h>\nuint64_t read_value(const unsigned char *bytes) { return bytes[0]; }", "keyword"],
   ["rust", "fn main() { let value: u64 = 42; }", "keyword"],
@@ -53,7 +53,9 @@ test("unknown language keeps its readable source when highlighted", () => {
 
 test("committed bundle matches the pinned language manifest and dependency graph", () => {
   const { execFileSync } = require("node:child_process");
-  expect(() => execFileSync(process.execPath, ["tools/assets.mjs", "prism", "check"], { cwd: root })).not.toThrow();
+  expect(() =>
+    execFileSync(process.execPath, ["tools/node.mjs", "assets", "prism", "check"], { cwd: root }),
+  ).not.toThrow();
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "config/prism-languages.json"), "utf8"));
   const prism = loadPrism();
   for (const language of manifest.languages) {

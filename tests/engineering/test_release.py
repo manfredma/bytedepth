@@ -1,4 +1,4 @@
-"""Release metadata behavior, with isolated real Git histories."""
+"""使用隔离的真实 Git 历史验证发布元数据行为。"""
 
 import importlib
 import os

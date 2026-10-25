@@ -13,7 +13,7 @@ const domains = [
   "device_sharedpref",
 ];
 const excludes = domains.map((domain) => `    <exclude domain="${domain}" path="."/>`).join("\n");
-// allowBackup=false alone does not disable OEM device-to-device transfers on Android12+.
+// 仅设置 allowBackup=false 无法禁用 Android 12 及以上厂商的设备间迁移。
 const backupRules = `<?xml version="1.0" encoding="utf-8"?>\n<data-extraction-rules>\n  <cloud-backup>\n${excludes}\n  </cloud-backup>\n  <device-transfer>\n${excludes}\n  </device-transfer>\n</data-extraction-rules>\n`;
 function applyPrivacy(manifest) {
   const app = manifest.manifest.application[0].$;

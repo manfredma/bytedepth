@@ -1,4 +1,4 @@
-/* Paint only server placements independently verified against the current pure-content DOM. */
+/* 仅绘制已根据当前纯内容 DOM 独立核验的服务端定位。 */
 (function () {
   "use strict";
   function create(root, documentMap) {
@@ -48,8 +48,8 @@
         verified.push({ view, ranges });
         accepted.add(view.id);
       }
-      // Snapshot intersections before changing any text node: overlapping live DOM
-      // Ranges would otherwise move while earlier annotations split their nodes.
+      // 修改文本节点前先记录交集快照，否则重叠的动态 DOM
+      // Range 会随先前批注拆分节点而移动。
       const walker = doc.createTreeWalker(root, w.NodeFilter.SHOW_TEXT);
       const pieces = [];
       let node;

@@ -1,4 +1,4 @@
-"""Signed Host transaction ordering and evidence gates, entirely offline."""
+"""离线验证签名 Host 事务顺序及证据门禁。"""
 from contextlib import ExitStack
 from pathlib import Path
 import tempfile

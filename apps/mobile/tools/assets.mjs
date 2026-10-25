@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -26,30 +25,32 @@ const sources = {
   prismLicense: site + "vendor/prism/LICENSE",
   prismVersion: site + "vendor/prism/prism-version.txt",
 };
-const runtime = {};
-const manifest = { schemaVersion: 1, generatedBy: "apps/mobile/tools/assets.mjs", sources: [] };
-for (const [name, source] of Object.entries(sources)) {
-  const bytes = await readFile(path.join(root, source));
-  runtime[name] = bytes.toString("utf8");
-  manifest.sources.push({
-    name,
-    path: source,
-    sha256: createHash("sha256").update(bytes).digest("hex"),
-    bytes: bytes.length,
-  });
+export async function readerAssets(check) {
+  const runtime = {};
+  const manifest = { schemaVersion: 1, generatedBy: "python3 -m tools.bytedepth assets mobile build", sources: [] };
+  for (const [name, source] of Object.entries(sources)) {
+    const bytes = await readFile(path.join(root, source));
+    runtime[name] = bytes.toString("utf8");
+    manifest.sources.push({
+      name,
+      path: source,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+      bytes: bytes.length,
+    });
+  }
+  const target = path.join(root, "apps/mobile/assets/reader");
+  if (!check) await mkdir(target, { recursive: true });
+  for (const [name, data] of [
+    ["runtime.json", runtime],
+    ["manifest.json", manifest],
+  ]) {
+    const expected = JSON.stringify(data, null, 2) + "\n";
+    const file = path.join(target, name);
+    if (check) {
+      const actual = await readFile(file, "utf8").catch(() => null);
+      if (actual !== expected)
+        throw new Error(`Reader asset drift: ${name}; run python3 -m tools.bytedepth assets mobile build`);
+    } else await writeFile(file, expected);
+  }
+  console.log(check ? "Reader assets match canonical sources." : "Reader assets synchronized.");
 }
-const target = path.join(root, "apps/mobile/assets/reader");
-const check = process.argv.includes("--check");
-if (!check) await mkdir(target, { recursive: true });
-for (const [name, data] of [
-  ["runtime.json", runtime],
-  ["manifest.json", manifest],
-]) {
-  const expected = JSON.stringify(data, null, 2) + "\n";
-  const file = path.join(target, name);
-  if (check) {
-    const actual = await readFile(file, "utf8").catch(() => null);
-    if (actual !== expected) throw new Error(`Reader asset drift: ${name}; run node apps/mobile/tools/assets.mjs`);
-  } else await writeFile(file, expected);
-}
-console.log(check ? "Reader assets match canonical sources." : "Reader assets synchronized.");
