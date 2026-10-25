@@ -42,3 +42,4 @@
 | [ADR-0023](0023-reading-history-event-projections.md)          | 以阅读事件驱动个人阅读历史投影                    | Accepted   | 2026-10-07 |
 | [ADR-0024](0024-versioned-annotation-selectors.md)             | 阅读批注采用版本化文字锚点与独立定位状态          | Accepted   | 2026-10-16 |
 | [ADR-0025](0025-react-native-mobile-reader.md)                 | React Native 独立阅读客户端与移动接口边界         | Accepted   | 2026-10-22 |
+| [ADR-0026](0026-standard-library-project-tools.md)             | 使用 Python 标准库收敛项目工程工具                | Accepted   | 2026-10-25 |
