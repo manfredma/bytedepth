@@ -64,12 +64,35 @@ def collect(root, scope, paths=()):
         raise ToolError("Unknown formatting scope", 2)
     files = set()
 
+    def in_scope(path):
+        canonical = path.resolve()
+        try:
+            canonical.relative_to(root)
+        except ValueError:
+            try:
+                path.absolute().relative_to(root)
+            except ValueError:
+                # Explicit absolute files outside the project remain supported
+                # (formatter fixtures use this); project aliases cannot escape.
+                return not path.is_symlink() and not ignored(root, canonical)
+            raise ToolError(f"Formatting alias escapes the project: {path}") from None
+        # Only inspect ancestry inside the configured project. System aliases
+        # above it (macOS /var -> /private/var) remain valid.
+        ancestor = path.absolute()
+        while True:
+            if ancestor.is_symlink():
+                return False
+            if ancestor.resolve() == root:
+                break
+            ancestor = ancestor.parent
+        return not ignored(root, canonical)
+
     def add(file):
-        if file.is_file() and not file.is_symlink() and file.suffix in EXTENSIONS and not ignored(root, file):
-            files.add(file.absolute())
+        if file.is_file() and file.suffix in EXTENSIONS and in_scope(file):
+            files.add(file.resolve())
 
     for path in selected:
-        if path.is_symlink() or ignored(root, path):
+        if path.is_symlink() or not in_scope(path):
             continue
         if path.is_dir():
             for directory, names, filenames in os.walk(path, followlinks=False):

@@ -18,7 +18,7 @@ class RunnerTests(unittest.TestCase):
         root = Path(temporary.name)
         io = Mock()
         io.root = root
-        io.env = {'ARTIFACT_DIGEST': 'sha256:' + 'b' * 64, 'RELEASE_PLATFORM_TASK_NONCE': 'nonce'}
+        io.env = {'ARTIFACT_DIGEST': 'sha256:' + 'b' * 64, 'RELEASE_PLATFORM_TASK_NONCE': 'nonce', 'RELEASE_PLATFORM_TEST_STATE_DIR': str(root / 'slots')}
         io.port.side_effect = lambda role: '18080' if role == 'app' else '18081'
         io.active.return_value = False
         io.call.return_value = ''
@@ -172,5 +172,27 @@ class RunnerTests(unittest.TestCase):
         self.assertNotIn('secret bearer token', text)
         host.http.side_effect = ToolError('timeout')
         with redirect_stdout(streams.StringIO()) as output:
+            runners.diagnostics(host, 'since')
+        self.assertIn('E2E_SEARCH_DIAGNOSTIC end', output.getvalue())
+
+    def test_default_slot_state_preserves_installed_host_path(self):
+        io, root = self.scenario()
+        io.env.pop('RELEASE_PLATFORM_TEST_STATE_DIR')
+        requested = []
+        def directory(path, *args):
+            requested.append(Path(path))
+            actual = root / 'slots' if Path(path) == Path('/var/lib/bytedepth-staging/test-slots') else Path(path)
+            actual.mkdir(parents=True, exist_ok=True)
+            return actual
+        with patch.object(runners.runtime, 'directory', side_effect=directory):
+            runners.execute(io, SHA, 'integration', root / 'state', root / 'evidence', root / 'runtime')
+        self.assertIn(Path('/var/lib/bytedepth-staging/test-slots'), requested)
+
+    def test_optional_metric_read_failure_does_not_replace_test_failure(self):
+        import io as streams
+        from contextlib import redirect_stdout
+        host = Mock()
+        host.service.side_effect = lambda role: role + '.service'
+        with patch.object(Path, 'is_file', return_value=True), patch.object(Path, 'read_text', side_effect=OSError('disappeared')), redirect_stdout(streams.StringIO()) as output:
             runners.diagnostics(host, 'since')
         self.assertIn('E2E_SEARCH_DIAGNOSTIC end', output.getvalue())

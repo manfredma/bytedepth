@@ -90,3 +90,25 @@ class FormattingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class AliasBoundaryTests(unittest.TestCase):
+    def test_symlinked_parent_cannot_include_generated_or_external_files(self):
+        from tools.bytedepth.formatting import collect
+        from tools.bytedepth.process import ToolError
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            root = Path(directory).resolve()
+            (root / '.prettierignore').write_text('apps/mobile/android/\n')
+            generated = root / 'apps/mobile/android/subtree'
+            generated.mkdir(parents=True)
+            (generated / 'config.json').write_text('{}')
+            (root / 'alias').symlink_to(generated.parent, target_is_directory=True)
+            self.assertEqual([], collect(root, 'paths', ['alias/subtree/config.json']))
+            self.assertEqual([], collect(root, 'paths', ['alias/subtree']))
+            external = Path(outside).resolve()
+            (external / 'config.json').write_text('{}')
+            (root / 'external').symlink_to(external, target_is_directory=True)
+            try:
+                selected = collect(root, 'paths', ['external/config.json'])
+            except ToolError:
+                selected = []
+            self.assertEqual([], selected)

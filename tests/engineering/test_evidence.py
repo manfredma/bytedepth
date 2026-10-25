@@ -133,6 +133,33 @@ class EvidenceTest(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             self_test()
 
+    def test_duplicate_execution_identities_never_replace_verified_seal(self):
+        previous = '{"runId":"verified"}\n'
+        self.vitest['testResults'][0]['assertionResults'] *= 2
+        self.vitest.update(numTotalTests=2, numPassedTests=2)
+        self.assertNotEqual(self.invoke(record_seal=True, existing_seal=previous), 0)
+        self.assertEqual(previous, (self.root / 'seal.json').read_text())
+        self.vitest['testResults'][0]['assertionResults'] = self.vitest['testResults'][0]['assertionResults'][:1]
+        self.vitest.update(numTotalTests=1, numPassedTests=1)
+        self.xml = '<testsuite tests="2"><testcase classname="example.UnitTest" name="behavior"/><testcase classname="example.UnitTest" name="behavior"/></testsuite>'
+        self.assertNotEqual(self.invoke(record_seal=True, existing_seal=previous), 0)
+        self.assertEqual(previous, (self.root / 'seal.json').read_text())
+
+    def test_boolean_and_nonfinite_counters_never_replace_verified_seal(self):
+        previous = '{"runId":"verified"}\n'
+        original = copy.deepcopy(self.vitest)
+        for key in ['numTotalTests', 'numPassedTests', 'numFailedTests', 'numPendingTests', 'numTodoTests', 'startTime']:
+            self.vitest = copy.deepcopy(original)
+            self.vitest[key] = bool(self.vitest[key])
+            self.assertNotEqual(self.invoke(record_seal=True, existing_seal=previous), 0, key)
+            self.assertEqual(previous, (self.root / 'seal.json').read_text())
+        self.vitest = original
+        for value in [True, float('inf'), float('nan'), 0.5, -1]:
+            record = next(iter(self.coverage.values()))
+            record['s']['0'] = value
+            self.assertNotEqual(self.invoke(record_seal=True, existing_seal=previous), 0, repr(value))
+            self.assertEqual(previous, (self.root / 'seal.json').read_text())
+
 
 if __name__=='__main__':
     unittest.main()

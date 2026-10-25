@@ -58,13 +58,22 @@ def redact(text, secrets):
 
 
 def stop_child(child):
-    if child.poll() is not None:
+    # The owned process group can outlive its session leader. Always signal it,
+    # including after poll()/wait() reports the leader has exited.
+    try:
+        os.killpg(child.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        child.wait()
         return
-    os.killpg(child.pid, signal.SIGTERM)
     try:
         child.wait(timeout=5)
     except subprocess.TimeoutExpired:
-        os.killpg(child.pid, signal.SIGKILL)
+        pass
+    finally:
+        try:
+            os.killpg(child.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
         child.wait()
 
 
@@ -91,8 +100,10 @@ def run(args, cwd, env=None, log=None, secrets=(), warnings=False):
             stop_child(child)
             raise
         if status:
+            stop_child(child)
             raise ToolError(f"{args[0]} exited with status {status}", status)
         if blocked:
+            stop_child(child)
             raise ToolError("Unallowlisted WARN or WARNING in command output")
 
 

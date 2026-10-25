@@ -190,3 +190,14 @@ class RuntimeTests(unittest.TestCase):
                 with self.assertRaises((SystemExit, ToolError)):
                     main(args)
                 host.assert_not_called()
+
+    def test_shared_lock_never_changes_existing_parent_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            parent.chmod(0o755)
+            original = parent.stat()
+            with patch.object(runtime, 'owned') as chown:
+                with runtime.lock(parent / 'shared.lock'):
+                    self.assertEqual(0o755, parent.stat().st_mode & 0o777)
+                    self.assertEqual(original.st_uid, parent.stat().st_uid)
+                chown.assert_not_called()

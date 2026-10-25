@@ -72,3 +72,5 @@ IntelliJ 设置路径：`Settings/Preferences → Other Settings → Palantir Ja
 ## 复用
 
 当前实现先服务 Maven 多模块项目。稳定后再抽取为独立版本化模板仓库；其他项目保留自己的工具版本、忽略规则和锁文件，不使用 Git submodule。Gradle 适配器不在当前范围内。
+
+显式路径也必须检查项目内的父目录软链接，并按真实目标应用生成目录排除规则；不能通过别名把 Android/iOS 或外部目录带入扫描。macOS `/var` 等位于项目根以上的系统别名不影响正常路径。对应反例由 `test_formatting.py` 验证。

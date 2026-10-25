@@ -25,7 +25,7 @@ Maven、Java 25、完整测试与变更覆盖率的唯一说明见 [maven.md](ma
 
 严重锚定错误必须在无远程凭据的单测环节失败，staging IT/E2E 只补充数据库与浏览器事实。`scripts/test-fixtures/annotation/unit-cases.json` 将 U01–U46 映射到实际 Vitest/Surefire 完整测试名；变更测试名时同步维护该清单，不能把源码字符串断言当成行为用例。
 
-`npm test` 统计 `annotation.js`、映射、显示、渲染生命周期和 Mermaid 适配器的真实执行，输出 JSON 测试与覆盖报告；自有模块不得放入 vendor、改用 eval 或缩小 include 逃避 100% 门禁。`run-local-quality.sh` 为本次测试建立 runId/时间上下文，清理自有前端报告，执行 Java 与前端完整门禁后对报告集合记录摘要并校验。`tools/bytedepth/evidence.py` 拒绝缺失场景、零执行、skip/todo/失败、无覆盖模块、未覆盖分支、陈旧或被替换的报告。旧报告、旧 runId 和仅有成功退出码均不能证明通过；检查器自身由 `tests/engineering/test_evidence.py` 回归；只有全部报告校验成功后才原子写入 seal，失败不得覆盖上一次已验证 seal。
+`npm test` 统计 `annotation.js`、映射、显示、渲染生命周期和 Mermaid 适配器的真实执行，输出 JSON 测试与覆盖报告；自有模块不得放入 vendor、改用 eval 或缩小 include 逃避 100% 门禁。`run-local-quality.sh` 为本次测试建立 runId/时间上下文，清理自有前端报告，执行 Java 与前端完整门禁后对报告集合记录摘要并校验。`tools/bytedepth/evidence.py` 拒绝缺失场景、零执行、skip/todo/失败、无覆盖模块、未覆盖分支、陈旧或被替换的报告。旧报告、旧 runId 和仅有成功退出码均不能证明通过；检查器自身由 `tests/engineering/test_evidence.py` 回归；只有全部报告校验成功后才原子写入 seal，失败不得覆盖上一次已验证 seal。执行身份在同一 runner/suite 内不得重复，计数必须为实际非负整数；布尔值、非有限值或小数不能作为执行/覆盖次数。
 
 `evidence.mutations` 在临时副本中依次移除引用核验、恢复整页 textContent、歧义取首项、未定位删除、忽略版本和接受旧实例结果。每项必须得到“原版通过 → 正式断言失败 → 恢复通过”；语法、编译或非断言运行时异常不能计为拦截。脚本按 lockfile 为该副本单独安装前端依赖，不污染工作区，也不连接 staging。若变异点因重构失配，门禁失败并要求审阅更新，不允许静默跳过。
 

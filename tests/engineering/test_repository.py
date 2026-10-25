@@ -176,3 +176,10 @@ class RepositoryTests(unittest.TestCase):
         for name in ['pom.xml', 'bytedepth-start/pom.xml']:
             self.assertNotIn('testcontainers', (ROOT / name).read_text().lower())
         self.assertFalse((ROOT / 'bytedepth-start/src/test/resources/testcontainers.properties').exists())
+
+    def test_current_gotchas_links_resolve_to_real_source_or_docs(self):
+        source = ROOT / 'docs/engineering/gotchas.md'
+        for link in re.findall(r'\]\(([^)]+)\)', source.read_text()):
+            if link.startswith(('https:', 'http:', '#')):
+                continue
+            self.assertTrue((source.parent / link.split('#')[0]).exists(), link)

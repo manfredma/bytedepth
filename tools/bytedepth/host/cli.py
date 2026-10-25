@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import signal
 
+from .. import ROOT
 from . import certificates, resources, runners, runtime
 from .runtime import require
 
@@ -35,7 +36,8 @@ def main(argv):
     env = dict(os.environ)
     root = Path(env.get('RELEASE_PLATFORM_TEST_SOURCE_ROOT', '/opt/bytedepth'))
     if args.action == 'certificate':
-        io = runtime.Host(root, env, native=False)
+        certificate_root = Path(env.get('RELEASE_PLATFORM_TEST_SOURCE_ROOT', str(ROOT)))
+        io = runtime.Host(certificate_root, env, native=False)
         certificates.provision(io, args.target)
         return
     env = runtime.test_configuration(env)
@@ -50,7 +52,10 @@ def main(argv):
         return
     require(runtime.values(env.get('RELEASE_PLATFORM_TEST_CONFIG_FILE', '/etc/bytedepth-deploy.conf')).get('BYTEDEPTH_DEPLOY_MODE') == 'staging', 'BYTEDEPTH_DEPLOY_MODE must be staging')
     held = env.get('RELEASE_PLATFORM_TEST_LOCK_HELD') == '1' or (args.action == 'bootstrap' and args.lock_held)
-    with runtime.lock(env.get('RELEASE_PLATFORM_TEST_LOCK_FILE', str(state / 'deployment-test.lock')), held):
+    lock_file = Path(env.get('RELEASE_PLATFORM_TEST_LOCK_FILE', str(state / 'deployment-test.lock')))
+    if not held and not lock_file.parent.exists():
+        runtime.directory(lock_file.parent)
+    with runtime.lock(lock_file, held):
         manifest = Path(env.get('RELEASE_PLATFORM_TEST_RUNTIME_MANIFEST', str(state / 'runtime/manifest')))
         if args.action == 'bootstrap':
             runtime.ensure(io, manifest, refresh=not args.ensure)

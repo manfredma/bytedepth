@@ -38,7 +38,7 @@ def report_paths(args):
 
 
 def verify_fresh(paths, context):
-    require(context.get('runId') and isinstance(context.get('startedAtNs'), int), 'Invalid run context')
+    require(isinstance(context.get('runId'), str) and context['runId'] and type(context.get('startedAtNs')) is int and context['startedAtNs'] > 0, 'Invalid run context')
     for path in paths:
         require(path.stat().st_mtime_ns >= context['startedAtNs'], f'Stale report: {path}')
 
@@ -57,6 +57,8 @@ def verify(args):
     require(manifest.get('schemaVersion') == 1 and set(manifest.get('cases', {})) == CASE_IDS,
             'Expected exactly U01-U46 (including U15) in unit manifest')
     vitest = load(args.vitest)
+    for key in ('numTotalTests', 'numPassedTests', 'numFailedTests', 'numPendingTests', 'numTodoTests', 'startTime'):
+        require(type(vitest.get(key)) is int and 0 <= vitest[key] <= 2**53 - 1, f'Invalid Vitest counter: {key}')
     require(vitest.get('success') is True and vitest.get('numTotalTests', 0) > 0, 'Vitest failed or zero tests')
     require(vitest.get('startTime', 0) * 1_000_000 >= context['startedAtNs'] - 1_000_000,
             'Stale Vitest startTime')
@@ -67,7 +69,9 @@ def verify(args):
     for suite in vitest['testResults']:
         for case in suite['assertionResults']:
             require(case['status'] == 'passed', f'Vitest case did not pass: {case["fullName"]}')
-            executed.add(('vitest', Path(suite['name']).as_posix(), case['fullName']))
+            identity = ('vitest', Path(suite['name']).as_posix(), case['fullName'])
+            require(identity not in executed, 'Duplicate Vitest execution identity')
+            executed.add(identity)
             total += 1
     require(total == vitest['numTotalTests'] == vitest['numPassedTests'], 'Vitest execution count mismatch')
     java_total = 0
@@ -80,7 +84,9 @@ def verify(args):
         for case in cases:
             require(not any(case.find(k) is not None for k in ['failure', 'error', 'skipped']),
                     f'Surefire case did not pass: {case.get("name")}')
-            executed.add(('surefire', case.attrib['classname'], case.attrib['name']))
+            identity = ('surefire', case.attrib['classname'], case.attrib['name'])
+            require(identity not in executed, 'Duplicate Surefire execution identity')
+            executed.add(identity)
             java_total += 1
     require(java_total > 0, 'Zero Java unit tests')
     for case_id, references in manifest['cases'].items():
@@ -105,7 +111,7 @@ def verify(args):
             if counts == 'b':
                 require(all(isinstance(value, list) and value for value in values), f'Empty branch: {module}')
                 values = [n for value in record[counts].values() for n in value]
-            require(all(isinstance(n, (int, float)) and n > 0 for n in values),
+            require(all(type(n) is int and 0 < n <= 2**53 - 1 for n in values),
                     f'Uncovered {counts}: {module}')
     if args.record_seal:
         require(expected_seal['reports'] == {str(p): digest(p) for p in paths}, 'Reports changed during verification')

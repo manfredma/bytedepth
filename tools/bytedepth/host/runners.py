@@ -63,8 +63,11 @@ def diagnostics(io, since):
             print('E2E_SEARCH_DIAGNOSTIC: diagnostic command unavailable')
     for metric in ['/proc/pressure/memory', '/proc/pressure/io', '/sys/fs/cgroup/system.slice/bytedepth-staging-native-meilisearch.service/memory.events']:
         path = Path(metric)
-        if path.is_file():
-            print(f'E2E_SEARCH_DIAGNOSTIC {path.name}: {path.read_text()[:4096]}')
+        try:
+            if path.is_file():
+                print(f'E2E_SEARCH_DIAGNOSTIC {path.name}: {path.read_text()[:4096]}')
+        except OSError:
+            print(f'E2E_SEARCH_DIAGNOSTIC metric unavailable: {path.name}')
     try:
         started = time.monotonic()
         io.http('GET', '/health')
@@ -152,7 +155,7 @@ def execute(io, sha, phase, state_dir, evidence_dir, runtime_manifest):
     if phase == 'e2e':
         io.stream(['npm', 'ci', '--ignore-scripts', '--no-audit', '--no-fund'])
     state_dir = runtime.directory(state_dir)
-    slots = runtime.directory(io.env.get('RELEASE_PLATFORM_TEST_STATE_DIR', str(state_dir.parent / 'slots')))
+    slots = runtime.directory(io.env.get('RELEASE_PLATFORM_TEST_STATE_DIR', '/var/lib/bytedepth-staging/test-slots'))
     run = new_run()
     file = slots / run / 'manifest'
     io.env.update(BYTEDEPTH_TEST_STATE_DIR=str(slots), BYTEDEPTH_TEST_CANDIDATE_SHA=sha, BYTEDEPTH_TEST_SLOT_LOCK_HELD='1', BYTEDEPTH_DEPLOY_MODE='staging')

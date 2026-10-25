@@ -46,3 +46,5 @@ integration 从本次 Maven Failsafe summary 统计 `completed - skipped`（执�
 实现集中在 `tools/bytedepth/host/`：`runtime.py` 维护候选身份、配置、锁与依赖准备；`resources.py` 维护隔离资源和失败清理；`runners.py` 维护 IT/E2E 事务；`certificates.py` 共用证书校验。两个正式 runner 路径和两个历史证书路径为薄适配器。Certbot reload hook 仍可脱离源码快照独立运行。
 
 既有 native `.conf` 是受信任的 Bash 配置，按原语法加载后只读取约定字段；项目测试 `.env` 是严格的字面量白名单数据。不能混用两种格式。Host 使用已有 Python 3 标准库，不安装 pip 依赖或第二套解释器。
+
+共享 Maven 锁只打开并 flock 锁文件，不 chmod/chown `/opt/shared-maven` 等既有共享父目录。项目专属状态目录由 CLI 明确准备；不能把锁获取当成目录配置。测试槽位默认仍为 `/var/lib/bytedepth-staging/test-slots`，证书适配器默认从自身源码目录定位版本化资产。可选诊断失败保留原测试失败，不参与 PASS 判定。

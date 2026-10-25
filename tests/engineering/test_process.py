@@ -115,6 +115,83 @@ class ProcessTests(unittest.TestCase):
                 raise KeyboardInterrupt()
         self.assertTrue(lock.exists())
 
+    def child_fixture(self, exit_parent=False):
+        import time
+        pidfile = self.root / 'descendant.pid'
+        child = "import os,signal,time,sys; from pathlib import Path; signal.signal(signal.SIGTERM, signal.SIG_IGN); Path(sys.argv[1]).write_text(str(os.getpid())); time.sleep(60)"
+        parent = "import subprocess,sys,time; from pathlib import Path; subprocess.Popen([sys.executable,'-c',sys.argv[2],sys.argv[1]]); p=Path(sys.argv[1]);\nwhile not p.exists(): time.sleep(.01)\nprint('READY',flush=True)\n" + ("raise SystemExit(0)" if exit_parent else "time.sleep(60)")
+        return [sys.executable, '-c', parent, str(pidfile), child], pidfile
+
+    def descendant_running(self, pid):
+        result = subprocess.run(['ps', '-o', 'stat=', '-p', str(pid)], capture_output=True, text=True)
+        return bool(result.stdout.strip()) and not result.stdout.strip().startswith('Z')
+
+    def test_stop_child_terminates_group_after_leader_has_exited(self):
+        import os
+        import signal
+        import time
+        api = self.api()
+        args, pidfile = self.child_fixture(exit_parent=True)
+        parent = subprocess.Popen(args, start_new_session=True, stdout=subprocess.DEVNULL)
+        try:
+            parent.wait(timeout=5)
+            pid = int(pidfile.read_text())
+            api.stop_child(parent)
+            time.sleep(.05)
+            self.assertFalse(self.descendant_running(pid))
+        finally:
+            try:
+                os.killpg(parent.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            parent.wait()
+
+    def test_log_write_failure_stops_descendants_before_unlock(self):
+        import os
+        import signal
+        import time
+        from unittest.mock import patch
+        api = self.api()
+        args, pidfile = self.child_fixture()
+        class BrokenLog(io.StringIO):
+            def write(self, value):
+                raise OSError('log sink failed')
+        try:
+            with patch.object(Path, 'open', return_value=BrokenLog()), redirect_stdout(io.StringIO()):
+                with self.assertRaises(OSError):
+                    with api.DirectoryLock(self.root / 'inputs.lock'):
+                        api.run(args, self.root, log=self.root / 'output.log')
+            time.sleep(.05)
+            self.assertFalse(self.descendant_running(int(pidfile.read_text())))
+            self.assertFalse((self.root / 'inputs.lock').exists())
+        finally:
+            if pidfile.exists():
+                try:
+                    os.kill(int(pidfile.read_text()), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+    def test_failed_command_stops_pipe_detached_descendant_before_unlock(self):
+        import os
+        import signal
+        import time
+        api = self.api()
+        args, pidfile = self.child_fixture(exit_parent=True)
+        args[2] = args[2].replace("subprocess.Popen([sys.executable,'-c',sys.argv[2],sys.argv[1]])", "subprocess.Popen([sys.executable,'-c',sys.argv[2],sys.argv[1]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)").replace('SystemExit(0)', 'SystemExit(17)')
+        try:
+            with redirect_stdout(io.StringIO()), self.assertRaises(api.ToolError) as failure:
+                with api.DirectoryLock(self.root / 'inputs.lock'):
+                    api.run(args, self.root)
+            self.assertEqual(17, failure.exception.status)
+            time.sleep(.05)
+            self.assertFalse(self.descendant_running(int(pidfile.read_text())))
+        finally:
+            if pidfile.exists():
+                try:
+                    os.kill(int(pidfile.read_text()), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
 
 if __name__ == "__main__":
     unittest.main()

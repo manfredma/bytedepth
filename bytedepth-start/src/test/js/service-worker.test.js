@@ -211,7 +211,7 @@ describe("real Service Worker cache boundary", () => {
     ["/posts/fixture/annotations/1", { method: "PATCH" }],
     ["/posts/fixture/annotations/1", { method: "DELETE" }],
     ["/icons/favicon.svg", { headers: new Headers({ "X-CSRF-Refresh": "1" }) }],
-  ])("bypass request %s goes directly to network", async (path, options) => {
+  ])("bypass request %s with options %j goes directly to network", async (path, options) => {
     const w = worker();
     await w.request(path, options);
     expect(w.calls).toHaveLength(1);

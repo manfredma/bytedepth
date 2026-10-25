@@ -8,6 +8,7 @@ from pathlib import Path
 import pwd
 import re
 import subprocess
+import stat
 import time
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlsplit
@@ -246,9 +247,10 @@ def lock(path, held=False):
         yield
         return
     path = Path(path)
-    directory(path.parent)
-    with path.open('a') as stream:
-        require(not path.is_symlink(), 'Lock cannot be a symlink')
+    require(path.parent.is_dir() and not path.parent.is_symlink(), 'Lock parent must already exist')
+    descriptor = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, 'a') as stream:
+        require(stat.S_ISREG(os.fstat(stream.fileno()).st_mode), 'Lock must be a regular file')
         fcntl.flock(stream, fcntl.LOCK_EX)
         yield
 

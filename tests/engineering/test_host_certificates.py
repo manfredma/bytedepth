@@ -16,3 +16,12 @@ class CertificateTests(unittest.TestCase):
             io.call.side_effect = replies
             with self.assertRaises(ToolError):
                 certificates.validate(io, 'staging-bytedepth.bytedepth.cn')
+
+    def test_certificate_adapter_resolves_versioned_assets_from_its_checkout(self):
+        import os
+        from unittest.mock import patch
+        from tools.bytedepth import ROOT
+        from tools.bytedepth.host import cli
+        with patch.dict(os.environ, {}, clear=True), patch.object(os, 'geteuid', return_value=0), patch.object(cli.signal, 'signal'), patch.object(cli.runtime, 'Host') as host, patch.object(cli.certificates, 'provision'):
+            cli.main(['certificate', 'staging'])
+        self.assertEqual(ROOT, host.call_args.args[0])

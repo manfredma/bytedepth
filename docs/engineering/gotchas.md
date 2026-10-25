@@ -6,7 +6,7 @@
 
 **故障复盘不能止于修复当前报错。** 一旦发现流程、配置、测试或部署遗漏，必须把“现象 → 根因 → 明确规则 → 自动检查 → 发布前证据”一起提交。自动检查应优先覆盖正常路径，让正确顺序自动发生；只有合并冲突、外部服务不可用等不可预防的特殊情况，才允许以失败后人工处理作为流程分支。
 
-发布流程的具体例子是 Changelog：任何用户可见、运行时、部署或配置改动，在首次 staging 前必须有非空、分类明确的 `## Unreleased`；本地质量、release-platform QUALITY、staging、合并和正式发布入口都必须自动校验。质量证据必须在 PR 前本地完成，release-platform 再按 PR head 完整 SHA 执行平台质量、构建和 staging 验收，验收通过后才合并同一 SHA。权威实现见 [`check-release-readiness.sh`](../../python3 -m tools.bytedepth release check)、[统一发布流程](unified-release-pipeline.md) 和 [发布管理](../releases/README.md)。
+发布流程的具体例子是 Changelog：任何用户可见、运行时、部署或配置改动，在首次 staging 前必须有非空、分类明确的 `## Unreleased`；本地质量、release-platform QUALITY、staging、合并和正式发布入口都必须自动校验。质量证据必须在 PR 前本地完成，release-platform 再按 PR head 完整 SHA 执行平台质量、构建和 staging 验收，验收通过后才合并同一 SHA。权威实现见 [发布校验实现](../../tools/bytedepth/release.py)（命令：`python3 -m tools.bytedepth release check`）、[统一发布流程](unified-release-pipeline.md) 和 [发布管理](../releases/README.md)。
 
 合并脚本在 fetch 分支后必须显式更新 `refs/remotes/origin/<branch>`；只写 `git fetch origin <branch> main` 可能只更新 `FETCH_HEAD`，随后 `git rev-parse origin/<branch>` 会失败。该 refspec 由 `test-merge-main-after-quality.sh` 固定检查。
 
