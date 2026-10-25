@@ -24,9 +24,6 @@ def java_home():
 def engineering_tests(root):
     from .__main__ import test
     test(root)
-    # Host fixture suites remain local-only during their subsequent migration.
-    for path in sorted(Path(root).glob("scripts/test-*.sh")):
-        run(["bash", str(path)], root)
 
 
 def coverage(root=ROOT):

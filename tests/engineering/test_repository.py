@@ -155,3 +155,24 @@ class RepositoryTests(unittest.TestCase):
         for text in ['## Unreleased', '### Changed', '最近 7 天']:
             self.assertIn(text, changelog)
         self.assertNotIn('待下一版本开发内容', changelog)
+
+    def test_integration_profile_keeps_external_resources_and_bounded_test_context(self):
+        pom = ET.parse(ROOT / 'pom.xml').getroot()
+        namespace = {'m': pom.tag.partition('}')[0].lstrip('{')}
+        profile = next(p for p in pom.findall('m:profiles/m:profile', namespace) if p.findtext('m:id', namespaces=namespace) == 'staging-integration')
+        text = ET.tostring(profile, encoding='unicode')
+        for required in ['${env.SPRING_PROFILES_ACTIVE}', 'maven-surefire-plugin', 'maven-failsafe-plugin', '**/*IT.java', '${argLine} -Xmx512m']:
+            self.assertIn(required, text)
+        self.assertEqual('16', profile.findtext('.//m:spring.test.context.cache.maxSize', namespaces=namespace))
+        self.assertEqual('true', profile.findtext('.//m:skipTests', namespaces=namespace))
+        self.assertNotRegex(text, r'bytedepth\.it\.(manifest|redis)|BYTEDEPTH_STAGING_IT_REDIS_PASSWORD')
+        paths = ['bytedepth-start/src/test/java/manfred/bytedepth/integration/' + name for name in ['PostRepositoryIT.java', 'AnnotationContentUpdateIT.java', 'AnnotationITSupport.java', 'AnnotationRevisionTransactionIT.java']]
+        paths.append('bytedepth-infrastructure/src/test/java/manfred/bytedepth/infrastructure/ratelimit/RedisRateLimitAdapterIT.java')
+        for name in paths:
+            source = (ROOT / name).read_text()
+            self.assertNotRegex(source, r'(?i)docker|testcontainers|mysqlcontainer|serviceconnection|jdbc:mysql://|spring\.datasource|localhost:3306')
+            if name.endswith(('AnnotationContentUpdateIT.java', 'AnnotationRevisionTransactionIT.java')):
+                self.assertIn('extends AnnotationITSupport', source)
+        for name in ['pom.xml', 'bytedepth-start/pom.xml']:
+            self.assertNotIn('testcontainers', (ROOT / name).read_text().lower())
+        self.assertFalse((ROOT / 'bytedepth-start/src/test/resources/testcontainers.properties').exists())

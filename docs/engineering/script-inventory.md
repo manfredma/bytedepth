@@ -14,15 +14,19 @@
 
 `process.py` 维护子进程、输出脱敏、告警规则、原子写入和互斥锁；`evidence.py` 维护批注实际执行/覆盖率报告、runId、seal 与 mutation 检查。Java 25 解析由 `quality.java_home` 提供，不再单独维护 Shell 版本。
 
+资源生成使用 `python3 -m tools.bytedepth assets <prism|hypothesis|mobile> <build|check>`；Prism 清单在 `config/prism-languages.json`。Node 库依赖保留在 `tools/assets.mjs` 和 `apps/mobile/tools/`。移动质量入口调用 `mobile quality`；原生命令使用 `mobile run -- <command...>` 共用包内输入锁。
+
+发布平台仍调用 `scripts/run-mobile-quality.sh`、`scripts/mobile-staging-fixtures.mjs` 和 `scripts/test-fixtures/mobile/delivery.test.mjs`；这三处只转发到实现或标准测试，删除前必须迁移平台消费者。
+
 ## 测试与约束
 
 测试按职责归入 process、release、formatting、evidence、quality 和 repository 套件，直接测试参数、执行顺序、失败路径和隔离夹具。文档检查保护完整 SHA、职责与有效入口，不绑定主机 IP；真实业务行为仍由 Java/JS 测试和 staging 验证。
 
-本地质量入口也执行保留在 `scripts/test-*.sh` 中的 Host 与移动工具离线回归；这些回归通过假进程和临时文件验证 Host 行为，不对本机执行真实部署。
+Host 离线回归已归入 `tests/engineering/test_host_*.py`；移动 Node 测试位于 `apps/mobile/tools/tests/`。统一发现测试，不再维护独立 Shell 测试入口。回归使用假进程和临时文件，不对本机执行真实部署。
 
 ## Host 与框架资产
 
-`deploy/run-staging-integration-tests.sh` 和 `deploy/run-staging-e2e-tests.sh` 是 release-platform 以完整候选 SHA 调用的固定入口。运行时准备、隔离资源和相关库只供 Host Agent 编排，详见 [部署手册](../../deploy/README.md)。项目工作区不得运行这些命令替代平台验证。
+`deploy/run-staging-integration-tests.sh` 和 `deploy/run-staging-e2e-tests.sh` 是 release-platform 以完整候选 SHA 调用的固定入口。`tools/bytedepth/host/` 共用运行时准备、隔离资源、执行器和证书验证，只供 Host Agent 编排，详见 [部署手册](../../deploy/README.md)。项目工作区不得运行这些命令替代平台验证。
 
 Maven Wrapper、Expo plugins、systemd/Nginx 模板与 `config/git-hooks/pre-commit` 按其框架职责维护，不额外包一层项目执行框架。Git hook 安装使用 [Git 工作流](git-workflow.md) 中的直接配置命令。
 

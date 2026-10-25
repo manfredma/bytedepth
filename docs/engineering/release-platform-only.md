@@ -79,4 +79,4 @@ integration/E2E runner 从 `/etc/bytedepth/staging-test.env` 读取项目测试�
 
 允许的配置键为 `BYTEDEPTH_TEST_MYSQL_DEFAULTS_FILE`、`BYTEDEPTH_TEST_REDIS_SECRET_FILE`、`BYTEDEPTH_TEST_MEILI_SECRET_FILE`、`BYTEDEPTH_TEST_FIXTURE`、`BYTEDEPTH_TEST_FIXTURE_SHA256_FILE`、`BYTEDEPTH_TEST_STAGING_REDIS_DB`、`BYTEDEPTH_TEST_IT_REDIS_DB`、`BYTEDEPTH_TEST_E2E_REDIS_DB`、`BYTEDEPTH_STAGING_E2E_USERNAME` 和 `BYTEDEPTH_STAGING_E2E_PASSWORD_FILE`。引用真实已有的测试输入，不自动生成临时凭据；Redis DB 必须明确配置且通过容量及隔离检查。密码只在执行主机读取，不在对话、日志或 API 回执中输出。
 
-缺少配置/凭据、依赖准备失败、零执行用例或清理失败，均不生成 PASS evidence。配置传递与权限回归入口为 `bash scripts/test-staging-test-config.sh`。
+缺少配置/凭据、依赖准备失败、零执行用例或清理失败，均不生成 PASS evidence。配置传递与权限回归入口为 `python3 -m tools.bytedepth test`。

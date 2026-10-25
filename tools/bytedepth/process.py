@@ -43,6 +43,10 @@ def capture(args, cwd, env=None):
     result = subprocess.run(args, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode:
         raise ToolError(f"{args[0]} failed: {result.stderr.strip()}", result.returncode)
+    if result.stderr:
+        print(result.stderr, end="", file=sys.stderr)
+        if warning_lines(result.stderr):
+            raise ToolError("Unallowlisted WARN or WARNING in captured command stderr")
     return result.stdout
 
 

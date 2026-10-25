@@ -47,6 +47,11 @@ class ProcessTests(unittest.TestCase):
         self.assertEqual(result.strip(), literal)
         self.assertFalse((self.root / "INJECTED").exists())
 
+    def test_capture_rejects_warning_on_successful_stderr(self):
+        api = self.api()
+        with self.assertRaises(api.ToolError):
+            api.capture([sys.executable, "-c", "import sys; print('WARNING hidden', file=sys.stderr); print('{}')"], self.root)
+
     def test_warning_allowlist_is_narrow(self):
         warnings = self.api().warning_lines
         self.assertEqual(warnings("[WARNING] issue for org.javassist:javassist:jar:3.21.0-GA during collection"), [])

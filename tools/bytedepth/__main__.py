@@ -56,7 +56,9 @@ def main(argv=None):
     mobile = commands.add_parser("mobile", help="Mobile quality, native inputs, receipts and fixtures")
     mobile.add_argument("action", choices=("quality", "run", "verify-delivery", "fixtures"))
     mobile.add_argument("arguments", nargs=argparse.REMAINDER)
-    for name in ("quality", "coverage", "host"):
+    host = commands.add_parser("host", help="Signed Host Agent operations only")
+    host.add_argument("arguments", nargs=argparse.REMAINDER)
+    for name in ("quality", "coverage"):
         commands.add_parser(name, help=f"{name} operations")
     args = parser.parse_args(argv)
     try:
@@ -90,6 +92,9 @@ def main(argv=None):
             else:
                 name = "delivery" if args.action == "verify-delivery" else "fixtures"
                 run(["node", f"apps/mobile/tools/{name}.mjs", *arguments], ROOT, warnings=True)
+        elif args.command == "host":
+            from .host.cli import main as host_main
+            host_main(args.arguments)
         elif args.command == "release":
             from . import release
             if args.action == "check":

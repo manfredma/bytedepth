@@ -37,8 +37,12 @@ Host Agent 调用 `deploy/run-staging-integration-tests.sh --commit-sha <40 位 
 
 隔离 MySQL、Redis、Meili、fixture、管理员账号和 native target 配置仍须由环境显式注入，原有资源隔离、清理和依赖校验保持生效。源快照没有 `.git`，也不自带 `node_modules`；E2E runner 在隔离快照中按 lockfile 执行 `npm ci --ignore-scripts --no-audit --no-fund`；宿主机须预备一致的 runtime manifest 与离线 Maven 仓库。依赖准备或校验失败时失败，不能退回版本探针。
 
-runtime manifest 的 `maven_inputs_sha256` 覆盖根 POM、递归声明的 reactor 模块 POM、`.mvn/` 下的 settings/config/extensions/wrapper 文件及 `mvnw`、`mvnw.cmd`，按稳定的相对路径和文件字节计算；不扫描 `target`、`node_modules` 或 Android 生成目录。该计算不依赖 `.git`，适用于平台的 source 快照。仅含旧 `pom_sha256` 的 manifest 不可复用；模块依赖、Maven 配置或 wrapper 改变时，由 Host Agent 在既有锁内调用 `ensure_staging_runtime` 重新准备同一候选的依赖，成功后才写新 manifest。声明的模块 POM 缺失或无法读取时拒绝校验和写入，不能沿用旧指纹或放宽离线 Maven 策略。
+runtime manifest 的 `maven_inputs_sha256` 覆盖根 POM、递归声明的 reactor 模块 POM、`.mvn/` 下的 settings/config/extensions/wrapper 文件及 `mvnw`、`mvnw.cmd`，按稳定的相对路径和文件字节计算；不扫描 `target`、`node_modules` 或 Android 生成目录。该计算不依赖 `.git`，适用于平台的 source 快照。仅含旧 `pom_sha256` 的 manifest 不可复用；模块依赖、Maven 配置或 wrapper 改变时，由 Host Agent 在既有锁内调用 `runtime.ensure` 重新准备同一候选的依赖，成功后才写新 manifest。声明的模块 POM 缺失或无法读取时拒绝校验和写入，不能沿用旧指纹或放宽离线 Maven 策略。
 
 integration 从本次 Maven Failsafe summary 统计 `completed - skipped`（执行前清除旧 summary）；E2E 使用本次 Playwright JSON reporter 的成功用例数。用例数为零或报告失败时，不生成 PASS。证据包含 `commit`、`artifact_digest`、`attempt_nonce`、`tests_total`、`command`、`result` 与清理结果；这些文件仅由正式 Host Agent 任务生成，本地回归测试不上传为 staging evidence。
 
-本地防复发检查：`bash scripts/test-staging-platform-contract.sh`、`bash scripts/test-run-staging-integration-tests.sh` 和 `bash scripts/test-run-staging-e2e-tests.sh`，也纳入 `scripts/run-local-quality.sh`。
+本地防复发检查：`python3 -m tools.bytedepth test`，也纳入 `scripts/run-local-quality.sh`。Host 契约、运行时、资源事务、证书和 runner 测试位于 `tests/engineering/test_host_*.py`，使用临时文件和假进程/服务，不能当作线上 evidence。
+
+实现集中在 `tools/bytedepth/host/`：`runtime.py` 维护候选身份、配置、锁与依赖准备；`resources.py` 维护隔离资源和失败清理；`runners.py` 维护 IT/E2E 事务；`certificates.py` 共用证书校验。两个正式 runner 路径和两个历史证书路径为薄适配器。Certbot reload hook 仍可脱离源码快照独立运行。
+
+既有 native `.conf` 是受信任的 Bash 配置，按原语法加载后只读取约定字段；项目测试 `.env` 是严格的字面量白名单数据。不能混用两种格式。Host 使用已有 Python 3 标准库，不安装 pip 依赖或第二套解释器。

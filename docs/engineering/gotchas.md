@@ -34,7 +34,7 @@
 - **旧 staging 主机 124 的上传限制（历史记录）**：该历史问题已经由 release-platform 的不可变文件制品和 Host Agent 传输路径接管；项目仓库不再上传候选 JAR，也不再维护项目侧的传输脚本。故障排查以 release-platform 任务日志、制品摘要和 Host Agent 结果为准。
 - **staging integration 只运行受限的 Failsafe `*IT`**：单元测试已由本机和 CI 执行；`staging-integration` profile 必须跳过 Surefire，否则会在 staging 再运行全套单测，占用共享 JVM 内存。曾有 Surefire fork 使用约 664 MiB 后被 global OOM killer 杀掉；Failsafe fork 最大堆固定为 512 MiB，Spring Test context cache 限为 16；不得把 exit 137 当测试通过或重试掩盖。
 - **staging E2E warning 要同时检查进程输出和 systemd journal**：Playwright stdout 不包含 test-slot 应用日志；runner 必须用运行时记录的 start timestamp 读取本轮 unit journal，并与 Playwright log 一起通过 WARNING policy。Redis fail-open、数据库或服务初始化 WARN 都不能因为 runner 原先只看 Playwright 输出而漏过。
-- staging E2E 的共享浏览器运行时不只包含 Chromium，还包含 Playwright ffmpeg；缺少 `/root/.cache/ms-playwright/ffmpeg-*/ffmpeg-linux` 会在创建 browser context 前让所有用例失败。必须由 `bootstrap-staging-runtime.sh` 统一安装/校验并写入 runtime manifest，不能在项目目录下载浏览器或在 runner 中临时安装。
+- staging E2E 的共享浏览器运行时不只包含 Chromium，还包含 Playwright ffmpeg；缺少 `/root/.cache/ms-playwright/ffmpeg-*/ffmpeg-linux` 会在创建 browser context 前让所有用例失败。必须由 Host 工具包的 `runtime.ensure` 统一安装/校验并写入 runtime manifest，不能在项目目录下载浏览器或在 runner 中临时安装。
 - **移动端文章 E2E 等待正文初始化**：staging 的长文章在移动 Chromium 下可能在 Playwright `goto(..., {waitUntil: 'commit'})` 后超过默认 5 秒才完成 HTML 流式传输；批注测试必须使用显式 15 秒的 `data-bd-annotation-ready` 等待超时，并保留固定 staging E2E 复验，不能把该时序失败误判为业务脚本异常。
 - **E2E 完整页面导航按目标 URL 同步**：Playwright 的 `page.waitForNavigation()` 可能在 URL 已切到目标页且 `networkidle` 已触发时仍超时；完整页面导航断言使用 `page.waitForURL(目标 URL)`，并继续检查目标页内容。对应导航 E2E 必须覆盖桌面 Chromium 和移动 Chromium。
 - **集成测试资源必须有界**：同一 staging test slot 内的多个 `*IT` 类共享本次 run 的隔离 MySQL、Redis 和 Meilisearch 资源；runner 退出时必须执行 teardown。资源身份不确定时保留 manifest 并报警，不能盲删。
@@ -64,7 +64,7 @@
 - staging 集成测试 runner 不使用固定的宿主机 `MemAvailable` 启动门槛；Surefire 在 staging profile 跳过，Failsafe fork 最大堆固定为 512 MiB，Spring Test context cache 限为 16。
 - native staging 中间件必须有 systemd `MemoryMax`：MySQL 512M、Redis 128M、Meilisearch 384M、edge 64M；Redis 同时固定 `maxmemory 64mb` 与 `noeviction`，防止中间件在 2 GiB 宿主机上无限争抢内存。上限是保护阈值，不代表会预留对应内存。中间件重启后必须等待实际端口就绪，不能只检查 systemd active。
 - 无分隔长文本的换行是公共页面基础规则：仅在版本页或文章页局部设置 `overflow-wrap` 会漏掉搜索摘要、列表内容、评论等其他文本容器。所有公共页面都加载 `theme.css`，在 `body` 基础样式处理此问题；移动端 E2E 应覆盖代表性公共路由的整份文档 `scrollWidth`，而 `pre` 代码块须保留内部横向滚动。
-- 各环境的 native 安装入口是独立执行路径；每个入口都必须负责退役旧网页部署 socket、job/unit 和历史 bytedepth NFS export/mount，不能假定另一环境或通用主机安装器已运行。`scripts/test-staging-native-stack.sh` 与 staging checklist 固定此约束。
+- 各环境的 native 安装入口是独立执行路径；每个入口都必须负责退役旧网页部署 socket、job/unit 和历史 bytedepth NFS export/mount，不能假定另一环境或通用主机安装器已运行。`python3 -m tools.bytedepth test` 与 staging checklist 固定此约束。
 - staging E2E test-slot 由 runner 主动停止，JVM 收到 SIGTERM 后以 143 退出是正常清理；unit 必须将 143 配置为成功退出码，避免通过的 E2E 留下 failed systemd 状态。
 - 原生 staging 部署不能因缺少 `/etc/bytedepth/staging-native.conf`、`staging-native.env` 或 Meilisearch 环境文件而静默回退到另一运行模式；运行模式必须在任何服务启动、重启或数据库备份前 fail-fast。2026-09-25 的事故已证明，未受限的旧 MySQL 在约 3.6 GiB 主机上增长到约 3.3 GiB 会触发全局 OOM，使 SSH banner、HTTP 和 systemd 同时失去响应。`ubuntu` 所有者策略还必须同时保证服务组对数据文件的写权限，不能只修正 owner/group 而留下 `640` 等不可写模式。
 - native MySQL 的数据目录必须使用与初始化时一致的 `lower_case_table_names=1`，并由 systemd 创建 `/run/mysqld` 运行目录；不能只依赖初始化命令或发行版默认 unit，否则重启可能因字典大小写模式不一致或运行目录权限失败。MySQL unit 的关键参数由 `test-host-native-runtime.sh` 固定检查。
@@ -131,19 +131,19 @@
 
 版本页、后台页和公共主题先后清除过浏览器默认 `body` margin；这不能保证后来新增的消费页加载了这些资源。阅读历史页漏载 `theme.css`，而主题检查和移动端 E2E 的手写名单都遗漏了它；原有 `headerLeft >= 0` 断言也允许 8px 空隙通过。修复应覆盖资源消费路径和最终浏览器几何，不能只断言 CSS 文件包含清零规则。权威接入要求与检查边界见 [前台页面基线与页头贴边](frontend-patterns.md#前台页面基线与页头贴边)。
 
-- 通用 Host Agent 的 staging runner 使用候选 release/source 快照；依赖准备也必须读取同一快照，不能继续读取 `/opt/bytedepth` 的历史 Git checkout。runner 在已持有部署/测试锁时调用 `ensure_staging_runtime`，仅既有 bootstrap 成功后写 runtime manifest，再检查当前依赖输入；准备失败或未更新 manifest 均拒绝测试。对应回归入口为 `scripts/test-staging-runtime-preparation.sh`。
+- 通用 Host Agent 的 staging runner 使用候选 release/source 快照；依赖准备也必须读取同一快照，不能继续读取 `/opt/bytedepth` 的历史 Git checkout。runner 在已持有部署/测试锁时调用 `runtime.ensure`，仅既有 bootstrap 成功后写 runtime manifest，再检查当前依赖输入；准备失败或未更新 manifest 均拒绝测试。对应回归入口为 `python3 -m tools.bytedepth test`。
 
 - 平台通用发布的 release 与 images-test 属于 ubuntu，私有目录保持 0700/0750。native E2E test-slot 必须使用与实际 app 一致的 ubuntu 身份；旧 bytedepth 用户会在进入 WorkingDirectory 时触发 systemd `200/CHDIR`，此时浏览器尚未运行，不能误报为登录失败，也不能通过 chmod 777 绕过。2026-10-13 正式日志 task f4c295f6-1087-4263-86f2-a3ec5642b64d 已复现此问题。
 
 ## staging 预热日志的临时文件与管道退出码
 
-`bootstrap-staging-runtime.sh` 的私有 `mktemp` 日志必须保持写入进程的所有权，不能在 root 的 `tee` 打开前改为 `ubuntu`；Linux `protected_regular` 可拒绝在 `/tmp` 中打开其他用户拥有的文件。脚注候选的 integration 日志曾出现临时日志 `Permission denied (os error 13)`，Maven 命令成功但日志采集失败。
+Host 工具包的 `runtime.ensure` 的私有 `mktemp` 日志必须保持写入进程的所有权，不能在 root 的 `tee` 打开前改为 `ubuntu`；Linux `protected_regular` 可拒绝在 `/tmp` 中打开其他用户拥有的文件。脚注候选的 integration 日志曾出现临时日志 `Permission denied (os error 13)`，Maven 命令成功但日志采集失败。
 
-Maven 与 Playwright 预热必须同时检查命令和 `tee` 的 `PIPESTATUS`，日志写入失败必须阻断并禁止刷新 runtime manifest；不能只检查第一个退出码后对空日志运行 WARNING 过滤。`scripts/test-staging-runtime-preparation.sh` 用真实采集函数与离线命令验证成功、日志写入失败、未允许 WARNING 和日志所有权边界。已允许的 Javassist WARNING 仍遵循 `TD-0001` 与窄范围 warning policy。
+Maven 与 Playwright 预热使用共享 `process.run`，命令失败、日志打开/写入失败或未知 WARNING 均必须阻断并禁止刷新 runtime manifest。日志由写入进程保持所有权，完成后才写 ubuntu-owned 的 manifest；不再使用 `tee` 管道或提前 chown 临时日志。`python3 -m tools.bytedepth test` 用真实子进程及隔离文件验证该边界。已允许的 Javassist WARNING 仍遵循 `TD-0001` 与窄范围 warning policy。
 
 ### staging 验证的工作区容量
 
-`run-staging-integration-tests.sh` 在创建测试槽位前要求工作区至少 2 GiB 可用空间。平台摘要的失败分类不能替代当前 attempt 日志：出现 `staging workspace needs at least` 时先通过正式主机维护恢复容量，再复用同一候选/制品重试失败任务；不要降低门槛、在项目工作区 SSH 清理或重复构建掩盖问题。容量恢复前不生成 IT/E2E PASS，不进入人工验收。`test-run-staging-integration-tests.sh` 固定检查容量门槛。
+`run-staging-integration-tests.sh` 在创建测试槽位前要求工作区至少 2 GiB 可用空间。平台摘要的失败分类不能替代当前 attempt 日志：出现 `staging workspace needs at least` 时先通过正式主机维护恢复容量，再复用同一候选/制品重试失败任务；不要降低门槛、在项目工作区 SSH 清理或重复构建掩盖问题。容量恢复前不生成 IT/E2E PASS，不进入人工验收。`python3 -m tools.bytedepth test` 固定检查容量门槛。
 
 ### staging E2E 的身份与表单协议
 
@@ -174,4 +174,4 @@ Maven 与 Playwright 预热必须同时检查命令和 `tee` 的 `PIPESTATUS`，
 
 Playwright 用例失败必须先区分断言和 owned fixture teardown。2026-10-19 两次运行在不同用例清理文章时，`MeiliSearchPostIndexer.awaitTask` 查询已提交任务超过 5 秒，删除接口返回 500；平台摘要匹配到恢复阶段的 curl 连接错误，不能代替首个应用错误。后续诊断确认任务 7511 已在约 20ms 成功、无重启/OOM，但 Java 状态读取未得到响应。按[搜索任务边界](search-indexing.md#任务与失败边界)仅恢复一次同 UID 状态 GET；不增加超时、不忽略清理失败、不重发写入。底层连接触发原因仍需与应用恢复边界区分。
 
-`run-staging-e2e-tests.sh` 在 Playwright 非零退出后、销毁隔离搜索索引前，由 Host Agent 只读采集 Meilisearch 资源、重启及日志、健康延迟、最近任务和错误日志中的任务终态。输出仅保留任务元数据，不输出认证 header 或文档细节；诊断失败不能改变原始失败或生成 PASS。`test-run-staging-e2e-tests.sh` 验证失败路径会采集、保持门禁失败并过滤凭据及任务详情。
+`run-staging-e2e-tests.sh` 在 Playwright 非零退出后、销毁隔离搜索索引前，由 Host Agent 只读采集 Meilisearch 资源、重启及日志、健康延迟、最近任务和错误日志中的任务终态。输出仅保留任务元数据，不输出认证 header 或文档细节；诊断失败不能改变原始失败或生成 PASS。`python3 -m tools.bytedepth test` 验证失败路径会采集、保持门禁失败并过滤凭据及任务详情。
