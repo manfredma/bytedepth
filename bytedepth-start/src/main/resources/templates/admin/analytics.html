@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <th:block th:replace="~{fragments/favicon-head :: favicon}"></th:block>
     <link rel="stylesheet" th:href="@{/css/admin-layout.css}">
+    <link rel="stylesheet" th:href="@{/css/analytics-trend-details.css}">
     <title>访问统计 - bytedepth</title>
     <script th:src="@{/vendor/echarts/echarts.min.js}"></script>
     <style>
@@ -154,10 +155,12 @@
             <button class="btn-close" id="trend-close" onclick="closeTrend()">× 关闭</button>
         </div>
         <div id="trend-chart"></div>
+        <section id="trend-details" class="analytics-trend-details" aria-label="访问趋势汇总与明细"></section>
     </div>
 
 </div>
 <script th:src="@{/js/analytics-date-range.js}"></script>
+<script th:src="@{/js/analytics-trend-details.js}"></script>
 <script>
     // ─── 状态 ────────────────────────────────────────────────────
     const analyticsLaunchDate = document.body.dataset.analyticsLaunchDate;
@@ -486,6 +489,7 @@
         document.getElementById('trend-close').style.display =
             showClose ? 'inline-block' : 'none';
 
+        const detailModel = AnalyticsTrendDetails.render(document.getElementById('trend-details'), comparison);
         const current = comparison.current || [];
         const previous = comparison.previous || [];
         if (!current.length) {
@@ -499,7 +503,7 @@
         const legend = [comparison.currentPeriod];
         const series = [{
             name: comparison.currentPeriod,
-            type: 'line', data: current.map(d => d.viewCount),
+            type: 'line', data: detailModel.chartValues,
             smooth: true, symbol: 'circle', symbolSize: 6,
             areaStyle: { color: adminAccentArea() },
             itemStyle: { color: adminAccent() },
