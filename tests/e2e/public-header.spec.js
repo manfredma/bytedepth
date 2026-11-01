@@ -121,9 +121,11 @@ for (const width of [320, 390, 768, 1280]) {
       await nav.locator('[data-theme-option="default"]').click();
       await expect(nav.locator(".theme-menu")).toBeHidden();
       await nav.locator(".nav-about").click();
-      await expect(nav.locator(".nav-about-menu__panel")).toBeVisible();
-      await expect(nav.getByRole("link", { name: "关于本站", exact: true })).toBeVisible();
-      await nav.getByRole("link", { name: "版本", exact: true }).click();
+      const aboutMenu = nav.locator(".nav-about-menu__panel");
+      await expect(aboutMenu).toBeVisible();
+      await expect(aboutMenu.getByRole("link", { name: "关于本站", exact: true })).toBeVisible();
+      await expect(aboutMenu.getByRole("link", { name: "网络地图", exact: true })).toBeVisible();
+      await aboutMenu.getByRole("link", { name: "版本", exact: true }).click();
       await expect(page).toHaveURL(/\/releases$/);
       // 测量导航和首页标题前先恢复此路由。
       await page.goto(route, { waitUntil: "domcontentloaded" });

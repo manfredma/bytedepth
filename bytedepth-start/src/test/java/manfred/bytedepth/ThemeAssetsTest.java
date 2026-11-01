@@ -510,6 +510,7 @@ class ThemeAssetsTest {
                 .contains("class=\"nav-about\"")
                 .contains("class=\"nav-about-menu\"")
                 .contains("<a th:href=\"@{/about}\">关于本站</a>")
+                .contains("<a th:href=\"@{/network}\">网络地图</a>")
                 .contains("<a th:href=\"@{/releases}\">版本</a>")
                 .doesNotContain("<a th:href=\"@{/releases}\">版本</a>\n            </div>")
                 .contains("nav-theme-placeholder")
