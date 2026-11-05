@@ -33,7 +33,7 @@ export function createAuthRecovery(browser, renderedAuthenticated) {
             }
             return;
           }
-          if (status.suppressed) {
+          if (status.suppressed || status.interactive) {
             return;
           }
           const last = Number(localStorage.getItem(key));
@@ -43,9 +43,10 @@ export function createAuthRecovery(browser, renderedAuthenticated) {
           }
           // 写入必须早于 POST 和跨站授权；整个尝试持锁，其他标签页不能抢先启动。
           localStorage.setItem(key, String(now));
+          const prepared = await (await request("/auth/status?prepare=true")).json();
           const response = await request("/auth/silent", {
             method: "POST",
-            headers: { "X-CSRF-TOKEN": status.csrfToken },
+            headers: { "X-CSRF-TOKEN": prepared.csrfToken },
           });
           if (response.status === 204) {
             return;

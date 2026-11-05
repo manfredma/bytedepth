@@ -19,15 +19,21 @@ public final class HearthSilentAuthenticationController {
 
     @GetMapping("/auth/status")
     @ResponseBody
-    public Map<String, Object> status(HttpServletRequest request, HttpServletResponse response, CsrfToken csrf) {
+    public Map<String, Object> status(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            CsrfToken csrf,
+            @RequestParam(defaultValue = "false") boolean prepare) {
         response.setHeader("Cache-Control", "no-store");
         return Map.of(
                 "authenticated",
                 silent.authenticated(),
                 "suppressed",
                 silent.suppressed(request),
+                "interactive",
+                silent.interactive(request),
                 "csrfToken",
-                csrf.getToken());
+                prepare ? csrf.getToken() : "");
     }
 
     @PostMapping("/auth/silent")

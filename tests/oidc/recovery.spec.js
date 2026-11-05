@@ -6,6 +6,79 @@ const business = "https://staging-bytedepth.bytedepth.cn";
 const hearth = "https://staging-hearth.bytedepth.cn";
 const target = "/posts?auth-check=one%2Btwo&tag=first&tag=second#reader";
 
+function routeKind(raw) {
+  const url = new URL(raw);
+  if (url.origin === hearth) {
+    if (url.pathname === "/login") return "hearth-login";
+    if (url.pathname === "/oauth2/authorize") return "hearth-authorize";
+    if (url.pathname.includes("consent")) return "hearth-consent";
+    return "hearth-other";
+  }
+  if (url.origin !== business) return "other";
+  if (url.pathname === "/login/oauth2/code/hearth") return "callback";
+  if (url.pathname === "/auth/silent-complete") return "completion";
+  if (url.pathname === "/auth/status") return "status";
+  if (url.pathname === "/auth/silent") return "prepare";
+  if (url.pathname.startsWith("/oauth2/")) return "start";
+  if (url.pathname === "/login") return url.searchParams.has("error") ? "business-login-error" : "business-login";
+  return "business-public";
+}
+
+function observe(context, name) {
+  const started = Date.now();
+  let state;
+  const known = new Set([
+    "login_required",
+    "consent_required",
+    "interaction_required",
+    "authorization_request_not_found",
+    "invalid_state_parameter",
+    "invalid_nonce",
+    "invalid_id_token",
+    "invalid_token_response",
+    "invalid_user_info_response",
+    "server_error",
+    "temporarily_unavailable",
+    "protocol_error",
+    "identity_unavailable",
+  ]);
+  const emit = (fields) =>
+    console.log("OIDC_EVENT " + JSON.stringify({ context: name, elapsedMs: Date.now() - started, ...fields }));
+  context.on("request", (request) => {
+    const kind = routeKind(request.url());
+    if (!["hearth-authorize", "callback", "prepare", "completion"].includes(kind)) return;
+    const url = new URL(request.url());
+    if (kind === "hearth-authorize") state = url.searchParams.get("state");
+    const error = url.searchParams.get("error");
+    emit({
+      kind,
+      event: "request",
+      promptNone: url.searchParams.get("prompt") === "none",
+      codePresent: url.searchParams.has("code"),
+      stateMatched: kind === "callback" ? state === url.searchParams.get("state") : undefined,
+      error: error ? (known.has(error) ? error : "other") : undefined,
+    });
+  });
+  context.on("response", async (response) => {
+    const kind = routeKind(response.url());
+    if (!["callback", "prepare", "completion"].includes(kind)) return;
+    const failure = await response.headerValue("X-Bytedepth-Auth-Failure").catch(() => null);
+    const outcome = new URL(response.url()).searchParams.get("outcome");
+    emit({
+      kind,
+      event: "response",
+      status: response.status(),
+      failure: failure ? (known.has(failure) ? failure : "other") : undefined,
+      outcome: ["success", "anonymous", "pending", "blocked"].includes(outcome) ? outcome : undefined,
+    });
+  });
+  context.on("requestfailed", (request) => {
+    const kind = routeKind(request.url());
+    if (["hearth-authorize", "callback", "completion"].includes(kind)) emit({ kind, event: "network-failure" });
+  });
+  return emit;
+}
+
 // 不把浏览器 API 的敏感 URL、输入值或响应体带入失败诊断。
 async function privateAction(action) {
   try {
@@ -32,7 +105,18 @@ async function login(page, navigate = true) {
     await page.getByRole("button", { name: "登录", exact: true }).click();
     expect((await result).status()).toBe(200);
   });
-  await expect.poll(() => new URL(page.url()).pathname !== "/login").toBe(true);
+  await expect
+    .poll(
+      () => {
+        const kind = routeKind(page.url());
+        return ["business-public", "business-login-error", "business-login", "hearth-consent"].includes(kind);
+      },
+      { timeout: 20_000 },
+    )
+    .toBe(true);
+  const terminal = routeKind(page.url());
+  console.log("OIDC_LOGIN_TERMINAL " + terminal);
+  expect(terminal).toBe("business-public");
 }
 async function signedInNavigation(page) {
   await expect(page.locator(".nav-logout")).toHaveCount(1);
@@ -64,8 +148,9 @@ test("real background Auth matrix without public-page navigation", async ({ brow
     baseURL: business,
   };
   const contexts = [];
-  const context = async () => {
+  const context = async (name) => {
     const result = await newVerificationContext(browser, options);
+    observe(result, name || "isolated-" + contexts.length);
     contexts.push(result);
     return result;
   };
@@ -124,14 +209,14 @@ test("real background Auth matrix without public-page navigation", async ({ brow
       .toBe(true);
     const duringInteractive = await authenticated.newPage();
     const preparation = duringInteractive.waitForResponse(
-      (response) => new URL(response.url()).origin === business && new URL(response.url()).pathname === "/auth/silent",
+      (response) => new URL(response.url()).origin === business && new URL(response.url()).pathname === "/auth/status",
     );
     await visit(duringInteractive);
-    expect((await privateAction(() => preparation)).status()).toBe(204);
+    expect((await (await privateAction(() => preparation)).json()).interactive).toBe(true);
     expect(interactiveBackgroundAttempts).toBe(0);
     await login(loginPage, false);
-    await expect.poll(async () => (await status(authenticated)).authenticated).toBe(true);
     await signedInNavigation(loginPage);
+    expect((await status(authenticated)).authenticated).toBe(true);
     console.log("OIDC_SCENARIO interactive-login-not-overwritten-by-public-tab: PASS");
     const original = await authenticated.cookies(hearth);
     const remember = original.filter((cookie) => cookie.name === "hearth-remember-me");
@@ -158,7 +243,7 @@ test("real background Auth matrix without public-page navigation", async ({ brow
       ["remember-only", remember],
       ["session-only", sessions],
     ]) {
-      const isolated = await context();
+      const isolated = await context(name);
       await isolated.addCookies(cookies);
       expect((await isolated.cookies(business)).length).toBe(0);
       if (name === "remember-only") {
@@ -179,8 +264,9 @@ test("real background Auth matrix without public-page navigation", async ({ brow
         }
       });
       await visit(page);
-      await expect.poll(async () => (await status(isolated)).authenticated).toBe(true);
-      await expect.poll(async () => page.locator(".nav-logout").count()).toBe(1);
+      // 先等待浏览器完成认证；并发 API status 会创建/轮换共享 Cookie，不能充当被动观察器。
+      await expect(page.locator(".nav-logout")).toHaveCount(1, { timeout: 25_000 });
+      expect((await status(isolated)).authenticated).toBe(true);
       expect(firstHearthPath === "/oauth2/authorize").toBe(true);
       expect(new URL(page.url()).pathname + new URL(page.url()).search + new URL(page.url()).hash === target).toBe(
         true,
@@ -208,9 +294,9 @@ test("real background Auth matrix without public-page navigation", async ({ brow
         await visit(oldTab);
         expect((await status(isolated)).authenticated).toBe(false);
         await login(page, false);
-        await expect.poll(async () => (await status(isolated)).authenticated).toBe(true);
-        expect((await status(isolated)).suppressed).toBe(false);
         await signedInNavigation(page);
+        expect((await status(isolated)).authenticated).toBe(true);
+        expect((await status(isolated)).suppressed).toBe(false);
         console.log("OIDC_SCENARIO explicit-login-after-logout-with-concurrent-public-tab: PASS");
       }
     }
@@ -225,7 +311,11 @@ test("real background Auth matrix without public-page navigation", async ({ brow
       if (url.origin === hearth && url.pathname === "/oauth2/authorize") parallelAttempts++;
     });
     await Promise.all([visit(one), visit(two)]);
-    await expect.poll(async () => (await status(parallel)).authenticated).toBe(true);
+    await Promise.all([
+      expect(one.locator(".nav-logout")).toHaveCount(1, { timeout: 25_000 }),
+      expect(two.locator(".nav-logout")).toHaveCount(1, { timeout: 25_000 }),
+    ]);
+    expect((await status(parallel)).authenticated).toBe(true);
     await signedInNavigation(one);
     await signedInNavigation(two);
     expect(parallelAttempts).toBe(1);
@@ -288,6 +378,12 @@ test("real background Auth matrix without public-page navigation", async ({ brow
     await expect.poll(async () => offlinePage.locator("iframe").count(), { timeout: 25_000 }).toBe(0);
     await quiet(offlinePage, offline);
     console.log("OIDC_SCENARIO network-failure-public-page-retained: PASS");
+  } catch {
+    for (let i = 0; i < contexts.length; i++) {
+      for (const page of contexts[i].pages())
+        console.log("OIDC_TERMINAL " + JSON.stringify({ context: i, kind: routeKind(page.url()) }));
+    }
+    throw new Error("OIDC matrix failed; inspect safe OIDC_EVENT and OIDC_TERMINAL diagnostics");
   } finally {
     for (const owned of contexts) await owned.close();
   }

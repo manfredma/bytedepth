@@ -111,7 +111,7 @@ def e2e(io, data, work, state):
 def oidc_e2e(io, work):
     # 本地表单测试槽不证明真实 OIDC；恢复正式 staging app 后再执行后台认证矩阵。
     report = work / 'oidc-results.json'
-    io.env['PLAYWRIGHT_JSON_OUTPUT_FILE'] = str(report)
+    io.env.update(E2E_BASE_URL=PUBLIC, E2E_LOCAL_HOST_RESOLVER_RULE='MAP staging-bytedepth.bytedepth.cn 127.0.0.1', E2E_ADMIN_USERNAME=io.env['BYTEDEPTH_STAGING_E2E_USERNAME'], E2E_ADMIN_PASSWORD=io.env['BYTEDEPTH_STAGING_E2E_PASSWORD'], PLAYWRIGHT_CHROMIUM_EXECUTABLE=str(runtime.CHROMIUM), PLAYWRIGHT_JSON_OUTPUT_FILE=str(report))
     io.stream(['npm', 'run', 'test:e2e', '--', '--config=playwright.oidc.config.mjs', '--reporter=list,json'],
               log=work / 'oidc.log')
     return runtime.test_count('e2e', report)
@@ -171,6 +171,7 @@ def execute(io, sha, phase, state_dir, evidence_dir, runtime_manifest):
     state = {'app_stop_attempted': False, 'slot_attempted': False, 'since': ''}
     with tempfile.TemporaryDirectory(prefix='.staging-' + phase + '.', dir=state_dir) as temporary:
         work = Path(temporary)
+        oidc_count = oidc_e2e(io, work) if phase == 'e2e' else 0
         try:
             state['app_stop_attempted'] = True
             io.control('stop', 'app')
@@ -190,7 +191,7 @@ def execute(io, sha, phase, state_dir, evidence_dir, runtime_manifest):
             cleanup(io, file, state, work)
         if phase == 'e2e':
             verify_hearth(io)
-            count += oidc_e2e(io, work)
+            count += oidc_count
     runtime.candidate(io.root, sha, io.env)
     # 只有清理成功且身份不可变的候选才能生成回执。
     fields = {'commit': sha, 'command': f'run-staging-{phase}-tests', 'timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), 'result': 'passed', 'runtime_mode': 'host-native', 'run_id': run, 'test_resource_manifest_sha': manifest_sha, 'cleanup': 'result=passed', 'artifact_digest': io.env['ARTIFACT_DIGEST'], 'attempt_nonce': io.env['RELEASE_PLATFORM_TASK_NONCE'], 'tests_total': str(count)}

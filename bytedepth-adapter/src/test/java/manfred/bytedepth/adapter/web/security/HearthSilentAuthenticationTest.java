@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import jakarta.servlet.http.Cookie;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -19,6 +20,23 @@ class HearthSilentAuthenticationTest {
     @AfterEach
     void cleanup() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void failureDiagnosticsContainOnlyKnownEnumsAndKeepUnknownDescriptionsPrivate() throws Exception {
+        for (var error : List.of(
+                new org.springframework.security.oauth2.core.OAuth2AuthenticationException(
+                        new org.springframework.security.oauth2.core.OAuth2Error("login_required")),
+                new org.springframework.security.oauth2.core.OAuth2AuthenticationException(
+                        new org.springframework.security.oauth2.core.OAuth2Error("secret-error-with-material")),
+                new org.springframework.security.authentication.BadCredentialsException("private description"))) {
+            var request = new MockHttpServletRequest();
+            var response = new MockHttpServletResponse();
+            silent.failure(request, response, error);
+            assertEquals("/login?error", response.getRedirectedUrl());
+            assertTrue(Set.of("login_required", "protocol_error")
+                    .contains(response.getHeader("X-Bytedepth-Auth-Failure")));
+        }
     }
 
     @Test

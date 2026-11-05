@@ -53,11 +53,7 @@ public class HearthOidcSecurityConfiguration {
                                         pkceAuthorizationRequestResolver(registrations))
                                 .authorizationRequestRepository(new HearthAuthorizationRequestRepository()))
                         .successHandler(successHandler)
-                        .failureHandler((req, res, error) -> {
-                            if (!silent.complete(req, res, "anonymous")) {
-                                res.sendRedirect("/login?error");
-                            }
-                        }))
+                        .failureHandler(silent::failure))
                 .logout(logoutSpec -> logoutSpec
                         .deleteCookies("bytedepth-remember-me")
                         .addLogoutHandler((req, res, auth) -> silent.logout(req, res))

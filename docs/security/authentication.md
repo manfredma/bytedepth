@@ -30,7 +30,7 @@ Web Locks 排队覆盖完整尝试，获锁标签先复查身份，其他标签�
 
 手动授权等待期间最多五分钟拒绝后台启动；回调分类取自框架已匹配 state 的授权请求，避免不同标签的流程串线。
 
-回归包括 `HearthOidcSecurityRoutingTest`、resolver/流程/网页超时单测和 `auth-recovery.test.js`。Host E2E 在隔离本地表单测试槽清理、真实 staging app 恢复后，使用 `playwright.oidc.config.mjs` 执行桌面/移动 OIDC 专项；专项失败不写 PASS evidence。Cookie-only 首个 Hearth 请求必须是授权，不先访问 `/api/session`。认证专项关闭 trace/视频/截图，输出不含凭据或授权材料。
+回归包括 `HearthOidcSecurityRoutingTest`、resolver/流程/网页超时单测和 `auth-recovery.test.js`。Host E2E 在真实 staging app 上优先使用 `playwright.oidc.config.mjs` 执行桌面/移动 OIDC 专项；随后通用隔离槽回归与清理也必须通过，才写 PASS evidence。Cookie-only 首个 Hearth 请求必须是授权，不先访问 `/api/session`。认证专项关闭 trace/视频/截图，输出不含凭据或授权材料。
 
 ## 共享 Session
 
@@ -78,3 +78,5 @@ Redis 重启会丢失普通 Session。本地表单模式使用本站签名 Cooki
 - 生产环境必须配置 `BYTEDEPTH_REMEMBER_ME_KEY` 与 `BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE=true`。
 - CSRF 仓库选型与历史故障见 [CSRF 决策记录](csrf-session-repository.md)。
 - 权限模型与授权执行见 [角色与权限模型](rbac.md)。
+
+认证诊断只使用 `X-Bytedepth-Auth-Failure` 的固定错误枚举，不包含异常描述、身份或授权材料。真实浏览器回归先等待浏览器完成页/导航，再单次核验身份；不得在 Session 轮换期间用共享 Cookie 的 API 客户端反复创建匿名 Session。专项日志只记录路由枚举、HTTP 状态、规范错误及 state 匹配布尔值。

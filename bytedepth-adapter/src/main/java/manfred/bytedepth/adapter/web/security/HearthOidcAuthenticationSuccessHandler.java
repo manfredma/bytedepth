@@ -53,6 +53,7 @@ public final class HearthOidcAuthenticationSuccessHandler implements Authenticat
                             oidcUser.getClaimAsString("email"))
                     .orElseThrow(() -> new IllegalStateException("Hearth identity has no local user"));
         } catch (RuntimeException error) {
+            response.setHeader("X-Bytedepth-Auth-Failure", "identity_unavailable");
             // 协议过滤器可能已保存临时 OIDC 主体；业务映射失败必须清除，不能留下半登录 Session。
             clearContext(request, response);
             if (!silent.complete(request, response, "anonymous")) {

@@ -9,6 +9,7 @@ function fixture() {
       ok: true,
       json: async () => ({ authenticated: false, suppressed: false, csrfToken: "test-csrf" }),
     })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ csrfToken: "test-csrf" }) })
     .mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -56,7 +57,7 @@ test("first anonymous public visit starts a hidden authorization without navigat
   const frame = document.querySelector("iframe");
   expect(frame).not.toBeNull();
   expect(frame.hidden).toBe(true);
-  expect(fetch.mock.calls[1][1].headers["X-CSRF-TOKEN"]).toBe("test-csrf");
+  expect(fetch.mock.calls[2][1].headers["X-CSRF-TOKEN"]).toBe("test-csrf");
   message(frame, "anonymous");
   await task;
   expect(reload).not.toHaveBeenCalled();
@@ -85,7 +86,7 @@ test("failure followed by refresh does not start another authorization during co
   await task;
   fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ authenticated: false, suppressed: false }) });
   await run();
-  expect(fetch).toHaveBeenCalledTimes(3);
+  expect(fetch).toHaveBeenCalledTimes(4);
   expect(document.querySelector("iframe")).toBeNull();
 });
 
@@ -104,6 +105,7 @@ test("timeout removes the hidden frame and leaves the reader in place", async ()
 test.each([
   { authenticated: true, suppressed: false },
   { authenticated: false, suppressed: true },
+  { authenticated: false, suppressed: false, interactive: true },
 ])("existing session or explicit logout prevents authorization: %j", async (status) => {
   const { browser, fetch, reload } = fixture();
   fetch.mockReset().mockResolvedValue({ ok: true, json: async () => status });
@@ -146,7 +148,7 @@ test("concurrent tabs hold the shared lock until the iframe has completed", asyn
   const frame = document.querySelector("iframe");
   expect(frame).not.toBeNull();
   await createAuthRecovery(browser, false)();
-  expect(fetch).toHaveBeenCalledTimes(2);
+  expect(fetch).toHaveBeenCalledTimes(3);
   message(frame, "anonymous");
   await first;
   expect(held).toBe(false);
@@ -204,15 +206,18 @@ test.each(["status", "start", "204", "foreign-target", "storage-read", "storage-
       fetch
         .mockReset()
         .mockResolvedValueOnce({ ok: true, json: async () => ({ csrfToken: "test" }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ csrfToken: "test" }) })
         .mockResolvedValueOnce({ ok: false });
     if (kind === "204")
       fetch
         .mockReset()
         .mockResolvedValueOnce({ ok: true, json: async () => ({ csrfToken: "test" }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ csrfToken: "test" }) })
         .mockResolvedValueOnce({ ok: true, status: 204 });
     if (kind === "foreign-target")
       fetch
         .mockReset()
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ csrfToken: "test" }) })
         .mockResolvedValueOnce({ ok: true, json: async () => ({ csrfToken: "test" }) })
         .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ start: "https://untrusted.example" }) });
     if (kind === "storage-read")
@@ -265,6 +270,7 @@ test("a late prepare response after timeout cannot leave an orphaned frame", asy
   let deliver;
   fetch
     .mockReset()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ csrfToken: "test" }) })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ csrfToken: "test" }) })
     .mockResolvedValueOnce({
       ok: true,

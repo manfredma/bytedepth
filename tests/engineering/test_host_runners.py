@@ -125,19 +125,19 @@ class RunnerTests(unittest.TestCase):
             self.stack.enter_context(patch.object(runners, 'diagnostics'))
         return io, root
 
-    def test_real_oidc_suite_runs_after_restoration_and_counts_toward_evidence(self):
+    def test_real_oidc_suite_runs_on_live_app_before_isolated_suite_and_counts_toward_evidence(self):
         io, root = self.e2e_scenario()
         runners.execute(io, SHA, 'e2e', root / 'state', root / 'evidence', root / 'runtime')
         commands = [call.args[0] for call in io.stream.call_args_list]
         self.assertTrue(any('--config=playwright.oidc.config.mjs' in command for command in commands))
         self.assertIn('tests_total=6', (root / 'evidence/staging-e2e').read_text())
         calls = io.mock_calls
-        restored = next(i for i, call in enumerate(calls) if call[0] == 'wait' and call.args[0] == 'app')
+        stopped = next(i for i, call in enumerate(calls) if call[0] == 'control' and call.args[:2] == ('stop', 'app'))
         oidc = next(i for i, call in enumerate(calls) if call[0] == 'stream'
                     and '--config=playwright.oidc.config.mjs' in call.args[0])
-        self.assertLess(restored, oidc)
+        self.assertLess(oidc, stopped)
 
-    def test_real_oidc_failure_blocks_evidence_after_test_slot_passes(self):
+    def test_real_oidc_failure_blocks_evidence_before_mutating_test_slot(self):
         io, root = self.e2e_scenario()
         def stream(command, **kwargs):
             if '--config=playwright.oidc.config.mjs' in command:
@@ -146,6 +146,8 @@ class RunnerTests(unittest.TestCase):
         with self.assertRaises(ToolError):
             runners.execute(io, SHA, 'e2e', root / 'state', root / 'evidence', root / 'runtime')
         self.assertFalse((root / 'evidence/staging-e2e').exists())
+        io.control.assert_not_called()
+        self.mocks['resources.provision'].assert_not_called()
 
     def test_e2e_runs_with_fixed_target_chromium_credentials_and_journal(self):
         io, root = self.e2e_scenario()
@@ -172,7 +174,7 @@ class RunnerTests(unittest.TestCase):
                 with self.assertRaises(ToolError):
                     runners.execute(io, SHA, 'e2e', root / 'state', root / 'evidence', root / 'runtime')
                 self.assertFalse(file.exists())
-                if failure in ('journal', 'playwright'):
+                if failure == 'journal':
                     io.control.assert_any_call('start', 'edge')
                 self.stack.close()
 

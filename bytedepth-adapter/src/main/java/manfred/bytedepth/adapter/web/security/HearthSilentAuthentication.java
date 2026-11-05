@@ -4,8 +4,11 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Set;
 import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 
 /** 仅保存短期流程状态；退出 Cookie 不具备任何认证能力。 */
 public final class HearthSilentAuthentication {
@@ -91,6 +94,28 @@ public final class HearthSilentAuthentication {
         clear(request);
         response.sendRedirect("/auth/silent-complete?outcome=" + outcome);
         return true;
+    }
+
+    void failure(HttpServletRequest request, HttpServletResponse response, AuthenticationException error)
+            throws IOException {
+        // 只输出规范错误枚举，绝不包含 description、URL 或授权材料。
+        String code = error instanceof OAuth2AuthenticationException oauth
+                ? oauth.getError().getErrorCode()
+                : "protocol_error";
+        var allowed = Set.of(
+                "login_required",
+                "consent_required",
+                "interaction_required",
+                "authorization_request_not_found",
+                "invalid_state_parameter",
+                "invalid_nonce",
+                "invalid_id_token",
+                "invalid_token_response",
+                "invalid_user_info_response",
+                "server_error",
+                "temporarily_unavailable");
+        response.setHeader("X-Bytedepth-Auth-Failure", allowed.contains(code) ? code : "protocol_error");
+        if (!complete(request, response, "anonymous")) response.sendRedirect("/login?error");
     }
 
     void logout(HttpServletRequest request, HttpServletResponse response) {

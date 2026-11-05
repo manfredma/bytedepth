@@ -82,6 +82,13 @@ class HearthOidcSecurityRoutingTest {
     private BuildProperties buildProperties;
 
     @Test
+    void checkingAuthenticationNeverCreatesAnAnonymousSession() throws Exception {
+        var result =
+                mockMvc.perform(get("/auth/status")).andExpect(status().isOk()).andReturn();
+        org.junit.jupiter.api.Assertions.assertNull(result.getRequest().getSession(false));
+    }
+
+    @Test
     void logoutSuppressionRejectsEvenALateAuthenticatedSession() throws Exception {
         mockMvc.perform(get("/auth/status")
                         .with(user("late-reader"))
@@ -99,7 +106,7 @@ class HearthOidcSecurityRoutingTest {
 
     @Test
     void anonymousFirstVisitCanPrepareSilentAuthenticationWithoutPriorLogin() throws Exception {
-        var result = mockMvc.perform(get("/auth/status"))
+        var result = mockMvc.perform(get("/auth/status").param("prepare", "true"))
                 .andExpect(status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.authenticated")
                         .value(false))
@@ -178,7 +185,9 @@ class HearthOidcSecurityRoutingTest {
                                 "state",
                                 org.springframework.web.util.UriUtils.decode(
                                         params.getFirst("state"), java.nio.charset.StandardCharsets.UTF_8)))
-                .andExpect(redirectedUrl("/auth/silent-complete?outcome=anonymous"));
+                .andExpect(redirectedUrl("/auth/silent-complete?outcome=anonymous"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("X-Bytedepth-Auth-Failure", "login_required"));
         mockMvc.perform(post("/auth/silent").session(session).with(csrf())).andExpect(status().isNoContent());
     }
 
