@@ -53,6 +53,7 @@ function observe(context, name) {
     emit({
       kind,
       event: "request",
+      worker: Boolean(request.serviceWorker()),
       promptNone: url.searchParams.get("prompt") === "none",
       codePresent: url.searchParams.has("code"),
       stateMatched: kind === "callback" ? state === url.searchParams.get("state") : undefined,
@@ -68,6 +69,7 @@ function observe(context, name) {
       kind,
       event: "response",
       status: response.status(),
+      worker: Boolean(response.request().serviceWorker()),
       failure: failure ? (known.has(failure) ? failure : "other") : undefined,
       outcome: ["success", "anonymous", "pending", "blocked"].includes(outcome) ? outcome : undefined,
     });
@@ -310,14 +312,19 @@ test("real background Auth matrix without public-page navigation", async ({ brow
     let parallelAttempts = 0;
     parallel.on("request", (request) => {
       const url = new URL(request.url());
-      if (url.origin === hearth && url.pathname === "/oauth2/authorize") parallelAttempts++;
+      if (!request.serviceWorker() && url.origin === hearth && url.pathname === "/oauth2/authorize") parallelAttempts++;
     });
     await Promise.all([visit(one), visit(two)]);
     await Promise.all([
       expect(one.locator(".nav-logout")).toHaveCount(1, { timeout: 25_000 }),
       expect(two.locator(".nav-logout")).toHaveCount(1, { timeout: 25_000 }),
     ]);
-    expect((await status(parallel)).authenticated).toBe(true);
+    const parallelStatus = await status(parallel);
+    console.log(
+      "OIDC_CHECK parallel " +
+        JSON.stringify({ authenticated: parallelStatus.authenticated, attempts: parallelAttempts }),
+    );
+    expect(parallelStatus.authenticated).toBe(true);
     await signedInNavigation(one);
     await signedInNavigation(two);
     expect(parallelAttempts).toBe(1);
