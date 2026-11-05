@@ -40,7 +40,7 @@ class SimplePortalControllerCoverageTest {
     @Test
     void staticAndProjectRoutesReturnExpectedViewsAndModel() {
         assertThat(new AboutController().about()).isEqualTo("public/about");
-        assertThat(new LoginController(false).login(null, null)).isEqualTo("public/login");
+        assertThat(new LoginController(false).login(null, null, "", null)).isEqualTo("public/login");
 
         ListProjectsQryExe projects = mock(ListProjectsQryExe.class);
         when(projects.execute()).thenReturn(List.of());
@@ -257,5 +257,10 @@ class SimplePortalControllerCoverageTest {
                         + "<guid isPermaLink=\"true\">https://example.test/posts/updated</guid>\n"
                         + "<description>updated content</description>\n"
                         + "<pubDate>Fri, 7 Aug 2026 08:00:00 +0800</pubDate>");
+    }
+
+    @org.junit.jupiter.api.Test
+    void localLoginRequiredDoesNotEnableHearthRecovery() {
+        assertThat(new LoginController(false).required(null, null, null)).isEqualTo("public/login");
     }
 }

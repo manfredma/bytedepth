@@ -114,8 +114,10 @@ class RepositoryTests(unittest.TestCase):
     def test_hearth_identity_does_not_grant_application_authorities(self):
         base = ROOT / 'bytedepth-adapter/src/main/java'
         security = base / 'manfred/bytedepth/adapter/web/security/HearthOidcSecurityConfiguration.java'
-        for text in ['OAuth2AuthorizationRequestCustomizers.withPkce', 'OidcClientInitiatedLogoutSuccessHandler']:
+        for text in ['HearthAuthorizationRequestResolver', 'OidcClientInitiatedLogoutSuccessHandler']:
             self.assertIn(text, security.read_text())
+        resolver = base / 'manfred/bytedepth/adapter/web/security/HearthAuthorizationRequestResolver.java'
+        self.assertIn('OAuth2AuthorizationRequestCustomizers.withPkce', resolver.read_text())
         self.assertIn('spring-boot-starter-oauth2-client', (ROOT / 'bytedepth-adapter/pom.xml').read_text())
         config = (ROOT / 'bytedepth-start/src/main/resources/application.yml').read_text()
         for text in ['BYTEDEPTH_HEARTH_OIDC_ISSUER', 'BYTEDEPTH_HEARTH_OIDC_CLIENT_SECRET']:

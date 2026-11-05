@@ -75,6 +75,7 @@ mybatis-plus:
       id-type: auto
 
 bytedepth:
+  web-session-timeout-seconds: 600
   environment: ${BYTEDEPTH_ENVIRONMENT:production}
   hearth-oidc:
     enabled: ${BYTEDEPTH_HEARTH_OIDC_ENABLED:false}

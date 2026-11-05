@@ -108,6 +108,15 @@ def e2e(io, data, work, state):
     return runtime.test_count('e2e', work / 'playwright-results.json')
 
 
+def oidc_e2e(io, work):
+    # 本地表单测试槽不证明真实 OIDC；恢复正式 staging app 后再执行后台认证矩阵。
+    report = work / 'oidc-results.json'
+    io.env['PLAYWRIGHT_JSON_OUTPUT_FILE'] = str(report)
+    io.stream(['npm', 'run', 'test:e2e', '--', '--config=playwright.oidc.config.mjs', '--reporter=list,json'],
+              log=work / 'oidc.log')
+    return runtime.test_count('e2e', report)
+
+
 def cleanup(io, file, state, work):
     failures = []
     if state['slot_attempted']:
@@ -179,8 +188,9 @@ def execute(io, sha, phase, state_dir, evidence_dir, runtime_manifest):
                 count = e2e(io, data, work, state)
         finally:
             cleanup(io, file, state, work)
-    if phase == 'e2e':
-        verify_hearth(io)
+        if phase == 'e2e':
+            verify_hearth(io)
+            count += oidc_e2e(io, work)
     runtime.candidate(io.root, sha, io.env)
     # 只有清理成功且身份不可变的候选才能生成回执。
     fields = {'commit': sha, 'command': f'run-staging-{phase}-tests', 'timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), 'result': 'passed', 'runtime_mode': 'host-native', 'run_id': run, 'test_resource_manifest_sha': manifest_sha, 'cleanup': 'result=passed', 'artifact_digest': io.env['ARTIFACT_DIGEST'], 'attempt_nonce': io.env['RELEASE_PLATFORM_TASK_NONCE'], 'tests_total': str(count)}

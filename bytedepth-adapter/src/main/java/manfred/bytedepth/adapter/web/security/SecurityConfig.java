@@ -21,6 +21,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.AbstractRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 @Configuration
@@ -65,17 +66,23 @@ public class SecurityConfig {
             RateLimitFilter rateLimitFilter,
             @Value("${BYTEDEPTH_REMEMBER_ME_KEY:bytedepth-local-remember-me-key}") String rememberMeKey,
             @Value("${BYTEDEPTH_REMEMBER_ME_COOKIE_SECURE:false}") boolean rememberMeCookieSecure,
-            @Value("${bytedepth.hearth-oidc.enabled:false}") boolean hearthEnabled)
+            @Value("${bytedepth.hearth-oidc.enabled:false}") boolean hearthEnabled,
+            @Value("${bytedepth.web-session-timeout-seconds:600}") int webTimeout)
             throws Exception {
         AbstractRememberMeServices rememberMeServices =
                 rememberMeServices(rememberMeKey, userDetailsService, rememberMeCookieSecure);
+
+        var requestCache = new org.springframework.security.web.savedrequest.HttpSessionRequestCache();
+        requestCache.setMatchingRequestParameterName(null);
 
         // CSRF：默认 HttpSessionCsrfTokenRepository + Thymeleaf 自动注入 _csrf hidden input。
         // 之前用 CookieCsrfTokenRepository，登录成功后 CsrfAuthenticationStrategy 清除
         // XSRF-TOKEN cookie 却不重新下发，导致后续 POST 表单（退出等）403。session 仓库
         // 把 token 存 session、提交时从 session 校验，不依赖 cookie 下发，更可靠。
         http.authenticationProvider(authenticationProvider(userDetailsService, passwordEncoder))
+                .requestCache(cache -> cache.requestCache(requestCache))
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new WebSessionTimeoutFilter(webTimeout), SecurityContextHolderFilter.class)
                 .headers(headers -> headers.addHeaderWriter(new StaticResourceCacheHeadersWriter()))
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/admin/search/**")
                         .ignoringRequestMatchers(
@@ -112,9 +119,21 @@ public class SecurityConfig {
                         .permitAll())
                 .rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices))
                 .logout(logout -> logout.logoutSuccessUrl("/").permitAll())
-                .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) ->
-                                res.sendRedirect(hearthEnabled ? "/oauth2/authorization/hearth" : "/login"))
+                .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> {
+                            if (!hearthEnabled) {
+                                res.sendRedirect("/login");
+                            } else if ("GET".equals(req.getMethod())
+                                    && !req.getRequestURI().startsWith("/api/")
+                                    && !"XMLHttpRequest".equals(req.getHeader("X-Requested-With"))) {
+                                res.sendRedirect("/login?required");
+                            } else {
+                                res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                            }
+                        })
                         .accessDeniedHandler((req, res, ex) -> res.sendError(HttpServletResponse.SC_FORBIDDEN)));
+        if (hearthEnabled) {
+            http.addFilterAfter(new HearthLogoutSuppressionFilter(), WebSessionTimeoutFilter.class);
+        }
         return http.build();
     }
 

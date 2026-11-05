@@ -19,4 +19,9 @@ public class EnvironmentAttributeAdvice {
     public void addEnvironmentAttribute(Model model) {
         model.addAttribute("environment", environment);
     }
+
+    @ModelAttribute("hearthOidcEnabled")
+    public boolean hearthOidcEnabled(@Value("${bytedepth.hearth-oidc.enabled:false}") boolean enabled) {
+        return enabled;
+    }
 }

@@ -38,6 +38,10 @@ export default [
     },
   },
   {
+    files: ["bytedepth-start/src/main/resources/static/js/auth-recovery.js"],
+    languageOptions: { sourceType: "module" },
+  },
+  {
     files: ["**/src/test/js/**/*.test.js", "tests/**/*.js"],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node, ...globals.jest },
@@ -47,7 +51,7 @@ export default [
     },
   },
   {
-    files: ["playwright.config.mjs"],
+    files: ["playwright.config.mjs", "playwright.oidc.config.mjs"],
     languageOptions: {
       globals: globals.node,
     },

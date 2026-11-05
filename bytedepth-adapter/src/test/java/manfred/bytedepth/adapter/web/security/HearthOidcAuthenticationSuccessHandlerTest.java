@@ -1,7 +1,6 @@
 package manfred.bytedepth.adapter.web.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,6 +21,64 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextRepository;
 
 class HearthOidcAuthenticationSuccessHandlerTest {
+
+    @org.junit.jupiter.api.AfterEach
+    void cleanupContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void identityMappingFailureCannotLeaveTemporaryOidcAuthenticationInSession() throws Exception {
+        var identities = mock(OidcIdentityAuthenticationPort.class);
+        var oidc = mock(OidcUser.class);
+        when(oidc.getSubject()).thenReturn("test-subject");
+        when(identities.authenticate("", "test-subject", null, null))
+                .thenThrow(new IllegalStateException("database unavailable"));
+        var authentication = oidcUserAuthentication(oidc);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        var request = new org.springframework.mock.web.MockHttpServletRequest();
+        var response = new org.springframework.mock.web.MockHttpServletResponse();
+        var silent = new HearthSilentAuthentication();
+        SecurityContextHolder.clearContext();
+        org.junit.jupiter.api.Assertions.assertTrue(silent.begin(request));
+        org.junit.jupiter.api.Assertions.assertTrue(silent.arm(request));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                () -> new HearthOidcAuthenticationSuccessHandler(identities, new HttpSessionSecurityContextRepository())
+                        .onAuthenticationSuccess(request, response, authentication));
+        assertEquals("/auth/silent-complete?outcome=anonymous", response.getRedirectedUrl());
+        assertEquals(null, SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"ACTIVE", "PENDING", "BANNED", "LOGGED_OUT"})
+    void silentCallbackHasBoundedLocalAccountOutcomes(String status) throws Exception {
+        var identities = mock(OidcIdentityAuthenticationPort.class);
+        var oidc = mock(OidcUser.class);
+        when(oidc.getSubject()).thenReturn("test-subject");
+        when(identities.authenticate("", "test-subject", null, null))
+                .thenReturn(Optional.of(new UserAuthentication(1L, "reader", "", status, List.of())));
+        var request = new org.springframework.mock.web.MockHttpServletRequest();
+        var response = new org.springframework.mock.web.MockHttpServletResponse();
+        var silent = new HearthSilentAuthentication();
+        org.junit.jupiter.api.Assertions.assertTrue(silent.begin(request));
+        org.junit.jupiter.api.Assertions.assertTrue(silent.arm(request));
+        if ("LOGGED_OUT".equals(status)) {
+            request.setCookies(new jakarta.servlet.http.Cookie("bytedepth-auth-logout", "1"));
+        }
+        new HearthOidcAuthenticationSuccessHandler(identities, new HttpSessionSecurityContextRepository())
+                .onAuthenticationSuccess(request, response, oidcUserAuthentication(oidc));
+        var expected = switch (status) {
+            case "ACTIVE" -> "success";
+            case "PENDING" -> "pending";
+            case "BANNED" -> "blocked";
+            default -> "anonymous";
+        };
+        assertEquals("/auth/silent-complete?outcome=" + expected, response.getRedirectedUrl());
+        assertEquals("ACTIVE".equals(status), silent.authenticated());
+        if ("ACTIVE".equals(status))
+            org.junit.jupiter.api.Assertions.assertNull(response.getCookie("bytedepth-auth-logout"));
+    }
 
     @Test
     void successReplacesOidcPrincipalWithLocalUserAndPermissions() throws Exception {
@@ -123,13 +180,11 @@ class HearthOidcAuthenticationSuccessHandlerTest {
         when(identities.authenticate("https://hearth.example", "subject-1", null, null))
                 .thenReturn(Optional.empty());
 
-        assertThrows(
-                IllegalStateException.class,
-                () -> new HearthOidcAuthenticationSuccessHandler(identities, mock(SecurityContextRepository.class))
-                        .onAuthenticationSuccess(
-                                mock(HttpServletRequest.class),
-                                mock(HttpServletResponse.class),
-                                oidcUserAuthentication(oidcUser)));
+        var response = new org.springframework.mock.web.MockHttpServletResponse();
+        new HearthOidcAuthenticationSuccessHandler(identities, mock(SecurityContextRepository.class))
+                .onAuthenticationSuccess(mock(HttpServletRequest.class), response, oidcUserAuthentication(oidcUser));
+        assertEquals("/login?error", response.getRedirectedUrl());
+        assertEquals(null, SecurityContextHolder.getContext().getAuthentication());
     }
 
     private static Authentication oidcUserAuthentication(OidcUser user) {

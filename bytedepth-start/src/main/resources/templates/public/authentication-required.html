@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>登录 - bytedepth</title><link rel="stylesheet" th:href="@{/css/theme.css}"><link rel="stylesheet" th:href="@{/css/authentication.css}"><script th:src="@{/js/theme-switcher.js}"></script></head>
+<body class="auth-result-page">
+<main class="auth-result-card"><p class="auth-result-brand">bytedepth</p><h1 class="auth-result-title">请登录后继续</h1><p class="auth-result-message">已有 Hearth 登录状态时，将自动完成认证。</p>
+<a class="auth-result-retry" th:href="@{/login(interactive=true)}">前往 Hearth 登录</a><a class="auth-result-home" th:href="@{/}">返回首页</a></main>
+<script type="module" th:src="@{/js/auth-recovery.js}" data-auth-recovery data-authenticated="false"></script>
+</body></html>

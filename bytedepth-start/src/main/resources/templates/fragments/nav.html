@@ -72,7 +72,7 @@
                             <button type="submit">退出</button>
                         </form>
                         <a sec:authorize="!isAuthenticated()"
-                           th:href="@{/login}">登录</a>
+                           th:href="@{/login(interactive=true)}">登录</a>
                         <a sec:authorize="!isAuthenticated()"
                            th:href="@{/register}" class="nav-register">注册</a>
                     </div>
@@ -92,6 +92,8 @@
 <!-- Initialize the small shared menu before parsing article images/scripts, so
      slow deferred article assets cannot move content down and then back up. -->
 <script th:src="@{/js/nav-menu.js}"></script>
+<script th:if="${hearthOidcEnabled}" type="module" th:src="@{/js/auth-recovery.js}"
+        data-auth-recovery th:attr="data-authenticated=${#authorization.expression('isAuthenticated()')}"></script>
 <div class="network-staging-notice" th:if="${environment == 'staging'}">
     预发环境 · 正式网站：<a href="https://bytedepth.cn" target="_blank" rel="noopener noreferrer">bytedepth.cn</a>
 </div>

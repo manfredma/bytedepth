@@ -23,6 +23,7 @@ public final class HearthOidcAuthenticationSuccessHandler implements Authenticat
 
     private final OidcIdentityAuthenticationPort identities;
     private final SecurityContextRepository securityContextRepository;
+    private final HearthSilentAuthentication silent = new HearthSilentAuthentication();
     private final SavedRequestAwareAuthenticationSuccessHandler redirect =
             new SavedRequestAwareAuthenticationSuccessHandler();
 
@@ -35,23 +36,42 @@ public final class HearthOidcAuthenticationSuccessHandler implements Authenticat
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Hearth OIDC principal is invalid");
             return;
         }
+        if (silent.pending(request) && silent.suppressed(request)) {
+            clearContext(request, response);
+            silent.complete(request, response, "anonymous");
+            return;
+        }
         String issuer =
                 Optional.ofNullable(oidcUser.getIssuer()).map(Object::toString).orElse("");
-        var local = identities
-                .authenticate(
-                        issuer,
-                        oidcUser.getSubject(),
-                        oidcUser.getClaimAsString("preferred_username"),
-                        oidcUser.getClaimAsString("email"))
-                .orElseThrow(() -> new IllegalStateException("Hearth identity has no local user"));
+        UserAuthentication local;
+        try {
+            local = identities
+                    .authenticate(
+                            issuer,
+                            oidcUser.getSubject(),
+                            oidcUser.getClaimAsString("preferred_username"),
+                            oidcUser.getClaimAsString("email"))
+                    .orElseThrow(() -> new IllegalStateException("Hearth identity has no local user"));
+        } catch (RuntimeException error) {
+            // 协议过滤器可能已保存临时 OIDC 主体；业务映射失败必须清除，不能留下半登录 Session。
+            clearContext(request, response);
+            if (!silent.complete(request, response, "anonymous")) {
+                response.sendRedirect("/login?error");
+            }
+            return;
+        }
         if ("PENDING".equals(local.status())) {
             clearContext(request, response);
-            response.sendRedirect("/login?oidc=pending");
+            if (!silent.complete(request, response, "pending")) {
+                response.sendRedirect("/login?oidc=pending");
+            }
             return;
         }
         if ("BANNED".equals(local.status())) {
             clearContext(request, response);
-            response.sendRedirect("/login?oidc=blocked");
+            if (!silent.complete(request, response, "blocked")) {
+                response.sendRedirect("/login?oidc=blocked");
+            }
             return;
         }
         SiteUserDetails principal = toPrincipal(local);
@@ -61,7 +81,10 @@ public final class HearthOidcAuthenticationSuccessHandler implements Authenticat
         localAuthentication.setDetails(token);
         SecurityContextHolder.getContext().setAuthentication(localAuthentication);
         securityContextRepository.saveContext(SecurityContextHolder.getContext(), request, response);
-        redirect.onAuthenticationSuccess(request, response, localAuthentication);
+        if (!silent.complete(request, response, "success")) {
+            silent.loggedIn(request, response);
+            redirect.onAuthenticationSuccess(request, response, localAuthentication);
+        }
     }
 
     private void clearContext(HttpServletRequest request, HttpServletResponse response) {

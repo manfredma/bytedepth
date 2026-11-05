@@ -6,7 +6,7 @@
 
 Hearth OIDC 是可配置的统一认证入口，使用 `BYTEDEPTH_HEARTH_OIDC_ENABLED=true` 开启。Client registration 名称固定为 `hearth`，由 Hearth issuer、client ID、client secret 和标准回调地址组成；生产环境只通过未跟踪的运行时环境注入 secret。
 
-启用 Hearth 后，网页正常登录入口 `/login` 以及匿名访问受保护网页均直接进入 `/oauth2/authorization/hearth`，凭证输入、记住我和认证界面由 Hearth 提供；不得在 bytedepth 继续显示本地登录表单并仅附加统一登录按钮。`/login?oidc=pending`、`/login?oidc=blocked` 和 `/login?error` 仅展示业务认证结果和重新登录入口，不自动重新授权，避免已有 Hearth 会话导致循环。关闭 OIDC 时保留本地登录；移动登录安全链不变。该入口行为由 `HearthOidcSecurityRoutingTest` 验证，部署门禁在隔离测试前及恢复后拒绝 `/login` 返回本地表单或重定向循环。
+启用 Hearth 后，用户主动登录进入 `/oauth2/authorization/hearth`；匿名访问受保护 HTML GET 保留原请求并展示后台认证及显式登录入口，API/写请求不自动重放。凭证输入、记住我和认证界面由 Hearth 提供；不得在 bytedepth 继续显示本地登录表单并仅附加统一登录按钮。`/login?oidc=pending`、`/login?oidc=blocked` 和 `/login?error` 仅展示业务认证结果和重新登录入口，不自动重新授权，避免已有 Hearth 会话导致循环。关闭 OIDC 时保留本地登录；移动登录安全链不变。该入口行为由 `HearthOidcSecurityRoutingTest` 验证，部署门禁在隔离测试前及恢复后拒绝 `/login` 返回本地表单或重定向循环。
 
 OIDC 成功后 bytedepth 以当前 issuer 的 `iss + sub` 查找 `user_identity`，首次登录创建无本地密码的 `PENDING` 用户，管理员激活后才能使用本地业务权限。用户名、邮箱和 Hearth 的 `role_key` 不作为跨系统身份或 bytedepth 权限来源。
 
@@ -20,11 +20,24 @@ Hearth 只负责认证、应用访问和统一登录生命周期。bytedepth 继
 
 移动接口使用独立安全链与显式 Session 头，边界见 [ADR-0025](../architecture/decisions/0025-react-native-mobile-reader.md) 与 [移动 API 契约](../architecture/mobile-api.md)。网页 Cookie 不认证移动接口，移动头不认证网页；两者均保留 CSRF。
 
+## 后台自动认证
+
+网页在首次公开访问、导航或从后台恢复时检查本站认证；无需本站历史登录标记。本站未登录且未明确退出时，通过隐藏 iframe 发起一次 `prompt=none`，复用既有 Authorization Code + S256 PKCE、state、nonce 和本地身份映射。主页面不离站；成功核实本站认证后刷新原完整 URL，失败、需要 consent 或二十秒超时均安静结束，保留匿名阅读与显式登录入口。
+
+Web Locks 排队覆盖完整尝试，获锁标签先复查身份，其他标签也能更新登录状态；跨标签页共享五分钟冷却。localStorage 仅保存尝试时间；没有周期保活轮询，不保存身份或 Token。受限浏览器保留显式登录，不偷偷降级为顶层授权。仅 `/auth/silent-complete` 允许 SAMEORIGIN 嵌入；父页面严格验证消息 origin、source 及固定结果，再核实真实本站认证。详细取舍见 [ADR-0027](../architecture/decisions/0027-bounded-oidc-session-recovery.md)。
+
+显式退出下发无身份的 Host-only/HttpOnly 退出抑制标记；旧标签页也不能启动后台授权。退出返回已登记 `/login` 时保留登录入口，只有用户主动登录成功才清除抑制；静默回调不删除它，网页安全链拒绝附带抑制标记的已认证遗留 Session，同时保留匿名显式登录的 state/CSRF。此标记不参与认证或权限判定，不能用它恢复身份。
+
+手动授权等待期间最多五分钟拒绝后台启动；回调分类取自框架已匹配 state 的授权请求，避免不同标签的流程串线。
+
+回归包括 `HearthOidcSecurityRoutingTest`、resolver/流程/网页超时单测和 `auth-recovery.test.js`。Host E2E 在隔离本地表单测试槽清理、真实 staging app 恢复后，使用 `playwright.oidc.config.mjs` 执行桌面/移动 OIDC 专项；专项失败不写 PASS evidence。Cookie-only 首个 Hearth 请求必须是授权，不先访问 `/api/session`。认证专项关闭 trace/视频/截图，输出不含凭据或授权材料。
+
 ## 共享 Session
 
 多实例共享 Spring Session Redis，负载均衡无需 sticky session。配置见 `bytedepth-start/src/main/resources/application.yml`：
 
-- `spring.session.timeout=60m`（空闲 60 分钟过期）
+- 网页：`bytedepth.web-session-timeout-seconds=600`（空闲 10 分钟过期），网页安全链在读取/创建 Session 时设置，保证重定向提交前生效。
+- Redis repository 的 `spring.session.timeout=60m` 保留给独立原生移动安全链；网页覆盖不改变移动时长。
 - `spring.session.data.redis.namespace`（默认值与环境变量见配置文件）
 
 Spring Boot 4 的 Redis Session 自动配置来自 BOM 管理的 `spring-boot-starter-session-data-redis`；仅依赖原始 `spring-session-data-redis` 不足以注册 Boot 自动配置。不要另写 `@EnableRedisHttpSession` 或复制命名空间/超时作为第二套配置。`SessionConfigurationTest` 验证实际 repository、filter 注册与顺序、命名空间、超时和 Cookie 属性；这是离线配置证据，真实 Redis 存取仍由 staging 集成测试验证。
@@ -35,7 +48,7 @@ Spring Boot 4 的 Redis Session 自动配置来自 BOM 管理的 `spring-boot-st
 
 测试可执行 JAR 的 Cookie 配置时，`WebApplicationContextRunner` 的默认 MockServletContext 会被识别为 WAR 环境；配置夹具需明确选择 embedded 分支，再验证 `server.servlet.session.cookie.*`，不能靠生产代码硬编码属性使测试通过。
 
-Redis 重启会丢失普通 Session；勾选记住我的用户靠签名 cookie 恢复登录，无需重新登录。
+Redis 重启会丢失普通 Session。本地表单模式使用本站签名 Cookie；Hearth 模式由浏览器经后台 OIDC 恢复，本站不读取 Hearth Cookie。
 
 移动端不使用 remember-me。先获取 `/api/mobile/v1/csrf`，再提交标准登录表单；成功接收轮换后的 `X-App-Session` 并重新获取 CSRF。会话失效重新登录，CSRF 失效不自动重放写入。Session principal 沿用登录快照，不将 `/me` 描述为已有即时封禁撤销能力。
 
