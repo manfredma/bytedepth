@@ -82,3 +82,5 @@ Redis 重启会丢失普通 Session。本地表单模式使用本站签名 Cooki
 认证诊断只使用 `X-Bytedepth-Auth-Failure` 的固定错误枚举，不包含异常描述、身份或授权材料。真实浏览器回归先等待浏览器完成页/导航，再单次核验身份；不得在 Session 轮换期间用共享 Cookie 的 API 客户端反复创建匿名 Session。专项日志只记录路由枚举、HTTP 状态、规范错误及 state 匹配布尔值。
 
 认证 E2E 的请求断言须限定在对应阶段：静默授权检查在主动登录前移除监听器；普通交互授权允许没有 `prompt=none`，仍须验证新 state、nonce 和 S256 PKCE。不能让旧阶段的事件断言污染后续场景。
+
+只有需要请求改写/断网注入的隔离浏览器上下文设置 `serviceWorkers: "block"`，并断言路由处理器确实执行；正常 Remember-Me、Session、并发与退出场景保留真实 Service Worker。Playwright 只对重定向链的初始请求执行路由处理器，不能只拦截 Hearth 的下游地址：consent 在本站启动入口真实获取 302（`maxRedirects: 0`），仅修改其 Location 的测试 client_id；无回调故障在同一初始导航处 abort。Worker 接管导航也可能绕过请求路由。依据：[Playwright BrowserContext.route](https://playwright.dev/docs/api/class-browsercontext#browser-context-route)、[Playwright 重定向路由边界](https://github.com/microsoft/playwright/issues/34994)。

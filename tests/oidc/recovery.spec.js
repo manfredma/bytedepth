@@ -148,8 +148,8 @@ test("real background Auth matrix without public-page navigation", async ({ brow
     baseURL: business,
   };
   const contexts = [];
-  const context = async (name) => {
-    const result = await newVerificationContext(browser, options);
+  const context = async (name, overrides = {}) => {
+    const result = await newVerificationContext(browser, { ...options, ...overrides });
     observe(result, name || "isolated-" + contexts.length);
     contexts.push(result);
     return result;
@@ -342,12 +342,20 @@ test("real background Auth matrix without public-page navigation", async ({ brow
     expect(created.status()).toBe(201);
     const fixtureClient = (await created.json()).clientId;
     try {
-      const consent = await context();
+      const consent = await context("consent-required", { serviceWorkers: "block" });
       await consent.addCookies(sessions);
-      await consent.route(hearth + "/oauth2/authorize?**", async (route) => {
-        const url = new URL(route.request().url());
-        url.searchParams.set("client_id", fixtureClient);
-        await privateAction(() => route.continue({ url: url.toString() }));
+      let rewritten = 0;
+      await consent.route(business + "/oauth2/authorization/hearth?silent=true", async (route) => {
+        await privateAction(async () => {
+          const response = await route.fetch({ maxRedirects: 0 });
+          expect(response.status()).toBe(302);
+          const url = new URL(response.headers().location);
+          expect(url.origin === hearth && url.pathname === "/oauth2/authorize").toBe(true);
+          url.searchParams.set("client_id", fixtureClient);
+          rewritten++;
+          console.log("OIDC_FIXTURE consent-authorization-rewritten");
+          await route.fulfill({ response, headers: { ...response.headers(), location: url.toString() } });
+        });
       });
       const page = await consent.newPage();
       let consentRequired = false;
@@ -359,6 +367,7 @@ test("real background Auth matrix without public-page navigation", async ({ brow
       });
       await visit(page);
       await expect.poll(() => consentRequired).toBe(true);
+      expect(rewritten).toBe(1);
       await quiet(page, consent);
       console.log("OIDC_SCENARIO consent-required-real-callback: PASS");
     } finally {
@@ -368,18 +377,19 @@ test("real background Auth matrix without public-page navigation", async ({ brow
       expect(deleted.status()).toBe(204);
     }
 
-    const offline = await context();
-    await offline.route(hearth + "/**", (route) => route.abort());
+    const offline = await context("network-failure", { serviceWorkers: "block" });
+    const silentStart = business + "/oauth2/authorization/hearth?silent=true";
+    await offline.route(silentStart, (route) => route.abort());
     const offlinePage = await offline.newPage();
     let offlineAttempts = 0;
     offlinePage.on("request", (request) => {
-      if (new URL(request.url()).origin === hearth) offlineAttempts++;
+      if (request.url() === silentStart) offlineAttempts++;
     });
     await visit(offlinePage);
     await expect.poll(() => offlineAttempts).toBe(1);
     await expect.poll(async () => offlinePage.locator("iframe").count(), { timeout: 25_000 }).toBe(0);
     await quiet(offlinePage, offline);
-    console.log("OIDC_SCENARIO network-failure-public-page-retained: PASS");
+    console.log("OIDC_SCENARIO authorization-navigation-failure-public-page-retained: PASS");
   } catch {
     for (let i = 0; i < contexts.length; i++) {
       for (const page of contexts[i].pages())
