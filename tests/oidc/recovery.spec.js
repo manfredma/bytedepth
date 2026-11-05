@@ -252,7 +252,7 @@ test("real background Auth matrix without public-page navigation", async ({ brow
       const page = await isolated.newPage();
       let attempts = 0;
       let firstHearthPath;
-      page.on("request", (request) => {
+      const observeSilentAuthorization = (request) => {
         const url = new URL(request.url());
         if (url.origin === hearth) {
           firstHearthPath ??= url.pathname;
@@ -262,7 +262,8 @@ test("real background Auth matrix without public-page navigation", async ({ brow
             expect(url.searchParams.get("code_challenge_method") === "S256").toBe(true);
           }
         }
-      });
+      };
+      page.on("request", observeSilentAuthorization);
       await visit(page);
       // 先等待浏览器完成认证；并发 API status 会创建/轮换共享 Cookie，不能充当被动观察器。
       await expect(page.locator(".nav-logout")).toHaveCount(1, { timeout: 25_000 });
@@ -287,6 +288,7 @@ test("real background Auth matrix without public-page navigation", async ({ brow
         expect((await status(isolated)).authenticated).toBe(false);
         expect(attempts).toBe(1);
         console.log("OIDC_SCENARIO explicit-logout-and-old-tab: PASS");
+        page.off("request", observeSilentAuthorization);
         await privateAction(() => page.goto(business + "/login?interactive=true"));
         await expect
           .poll(() => new URL(page.url()).origin === hearth && new URL(page.url()).pathname === "/login")
